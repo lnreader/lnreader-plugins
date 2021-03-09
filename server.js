@@ -1,5 +1,7 @@
 const express = require("express");
 
+const extensions = require("./src/extensions");
+
 const app = express();
 
 app.use(
@@ -15,6 +17,8 @@ app.get("/", (req, res) =>
         Github: "https://github.com/rajarsheechatterjee/lnreader-extensions",
     })
 );
+
+app.get("/api/", (req, res) => res.json(extensions));
 
 // Box Novel
 app.use("/api/1/", require("./src/en/boxnovel/boxnovel"));
