@@ -103,21 +103,21 @@ router.get("/novel/:novelUrl", (req, res) => {
         let novelChapters = [];
 
         $(".wp-manga-chapter").each(function (result) {
-            let name = $(this)
+            chapterName = $(this)
                 .find("a")
                 .text()
                 .replace(/[\t\n]/g, "")
                 .trim();
 
-            let date_upload = $(this)
+            releaseDate = $(this)
                 .find("span")
                 .text()
                 .replace(/[\t\n]/g, "")
                 .trim();
 
-            chapter_url = $(this).find("a").attr("href").replace(url, "");
+            chapterUrl = $(this).find("a").attr("href").replace(url, "");
 
-            novelChapters.push({ name, date_upload, chapter_url });
+            novelChapters.push({ chapterName, releaseDate, chapterUrl });
         });
 
         novel.novelChapters = novelChapters.reverse();
@@ -193,6 +193,25 @@ router.get("/search/", (req, res) => {
 
         $(".c-tabs-item__content").each(function (result) {
             novelName = $(this).find("h4 > a").text();
+
+            // let novelDetails = {};
+
+            // $(this)
+            //     .find(".post-content_item")
+            //     .each(function (result) {
+            //         detailName = $(this)
+            //             .find(".summary-heading > h5")
+            //             .text()
+            //             .replace(/[\t\n]/g, "")
+            //             .trim();
+            //         detail = $(this)
+            //             .find(".summary-content")
+            //             .text()
+            //             .replace(/[\t\n]/g, "")
+            //             .trim();
+
+            //         novelDetails[detailName] = detail;
+            //     });
 
             novelCover = $(this).find("img").attr("src");
 
