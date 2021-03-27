@@ -97,28 +97,23 @@ router.get("/novel/:novelUrl", (req, res) => {
         $(".tab-content")
             .find("li")
             .each(function (result) {
-                chapterName = $(this)
+                let name = $(this)
                     .find("a")
                     .text()
                     .replace(/[\t\n]/g, "")
                     .trim();
 
-                releaseDate = null;
-                // $(this)
-                //     .find("span")
-                //     .text()
-                //     .replace(/[\t\n]/g, "")
-                //     .trim();
+                date_upload = null;
 
-                chapterUrl = $(this)
+                chapter_url = $(this)
                     .find("a")
                     .attr("href")
                     .replace(baseUrl, "");
 
                 novelChapters.push({
-                    chapterName,
-                    releaseDate,
-                    chapterUrl: chapterUrl.replace(`/${novelUrl}/`, ""),
+                    name,
+                    date_upload,
+                    chapter_url: chapter_url.replace(`/${novelUrl}/`, ""),
                 });
             });
 
