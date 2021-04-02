@@ -15,7 +15,8 @@ extensions = [
     {
         sourceId: 3,
         sourceName: "FastNovel",
-        sourceCover: "./en/fastnovel/icon.png",
+        sourceCover:
+            "https://github.com/rajarsheechatterjee/lnreader-extensions/blob/main/src/en/fastnovel/icon.png",
         sourceLanguage: "English",
     },
 ];
