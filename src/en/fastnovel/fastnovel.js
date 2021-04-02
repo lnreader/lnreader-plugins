@@ -6,8 +6,6 @@ const baseUrl = "https://fastnovel.net";
 
 const router = express.Router();
 router.get("/novels/", (req, res) => {
-    let novels = [];
-
     url = `https://fastnovel.net/list/most-popular.html`;
 
     request(url, (err, response, body) => {

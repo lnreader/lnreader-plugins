@@ -12,7 +12,6 @@ const searchUrl = "https://www.readlightnovel.org/detailed-search";
 
 router.get("/novels/", (req, res) => {
     // orderBy = req.query.o;
-    let novels = [];
 
     url = `${baseUrl}/top-novel?change_type=top_rated`;
 
@@ -20,6 +19,8 @@ router.get("/novels/", (req, res) => {
         if (err) throw err;
 
         $ = cheerio.load(body);
+
+        let novels = [];
 
         $(".top-novel-block").each(function (result) {
             novelName = $(this).find(".top-novel-header > h2 > a").text();
