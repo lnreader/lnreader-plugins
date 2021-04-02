@@ -12,6 +12,12 @@ extensions = [
         sourceCover: "https://www.readlightnovel.org/assets/images/logo6.png",
         sourceLanguage: "English",
     },
+    {
+        sourceId: 3,
+        sourceName: "FastNovel",
+        sourceCover: "./en/fastnovel/icon.png",
+        sourceLanguage: "English",
+    },
 ];
 
 module.exports = extensions;
