@@ -108,7 +108,7 @@ router.get("/novel/:novelUrl", (req, res) => {
 
         novel.novelChapters = novelChapters;
 
-        res.json({ novel });
+        res.json(novel);
     });
 });
 
