@@ -72,12 +72,12 @@ router.get("/novel/:novelUrl", (req, res) => {
             .siblings()
             .text();
 
-        novel["Genre(s)"] = $("li > h3")
+        novel["Genre(s)"] = $("li")
             .filter(function () {
-                return $(this).text().trim() === "Genre:";
+                return $(this).find("h3").text().trim() === "Genre:";
             })
-            .siblings()
-            .text();
+            .text()
+            .replace("Genre:", "");
 
         novel["Artist(s)"] = null;
 
