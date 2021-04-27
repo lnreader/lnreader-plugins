@@ -41,7 +41,7 @@ extensions = [
         sourceCover:
             "https://github.com/rajarsheechatterjee/lnreader-extensions/blob/main/src/en/mtlnovel/icon.png?raw=true",
         sourceLanguage: "English",
-        status: 1,
+        status: 0,
     },
 ];
 
