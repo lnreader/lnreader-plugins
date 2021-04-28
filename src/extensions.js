@@ -43,6 +43,15 @@ extensions = [
         sourceLanguage: "English",
         status: 0,
     },
+    {
+        sourceId: 6,
+        sourceUrl: "https://www.novelhall.com/",
+        sourceName: "NovelHall",
+        sourceCover:
+            "https://www.novelhall.com/statics/default/images/logo.b5b4c.png",
+        sourceLanguage: "English",
+        status: 1,
+    },
 ];
 
 module.exports = extensions;
