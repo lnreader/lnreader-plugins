@@ -80,23 +80,25 @@ router.get("/novel/:novelUrl", (req, res) => {
 
         let novelChapters = [];
 
-        $("li.post-11").each(function (result) {
-            let chapterName = $(this).find("a").text();
+        $("div.book-catalog.hidden-xs#morelist")
+            .find("li.post-11")
+            .each(function (result) {
+                let chapterName = $(this).find("a").text();
 
-            let releaseDate = null;
+                let releaseDate = null;
 
-            let chapterUrl = $(this).find("a").attr("href");
+                let chapterUrl = $(this).find("a").attr("href");
 
-            if (chapterUrl) {
-                chapterUrl = chapterUrl.replace(`/${novelUrl}/`, "");
-            }
+                if (chapterUrl) {
+                    chapterUrl = chapterUrl.replace(`/${novelUrl}/`, "");
+                }
 
-            novelChapters.push({
-                chapterName,
-                releaseDate,
-                chapterUrl,
+                novelChapters.push({
+                    chapterName,
+                    releaseDate,
+                    chapterUrl,
+                });
             });
-        });
 
         novel.novelChapters = novelChapters;
 
