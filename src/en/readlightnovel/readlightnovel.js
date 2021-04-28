@@ -95,28 +95,36 @@ router.get("/novel/:novelUrl", (req, res) => {
 
         let novelChapters = [];
 
-        $(".tab-content")
-            .find("li")
-            .each(function (result) {
-                chapterName = $(this)
-                    .find("a")
-                    .text()
-                    .replace(/[\t\n]/g, "")
-                    .trim();
+        $(".panel").each(function (res) {
+            let volumeName = $(this).find("h4.panel-title").text();
 
-                releaseDate = null;
+            $(this)
+                .find("ul.chapter-chs > li")
+                .each(function (result) {
+                    chapterName = $(this)
+                        .find("a")
+                        .text()
+                        .replace(/[\t\n]/g, "")
+                        .trim();
 
-                chapterUrl = $(this)
-                    .find("a")
-                    .attr("href")
-                    .replace(baseUrl, "");
+                    releaseDate = null;
 
-                novelChapters.push({
-                    chapterName,
-                    releaseDate,
-                    chapterUrl: chapterUrl.replace(`/${novelUrl}/`, ""),
+                    chapterUrl = $(this)
+                        .find("a")
+                        .attr("href")
+                        .replace(baseUrl, "");
+
+                    if (volumeName.includes("Volume")) {
+                        chapterName = volumeName + " " + chapterName;
+                    }
+
+                    novelChapters.push({
+                        chapterName,
+                        releaseDate,
+                        chapterUrl: chapterUrl.replace(`/${novelUrl}/`, ""),
+                    });
                 });
-            });
+        });
 
         novel.novelChapters = novelChapters;
 
