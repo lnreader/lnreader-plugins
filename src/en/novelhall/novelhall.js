@@ -57,7 +57,7 @@ router.get("/novel/:novelUrl", (req, res) => {
 
         novel.novelName = $("h1").text();
 
-        novel.novelCover = $("img").attr("src");
+        novel.novelCover = $("div.book-img > img").attr("src");
 
         novel.novelSummary = $("div.intro")
             .text()
