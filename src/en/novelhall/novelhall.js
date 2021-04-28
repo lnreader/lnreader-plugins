@@ -120,15 +120,19 @@ router.get("/novel/:novelUrl/:chapterUrl", (req, res) => {
 
         let nextChapter = null;
 
-        nextChapter = $('a[rel="next"]')
-            .attr("href")
-            .replace(`/${req.params.novelUrl}/`, "");
+        nextChapter = $('a[rel="next"]').attr("href");
+
+        if (nextChapter) {
+            nextChapter = nextChapter.replace(`/${req.params.novelUrl}/`, "");
+        }
 
         let prevChapter = null;
 
-        prevChapter = $('a[rel="prev"]')
-            .attr("href")
-            .replace(`/${req.params.novelUrl}/`, "");
+        prevChapter = $('a[rel="prev"]').attr("href");
+
+        if (prevChapter) {
+            prevChapter = prevChapter.replace(`/${req.params.novelUrl}/`, "");
+        }
 
         chapter = {
             extensionId: 6,
