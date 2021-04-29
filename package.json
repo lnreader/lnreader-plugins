@@ -1,14 +1,14 @@
 {
-    "name": "lnreader-backend",
+    "name": "lnreader-extensions",
     "version": "1.0.0",
-    "description": "Backend for LNReader",
-    "main": "server.js",
+    "description": "Extensions for LNReader",
+    "main": "index.js",
     "scripts": {
-        "start": "node server",
-        "server": "nodemon server"
+        "start": "node index.js",
+        "server": "nodemon index.js"
     },
-    "author": "",
-    "license": "ISC",
+    "author": "Rajarshee Chatterjee",
+    "license": "MIT",
     "dependencies": {
         "cheerio": "^1.0.0-rc.5",
         "express": "^4.17.1",
