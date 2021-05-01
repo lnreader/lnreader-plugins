@@ -10,7 +10,9 @@ const router = express.Router();
 router.get("/novels/", async (req, res) => {
     let url = `https://www.wuxiaworld.com/novels`;
 
-    const browser = await puppeteer.launch();
+    const browser = await puppeteer.launch({
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
     const page = await browser.newPage();
 
     await page.goto(url);
@@ -46,7 +48,9 @@ router.get("/novel/:novelUrl", async (req, res) => {
     let novelUrl = req.params.novelUrl;
     let url = `${baseUrl}novel/${novelUrl}/`;
 
-    const browser = await puppeteer.launch();
+    const browser = await puppeteer.launch({
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
     const page = await browser.newPage();
 
     await page.goto(url);
@@ -120,7 +124,9 @@ router.get("/novel/:novelUrl/:chapterUrl", async (req, res) => {
     const novelUrl = `${req.params.novelUrl}/`;
     const chapterUrl = `${req.params.chapterUrl}/`;
 
-    const browser = await puppeteer.launch();
+    const browser = await puppeteer.launch({
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
     const page = await browser.newPage();
 
     await page.goto(url);
