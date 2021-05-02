@@ -1,39 +1,37 @@
 const express = require("express");
 const cheerio = require("cheerio");
 const request = require("request");
-const chromium = require("chrome-aws-lambda");
-const puppeteer = require("puppeteer");
-const { scraper } = require("../../helper");
 
 const baseUrl = "https://www.wuxiaworld.com/";
 
 const router = express.Router();
 
 router.get("/novels/", async (req, res) => {
-    let url = `https://www.wuxiaworld.com/novels`;
-    const body = await scraper(url);
+    let url = `https://www.wuxiaworld.com/api/novels`;
 
-    let novels = [];
+    request(url, (err, response, body) => {
+        if (err) throw err;
 
-    const $ = cheerio.load(body);
+        let novels = [];
 
-    $(".novel-item").each(function (result) {
-        let novelName = $(this).find("div.novel-title").text();
-        let novelCover = $(this).find("img").attr("src");
-        let novelUrl = $(this).find("a").attr("href");
-        novelUrl = novelUrl.replace("/novel/", "").concat("/");
+        let data = JSON.parse(body);
+        data = data.items;
 
-        novel = {
-            extensionId: 7,
-            novelName,
-            novelCover,
-            novelUrl,
-        };
+        data.map((novel) => {
+            let novelName = novel.name;
+            let novelCover = novel.coverUrl;
+            let novelUrl = novel.slug;
+            novelUrl = novelUrl + "/";
 
-        novels.push(novel);
+            novels.push({
+                extensionId: 7,
+                novelUrl,
+                novelName,
+                novelCover,
+            });
+        });
+        res.json(novels);
     });
-
-    res.json(novels);
 });
 
 // Novel
@@ -41,67 +39,69 @@ router.get("/novels/", async (req, res) => {
 router.get("/novel/:novelUrl", async (req, res) => {
     let novelUrl = req.params.novelUrl;
     let url = `${baseUrl}novel/${novelUrl}/`;
-    const body = await scraper(url);
 
-    const $ = cheerio.load(body);
+    request(url, (err, response, body) => {
+        if (err) throw err;
+        const $ = cheerio.load(body);
 
-    let novel = {};
+        let novel = {};
 
-    novel.extensionId = 7;
+        novel.extensionId = 7;
 
-    novel.sourceName = "WuxiaWorld";
+        novel.sourceName = "WuxiaWorld";
 
-    novel.sourceUrl = url;
+        novel.sourceUrl = url;
 
-    novel.novelUrl = `${novelUrl}/`;
+        novel.novelUrl = `${novelUrl}/`;
 
-    novel.novelName = $("h2").text();
+        novel.novelName = $("h2").text();
 
-    novel.novelCover = $("img.img-thumbnail").attr("src");
+        novel.novelCover = $("img.img-thumbnail").attr("src");
 
-    novel.novelSummary = $(".fr-view > p").text();
+        novel.novelSummary = $(".fr-view > p").text();
 
-    novel["Author(s)"] = $("div > dt")
-        .filter(function () {
-            return $(this).text().trim() === "Author:";
-        })
-        .next()
-        .text();
+        novel["Author(s)"] = $("div > dt")
+            .filter(function () {
+                return $(this).text().trim() === "Author:";
+            })
+            .next()
+            .text();
 
-    let genres = [];
+        let genres = [];
 
-    $(".genres")
-        .find("div")
-        .each(function (res) {
-            genres.push($(this).find("a").text());
+        $(".genres")
+            .find("div")
+            .each(function (res) {
+                genres.push($(this).find("a").text());
+            });
+
+        novel["Genre(s)"] = genres.join(",");
+
+        novel["Artist(s)"] = null;
+
+        novel.Status = null;
+
+        let novelChapters = [];
+
+        $(".chapter-item").each(function (result) {
+            let chapterName = $(this).text();
+            chapterName = chapterName.replace(/[\t\n]/g, "");
+
+            let releaseDate = null;
+            let chapterUrl = $(this).find("a").attr("href");
+            chapterUrl = chapterUrl.replace(`/novel/${novelUrl}/`, "");
+
+            novelChapters.push({
+                chapterName,
+                releaseDate,
+                chapterUrl,
+            });
         });
 
-    novel["Genre(s)"] = genres.join(",");
+        novel.novelChapters = novelChapters;
 
-    novel["Artist(s)"] = null;
-
-    novel.Status = null;
-
-    let novelChapters = [];
-
-    $(".chapter-item").each(function (result) {
-        let chapterName = $(this).text();
-        chapterName = chapterName.replace(/[\t\n]/g, "");
-
-        let releaseDate = null;
-        let chapterUrl = $(this).find("a").attr("href");
-        chapterUrl = chapterUrl.replace(`/novel/${novelUrl}/`, "");
-
-        novelChapters.push({
-            chapterName,
-            releaseDate,
-            chapterUrl,
-        });
+        res.json(novel);
     });
-
-    novel.novelChapters = novelChapters;
-
-    res.json(novel);
 });
 
 router.get("/novel/:novelUrl/:chapterUrl", async (req, res) => {
@@ -109,41 +109,43 @@ router.get("/novel/:novelUrl/:chapterUrl", async (req, res) => {
 
     const novelUrl = `${req.params.novelUrl}/`;
     const chapterUrl = `${req.params.chapterUrl}/`;
-    const body = await scraper(url);
 
-    const $ = cheerio.load(body);
+    request(url, (err, response, body) => {
+        if (err) throw err;
+        const $ = cheerio.load(body);
 
-    let chapterName = $("#sidebar-toggler-container").next().text();
-    chapterName = chapterName.replace(/[\t\n]/g, "");
+        let chapterName = $("#sidebar-toggler-container").next().text();
+        chapterName = chapterName.replace(/[\t\n]/g, "");
 
-    let chapterText = $("#chapter-content").text();
+        let chapterText = $("#chapter-content").text();
 
-    let nextChapter = null;
+        let nextChapter = null;
 
-    if ($("li.next > a").attr("href") !== "#") {
-        nextChapter = $("li.next > a")
-            .attr("href")
-            .replace(`/novel/${novelUrl}`, "");
-    }
+        if ($("li.next > a").attr("href") !== "#") {
+            nextChapter = $("li.next > a")
+                .attr("href")
+                .replace(`/novel/${novelUrl}`, "");
+        }
 
-    let prevChapter = null;
+        let prevChapter = null;
 
-    if ($("li.prev > a").attr("href") !== "#") {
-        prevChapter = $("li.prev > a")
-            .attr("href")
-            .replace(`/novel/${novelUrl}`, "");
-    }
-    chapter = {
-        extensionId: 7,
-        novelUrl,
-        chapterUrl,
-        chapterName,
-        chapterText,
-        nextChapter,
-        prevChapter,
-    };
+        if ($("li.prev > a").attr("href") !== "#") {
+            prevChapter = $("li.prev > a")
+                .attr("href")
+                .replace(`/novel/${novelUrl}`, "");
+        }
+        chapter = {
+            extensionId: 7,
+            novelUrl,
+            chapterUrl,
+            chapterName,
+            chapterText,
+            nextChapter,
+            prevChapter,
+        };
 
-    res.json(chapter);
+        res.json(chapter);
+    });
 });
 
 router.get("/search/", (req, res) => {
