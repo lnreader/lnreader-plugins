@@ -151,7 +151,7 @@ router.get("/novel/:novelUrl/:chapterUrl", async (req, res) => {
 router.get("/search/", (req, res) => {
     let searchTerm = req.query.s;
     searchTerm = encodeURI(searchTerm);
-    const searchUrl = `https://www.wuxiaworld.com/api/novels/search?query=}`;
+    const searchUrl = `https://www.wuxiaworld.com/api/novels/search?query=`;
 
     const url = `${searchUrl}${searchTerm}`;
 
