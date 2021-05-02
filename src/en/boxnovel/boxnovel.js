@@ -68,7 +68,7 @@ router.get("/novels/:pageNo/", (req, res) => {
         .then((result) => {
             page4 = result;
 
-            res.json([...page1, ...page2, ...page3]);
+            res.json([...page1, ...page2, ...page3, ...page4]);
         })
         .catch((err) => {
             console.log("Error occured in one of the API call: ", err);
