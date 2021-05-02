@@ -1,217 +1,247 @@
 const express = require("express");
 const cheerio = require("cheerio");
-const fetch = require("node-fetch");
-
-const baseUrl = "https://boxnovel.com/novel";
-const searchUrl = "https://boxnovel.com/";
+const request = require("request");
 
 const router = express.Router();
 
+const baseUrl = "https://boxnovel.com/novel";
+
+const searchUrl = "https://boxnovel.com/";
+
 // Top novels
 
-router.get("/novels/:pageNo/", async (req, res) => {
-    const orderBy = req.params.orderBy;
+function apiCall(reqOps) {
+    return new Promise(function (resolve, reject) {
+        request(reqOps, (err, res, body) => {
+            if (!err && res.statusCode == 200) {
+                if (err) throw err;
 
-    let url1 = `${baseUrl}/page/1/?m_orderby=${orderBy}`;
-    let url2 = `${baseUrl}/page/2/?m_orderby=${orderBy}`;
-    let url3 = `${baseUrl}/page/3/?m_orderby=${orderBy}`;
-    let url4 = `${baseUrl}/page/4/?m_orderby=${orderBy}`;
+                let novels = [];
 
-    const page1 = await scraper(url1);
-    const page2 = await scraper(url2);
-    const page3 = await scraper(url3);
-    const page4 = await scraper(url4);
+                $ = cheerio.load(body);
 
-    res.json([...page1, ...page2, ...page3, ...page4]);
+                $(".page-item-detail").each(function (result) {
+                    novelName = $(this).find("h5 > a").text();
+                    novelCover = $(this).find("img").attr("src");
+                    novelUrl = $(this)
+                        .find("h5 > a")
+                        .attr("href")
+                        .replace(`${baseUrl}/`, "");
+                    novel = {
+                        extensionId: 1,
+                        novelName: novelName,
+                        novelCover: novelCover,
+                        novelUrl: novelUrl,
+                    };
+
+                    novels.push(novel);
+                });
+                resolve(novels);
+            }
+
+            reject(err);
+        });
+    });
+}
+
+router.get("/novels/:pageNo/", (req, res) => {
+    orderBy = req.query.o;
+    pageNo = req.params.pageNo;
+
+    let url = `${baseUrl}/page/1/?m_orderby=${orderBy}`;
+
+    let page1, page2, page3, page4;
+
+    apiCall(url)
+        .then((res) => {
+            page1 = res;
+            return apiCall(`${baseUrl}/page/2/?m_orderby=${orderBy}`);
+        })
+        .then((res) => {
+            page2 = res;
+            return apiCall(`${baseUrl}/page/3/?m_orderby=${orderBy}`);
+        })
+        .then((res) => {
+            page3 = res;
+            return apiCall(`${baseUrl}/page/4/?m_orderby=${orderBy}`);
+        })
+        .then((result) => {
+            page4 = result;
+
+            res.json([...page1, ...page2, ...page3]);
+        })
+        .catch((err) => {
+            console.log("Error occured in one of the API call: ", err);
+        });
 });
 
 // Novel
 
-router.get("/novel/:novelUrl", async (req, res) => {
-    const novelUrl = req.params.novelUrl;
-    const url = `${baseUrl}/${novelUrl}/`;
+router.get("/novel/:novelUrl", (req, res) => {
+    novelUrl = req.params.novelUrl;
+    url = `${baseUrl}/${novelUrl}/`;
 
-    const result = await fetch(url);
-    const body = await result.text();
+    request(url, (err, response, body) => {
+        if (err) throw err;
 
-    $ = cheerio.load(body);
+        $ = cheerio.load(body);
 
-    let novel = {};
+        let novel = {};
 
-    $(".post-title > h3 > span").remove();
+        $(".post-title > h3 > span").remove();
 
-    novel.extensionId = 1;
+        novel.extensionId = 1;
 
-    novel.sourceName = "BoxNovel";
+        novel.sourceName = "BoxNovel";
 
-    novel.sourceUrl = url;
+        novel.sourceUrl = url;
 
-    novel.novelUrl = `${novelUrl}/`;
+        novel.novelUrl = `${novelUrl}/`;
 
-    novel.novelName = $(".post-title > h3")
-        .text()
-        .replace(/[\t\n]/g, "")
-        .trim();
-
-    novel.novelCover = $(".summary_image > a > img").attr("src");
-
-    $(".post-content_item").each(function (result) {
-        detailName = $(this)
-            .find(".summary-heading > h5")
-            .text()
-            .replace(/[\t\n]/g, "")
-            .trim();
-        detail = $(this)
-            .find(".summary-content")
+        novel.novelName = $(".post-title > h3")
             .text()
             .replace(/[\t\n]/g, "")
             .trim();
 
-        novel[detailName] = detail;
+        novel.novelCover = $(".summary_image > a > img").attr("src");
+
+        $(".post-content_item").each(function (result) {
+            detailName = $(this)
+                .find(".summary-heading > h5")
+                .text()
+                .replace(/[\t\n]/g, "")
+                .trim();
+            detail = $(this)
+                .find(".summary-content")
+                .text()
+                .replace(/[\t\n]/g, "")
+                .trim();
+
+            novel[detailName] = detail;
+        });
+
+        $(".description-summary > div.summary__content").find("em").remove();
+
+        novel.novelSummary = $(
+            ".description-summary > div.summary__content > div"
+        )
+            .text()
+            .replace(/[\t\n]/g, "");
+
+        // if (novel.novelSummary === "") {
+        //     novel.novelSummary = $(".c_000").text();
+        // }
+
+        let novelChapters = [];
+
+        $(".wp-manga-chapter").each(function (result) {
+            chapterName = $(this)
+                .find("a")
+                .text()
+                .replace(/[\t\n]/g, "")
+                .trim();
+
+            releaseDate = $(this)
+                .find("span")
+                .text()
+                .replace(/[\t\n]/g, "")
+                .trim();
+
+            chapterUrl = $(this).find("a").attr("href").replace(url, "");
+
+            novelChapters.push({ chapterName, releaseDate, chapterUrl });
+        });
+
+        novel.novelChapters = novelChapters.reverse();
+
+        res.json(novel);
     });
-
-    $(".description-summary > div.summary__content").find("em").remove();
-
-    novel.novelSummary = $(".description-summary > div.summary__content > div")
-        .text()
-        .replace(/[\t\n]/g, "");
-
-    let novelChapters = [];
-
-    $(".wp-manga-chapter").each(function (result) {
-        chapterName = $(this)
-            .find("a")
-            .text()
-            .replace(/[\t\n]/g, "")
-            .trim();
-
-        releaseDate = $(this)
-            .find("span")
-            .text()
-            .replace(/[\t\n]/g, "")
-            .trim();
-
-        chapterUrl = $(this).find("a").attr("href").replace(url, "");
-
-        novelChapters.push({ chapterName, releaseDate, chapterUrl });
-    });
-
-    novel.novelChapters = novelChapters.reverse();
-
-    res.json(novel);
 });
 
 // Chapter
 
-router.get("/novel/:novelUrl/:chapterUrl", async (req, res) => {
-    let novelUrl = req.params.novelUrl;
-    let chapterUrl = req.params.chapterUrl;
+router.get("/novel/:novelUrl/:chapterUrl", (req, res) => {
+    url = `${baseUrl}/${req.params.novelUrl}/${req.params.chapterUrl}`;
 
-    const url = `${baseUrl}/${novelUrl}/${chapterUrl}`;
+    request(url, (err, response, body) => {
+        if (err) throw err;
 
-    const result = await fetch(url);
-    const body = await result.text();
+        $ = cheerio.load(body);
 
-    $ = cheerio.load(body);
+        chapterNameLower = req.params.chapterUrl.replace("-", " ");
 
-    const chapterName = $("div.text-left > h3").text();
-    const chapterText = $(".reading-content").text();
+        chapterName =
+            chapterNameLower.charAt(0).toUpperCase() +
+            chapterNameLower.slice(1);
 
-    let nextChapter = null;
+        chapterText = $(".reading-content").text();
 
-    if ($(".nav-next").length) {
-        nextChapter = $(".nav-next")
-            .find("a")
-            .attr("href")
-            .replace(baseUrl + "/" + novelUrl + "/", "");
-    }
+        let nextChapter = null;
 
-    let prevChapter = null;
+        if ($(".nav-next").length) {
+            nextChapter = $(".nav-next")
+                .find("a")
+                .attr("href")
+                .replace(baseUrl + "/" + req.params.novelUrl + "/", "");
+        }
 
-    if ($(".nav-previous").length) {
-        prevChapter = $(".nav-previous")
-            .find("a")
-            .attr("href")
-            .replace(baseUrl + "/" + novelUrl + "/", "");
-    }
+        let prevChapter = null;
 
-    novelUrl = novelUrl + "/";
-    chapterUrl = chapterUrl + "/";
+        if ($(".nav-previous").length) {
+            prevChapter = $(".nav-previous")
+                .find("a")
+                .attr("href")
+                .replace(baseUrl + "/" + req.params.novelUrl + "/", "");
+        }
 
-    const chapter = {
-        extensionId: 1,
-        novelUrl,
-        chapterUrl,
-        chapterName,
-        chapterText,
-        nextChapter,
-        prevChapter,
-    };
+        chapter = {
+            extensionId: 1,
+            novelUrl: `${req.params.novelUrl}/`,
+            chapterUrl: `${req.params.chapterUrl}/`,
+            chapterName,
+            chapterText,
+            nextChapter,
+            prevChapter,
+        };
 
-    res.json(chapter);
+        res.json(chapter);
+    });
 });
 
 // Search
 
-router.get("/search/", async (req, res) => {
-    const searchTerm = req.query.s;
-    const orderBy = req.query.o;
+router.get("/search/", (req, res) => {
+    searchTerm = req.query.s;
+    orderBy = req.query.o;
 
-    const url = `${searchUrl}?s=${searchTerm}&post_type=wp-manga&m_orderby=${orderBy}`;
+    url = `${searchUrl}?s=${searchTerm}&post_type=wp-manga&m_orderby=${orderBy}`;
 
-    const result = await fetch(url);
-    const body = await result.text();
+    request(url, (err, response, body) => {
+        if (err) throw err;
 
-    $ = cheerio.load(body);
+        $ = cheerio.load(body);
 
-    let novels = [];
+        let novels = [];
 
-    $(".c-tabs-item__content").each(function (result) {
-        const novelName = $(this).find("h4 > a").text();
-        const novelCover = $(this).find("img").attr("src");
+        $(".c-tabs-item__content").each(function (result) {
+            novelName = $(this).find("h4 > a").text();
+            novelCover = $(this).find("img").attr("src");
 
-        let novelUrl = $(this).find("h4 > a").attr("href");
-        novelUrl = novelUrlreplace(`${baseUrl}/`, "");
+            novelUrl = $(this)
+                .find("h4 > a")
+                .attr("href")
+                .replace(`${baseUrl}/`, "");
 
-        const novel = {
-            extensionId: 1,
-            novelName,
-            novelCover,
-            novelUrl,
-        };
+            novels.push({
+                extensionId: 1,
+                novelName,
+                novelCover,
+                novelUrl,
+            });
+        });
 
-        novels.push(novel);
+        res.json(novels);
     });
-
-    res.json(novels);
 });
 
 module.exports = router;
-
-const scraper = async (url) => {
-    const result = await fetch(url);
-    const body = await result.text();
-
-    let novels = [];
-
-    $ = cheerio.load(body);
-
-    $(".page-item-detail").each(function (result) {
-        const novelName = $(this).find("h5 > a").text();
-        const novelCover = $(this).find("img").attr("src");
-
-        let novelUrl = $(this).find("h5 > a").attr("href");
-        novelUrl = novelUrl.replace(`${baseUrl}/`, "");
-
-        const novel = {
-            extensionId: 1,
-            novelName,
-            novelCover,
-            novelUrl,
-        };
-
-        novels.push(novel);
-    });
-
-    return novels;
-};
