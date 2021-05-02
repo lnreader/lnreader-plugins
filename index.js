@@ -18,7 +18,7 @@ app.get("/", (req, res) =>
 );
 
 app.get("/api/", (req, res) => res.json(extensions));
-app.use("/api/1/", require("./src/en/boxnovel/boxnovel"));
+app.use("/api/1/", require("./src/en/boxnovel/BoxNovel"));
 app.use("/api/2/", require("./src/en/readlightnovel/readlightnovel"));
 app.use("/api/3/", require("./src/en/fastnovel/fastnovel"));
 app.use("/api/4/", require("./src/en/readnovelfull/readnovelfull"));

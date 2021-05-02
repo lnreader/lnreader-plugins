@@ -13,6 +13,7 @@
         "cheerio": "^1.0.0-rc.5",
         "chrome-aws-lambda": "^8.0.2",
         "express": "^4.17.1",
+        "node-fetch": "^2.6.1",
         "puppeteer": "^9.0.0",
         "request": "^2.88.2"
     },
