@@ -10,37 +10,69 @@ const searchUrl = "https://boxnovel.com/";
 
 // Top novels
 
+function apiCall(reqOps) {
+    return new Promise(function (resolve, reject) {
+        request(reqOps, (err, res, body) => {
+            if (!err && res.statusCode == 200) {
+                if (err) throw err;
+
+                let novels = [];
+
+                $ = cheerio.load(body);
+
+                $(".page-item-detail").each(function (result) {
+                    novelName = $(this).find("h5 > a").text();
+                    novelCover = $(this).find("img").attr("src");
+                    novelUrl = $(this)
+                        .find("h5 > a")
+                        .attr("href")
+                        .replace(`${baseUrl}/`, "");
+                    novel = {
+                        extensionId: 1,
+                        novelName: novelName,
+                        novelCover: novelCover,
+                        novelUrl: novelUrl,
+                    };
+
+                    novels.push(novel);
+                });
+                resolve(novels);
+            }
+
+            reject(err);
+        });
+    });
+}
+
 router.get("/novels/:pageNo/", (req, res) => {
     orderBy = req.query.o;
     pageNo = req.params.pageNo;
 
-    url = `${baseUrl}/page/${pageNo}/?m_orderby=${orderBy}`;
+    let url = `${baseUrl}/page/1/?m_orderby=${orderBy}`;
 
-    request(url, (err, response, body) => {
-        if (err) throw err;
+    let page1, page2, page3, page4;
 
-        let novels = [];
+    apiCall(url)
+        .then((res) => {
+            page1 = res;
+            return apiCall(`${baseUrl}/page/2/?m_orderby=${orderBy}`);
+        })
+        .then((res) => {
+            page2 = res;
+            return apiCall(`${baseUrl}/page/3/?m_orderby=${orderBy}`);
+        })
+        .then((res) => {
+            page3 = res;
+            return apiCall(`${baseUrl}/page/4/?m_orderby=${orderBy}`);
+        })
+        .then((result) => {
+            page4 = result;
 
-        $ = cheerio.load(body);
-
-        $(".page-item-detail").each(function (result) {
-            novelName = $(this).find("h5 > a").text();
-            novelCover = $(this).find("img").attr("src");
-            novelUrl = $(this)
-                .find("h5 > a")
-                .attr("href")
-                .replace(`${baseUrl}/`, "");
-            novel = {
-                extensionId: 1,
-                novelName: novelName,
-                novelCover: novelCover,
-                novelUrl: novelUrl,
-            };
-
-            novels.push(novel);
+            res.json([...page1, ...page2, ...page3]);
+        })
+        .catch((err) => {
+            console.log("Error occured in one of the API call: ", err);
         });
-        res.json(novels);
-    });
 });
 
 // Novel
