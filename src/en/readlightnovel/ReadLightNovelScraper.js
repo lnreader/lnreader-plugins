@@ -1,6 +1,7 @@
 const cheerio = require("cheerio");
 const fetch = require("node-fetch");
 const request = require("request");
+const { htmlToText } = require("html-to-text");
 
 const baseUrl = "https://www.readlightnovel.org";
 const searchUrl = "https://www.readlightnovel.org/detailed-search";
@@ -144,7 +145,17 @@ const chapterScraper = async (req, res) => {
     $(".block-title > h1").find("a").remove();
 
     const chapterName = $(".block-title > h1").text().replace(" - ", "");
-    const chapterText = $(".desc").text();
+
+    $(".desc")
+        .find("hr")
+        .each(function (result) {
+            $(this).remove();
+        });
+
+    $(".alert").remove();
+
+    let chapterText = $(".desc").html();
+    chapterText = htmlToText(chapterText);
 
     let nextChapter = null;
 
