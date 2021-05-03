@@ -113,7 +113,11 @@ const chapterScraper = async (req, res) => {
     let chapterName = $("#sidebar-toggler-container").next().text();
     chapterName = chapterName.replace(/[\t\n]/g, "");
 
-    const chapterText = $("#chapter-content").text();
+    $("#chapter-content > script").remove();
+
+    const chapterText = $("#chapter-content")
+        .html()
+        .replace(/<(?:.|\n)*?>/gm, "\n");
 
     let nextChapter = null;
 
