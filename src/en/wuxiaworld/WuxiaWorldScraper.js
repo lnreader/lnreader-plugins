@@ -1,5 +1,6 @@
 const cheerio = require("cheerio");
 const fetch = require("node-fetch");
+const { htmlToText } = require("html-to-text");
 
 const baseUrl = "https://www.wuxiaworld.com/";
 
@@ -115,9 +116,8 @@ const chapterScraper = async (req, res) => {
 
     $("#chapter-content > script").remove();
 
-    const chapterText = $("#chapter-content")
-        .html()
-        .replace(/<(?:.|\n)*?>/gm, "\n");
+    let chapterText = $("#chapter-content").html();
+    chapterText = htmlToText(chapterText);
 
     let nextChapter = null;
 

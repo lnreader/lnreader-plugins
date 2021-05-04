@@ -71,6 +71,16 @@ extensions = [
         sourceLanguage: "English",
         status: 1,
     },
+
+    {
+        sourceId: 9,
+        sourceUrl: "https://noveltrench.com/",
+        sourceName: "NovelTrench",
+        sourceCover:
+            "https://github.com/rajarsheechatterjee/lnreader-extensions/blob/main/src/en/noveltrench/icon.png?raw=true",
+        sourceLanguage: "English",
+        status: 1,
+    },
 ];
 
 module.exports = extensions;
