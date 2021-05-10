@@ -92,7 +92,7 @@ extensions = [
     {
         sourceId: 11,
         sourceUrl: "https://kisslightnovels.info/",
-        sourceName: "KissLightNovel",
+        sourceName: "KissLightNovels",
         sourceCover:
             "https://github.com/rajarsheechatterjee/lnreader-extensions/blob/main/src/en/kisslightnovels/icon.png?raw=true",
         sourceLanguage: "English",
