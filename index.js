@@ -28,6 +28,7 @@ app.use("/api/7/", require("./src/en/wuxiaworld/WuxiaWorld"));
 app.use("/api/8/", require("./src/en/novelfull/NovelFull"));
 app.use("/api/9/", require("./src/en/noveltrench/NovelTrench"));
 app.use("/api/10/", require("./src/en/vipnovel/VipNovel"));
+app.use("/api/11/", require("./src/en/kisslightnovels/KissLightNovels"));
 
 const PORT = process.env.PORT || 5000;
 

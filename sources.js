@@ -80,13 +80,21 @@ extensions = [
         sourceLanguage: "English",
         status: 1,
     },
-
     {
         sourceId: 10,
         sourceUrl: "https://vipnovel.com/",
         sourceName: "VipNovel",
         sourceCover:
             "https://github.com/rajarsheechatterjee/lnreader-extensions/blob/main/src/en/vipnovel/icon.png?raw=true",
+        sourceLanguage: "English",
+        status: 1,
+    },
+    {
+        sourceId: 11,
+        sourceUrl: "https://kisslightnovels.info/",
+        sourceName: "KissLightNovel",
+        sourceCover:
+            "https://github.com/rajarsheechatterjee/lnreader-extensions/blob/main/src/en/kisslightnovels/icon.png?raw=true",
         sourceLanguage: "English",
         status: 1,
     },
