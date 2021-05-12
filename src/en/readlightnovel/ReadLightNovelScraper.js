@@ -153,7 +153,7 @@ const chapterScraper = async (req, res) => {
         });
 
     $(".alert").remove();
-    $("#growfoodsmart").remove();
+    $(".hidden").remove();
 
     let chapterText = $(".desc").html();
     chapterText = htmlToText(chapterText).replace(/\n\nSponsored Content\n\n/g, "");
