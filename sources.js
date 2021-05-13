@@ -98,6 +98,15 @@ extensions = [
         sourceLanguage: "English",
         status: 1,
     },
+    {
+        sourceId: 12,
+        sourceUrl: "https://wuxiaworldsite.co/",
+        sourceName: "WuxiaWorldSite",
+        sourceCover:
+            "https://github.com/rajarsheechatterjee/lnreader-extensions/blob/main/src/en/wuxiaworldsite/icon.png?raw=true",
+        sourceLanguage: "English",
+        status: 1,
+    },
 ];
 
 module.exports = extensions;
