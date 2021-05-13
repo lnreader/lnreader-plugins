@@ -14,10 +14,12 @@ const novelsScraper = async (req, res) => {
 
     let novels = [];
 
-    $(".a_item").each( (i, el) => {
+    $(".a_item").each((i, el) => {
         const novelName = $(el).find("a").attr("title");
-        const novelCover = baseUrl + $(el).find("a > img").attr("src"); 
-        const novelUrl = $(el).find(".name_views > a").attr("href");
+        const novelCover = baseUrl + $(el).find("a > img").attr("src");
+
+        let novelUrl = $(el).find(".name_views > a").attr("href").slice(1);
+        novelUrl += "/";
 
         const novel = {
             extensionId: 12,
@@ -30,7 +32,7 @@ const novelsScraper = async (req, res) => {
     });
 
     res.json(novels);
-}
+};
 
 const novelScraper = async (req, res) => {
     const novelUrl = req.params.novelUrl;
@@ -74,7 +76,7 @@ const novelScraper = async (req, res) => {
 
     novel.Status = novel["Genre(s)"].pop();
 
-    novel["Genre(s)"] = novel["Genre(s)"].join(",");    
+    novel["Genre(s)"] = novel["Genre(s)"].join(",");
 
     const novelID = $(".show-more-list").attr("data-id");
 
@@ -92,7 +94,7 @@ const novelScraper = async (req, res) => {
             let chapterName = $(el).text().split(/\t+/);
             const releaseDate = chapterName.pop();
             chapterName = chapterName[0];
-            let chapterUrl = $(el).attr("href");   
+            let chapterUrl = $(el).attr("href");
             chapterUrl = chapterUrl.split("/").pop();
 
             const novel = {
@@ -138,14 +140,13 @@ const chapterScraper = async (req, res) => {
 
     chapterText = chapterText.join("\n");
 
-    const prevChapter = $(".pre").attr("href") 
-        ? $(".pre").attr("href").split("/").pop() 
+    const prevChapter = $(".pre").attr("href")
+        ? $(".pre").attr("href").split("/").pop()
         : null;
 
-    const nextChapter = $(".next_sesction > a").attr("href") 
-        ? $(".next_sesction > a").attr("href").split("/").pop() 
+    const nextChapter = $(".next_sesction > a").attr("href")
+        ? $(".next_sesction > a").attr("href").split("/").pop()
         : null;
-
 
     novelUrl += "/";
     chapterUrl += "/";
@@ -170,16 +171,17 @@ const searchScraper = async (req, res) => {
 
     const result = await fetch(url);
     const body = await result.text();
-    
+
     $ = cheerio.load(body);
 
     let novels = [];
 
-    $(".a_item").each( (i, el) => {
+    $(".a_item").each((i, el) => {
         const novelName = $(el).find(".name_views > a").attr("title");
         const novelCover = baseUrl + $(el).find("a > img").attr("src");
-        const novelUrl = $(el).find(".name_views > a").attr("href");
-    
+        let novelUrl = $(el).find(".name_views > a").attr("href").slice(1);
+        novelUrl += "/";
+
         const novel = {
             extensionId: 12,
             novelName,
@@ -190,9 +192,8 @@ const searchScraper = async (req, res) => {
         novels.push(novel);
     });
 
-    res.json(novels)
+    res.json(novels);
 };
-
 
 module.exports = WuxiaWorldSiteScraper = {
     novelsScraper,
