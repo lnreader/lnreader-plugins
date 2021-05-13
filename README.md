@@ -17,6 +17,9 @@ Sources for [LNReader](https://github.com/rajarsheechatterjee/lnreader)
 | NovelTrench     | :heavy_check_mark: |
 | VipNovel        | :heavy_check_mark: |
 | KissLightNovels | :heavy_check_mark: |
+| WuxiaWorldSite  | :heavy_check_mark: |
+| FreeWebNovel    | :heavy_check_mark: |
+| JPMTL           | :heavy_check_mark: |
 
 ## Setup locally
 
