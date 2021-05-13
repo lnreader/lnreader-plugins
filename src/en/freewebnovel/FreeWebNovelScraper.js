@@ -109,7 +109,7 @@ const novelScraper = async (req, res) => {
         novelChapters.push(chapter);
     }
 
-    novel.novelChapters = novelChapters.reverse();
+    novel.novelChapters = novelChapters;
 
     res.json(novel);
 };
