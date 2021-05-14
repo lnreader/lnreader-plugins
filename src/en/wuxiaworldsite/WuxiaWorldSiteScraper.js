@@ -55,7 +55,7 @@ const novelScraper = async (req, res) => {
 
     novel.novelUrl = novelUrl + "/";
 
-    novel.novelName = $(".content-reading > h1").text();
+    novel.novelName = $(".content-reading > h1").text().trim();
 
     novel.novelCover = baseUrl + $(".img-read> img").attr("src");
 
