@@ -90,9 +90,15 @@ const novelScraper = async (req, res) => {
 
     let novelChapters = [];
 
-    let latestChapter = $("div.col-l > ul > li > div.txt > div > span.s3")
-        .text()
-        .match(/\d+/);
+    let latestChapter;
+
+    $("h3.tit").each(function (res) {
+        if ($(this).find("a").text() === novel.novelName) {
+            // console.log($(this).find("a").text());
+            // console.log(novel.novelName);
+            latestChapter = $(this).next().find("span.s3").text().match(/\d+/);
+        }
+    });
 
     latestChapter = latestChapter[0];
 
