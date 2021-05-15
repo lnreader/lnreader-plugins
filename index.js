@@ -32,6 +32,7 @@ app.use("/api/11/", require("./src/en/kisslightnovels/KissLightNovels"));
 app.use("/api/12/", require("./src/en/wuxiaworldsite/WuxiaWorldSite"));
 app.use("/api/13/", require("./src/en/freewebnovel/FreeWebNovel"));
 app.use("/api/14/", require("./src/en/jpmtl/JPMTL"));
+app.use("/api/15/", require("./src/en/lightnovelpub/LightNovelPub"));
 
 const PORT = process.env.PORT || 5000;
 

@@ -20,6 +20,7 @@ Sources for [LNReader](https://github.com/rajarsheechatterjee/lnreader)
 | WuxiaWorldSite  | :heavy_check_mark: |
 | FreeWebNovel    | :heavy_check_mark: |
 | JPMTL           | :heavy_check_mark: |
+| LightNovelPub   | :heavy_check_mark: |
 
 ## Setup locally
 
