@@ -126,6 +126,15 @@ extensions = [
         status: 1,
     },
     {
+        sourceId: 16,
+        sourceUrl: "https://www.wuxiaworld.co/",
+        sourceName: "WuxiaWorldCo",
+        sourceCover:
+            "https://github.com/rajarsheechatterjee/lnreader-extensions/blob/main/src/en/wuxiaworldco/icon.png?raw=true",
+        sourceLanguage: "English",
+        status: 1,
+    },
+    {
         sourceId: 15,
         sourceUrl: "https://www.lightnovelpub.com/",
         sourceName: "LightNovelPub",
