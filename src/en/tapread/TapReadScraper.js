@@ -160,8 +160,11 @@ const searchScraper = async (req, res) => {
     const novels = [];
 
     body.result.storyList.map((novel) => {
-        const novelName = novel.storyName;
-        const novelUrl = novel.storyId;
+        const novelName = novel.storyName.replace(
+            '<font color="#FFCE2E">Demon</font>',
+            ""
+        );
+        const novelUrl = novel.storyId + "/";
         const novelCover = novel.coverUrl;
 
         novels.push({ extensionId: 17, novelName, novelCover, novelUrl });
