@@ -15,7 +15,7 @@ const novelsScraper = async (req, res) => {
 
     $(".section-item").each(function (result) {
         const novelName = $(this).find(".book-name").text();
-        const novelCover = $(this).find("img").attr("src");
+        const novelCover = "http:" + $(this).find("img").attr("src");
         let novelUrl = $(this).attr("data-id");
         novelUrl += "/";
 
@@ -53,7 +53,7 @@ const novelScraper = async (req, res) => {
 
     novel.novelName = $(".book-name").text();
 
-    novel.novelCover = $("div.book-img > img").attr("src");
+    novel.novelCover = "http:" + $("div.book-img > img").attr("src");
 
     novel["Genre(s)"] = $("div.book-catalog > span.txt").text();
 
@@ -82,7 +82,7 @@ const novelScraper = async (req, res) => {
         chapters.result.chapterList.map((chapter) => {
             let chapterName = chapter.chapterName;
             const releaseDate = chapter.pubTime;
-            const chapterUrl = chapter.chapterId;
+            const chapterUrl = chapter.chapterId.toString();
 
             if (chapter.lock) {
                 chapterName = "🔒 " + chapterName;
@@ -121,8 +121,11 @@ const chapterScraper = async (req, res) => {
 
     const chapterName = body.result.chapterName;
     const chapterText = htmlToText(body.result.content);
-    const nextChapter = body.result.nextChapterId;
-    const prevChapter = body.result.preChapterId;
+    const nextChapter =
+        body.result.nextChapterId === 0
+            ? null
+            : body.result.nextChapterId.toString();
+    const prevChapter = body.result.preChapterId.toString();
     novelUrl += "/";
 
     const chapter = {
@@ -155,8 +158,6 @@ const searchScraper = async (req, res) => {
 
     const body = await data.json();
 
-    console.log(body.result.storyList);
-
     const novels = [];
 
     body.result.storyList.map((novel) => {
@@ -165,7 +166,7 @@ const searchScraper = async (req, res) => {
             ""
         );
         const novelUrl = novel.storyId + "/";
-        const novelCover = novel.coverUrl;
+        const novelCover = "http://static.tapread.com" + novel.coverUrl;
 
         novels.push({ extensionId: 17, novelName, novelCover, novelUrl });
     });
