@@ -135,6 +135,15 @@ extensions = [
         status: 1,
     },
     {
+        sourceId: 17,
+        sourceUrl: "http://www.tapread.com/",
+        sourceName: "TapRead",
+        sourceCover:
+            "https://github.com/rajarsheechatterjee/lnreader-extensions/blob/main/src/en/tapread/icon.png?raw=true",
+        sourceLanguage: "English",
+        status: 1,
+    },
+    {
         sourceId: 15,
         sourceUrl: "https://www.lightnovelpub.com/",
         sourceName: "LightNovelPub",
