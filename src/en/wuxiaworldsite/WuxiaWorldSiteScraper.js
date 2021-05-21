@@ -18,8 +18,9 @@ const novelsScraper = async (req, res) => {
         const novelName = $(el).find("a").attr("title");
         const novelCover = baseUrl + $(el).find("a > img").attr("src");
 
-        let novelUrl = $(el).find(".name_views > a").attr("href").slice(1);
-        novelUrl += "/";
+        let novelUrl = $(el).find(".name_views > a").attr("href");
+        novelId = novelUrl.split("/");
+        novelUrl = novelId[2] + "/";
 
         const novel = {
             extensionId: 12,
@@ -179,8 +180,9 @@ const searchScraper = async (req, res) => {
     $(".a_item").each((i, el) => {
         const novelName = $(el).find(".name_views > a").attr("title");
         const novelCover = baseUrl + $(el).find("a > img").attr("src");
-        let novelUrl = $(el).find(".name_views > a").attr("href").slice(1);
-        novelUrl += "/";
+        let novelUrl = $(el).find(".name_views > a").attr("href");
+        novelId = novelUrl.split("/");
+        novelUrl = novelId[2] + "/";
 
         const novel = {
             extensionId: 12,
