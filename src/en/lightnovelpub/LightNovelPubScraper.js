@@ -1,6 +1,7 @@
 const cheerio = require("cheerio");
 const fetch = require("node-fetch");
 const { htmlToText } = require("html-to-text");
+const { parseHtml } = require("../../helper");
 const { scraper } = require("../../helper");
 
 const baseUrl = "https://www.lightnovelpub.com/";
@@ -126,7 +127,7 @@ const chapterScraper = async (req, res) => {
 
     const chapterName = $("h2").text();
     let chapterText = $("#chapter-container").html();
-    chapterText = htmlToText(chapterText);
+    chapterText = parseHtml(chapterText);
 
     let nextChapter = null;
 

@@ -1,7 +1,7 @@
 const cheerio = require("cheerio");
 const fetch = require("node-fetch");
 const request = require("request");
-const { htmlToText } = require("html-to-text");
+const { parseHtml } = require("../../helper");
 
 const baseUrl = "https://www.readlightnovel.org";
 const searchUrl = "https://www.readlightnovel.org/detailed-search";
@@ -156,7 +156,8 @@ const chapterScraper = async (req, res) => {
     $(".hidden").remove();
 
     let chapterText = $(".desc").html();
-    chapterText = htmlToText(chapterText).replace(
+
+    chapterText = parseHtml(chapterText).replace(
         /\n\nSponsored Content\n\n/g,
         ""
     );

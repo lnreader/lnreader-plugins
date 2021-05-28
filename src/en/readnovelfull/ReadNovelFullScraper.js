@@ -1,6 +1,6 @@
 const cheerio = require("cheerio");
 const fetch = require("node-fetch");
-const { htmlToText } = require("html-to-text");
+const { parseHtml } = require("../../helper");
 
 const baseUrl = "https://readnovelfull.com";
 
@@ -134,7 +134,7 @@ const chapterScraper = async (req, res) => {
 
     const chapterName = $(".chr-title").attr("title");
     let chapterText = $("#chr-content").html();
-    chapterText = htmlToText(chapterText);
+    chapterText = parseHtml(chapterText);
 
     let nextChapter = null;
     if ($("a#next_chap").attr("href")) {

@@ -1,6 +1,6 @@
 const cheerio = require("cheerio");
 const fetch = require("node-fetch");
-const { htmlToText } = require("html-to-text");
+const { parseHtml } = require("../../helper");
 
 const baseUrl = "https://boxnovel.com/novel";
 const searchUrl = "https://boxnovel.com/";
@@ -127,7 +127,7 @@ const chapterScraper = async (req, res) => {
 
     const chapterName = $("div.text-left > h3").text();
     let chapterText = $(".reading-content").html();
-    chapterText = htmlToText(chapterText);
+    chapterText = parseHtml(chapterText);
 
     let nextChapter = null;
 

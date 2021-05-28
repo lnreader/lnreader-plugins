@@ -1,6 +1,6 @@
 const cheerio = require("cheerio");
 const fetch = require("node-fetch");
-const { htmlToText } = require("html-to-text");
+const { parseHtml } = require("../../helper");
 
 const baseUrl = "https://jpmtl.com/";
 
@@ -121,7 +121,7 @@ const chapterScraper = async (req, res) => {
 
     const chapterName = $(".chapter-content__title").text();
     let chapterText = $(".chapter-content__content").html();
-    chapterText = htmlToText(chapterText);
+    chapterText = parseHtml(chapterText);
 
     let nextChapter = null;
     let prevChapter = null;

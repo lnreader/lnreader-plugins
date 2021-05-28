@@ -1,6 +1,7 @@
 const cheerio = require("cheerio");
 const fetch = require("node-fetch");
 const { htmlToText } = require("html-to-text");
+const { parseHtml } = require("../../helper");
 
 const baseUrl = "https://vipnovel.com/";
 
@@ -126,7 +127,7 @@ const chapterScraper = async (req, res) => {
     }
 
     let chapterText = $(".text-left").html();
-    chapterText = htmlToText(chapterText);
+    chapterText = parseHtml(chapterText);
 
     let nextChapter = null;
 

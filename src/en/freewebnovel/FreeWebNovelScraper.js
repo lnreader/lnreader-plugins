@@ -2,6 +2,7 @@ const cheerio = require("cheerio");
 const fetch = require("node-fetch");
 const request = require("request");
 const { htmlToText } = require("html-to-text");
+const { parseHtml } = require("../../helper");
 
 const baseUrl = "https://freewebnovel.com/";
 
@@ -133,7 +134,7 @@ const chapterScraper = async (req, res) => {
     let chapterName = $("h1.tit").text();
 
     let chapterText = $("div.txt").html();
-    chapterText = htmlToText(chapterText);
+    chapterText = parseHtml(chapterText);
 
     let nextChapter = null;
 
