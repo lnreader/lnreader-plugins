@@ -76,6 +76,14 @@ const novelScraper = async (req, res) => {
         novel[detailName] = detail;
     });
 
+    novel["Genre(s)"] = novel.Genre.replace(/, /g, ",");
+    novel["Author(s)"] = novel.Author;
+    novel.Status = null;
+    novel["Artist(s)"] = null;
+
+    delete novel.Genre;
+    delete novel.Author;
+
     $(".description-summary > div.summary__content").find("em").remove();
 
     novel.novelSummary = $(".description-summary > div.summary__content")
