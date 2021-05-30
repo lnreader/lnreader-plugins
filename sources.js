@@ -170,6 +170,15 @@ extensions = [
         sourceLanguage: "English",
         status: 1,
     },
+    {
+        sourceId: 20,
+        sourceUrl: "http://wuxiaworld.cloud/",
+        sourceName: "WUxiaWorld.cloud",
+        sourceCover:
+            "https://github.com/rajarsheechatterjee/lnreader-extensions/blob/main/src/en/wuxiaworldcloud/icon.png?raw=true",
+        sourceLanguage: "English",
+        status: 1,
+    },
 ];
 
 module.exports = extensions;
