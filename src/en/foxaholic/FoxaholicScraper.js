@@ -19,8 +19,8 @@ const novelsScraper = async (req, res) => {
         const novelName = $(this).find(".h5 > a").text();
         const novelCover = $(this).find("img").attr("data-src");
 
-        let novelUrl = $(this).find(".h5 > a").attr("href");
-        novelUrl = novelUrl.replace(`${baseUrl}novel/`, "");
+        let novelUrl = $(this).find(".h5 > a").attr("href").split("/")[4];
+        novelUrl += "/";
 
         const novel = {
             extensionId: 22,
@@ -115,7 +115,11 @@ const novelScraper = async (req, res) => {
 
         releaseDate = $(this).find("span").text().trim();
 
-        chapterUrl = $(this).find("a").attr("href").replace(url, "");
+        chapterUrl = $(this).find("a").attr("href").split("/");
+
+        chapterUrl[6]
+            ? (chapterUrl = chapterUrl[5] + "/" + chapterUrl[6])
+            : (chapterUrl = chapterUrl[5]);
 
         novelChapters.push({ chapterName, releaseDate, chapterUrl });
     });
@@ -152,23 +156,23 @@ const chapterScraper = async (req, res) => {
     let nextChapter = null;
 
     if ($(".nav-next").length) {
-        nextChapter = $(".nav-next")
-            .find("a")
-            .attr("href")
-            .replace(baseUrl + "novel/" + novelUrl + "/", "");
+        nextChapter = $(".nav-next").find("a").attr("href").split("/");
+        nextChapter[6]
+            ? (nextChapter = nextChapter[5] + "/" + nextChapter[6])
+            : (nextChapter = nextChapter[5]);
     }
 
     let prevChapter = null;
 
     if ($(".nav-previous").length) {
-        prevChapter = $(".nav-previous")
-            .find("a")
-            .attr("href")
-            .replace(baseUrl + "novel/" + novelUrl + "/", "");
+        prevChapter = $(".nav-previous").find("a").attr("href").split("/");
+        prevChapter[6]
+            ? (prevChapter = prevChapter[5] + "/" + prevChapter[6])
+            : (prevChapter = prevChapter[5]);
     }
 
     novelUrl += "/";
-    chapterUrl = optionalUrl + chapterUrl + "/";
+    chapterUrl = optionalUrl + chapterUrl;
 
     const chapter = {
         extensionId: 22,
@@ -199,9 +203,8 @@ const searchScraper = async (req, res) => {
         const novelName = $(this).find(".h4 > a").text();
         const novelCover = $(this).find("img").attr("data-src");
 
-        let novelUrl = $(this).find(".h4 > a").attr("href");
-        novelUrl = novelUrl.replace(`${baseUrl}novel/`, "");
-
+        let novelUrl = $(this).find(".h4 > a").attr("href").split("/")[4];
+        novelUrl += "/";
         const novel = {
             extensionId: 22,
             novelName,
