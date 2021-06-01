@@ -6,28 +6,22 @@ const { parseHtml } = require("../../helper");
 const baseUrl = "https://www.skynovels.net/";
 
 const novelsScraper = async (req, res) => {
-    let url = baseUrl + "novelas";
+    const url = "https://api.skynovels.net/api/novels?&q";
 
     const result = await fetch(url);
-    const body = await result.text();
+    const body = await result.json();
 
-    $ = cheerio.load(body);
+    const novels = [];
 
-    let novels = [];
+    body.novels.map((res) => {
+        const novelName = res.nvl_title;
+        const novelCover =
+            "https://api.skynovels.net/api/get-image/" +
+            res.image +
+            "/novels/false";
+        const novelUrl = res.id + "/" + res.nvl_name + "/";
 
-    $(".skn-nvl-card").each(function (result) {
-        const novelName = $(this).find(".skn-nvl-card-title").text();
-        const novelCover = $(this).find("img").attr("src");
-
-        let novelUrl = $(this).attr("href").split("/");
-        novelUrl = novelUrl[2] + "/" + novelUrl[3] + "/";
-
-        const novel = {
-            extensionId: 24,
-            novelName,
-            novelCover,
-            novelUrl,
-        };
+        const novel = { extensionId: 24, novelName, novelUrl, novelCover };
 
         novels.push(novel);
     });
@@ -128,8 +122,8 @@ const chapterScraper = async (req, res) => {
 };
 
 const searchScraper = async (req, res) => {
-    const searchTerm = req.query.s;
-
+    let searchTerm = req.query.s;
+    searchTerm = searchTerm.toLowerCase();
     const url = "https://api.skynovels.net/api/novels?&q";
 
     const result = await fetch(url);
