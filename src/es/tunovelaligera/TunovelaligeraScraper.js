@@ -144,8 +144,17 @@ const novelScraper = async (req, res) => {
 const chapterScraper = async (req, res) => {
     let novelUrl = req.params.novelUrl;
     let chapterUrl = req.params.chapterUrl;
+    let volumeUrl = req.params.volumeUrl;
 
-    const url = `${baseUrl}novelas/${novelUrl}/${chapterUrl}`;
+    let optionalUrl;
+
+    if (volumeUrl) {
+        optionalUrl = volumeUrl + "/";
+    } else {
+        optionalUrl = "";
+    }
+
+    const url = `${baseUrl}novelas/${novelUrl}/${optionalUrl}${chapterUrl}/`;
 
     const result = await fetch(url);
     const body = await result.text();
@@ -176,7 +185,7 @@ const chapterScraper = async (req, res) => {
     }
 
     novelUrl = novelUrl + "/";
-    chapterUrl = chapterUrl + "/";
+    chapterUrl = optionalUrl + chapterUrl;
 
     const chapter = {
         extensionId: 23,

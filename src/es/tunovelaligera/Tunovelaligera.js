@@ -8,7 +8,7 @@ router.get("/novels/", tunovelaligeraScraper.novelsScraper);
 router.get("/novel/:novelUrl", tunovelaligeraScraper.novelScraper);
 
 router.get(
-    "/novel/:novelUrl/:chapterUrl",
+    "/novel/:novelUrl/:volumeUrl?/:chapterUrl",
     tunovelaligeraScraper.chapterScraper
 );
 
