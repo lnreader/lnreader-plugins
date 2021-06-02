@@ -61,7 +61,7 @@ const novelScraper = async (req, res) => {
 
     novel.novelName = $("h1").text();
 
-    novel.novelCover = $(".swiper-slide-image").attr("src");
+    novel.novelCover = $(".elementor-widget-container").find("img").attr("src");
 
     $(".elementor-row")
         .find("p")
@@ -192,11 +192,13 @@ const searchScraper = async (req, res) => {
         const novelCover = $(this).find("img").attr("src");
         let novelUrl = $(this).find("a").attr("href").split("/")[4];
 
-        const novelName = novelUrl
-            .replace(/-/g, " ")
-            .replace(/^./, function (x) {
+        let novelName;
+
+        if (novelUrl) {
+            novelName = novelUrl.replace(/-/g, " ").replace(/^./, function (x) {
                 return x.toUpperCase();
             });
+        }
 
         novelUrl += "/";
 

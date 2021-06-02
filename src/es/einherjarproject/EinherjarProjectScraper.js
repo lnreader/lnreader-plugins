@@ -101,10 +101,12 @@ const novelScraper = async (req, res) => {
             if ($(this).find("a").text()) {
                 const chapterName = $(this).text();
                 const releaseDate = null;
-                const chapterUrl = $(this)
+                let chapterUrl = $(this)
                     .find("a")
                     .attr("href")
                     .replace(baseUrl, "");
+                if (chapterUrl.includes(novelUrl + "/"))
+                    chapterUrl = chapterUrl.replace(novelUrl + "/", "");
 
                 const chapter = { chapterName, releaseDate, chapterUrl };
 
@@ -122,7 +124,7 @@ const chapterScraper = async (req, res) => {
     let chapterUrl = req.params.chapterUrl;
 
     const url = baseUrl + chapterUrl;
-
+    console.log(url);
     const result = await fetch(url);
     const body = await result.text();
 
