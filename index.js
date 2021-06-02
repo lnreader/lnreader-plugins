@@ -45,6 +45,7 @@ app.use("/api/22/", require("./src/en/foxaholic/Foxaholic"));
 // Spanish
 app.use("/api/23/", require("./src/es/tunovelaligera/Tunovelaligera"));
 app.use("/api/24/", require("./src/es/skynovels/Skynovels"));
+app.use("/api/25/", require("./src/es/einherjarproject/EinherjarProject"));
 
 const PORT = process.env.PORT || 5000;
 
