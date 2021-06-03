@@ -1,4 +1,8 @@
 extensions = [
+    /**
+     * English
+     */
+
     {
         sourceId: 1,
         sourceUrl: "https://boxnovel.com/",
@@ -197,6 +201,20 @@ extensions = [
         sourceLanguage: "English",
         status: 1,
     },
+    {
+        sourceId: 27,
+        sourceUrl: "https://comrademao.com/",
+        sourceName: "ComradeMao",
+        sourceCover:
+            "https://github.com/rajarsheechatterjee/lnreader-extensions/blob/main/src/en/comrademao/icon.png?raw=true",
+        sourceLanguage: "English",
+        status: 1,
+    },
+
+    /**
+     * Spanish
+     */
+
     {
         sourceId: 23,
         sourceUrl: "https://tunovelaligera.com/",

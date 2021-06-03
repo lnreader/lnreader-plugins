@@ -41,6 +41,7 @@ app.use("/api/19/", require("./src/en/readlightnovelcc/ReadLightNovelCc"));
 app.use("/api/20/", require("./src/en/wuxiaworldcloud/WuxiaWorldCloud"));
 app.use("/api/21/", require("./src/en/woopread/WoopRead"));
 app.use("/api/22/", require("./src/en/foxaholic/Foxaholic"));
+app.use("/api/27/", require("./src/en/comrademao/ComradeMao"));
 
 // Spanish
 app.use("/api/23/", require("./src/es/tunovelaligera/Tunovelaligera"));

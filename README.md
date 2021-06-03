@@ -27,6 +27,7 @@ Sources for [LNReader](https://github.com/rajarsheechatterjee/lnreader)
 | https://m.readlightnovel.cc/  | :heavy_check_mark: |
 | http://wuxiaworld.cloud/      | :heavy_check_mark: |
 | https://foxaholic.com/        | :heavy_check_mark: |
+| https://comrademao.com/       | :heavy_check_mark: |
 | https://tunovelaligera.com/   | :heavy_check_mark: |
 | https://www.skynovels.net/    | :heavy_check_mark: |
 | https://einherjarproject.net/ | :heavy_check_mark: |
