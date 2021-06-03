@@ -260,6 +260,15 @@ extensions = [
         sourceLanguage: "Spanish",
         status: 1,
     },
+    {
+        sourceId: 29,
+        sourceUrl: "https://hasutl.wordpress.com/",
+        sourceName: "Hasu Translations",
+        sourceCover:
+            "https://github.com/rajarsheechatterjee/lnreader-extensions/blob/main/src/es/yuukitls/icon.png?raw=true",
+        sourceLanguage: "Spanish",
+        status: 1,
+    },
 ];
 
 module.exports = extensions;

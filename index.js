@@ -49,6 +49,7 @@ app.use("/api/24/", require("./src/es/skynovels/Skynovels"));
 app.use("/api/25/", require("./src/es/einherjarproject/EinherjarProject"));
 app.use("/api/26/", require("./src/es/novelasligera/NovelasLigera"));
 app.use("/api/28/", require("./src/es/yuukitls/YuukiTls"));
+app.use("/api/29/", require("./src/es/hasutl/Hasutl"));
 
 const PORT = process.env.PORT || 5000;
 
