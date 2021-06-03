@@ -251,6 +251,15 @@ extensions = [
         sourceLanguage: "Spanish",
         status: 1,
     },
+    {
+        sourceId: 28,
+        sourceUrl: "https://yuukitls.com/",
+        sourceName: "YuukiTls",
+        sourceCover:
+            "https://github.com/rajarsheechatterjee/lnreader-extensions/blob/main/src/es/yuukitls/icon.png?raw=true",
+        sourceLanguage: "Spanish",
+        status: 1,
+    },
 ];
 
 module.exports = extensions;

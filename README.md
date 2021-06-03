@@ -32,6 +32,7 @@ Sources for [LNReader](https://github.com/rajarsheechatterjee/lnreader)
 | https://www.skynovels.net/    | :heavy_check_mark: |
 | https://einherjarproject.net/ | :heavy_check_mark: |
 | https://novelasligera.com/    | :heavy_check_mark: |
+| https://yuukitls.com/         | :heavy_check_mark: |
 
 ## Setup locally
 
