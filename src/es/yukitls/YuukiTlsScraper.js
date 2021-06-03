@@ -62,7 +62,7 @@ const novelScraper = async (req, res) => {
         .replace(/[\t\n]/g, "")
         .trim();
 
-    novel.novelCover = $(".entry-content > div > img").attr("src");
+    novel.novelCover = $('img[loading="lazy"]').attr("src");
 
     $(".entry-content")
         .find("div")
@@ -93,23 +93,43 @@ const novelScraper = async (req, res) => {
 
     let novelChapters = [];
 
-    $(".entry-content")
-        .find("li")
-        .each(function (result) {
-            let chapterUrl = $(this).find("a").attr("href");
+    if ($(".entry-content").find("li").length) {
+        $(".entry-content")
+            .find("li")
+            .each(function (result) {
+                let chapterUrl = $(this).find("a").attr("href");
 
-            if (chapterUrl && chapterUrl.includes(baseUrl)) {
-                const chapterName = $(this).text();
-                const releaseDate = null;
+                if (chapterUrl && chapterUrl.includes(baseUrl)) {
+                    const chapterName = $(this).text();
+                    const releaseDate = null;
 
-                chapterUrl = chapterUrl.split("/");
-                chapterUrl = chapterUrl[chapterUrl.length - 2] + "/";
+                    chapterUrl = chapterUrl.split("/");
+                    chapterUrl = chapterUrl[chapterUrl.length - 2] + "/";
 
-                const chapter = { chapterName, releaseDate, chapterUrl };
+                    const chapter = { chapterName, releaseDate, chapterUrl };
 
-                novelChapters.push(chapter);
-            }
-        });
+                    novelChapters.push(chapter);
+                }
+            });
+    } else {
+        $(".entry-content")
+            .find("p")
+            .each(function (result) {
+                let chapterUrl = $(this).find("a").attr("href");
+
+                if (chapterUrl && chapterUrl.includes(baseUrl)) {
+                    const chapterName = $(this).text();
+                    const releaseDate = null;
+
+                    chapterUrl = chapterUrl.split("/");
+                    chapterUrl = chapterUrl[chapterUrl.length - 2] + "/";
+
+                    const chapter = { chapterName, releaseDate, chapterUrl };
+
+                    novelChapters.push(chapter);
+                }
+            });
+    }
 
     novel.novelChapters = novelChapters;
 
