@@ -2,7 +2,7 @@ const cheerio = require("cheerio");
 const fetch = require("node-fetch");
 const UserAgent = require("user-agents");
 
-const { scraper } = require("../../helper");
+const { scraper, parseHtml } = require("../../helper");
 
 const baseUrl = "https://mtlnovel.com";
 
@@ -37,6 +37,7 @@ const novelsScraper = async (req, res) => {
 
 const novelScraper = async (req, res) => {
     const novelUrl = req.params.novelUrl;
+
     const url = `${baseUrl}/${novelUrl}`;
 
     const body = await scraper(url);
@@ -55,7 +56,7 @@ const novelScraper = async (req, res) => {
 
     novel.novelName = $("h1.entry-title").text();
 
-    novel.novelCover = $("amp-img").attr("src");
+    novel.novelCover = $(".nov-head > amp-img").attr("src");
 
     novel.novelSummary = $("div.desc > h2").next().text();
 
@@ -131,7 +132,8 @@ const chapterScraper = async (req, res) => {
     $ = cheerio.load(body);
 
     const chapterName = $("h1.main-title").text();
-    const chapterText = $("div.par").text();
+    let chapterText = $("div.par").html();
+    chapterText = parseHtml(chapterText);
 
     let nextChapter = null;
     if ($("a.next").attr("href")) {
