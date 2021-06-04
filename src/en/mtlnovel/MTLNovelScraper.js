@@ -1,10 +1,11 @@
 const cheerio = require("cheerio");
+const FormData = require("form-data");
 const fetch = require("node-fetch");
 const UserAgent = require("user-agents");
 
 const { scraper, parseHtml } = require("../../helper");
 
-const baseUrl = "https://mtlnovel.com";
+const baseUrl = "https://www.mtlnovel.com";
 
 const novelsScraper = async (req, res) => {
     const url = `${baseUrl}/alltime-rank/`;
@@ -161,38 +162,44 @@ const chapterScraper = async (req, res) => {
 const searchScraper = async (req, res) => {
     const searchTerm = req.query.s;
 
-    const userAgent = new UserAgent();
+    const searchUrl =
+        "https://www.mtlnovel.com/wp-admin/admin-ajax.php?action=autosuggest&q=" +
+        searchTerm +
+        "&__amp_source_origin=https%3A%2F%2Fwww.mtlnovel.com";
 
-    let headers = new fetch.Headers({
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        "user-agent": userAgent,
-    });
-
-    const result = await fetch(baseUrl, {
-        method: "POST",
-        body: { s: searchTerm },
-        headers: headers,
-    });
-    const body = await result.text();
-
-    $ = cheerio.load(body);
+    const result = await fetch(searchUrl);
+    const body = await result.json();
 
     let novels = [];
 
-    $("div.box").each(function (result) {
-        const novelName = $(this).find("a.list-title").text();
-        const novelCover = $(this).find("amp-img").attr("src");
+    // $("div.box").each(function (result) {
+    //     const novelName = $(this).find("a.list-title").text();
+    //     if (novelName && novelName !== "{{permalink}}") {
+    //         const novelCover = $(this).find("amp-img").attr("src");
 
-        let novelUrl = $(this).find("a").attr("href");
-        novelUrl = novelUrl.replace("https://www.mtlnovel.com/", "");
+    //         let novelUrl = $(this).find("a").attr("href");
+    //         novelUrl = novelUrl.replace("https://www.mtlnovel.com/", "");
 
-        const novel = {
-            extensionId: 5,
-            novelUrl,
-            novelName,
-            novelCover,
-        };
+    //         const novel = {
+    //             extensionId: 5,
+    //             novelUrl,
+    //             novelName,
+    //             novelCover,
+    //         };
+
+    //         novels.push(novel);
+    //     }
+    // });
+
+    body.items[0].results.map((item) => {
+        const novelName = item.title.replace(/<\/?strong>/g, "");
+        const novelCover = item.thumbnail;
+        const novelUrl = item.permalink.replace(
+            "https://www.mtlnovel.com/",
+            ""
+        );
+
+        const novel = { extensionId: 5, novelName, novelCover, novelUrl };
 
         novels.push(novel);
     });

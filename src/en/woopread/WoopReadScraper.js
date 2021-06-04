@@ -180,7 +180,6 @@ const searchScraper = async (req, res) => {
     const searchTerm = req.query.s;
 
     const url = `${baseUrl}?s=${searchTerm}&post_type=wp-manga&op=&author=&artist=&release=&adult=`;
-    console.log(url);
 
     const result = await fetch(url);
     const body = await result.text();
