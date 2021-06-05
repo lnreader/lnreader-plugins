@@ -269,6 +269,15 @@ extensions = [
         sourceLanguage: "Spanish",
         status: 1,
     },
+    {
+        sourceId: 30,
+        sourceUrl: "https://oasistranslations.wordpress.com/",
+        sourceName: "Oasis Translations",
+        sourceCover:
+            "https://github.com/rajarsheechatterjee/lnreader-extensions/blob/main/src/es/oasistranslations/icon.png?raw=true",
+        sourceLanguage: "Spanish",
+        status: 1,
+    },
 ];
 
 module.exports = extensions;
