@@ -72,27 +72,31 @@ const novelScraper = async (req, res) => {
     novel["Artist(s)"] = "";
     novel.Status = "";
 
-    $(".col-6.col-sm-6 > b").each(function (result) {
+    $("div > b").each(function (result) {
         const detailName = $(this).text();
-        const detail = $(this)[0].nextSibling.nodeValue.trim();
+        let detail = $(this)[0].nextSibling;
 
-        if (detailName.includes("Autor")) {
-            novel["Author(s)"] = detail.replace("Autor:", "");
-        }
-        if (detailName.includes("Ilustrador")) {
-            novel["Artist(s)"] = detail.replace("Ilustrador: ", "");
-        }
-        if (detailName.includes("Estatus")) {
-            novel.Status = detail.replace("Estatus: ", "");
-        }
-        if (detailName.includes("Géneros:")) {
-            novel["Genre(s)"] = detail
-                .replace("Géneros: ", "")
-                .replace(/,\s/g, ",");
+        if (detailName && detail) {
+            detail = detail.nodeValue.trim();
+
+            if (detailName.includes("Autor")) {
+                novel["Author(s)"] = detail.replace("Autor:", "");
+            }
+
+            if (detailName.includes("Estatus")) {
+                novel.Status = detail.replace("Estatus: ", "");
+            }
+            if (detailName.includes("Géneros:")) {
+                novel["Genre(s)"] = detail
+                    .replace("Géneros: ", "")
+                    .replace(/,\s/g, ",");
+            }
         }
     });
 
-    $('div[style="text-align: center;"]').each(function (result) {
+    let novelChapters = [];
+
+    $("div").each(function (result) {
         const detailName = $(this).text();
 
         if (detailName.includes("Sinopsis")) {
@@ -102,23 +106,36 @@ const novelScraper = async (req, res) => {
                 .replace("Sinopsis", "")
                 .trim();
         }
+
+        if (detailName.includes("Lista de Capítulos")) {
+            $(this)
+                .find("a")
+                .each(function (res) {
+                    const chapterName = $(this).text();
+                    let chapterUrl = $(this).attr("href");
+                    const releaseDate = null;
+
+                    if (
+                        chapterName &&
+                        chapterUrl &&
+                        chapterUrl.includes(novelUrl.replace(".html", "")) &&
+                        !novelChapters.some(
+                            (chap) => chap.chapterName === chapterName
+                        )
+                    ) {
+                        chapterUrl = chapterUrl.replace(baseUrl, "");
+
+                        const chapter = {
+                            chapterName,
+                            releaseDate,
+                            chapterUrl,
+                        };
+
+                        novelChapters.push(chapter);
+                    }
+                });
+        }
     });
-
-    let novelChapters = [];
-
-    $(
-        'div[style="-webkit-text-stroke-width: 0px; color: black; font-family: "times new roman"; font-size: medium; font-style: normal; font-variant-caps: normal; font-variant-ligatures: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: center; text-decoration-color: initial; text-decoration-style: initial; text-indent: 0px; text-transform: none; white-space: normal; widows: 2; word-spacing: 0px;"]'
-    )
-        .find("a")
-        .each(function (res) {
-            const chapterName = $(this).text();
-            const chapterUrl = $(this).attr("href").replace(baseUrl, "");
-            const releaseDate = null;
-
-            const chapter = { chapterName, releaseDate, chapterUrl };
-
-            novelChapters.push(chapter);
-        });
 
     novel.novelChapters = novelChapters;
 
