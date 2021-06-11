@@ -67,7 +67,7 @@ const novelScraper = async (req, res) => {
 
     novel.novelName = $("h1.post-title").text().trim();
 
-    novel.novelCover = $(`img[title="${novel.novelName}"]`).attr("src");
+    novel.novelCover = $("div.separator").find("a").attr("href");
 
     novel["Artist(s)"] = "";
     novel.Status = "";
