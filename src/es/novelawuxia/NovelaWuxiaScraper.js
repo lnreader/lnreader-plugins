@@ -69,6 +69,9 @@ const novelScraper = async (req, res) => {
 
     novel.novelCover = $(`img[title="${novel.novelName}"]`).attr("src");
 
+    novel["Artist(s)"] = "";
+    novel.Status = "";
+
     $(".col-6.col-sm-6 > b").each(function (result) {
         const detailName = $(this).text();
         const detail = $(this)[0].nextSibling.nodeValue.trim();
