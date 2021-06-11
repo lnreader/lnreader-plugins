@@ -35,6 +35,7 @@ Sources for [LNReader](https://github.com/rajarsheechatterjee/lnreader)
 | https://yuukitls.com/                    | :heavy_check_mark: |
 | https://hasutl.wordpress.com/            | :heavy_check_mark: |
 | https://oasistranslations.wordpress.com/ | :heavy_check_mark: |
+| http://www.novelawuxia.com/              | :heavy_check_mark: |
 
 ## Setup locally
 

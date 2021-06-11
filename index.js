@@ -51,6 +51,7 @@ app.use("/api/26/", require("./src/es/novelasligera/NovelasLigera"));
 app.use("/api/28/", require("./src/es/yuukitls/YuukiTls"));
 app.use("/api/29/", require("./src/es/hasutl/Hasutl"));
 app.use("/api/30/", require("./src/es/oasistranslations/OasisTranslations"));
+app.use("/api/31/", require("./src/es/novelawuxia/NovelaWuxia"));
 
 const PORT = process.env.PORT || 5000;
 
