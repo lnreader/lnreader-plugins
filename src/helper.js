@@ -28,11 +28,7 @@ const scraper = async (url) => {
 
 const parseHtml = (html) => {
     let text = htmlToText(html);
-    text = text.replace(
-        /(?<=[ A-Za-z0-9_@./#&+-])\n(?=[ A-Za-z0-9_@./#&+-])/g,
-        " "
-    );
-
+    text = text.replace(/\n{2,}/g, "\n\n");
     return text;
 };
 
