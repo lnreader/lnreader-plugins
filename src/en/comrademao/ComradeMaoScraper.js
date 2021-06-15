@@ -84,6 +84,17 @@ const novelScraper = async (req, res) => {
 
     let novelChapters = [];
 
+    let chapterUrlPrefix = $("tbody > tr")
+        .first()
+        .next()
+        .find("td > a")
+        .text()
+        .split(" ");
+
+    chapterUrlPrefix.pop();
+
+    chapterUrlPrefix = chapterUrlPrefix.join("-").toLowerCase();
+
     const latestChapter = $("tbody > tr")
         .first()
         .next()
@@ -94,7 +105,7 @@ const novelScraper = async (req, res) => {
     for (let i = 1; i <= latestChapter; i++) {
         const chapterName = "Chapter " + i;
         const releaseDate = null;
-        const chapterUrl = novelUrl + "-chapter-" + i + "/";
+        const chapterUrl = chapterUrlPrefix + "-" + i + "/";
 
         const chapter = {
             chapterName,
