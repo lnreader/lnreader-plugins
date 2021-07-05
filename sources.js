@@ -314,6 +314,18 @@ extensions = [
         sourceLanguage: "Spanish",
         status: 1,
     },
+
+    /**
+     * Japanese
+     */
+    {
+        sourceId: 36,
+        sourceUrl: "https://syosetsu.com",
+        sourceName: "Syosetsu",
+        sourceCover: "https://github.com/skillgg/lnreader-sources/blob/main/src/jp/syosetu/icon.png?raw=true",
+        sourceLanguage: "Japanese",
+        status: 0
+    },
 ];
 
 module.exports = extensions;
