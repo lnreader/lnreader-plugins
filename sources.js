@@ -276,7 +276,7 @@ extensions = [
     {
         sourceId: 41,
         sourceUrl: "https://zinnovel.com/",
-        sourceName: "ZinnNovel",
+        sourceName: "ZinNovel",
         sourceCover:
             "https://github.com/rajarsheechatterjee/lnreader-extensions/blob/main/multisrc/madara/icons/zinnovel.png?raw=true",
         sourceLanguage: "English",

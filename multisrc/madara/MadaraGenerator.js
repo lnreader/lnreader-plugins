@@ -51,7 +51,7 @@ const madaraSources = [
         scraper: new MadaraScraper(
             41,
             "https://zinnovel.com/",
-            "ZinnNovel",
+            "ZinNovel",
             getPath(41)
         ),
     },
