@@ -60,6 +60,9 @@ app.use("/api/31/", require("./src/es/novelawuxia/NovelaWuxia"));
 // Japanese
 app.use("/api/36", require("./src/jp/syosetu/Syosetu"));
 
+// MultiSrc
+app.use("/api/", require("./multisrc/madara/MadaraGenerator"));
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => console.log(`Server started on port ${PORT}`));

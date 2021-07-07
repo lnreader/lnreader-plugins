@@ -32,6 +32,14 @@ Sources for [LNReader](https://github.com/rajarsheechatterjee/lnreader)
 | https://www.royalroad.com/               | :heavy_check_mark: |
 | https://www.scribblehub.com/             | :heavy_check_mark: |
 | https://lnmtl.com/                       | :heavy_check_mark: |
+| https://skynovel.org/                    | :heavy_check_mark: |
+| https://novelcake.com/                   | :heavy_check_mark: |
+| https://novelsrock.com/                  | :heavy_check_mark: |
+| https://zinnovel.com/                    | :heavy_check_mark: |
+| https://noveltranslate.com/              | :heavy_check_mark: |
+| https://www.lunarletters.com/            | :heavy_check_mark: |
+| https://sleepytranslations.com/          | :heavy_check_mark: |
+| https://freenovel.me/                    | :heavy_check_mark: |
 | https://syosetu.com                      | :heavy_check_mark: |
 | https://tunovelaligera.com/              | :heavy_check_mark: |
 | https://www.skynovels.net/               | :heavy_check_mark: |

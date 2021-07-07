@@ -246,6 +246,78 @@ extensions = [
         sourceLanguage: "English",
         status: 1,
     },
+    {
+        sourceId: 38,
+        sourceUrl: "https://skynovel.org/",
+        sourceName: "SkyNovel",
+        sourceCover:
+            "https://github.com/rajarsheechatterjee/lnreader-extensions/blob/main/multisrc/madara/icons/skynovel.png?raw=true",
+        sourceLanguage: "English",
+        status: 1,
+    },
+    {
+        sourceId: 39,
+        sourceUrl: "https://novelcake.com/",
+        sourceName: "NovelCake",
+        sourceCover:
+            "https://github.com/rajarsheechatterjee/lnreader-extensions/blob/main/multisrc/madara/icons/novelcake.png?raw=true",
+        sourceLanguage: "English",
+        status: 1,
+    },
+    {
+        sourceId: 40,
+        sourceUrl: "https://novelsrock.com/",
+        sourceName: "NovelsRock",
+        sourceCover:
+            "https://github.com/rajarsheechatterjee/lnreader-extensions/blob/main/multisrc/madara/icons/novelsrock.png?raw=true",
+        sourceLanguage: "English",
+        status: 1,
+    },
+    {
+        sourceId: 41,
+        sourceUrl: "https://zinnovel.com/",
+        sourceName: "ZinnNovel",
+        sourceCover:
+            "https://github.com/rajarsheechatterjee/lnreader-extensions/blob/main/multisrc/madara/icons/zinnovel.png?raw=true",
+        sourceLanguage: "English",
+        status: 1,
+    },
+    {
+        sourceId: 42,
+        sourceUrl: "https://noveltranslate.com/",
+        sourceName: "NovelTranslate",
+        sourceCover:
+            "https://github.com/rajarsheechatterjee/lnreader-extensions/blob/main/multisrc/madara/icons/noveltranslate.png?raw=true",
+        sourceLanguage: "English",
+        status: 1,
+    },
+    {
+        sourceId: 43,
+        sourceUrl: "https://www.lunarletters.com/",
+        sourceName: "LunarLetters",
+        sourceCover:
+            "https://github.com/rajarsheechatterjee/lnreader-extensions/blob/main/multisrc/madara/icons/lunarletters.png?raw=true",
+        sourceLanguage: "English",
+        status: 1,
+    },
+    {
+        sourceId: 44,
+        sourceUrl: "https://sleepytranslations.com/",
+        sourceName: "SleepyTranslations",
+        sourceCover:
+            "https://github.com/rajarsheechatterjee/lnreader-extensions/blob/main/multisrc/madara/icons/sleepytranslations.png?raw=true",
+        sourceLanguage: "English",
+        status: 1,
+    },
+    {
+        sourceId: 45,
+        sourceUrl: "https://freenovel.me/",
+        sourceName: "FreeNovelMe",
+        sourceCover:
+            "https://github.com/rajarsheechatterjee/lnreader-extensions/blob/main/multisrc/madara/icons/freenovel.png?raw=true",
+        sourceLanguage: "English",
+        status: 1,
+    },
 
     /**
      * Spanish

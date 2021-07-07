@@ -133,7 +133,7 @@ const chapterScraper = async (req, res) => {
 
     $(".original").remove();
 
-    let chapterText = $(".chapter-body ").html();
+    let chapterText = $(".chapter-body").html();
     chapterText = chapterName + "\n\n" + parseHtml(chapterText);
 
     let nextChapter = null;
