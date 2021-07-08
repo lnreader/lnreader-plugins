@@ -40,6 +40,8 @@ Sources for [LNReader](https://github.com/rajarsheechatterjee/lnreader)
 | https://www.lunarletters.com/            | :heavy_check_mark: |
 | https://sleepytranslations.com/          | :heavy_check_mark: |
 | https://freenovel.me/                    | :heavy_check_mark: |
+| "https://1stkissnovel.love/"             | :heavy_check_mark: |
+| "https://daonovel.com/"                  | :heavy_check_mark: |
 | https://syosetu.com                      | :heavy_check_mark: |
 | https://tunovelaligera.com/              | :heavy_check_mark: |
 | https://www.skynovels.net/               | :heavy_check_mark: |

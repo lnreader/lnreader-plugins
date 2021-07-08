@@ -318,6 +318,24 @@ extensions = [
         sourceLanguage: "English",
         status: 1,
     },
+    {
+        sourceId: 46,
+        sourceUrl: "https://1stkissnovel.love/",
+        sourceName: "1stKissNovel",
+        sourceCover:
+            "https://github.com/rajarsheechatterjee/lnreader-extensions/blob/main/multisrc/madara/icons/1stkissnovel.png?raw=true",
+        sourceLanguage: "English",
+        status: 1,
+    },
+    {
+        sourceId: 47,
+        sourceUrl: "https://daonovel.com/",
+        sourceName: "DaoNovel",
+        sourceCover:
+            "https://github.com/rajarsheechatterjee/lnreader-extensions/blob/main/multisrc/madara/icons/daonovel.png?raw=true",
+        sourceLanguage: "English",
+        status: 1,
+    },
 
     /**
      * Spanish

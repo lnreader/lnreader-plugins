@@ -13,6 +13,8 @@ const getPath = (extensionId) => {
         43: { novels: "series", novel: "series", chapter: "series" },
         44: { novels: "series", novel: "series", chapter: "series" },
         45: { novels: "novel", novel: "novel", chapter: "novel" },
+        46: { novels: "novel", novel: "novel", chapter: "novel" },
+        47: { novels: "novel-list", novel: "novel", chapter: "novel" },
     };
 
     return path[extensionId];
@@ -89,6 +91,24 @@ const madaraSources = [
             "https://freenovel.me/",
             "FreeNovelMe",
             getPath(45)
+        ),
+    },
+    {
+        extensionId: 46,
+        scraper: new MadaraScraper(
+            46,
+            "https://1stkissnovel.love/",
+            "1stKissNovel",
+            getPath(46)
+        ),
+    },
+    {
+        extensionId: 47,
+        scraper: new MadaraScraper(
+            47,
+            "https://daonovel.com/",
+            "DaoNovel",
+            getPath(47)
         ),
     },
 ];
