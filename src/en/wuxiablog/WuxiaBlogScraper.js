@@ -104,6 +104,35 @@ const novelScraper = async (req, res) => {
         novelChapters.push(chapter);
     });
 
+    let moreChaptersUrl =
+        baseUrl +
+        "temphtml/_tempChapterList_all_" +
+        $("div#more").attr("data-nid") +
+        ".html";
+
+    let moreChapters = await fetch(moreChaptersUrl);
+    let moreChaptersString = await moreChapters.text();
+
+    $ = cheerio.load(moreChaptersString);
+
+    $("a").each(function () {
+        const chapterName = $(this).text();
+
+        const releaseDate = $(this)[0]
+            .nextSibling.nodeValue.replace(/-/g, "/")
+            .trim();
+
+        const chapterUrl = $(this).attr("href").replace(url, "");
+
+        const chapter = {
+            chapterName,
+            releaseDate,
+            chapterUrl,
+        };
+
+        novelChapters.push(chapter);
+    });
+
     novel.novelChapters = novelChapters.reverse();
 
     res.json(novel);
@@ -115,7 +144,6 @@ const chapterScraper = async (req, res) => {
     let chapterUrl = req.params.chapterUrl;
 
     const url = `${baseUrl}novel/${novelUrl}/${chapterId}/${chapterUrl}`;
-    console.log(url);
 
     const result = await fetch(url);
     const body = await result.text();
@@ -152,8 +180,6 @@ const searchScraper = async (req, res) => {
     const searchTerm = req.query.s;
 
     const url = `${baseUrl}?search=${searchTerm}`;
-
-    console.log(url);
 
     const result = await fetch(url);
     const body = await result.text();
