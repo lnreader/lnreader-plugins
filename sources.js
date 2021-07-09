@@ -341,7 +341,7 @@ extensions = [
         sourceUrl: "https://www.wuxia.blog/",
         sourceName: "Wuxia.Blog",
         sourceCover:
-            "https://github.com/rajarsheechatterjee/lnreader-extensions/blob/main/multisrc/madara/icons/daonovel.png?raw=true",
+            "https://github.com/rajarsheechatterjee/lnreader-extensions/blob/main/src/en/wuxiablog/icon.png?raw=true",
         sourceLanguage: "English",
         status: 1,
     },
@@ -350,7 +350,7 @@ extensions = [
         sourceUrl: "https://wuxia.city/",
         sourceName: "Wuxia.City",
         sourceCover:
-            "https://github.com/rajarsheechatterjee/lnreader-extensions/blob/main/multisrc/madara/icons/daonovel.png?raw=true",
+            "https://github.com/rajarsheechatterjee/lnreader-extensions/blob/main/src/en/wuxiacity/icon.png?raw=true",
         sourceLanguage: "English",
         status: 1,
     },
