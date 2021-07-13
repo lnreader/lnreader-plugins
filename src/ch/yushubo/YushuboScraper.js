@@ -169,7 +169,7 @@ const searchScraper = async (req, res) => {
   res.json(novels);
 };
 
-module.exports = readNovelFullScraper = {
+module.exports = YushuboScraper = {
   novelsScraper,
   novelScraper,
   chapterScraper,
