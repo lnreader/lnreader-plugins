@@ -444,6 +444,28 @@ extensions = [
         sourceLanguage: "Japanese",
         status: 1,
     },
+
+    /**
+     * Arabic
+     */
+    {
+        sourceId: 53,
+        sourceUrl: "https://kolnovel.com/",
+        sourceName: "KolNovel",
+        sourceCover:
+            "https://github.com/LNReader/lnreader-sources/blob/main/multisrc/wpmangastream/icons/kolnovel.png?raw=true",
+        sourceLanguage: "Arabic",
+        status: 1,
+    },
+    {
+        sourceId: 54,
+        sourceUrl: "https://rewayat-ar.site/",
+        sourceName: "Rewayat-Ar",
+        sourceCover:
+            "https://github.com/LNReader/lnreader-sources/blob/main/multisrc/wpmangastream/icons/rewayatar.png?raw=true",
+        sourceLanguage: "Arabic",
+        status: 1,
+    },
 ];
 
 module.exports = extensions;

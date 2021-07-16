@@ -4,17 +4,17 @@ const sources = require("./sources");
 const app = express();
 
 app.use(
-  express.json({
-    extended: false,
-  })
+    express.json({
+        extended: false,
+    })
 );
 
 app.get("/", (req, res) =>
-  res.json({
-    Author: "@rajarsheechatterjee",
-    Version: "1.0.0",
-    Github: "https://github.com/rajarsheechatterjee/lnreader-extensions",
-  })
+    res.json({
+        Author: "@rajarsheechatterjee",
+        Version: "1.0.0",
+        Github: "https://github.com/rajarsheechatterjee/lnreader-extensions",
+    })
 );
 
 // English
@@ -67,6 +67,7 @@ app.use("/api/50/", require("./src/ch/yushubo/Yushubo"));
 
 // MultiSrc
 app.use("/api/", require("./multisrc/madara/MadaraGenerator"));
+app.use("/api/", require("./multisrc/wpmangastream/WPMangaStreamGenerator"));
 
 const PORT = process.env.PORT || 5000;
 
