@@ -3,44 +3,46 @@ const fetch = require("node-fetch");
 const { htmlToText } = require("html-to-text");
 const { parseHtml } = require("../../helper");
 
-const baseUrl = "https://noveldeglace.com/";
+const baseUrl = "https://www.wnmtl.org/";
 
-const sourceName = "Novel De Glace";
-const sourceId = 76;
+const sourceName = "WNMTL";
+const sourceId = 77;
 
 const novelsScraper = async (req, res) => {
-    let url = baseUrl + "roman";
+    let url = baseUrl + "explore";
 
     console.log(url);
 
-    const result = await fetch(url);
+    const result = await fetch(
+        "https://www.wnmtl.org/book/2308-warlock-apprentice"
+    );
     const body = await result.text();
 
-    $ = cheerio.load(body);
+    // $ = cheerio.load(body);
 
-    let novels = [];
+    // let novels = [];
 
-    $("article").each(function () {
-        const novelName = $(this).find("h2").text().trim();
-        const novelCover = $(this).find("img").attr("src");
-        const novelUrl = $(this).find("h2 > a").attr("href");
+    // $(".card").each(function () {
+    //     const novelName = $(this).find(".book-name").text();
+    //     const novelCover = $(this).find("img").attr("src");
+    //     const novelUrl = $(this).find("a").attr("href");
 
-        const novel = {
-            sourceId,
-            novelName,
-            novelCover,
-            novelUrl,
-        };
+    //     const novel = {
+    //         sourceId,
+    //         novelName,
+    //         novelCover,
+    //         novelUrl,
+    //     };
 
-        novels.push(novel);
-    });
+    //     novels.push(novel);
+    // });
 
-    res.json(novels);
+    res.json({ novels: body });
 };
 
 const novelScraper = async (req, res) => {
     const novelUrl = req.params.novelUrl;
-    const url = baseUrl + "novel/" + novelUrl;
+    const url = novelUrl;
 
     const result = await fetch(url);
     const body = await result.text();
@@ -49,14 +51,7 @@ const novelScraper = async (req, res) => {
 
     let novel = { sourceId, sourceName, url, novelUrl };
 
-    function getNovelName(y) {
-        return y
-            .replace("-", " ")
-            .replace(/(?:^|\s)\S/g, (a) => a.toUpperCase());
-    }
-
-    novelName = getNovelName(novelUrl);
-    novel.novelName = novelName;
+    novel.novelName = $("#thumbnail > img").text();
 
     novel.novelCover = $("#thumbnail > img").attr("src");
 

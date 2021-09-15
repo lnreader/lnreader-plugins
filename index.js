@@ -48,7 +48,7 @@ app.use("/api/35/", require("./src/en/scribblehub/ScribbleHub"));
 app.use("/api/37/", require("./src/en/lnmtl/LNMTL"));
 app.use("/api/48/", require("./src/en/wuxiablog/WuxiaBlog"));
 app.use("/api/49/", require("./src/en/wuxiacity/WuxiaCity"));
-app.use("/api/76/", require("./src/en/wnmtl/WNMTL"));
+app.use("/api/77/", require("./src/en/wnmtl/WNMTL"));
 
 // Spanish
 app.use("/api/23/", require("./src/es/tunovelaligera/Tunovelaligera"));
@@ -65,6 +65,9 @@ app.use("/api/36", require("./src/jp/syosetu/Syosetu"));
 
 // Chinese
 app.use("/api/50/", require("./src/ch/yushubo/Yushubo"));
+
+// French
+app.use("/api/76/", require("./src/fr/noveldeglace/NovelDeGlace"));
 
 // MultiSrc
 app.use("/api/", require("./multisrc/madara/MadaraGenerator"));
