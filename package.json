@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node ./index.js",
     "test": "exit 0",
-    "json": "node ./scripts/json_plugins.js && git add ."
+    "json": "node ./scripts/json_plugins.js && git add dist"
   },
   "author": "",
   "license": "MIT",
@@ -15,7 +15,6 @@
     "cheerio": "^1.0.0-rc.10",
     "cli-color": "^2.0.3",
     "dayjs": "^1.11.4",
-    "dotenv": "^16.0.3",
     "express": "^4.18.2",
     "module-alias": "^2.2.2",
     "node-fetch": "^3.3.1"

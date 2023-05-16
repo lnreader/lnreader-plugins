@@ -3,11 +3,6 @@ const languages = require('@libs/languages');
 const path = require('path')
 const root = path.dirname(require.main.filename);
 
-const githubIconsLink = 'https://raw.githubusercontent.com/nyagami/plugins/main/icons';
-const githubIconSuffix = '?raw=true';
-const githubPluginsLink = 'https://raw.githubusercontent.com/nyagami/plugins/main/plugins';
-const githubPluginSuffix = '?newtest=true';
-
 const all_plugins = () => {
     const res = {}
     for (let language in languages) {     //language with English name
@@ -19,10 +14,8 @@ const all_plugins = () => {
             if(plugin.startsWith('.')) return;
             const requirePath = `@plugins/${language.toLowerCase()}/${plugin.split('.')[0]}`
             const instance = require(requirePath);
-            const { id, name, lang, version, icon, description } = instance;
+            const { id, name, lang, version, description } = instance;
             const info = { id, name, lang, version, description } // lang: language with native name
-            info.url = `${githubPluginsLink}/${language.toLowerCase()}/${plugin}${githubPluginSuffix}`;
-            info.iconUrl = `${githubIconsLink}/${icon}${githubIconSuffix}`;
             info.requirePath = requirePath;
             res[lang].push(info);
         });

@@ -43,5 +43,5 @@ app.get('/', (req, res) => {
 
 
 app.listen(port, host, () => {
-    console.log("testing plugins web listening on http://localhost:3000");
+    console.log("Testing plugins web listening on http://localhost:3000");
 });
