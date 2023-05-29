@@ -1,9 +1,11 @@
 require('module-alias/register');
 
 const path = require('path');
+const dayjs = require('dayjs')
 const express = require('express');
 const bodyParser = require('body-parser');
 const pluginApi = require('@api/plugins');
+const localizedFormat = require('dayjs/plugin/localizedFormat');
 
 const app = express();
 const port = 3000;
@@ -45,3 +47,19 @@ app.get('/', (req, res) => {
 app.listen(port, host, () => {
     console.log("Testing plugins web listening on http://localhost:3000");
 });
+
+//Dayjs localization
+const language = Intl?.DateTimeFormat()?.resolvedOptions()?.locale || "en";
+
+require("dayjs/locale/ar");
+require("dayjs/locale/de");
+require("dayjs/locale/es");
+require("dayjs/locale/it");
+require("dayjs/locale/pt");
+require("dayjs/locale/ru");
+require("dayjs/locale/tr");
+require("dayjs/locale/uk");
+require("dayjs/locale/zh");
+
+dayjs.locale(language);
+dayjs.extend(localizedFormat);

@@ -216,7 +216,8 @@ const parseNovelAndChapters = () => {
             sourceNovel.chapters.forEach(chapter => {
                 chapter_list.append(`
                 <div class="chapter-item">
-                    <samp class="info-value btn-light">${chapter.name?.slice(0, 26)}</samp>
+                    <samp class="info-value btn-light">${chapter.name?.slice(0, 26)}</samp><br>
+                    <samp class="info-value btn-light">${chapter.releaseTime}</samp>
                     <div class="info-copy btn btn-primary" data="${chapter.url}" onclick="navigator.clipboard.writeText(this.getAttribute('data'))">Copy url</div>
                 </div>
                 `);

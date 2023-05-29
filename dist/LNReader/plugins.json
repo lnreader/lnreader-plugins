@@ -169,6 +169,33 @@
 	"Português": [],
 	"русский язык": [
 		{
+			"id": "AT",
+			"name": "Автор Тудей",
+			"site": "https://author.today",
+			"lang": "русский язык",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/plugins/russian/authortoday.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/ru/authortoday/icon.png"
+		},
+		{
+			"id": "bookriver",
+			"name": "Bookriver",
+			"site": "https://bookriver.ru",
+			"lang": "русский язык",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/plugins/russian/bookriver.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/ru/bookriver/icon.png"
+		},
+		{
+			"id": "EROLATE",
+			"name": "Erolate",
+			"site": "https://erolate.com",
+			"lang": "русский язык",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/plugins/russian/erolate.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/ru/erolate/icon.png"
+		},
+		{
 			"id": "jaomix.ru",
 			"name": "Jaomix",
 			"site": "https://jaomix.ru",
@@ -176,6 +203,24 @@
 			"version": "1.0.0",
 			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/plugins/russian/jaomix.js",
 			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/ru/jaomix/icon.png"
+		},
+		{
+			"id": "ReN",
+			"name": "Renovels",
+			"site": "https://renovels.org",
+			"lang": "русский язык",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/plugins/russian/renovels.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/ru/renovels/icon.png"
+		},
+		{
+			"id": "RLIB",
+			"name": "RanobeLib",
+			"site": "https://ranobelib.me",
+			"lang": "русский язык",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/plugins/russian/ranobelib.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/ru/ranobelib/icon.png"
 		},
 		{
 			"id": "RNBH.org",
@@ -194,6 +239,24 @@
 			"version": "1.0.0",
 			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/plugins/russian/ranoberf.js",
 			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/ru/ranoberf/icon.png"
+		},
+		{
+			"id": "RULATE",
+			"name": "Rulate",
+			"site": "https://tl.rulate.ru",
+			"lang": "русский язык",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/plugins/russian/rulate.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/ru/rulate/icon.png"
+		},
+		{
+			"id": "TL",
+			"name": "NovelTL",
+			"site": "https://novel.tl",
+			"lang": "русский язык",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/plugins/russian/novelTL.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/ru/noveltl/icon.png"
 		}
 	],
 	"español, castellano": [
