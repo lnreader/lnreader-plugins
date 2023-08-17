@@ -14,16 +14,17 @@ Repository to host plugins and related issues, and requests for [LNReader](https
 
 ## Contributing
 
-1. Please use this [template](./template.js) or [template.min](./template.min.js)
+1. Please use this [template](./template.ts) or [template.min](./template.min.ts)  
 
 2. Choose your language in [./plugins](./plugins)
 
-+ If your language doenst exist, please request us. We will add it soon.
++ If your language doenst exist or you need some other packages, please request us. We will add it soon.
 
 3. Write your scripts
 
-+ See example: [Hako](./plugins/vietnamese/LNHako.js)
++ See example: [Hako](./plugins/vietnamese/LNHako.ts)
 
+Multisrc: [multisrc](./scripts/multisrc)
 
 ## Test your script
 
@@ -38,7 +39,11 @@ npm install
 2. Running
 
 ```
-nodemon index.js
+npm start
+```
+or
+```
+nodemon
 ```
 
 + Then open http://localhost:3000
@@ -51,13 +56,10 @@ nodemon index.js
 
 #### No need to reload webpage after changing your plugin script.
 
-- One more thing: you can use [cheerio_space](./cheerio_space) to build functions without requesting to the site.
-
 ----------
 
 If you want to test plugin in app side, remember to config these things.
 
-in [.env](./.env)
 
 1. Create `config.json` file in root dir
 2. Add your github infomation. Here is an example.
@@ -68,7 +70,7 @@ in [.env](./.env)
 	"githubBranch": "plugins"
 }
 ```
-3. Just commit and push it. And you will see your own json files in github folk: dist/`username`/
+3. Just commit and push it. And you will see your own json files in github fork: dist/`username`/
 
 also in [pluginManager.ts](https://github.com/LNReader/lnreader/blob/plugins/src/plugins/pluginManager.ts) (app repo)
 

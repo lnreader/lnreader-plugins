@@ -2,9 +2,6 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@api/*": [
-        "./api/*",
-      ],
       "@libs/*": [
         "./libs/*",
       ],

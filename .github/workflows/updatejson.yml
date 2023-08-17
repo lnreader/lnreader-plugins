@@ -1,57 +1,56 @@
 name: Update json files
 
 on:
-  push:
-    branches:
-      - plugins
+    push:
+        branches:
+            - plugins
 
 jobs:
-  updatejson:
-    if: github.repository == 'LNReader/lnreader-sources'
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-node@v3
-      with:
-        node-version: '16'
-    - name: Install dependencies
-      run: npm install
- 
-    - name: Clean up current dist
-      run: |
-        rm -rf dist
-        mkdir dist
-        cat > config.json << EOF
-        {
-            "githubUsername": "LNReader",
-            "githubRepository": "lnreader-sources",
-            "githubBranch": "plugins"
-        }
-        EOF
-      
-    - name: Update json files
-      id: json
-      run: |
-        node scripts/json_plugins.js
-        changes="$(git diff)"
-        if [ "$changes" ]
-        then
-        changes=1
-        else
-        changes=""
-        fi
-        echo "json-diff=$changes" >> $GITHUB_OUTPUT
+    updatejson:
+        if: github.repository == 'LNReader/lnreader-sources'
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v3
+            - uses: actions/setup-node@v3
+              with:
+                  node-version: "16"
+            - name: Install dependencies
+              run: npm install
 
-    - name: Create pull request
-      if: ${{ steps.json.outputs.json-diff }}
-      uses: peter-evans/create-pull-request@v4
-      with:
-        token: ${{ secrets.REPO_SCOPED_TOKEN }}
-        author: rajarsheechatterjee <rajarshee.adm@gmail.com>
-        committer: rajarsheechatterjee <rajarshee.adm@gmail.com>
-        commit-message: 'plugins: update json files for new plugins'
-        title: Update json files
-        labels: enhancement
-        body: Auto-generated PR for updating json files
-        branch: update-json
-        delete-branch: true
+            - name: Clean up current dist
+              run: |
+                  rm -rf dist
+                  mkdir dist
+                  cat > config.json << EOF
+                  {
+                      "githubUsername": "LNReader",
+                      "githubRepository": "lnreader-sources",
+                      "githubBranch": "plugins"
+                  }
+                  EOF
+            - name: Update json files
+              id: json
+              run: |
+                  npm run json
+                  changes="$(git diff)"
+                  if [ "$changes" ]
+                  then
+                  changes=1
+                  else
+                  changes=""
+                  fi
+                  echo "json-diff=$changes" >> $GITHUB_OUTPUT
+
+            - name: Create pull request
+              if: ${{ steps.json.outputs.json-diff }}
+              uses: peter-evans/create-pull-request@v4
+              with:
+                  token: ${{ secrets.REPO_SCOPED_TOKEN }}
+                  author: rajarsheechatterjee <rajarshee.adm@gmail.com>
+                  committer: rajarsheechatterjee <rajarshee.adm@gmail.com>
+                  commit-message: "plugins: update json files for new plugins"
+                  title: Update json files
+                  labels: enhancement
+                  body: Auto-generated PR for updating json files
+                  branch: update-json
+                  delete-branch: true

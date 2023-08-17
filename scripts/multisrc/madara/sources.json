@@ -1,0 +1,360 @@
+[
+    {
+      "pluginId": "boxnovel",
+      "baseUrl": "https://boxnovel.com/",
+      "sourceName": "BoxNovel",
+      "options": {
+        "useNewChapterEndpoint": true
+      }
+    },
+    {
+      "pluginId": "zinnovel",
+      "baseUrl": "https://zinnovel.com/",
+      "sourceName": "ZinnNovel",
+      "options": {
+        "path": { "novels": "manga", "novel": "manga", "chapter": "manga" }
+      }
+    },
+    {
+      "pluginId": "novelTL",
+      "baseUrl": "https://noveltranslate.com/",
+      "sourceName": "NovelTranslate",
+      "options": {
+        "path": { "novels": "all-novels", "novel": "manga", "chapter": "manga" }
+      }
+    },
+    {
+      "pluginId": "lunarletters",
+      "baseUrl": "https://www.lunarletters.com/",
+      "sourceName": "LunarLetters",
+      "options": {
+        "path": { "novels": "series", "novel": "series", "chapter": "series" },
+        "useNewChapterEndpoint": true
+      }
+    },
+    {
+      "pluginId": "sleeptTLS",
+      "baseUrl": "https://sleepytranslations.com/",
+      "sourceName": "SleepyTranslations",
+      "options": {
+        "path": { "novels": "series", "novel": "series", "chapter": "series" },
+        "useNewChapterEndpoint": true
+      }
+    },
+    {
+      "pluginId": "freenovel.me",
+      "baseUrl": "https://freenovel.me/",
+      "sourceName": "FreeNovelMe"
+    },
+    {
+      "pluginId": "1stkissnovel",
+      "baseUrl": "https://1stkissnovel.org/",
+      "sourceName": "FirstKissNovel",
+      "options": {
+        "useNewChapterEndpoint": true
+      }
+    },
+    {
+      "pluginId": "daonovel",
+      "baseUrl": "https://daonovel.com/",
+      "sourceName": "DaoNovel",
+      "options": {
+        "path": {
+          "novels": "novels-list",
+          "novel": "novels",
+          "chapter": "novels"
+        },
+        "useNewChapterEndpoint": true
+      }
+    },
+    {
+      "pluginId": "mostnovel",
+      "baseUrl": "https://mostnovel.com/",
+      "sourceName": "MostNovel",
+      "options": {
+        "path": { "novels": "manga", "novel": "manga", "chapter": "manga" }
+      }
+    },
+    {
+      "pluginId": "novelmultiverse",
+      "baseUrl": "https://www.novelmultiverse.com/",
+      "sourceName": "NovelMultiverse"
+    },
+    {
+      "pluginId": "lnheaven",
+      "baseUrl": "https://lightnovelheaven.com/",
+      "sourceName": "LightNovelHeaven",
+      "options": {
+        "path": { "novels": "series", "novel": "series", "chapter": "series" },
+        "useNewChapterEndpoint": true
+      }
+    },
+    {
+      "pluginId": "arnovel",
+      "baseUrl": "https://arnovel.me/",
+      "sourceName": "ArNovel",
+      "options": {
+        "useNewChapterEndpoint": true,
+        "lang": "Arabic"
+      }
+    },
+    {
+      "pluginId": "meionovel",
+      "baseUrl": "https://meionovel.id/",
+      "sourceName": "MeioNovel",
+      "options": {
+        "useNewChapterEndpoint": true,
+        "lang": "Indonesian"
+      }
+    },
+    {
+      "pluginId": "webnovelover",
+      "baseUrl": "https://www.webnovelover.com/",
+      "sourceName": "WebNovelLover"
+    },
+    {
+      "pluginId": "cratenovel",
+      "baseUrl": "https://cratenovel.com/",
+      "sourceName": "CrateNovel",
+      "options": {
+        "useNewChapterEndpoint": true
+      }
+    },
+    {
+      "pluginId": "clicknovel",
+      "baseUrl": "https://clicknovel.net/",
+      "sourceName": "ClickNovel"
+    },
+    {
+      "pluginId": "readwebnovels",
+      "baseUrl": "https://readwebnovels.net/",
+      "sourceName": "ReadWebNovels"
+    },
+    {
+      "pluginId": "wbnovel",
+      "baseUrl": "https://wbnovel.com/",
+      "sourceName": "WBNovel",
+      "options": { "lang": "Indonesian" }
+    },
+    {
+      "pluginId": "wuxiaworld.site",
+      "baseUrl": "https://wuxiaworld.site/",
+      "sourceName": "WuxiaWorld.Site",
+      "options": {
+        "useNewChapterEndpoint": true
+      }
+    },
+    {
+      "pluginId": "mysticalmerries",
+      "baseUrl": "https://mysticalmerries.com/",
+      "sourceName": "MysticalSeries",
+      "options": {
+        "path": { "novels": "series", "novel": "series", "chapter": "series" },
+        "useNewChapterEndpoint": true
+      }
+    },
+    {
+      "pluginId": "morenovel",
+      "baseUrl": "https://morenovel.net/",
+      "sourceName": "MoreNovel",
+      "options": {
+        "useNewChapterEndpoint": true,
+        "lang": "Indonesian"
+      }
+    },
+    {
+      "pluginId": "onlymtl",
+      "baseUrl": "https://www.onlymtl.com/",
+      "sourceName": "OnlyMTL",
+      "options": {
+        "useNewChapterEndpoint": true
+      }
+    },
+    {
+      "pluginId": "hizomanga",
+      "baseUrl": "https://hizomanga.com/",
+      "sourceName": "HizoManga",
+      "options": {
+        "path": { "novels": "serie", "novel": "serie", "chapter": "serie" },
+        "useNewChapterEndpoint": true,
+        "lang": "Arabic"
+      }
+    },
+    {
+      "pluginId": "ar-mtl",
+      "baseUrl": "https://ar-mtl.club/",
+      "sourceName": "ArMTL",
+      "options": {
+        "useNewChapterEndpoint": true,
+        "lang": "Arabic"
+      }
+    },
+    {
+      "pluginId": "novel4up",
+      "baseUrl": "https://novel4up.com/",
+      "sourceName": "Novel4Up",
+      "options": {
+        "lang": "Arabic"
+      }
+    },
+    {
+      "pluginId": "teamxnovel",
+      "baseUrl": "https://teamxnovel.com/",
+      "sourceName": "TeamXNovel",
+      "options": {
+        "useNewChapterEndpoint": true,
+        "lang": "Arabic"
+      }
+    },
+    {
+      "pluginId": "turkcelightnovels",
+      "baseUrl": "https://turkcelightnovels.com/",
+      "sourceName": "TurkceLightNovels",
+      "options": {
+        "path": {
+          "novels": "light-novel",
+          "novel": "light-novel",
+          "chapter": "light-novel"
+        },
+        "lang": "Turkish"
+      }
+    },
+    {
+      "pluginId": "sonicmtl",
+      "baseUrl": "https://www.sonicmtl.com/",
+      "sourceName": "SonicMTL",
+      "options": {
+        "useNewChapterEndpoint": true
+      }
+    },
+    {
+      "pluginId": "mtlnovel.club",
+      "baseUrl": "https://mtlnovel.club/",
+      "sourceName": "MTLNovel.Club",
+      "options": {
+        "useNewChapterEndpoint": true
+      }
+    },
+    {
+      "pluginId": "noobchanTL",
+      "baseUrl": "https://noobchan.xyz/",
+      "sourceName": "Noobchan Translation",
+      "options": {
+        "useNewChapterEndpoint": true
+      }
+    },
+    {
+      "pluginId": "guavaread",
+      "baseUrl": "https://guavaread.com/",
+      "sourceName": "Guavaread",
+      "options": {
+        "useNewChapterEndpoint": true
+      }
+    },
+    {
+      "pluginId": "sweetEscapeTL",
+      "baseUrl": "https://sweetescapetranslations.com/",
+      "sourceName": "Sweet Escape Translations",
+      "options": {
+        "useNewChapterEndpoint": false,
+        "path": { "novels": "manga", "novel": "manga", "chapter": "manga" }
+      }
+    },
+    {
+      "pluginId": "fanTLS",
+      "baseUrl": "https://fanstranslations.com/",
+      "sourceName": "Fans Translations",
+      "options": {
+        "useNewChapterEndpoint": true
+      }
+    },
+    {
+      "pluginId": "riwyat",
+      "baseUrl": "https://riwyat.com/",
+      "sourceName": "Riwyat",
+      "options": {
+        "useNewChapterEndpoint": true,
+        "lang": "Arabic"
+      }
+    },
+    {
+      "pluginId": "novelstic",
+      "baseUrl": "https://novelstic.com/",
+      "sourceName": "Novelstic",
+      "options": {
+        "useNewChapterEndpoint": true,
+        "lang": "English"
+      }
+    },
+    {
+      "pluginId": "neosekaiTLS",
+      "baseUrl": "https://www.neosekaitranslations.com/",
+      "sourceName": "NeoSekai Translations",
+      "options": {
+        "lang": "English"
+      }
+    },
+    {
+      "pluginId": "mtl-novel",
+      "baseUrl": "https://mtl-novel.com/",
+      "sourceName": "MTL-Novel",
+      "options": {
+        "useNewChapterEndpoint": true,
+        "lang": "English",
+        "orderBy": "latest"
+      }
+    },
+    {
+      "pluginId": "zetroTL",
+      "baseUrl": "https://zetrotranslation.com/",
+      "sourceName": "Zetro Translation",
+      "options": {
+        "lang": "English"
+      }
+    },
+    {
+      "pluginId": "nocturneTLS",
+      "baseUrl": "https://nocturnetls.net/",
+      "sourceName": "Nocturne Translations",
+      "options": {
+        "lang": "English",
+        "path": { "novels": "novels", "novel": "novels", "chapter": "novels" }
+      }
+    },
+    {
+      "pluginId": "sugarbbscan",
+      "baseUrl": "https://sugarbbscan.com/",
+      "sourceName": "Sugar Babies",
+      "options": {
+        "lang": "English",
+        "path": { "novels": "series", "novel": "series", "chapter": "series" }
+      }
+    },
+    {
+      "pluginId": "novelroom",
+      "baseUrl": "https://novelroom.net/",
+      "sourceName": "Novelroom.net",
+      "options": {
+        "lang": "English",
+        "path": { "novels": "manga", "novel": "manga", "chapter": "manga" }
+      }
+    },
+    {
+      "pluginId": "novelr18",
+      "baseUrl": "https://novelr18.com/",
+      "sourceName": "NovelR18 ",
+      "options": {
+        "lang": "English",
+        "path": { "novels": "novel", "novel": "manga", "chapter": "manga" },
+        "useNewChapterEndpoint": true
+      }
+    },
+    {
+      "pluginId": "webnoveloku",
+      "baseUrl": "https://www.webnoveloku.com/",
+      "sourceName": "WebNovelOku ",
+      "options": {
+        "lang": "Turkish"
+      }
+    }
+  ]

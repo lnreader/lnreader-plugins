@@ -1,3 +1,5 @@
 {   
-    "ignore": ["plugins/plugins.json", "plugins/plugins.min.json", "cheerio_space/*"]
+    "ext": "js,mjs,json,ts",
+    "ignore": ["js/**"],
+    "exec": "tsc && node ./js/index.js"
 }

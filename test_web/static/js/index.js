@@ -39,7 +39,7 @@ plugin_search.focus(e => {
 });
 
 plugin_search.keyup(e => {
-    display_search(current_array.filter(plg => plg.name.toLowerCase().includes(plugin_search.val())));
+    display_search(current_array.filter(plg => plg.name.toLowerCase().includes(plugin_search.val().toLowerCase())));
 });
 
 $('#clear-search').click(e => {
