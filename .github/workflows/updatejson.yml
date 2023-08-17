@@ -32,7 +32,7 @@ jobs:
               id: json
               run: |
                   npm run json
-                  changes="$(git diff)"
+                  changes="$(git diff --staged dist)"
                   if [ "$changes" ]
                   then
                   changes=1
