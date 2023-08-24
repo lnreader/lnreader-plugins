@@ -35,7 +35,6 @@ const generator = function generator(sourceJson: sourceData) {
     export const version = "1.0.0";
     export const site = "${site}";
     export const filters: Filter[] = ${filetersString};
-    exports["protected"] = false;
     
     const baseUrl = site;
     const domain = baseUrl.split('//')[1];

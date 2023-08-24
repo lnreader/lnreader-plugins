@@ -18,7 +18,6 @@ exports.name = "NobleMTL";
 exports.version = "1.0.0";
 exports.icon = "src/en/noblemtl/icon.png";
 exports.site = "https://www.noblemtl.com/";
-exports.protected = false;
 const popularNovels = function (page, { filters }) {
     var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {

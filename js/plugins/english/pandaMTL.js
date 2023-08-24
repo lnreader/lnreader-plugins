@@ -18,7 +18,6 @@ exports.name = "PandaMTL";
 exports.version = "1.0.0";
 exports.icon = "src/en/wordpress/icon.png";
 exports.site = "https://www.pandamtl.com/";
-exports.protected = false;
 const pluginId = exports.id;
 const baseUrl = exports.site;
 const popularNovels = function (page, { filters }) {

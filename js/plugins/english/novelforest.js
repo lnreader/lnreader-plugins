@@ -17,7 +17,6 @@ exports.name = "Novel Forest (Broken)";
 exports.version = "1.0.0";
 exports.icon = "src/en/novelforest/icon.png";
 exports.site = "https://novelforest.com/";
-exports.protected = false;
 const pluginId = exports.id;
 const baseUrl = exports.site;
 const popularNovels = function (page) {

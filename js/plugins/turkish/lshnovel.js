@@ -18,7 +18,6 @@ exports.name = "Liebe Schnee Hiver Novel";
 exports.version = "1.0.0";
 exports.icon = "multisrc/wpmangastream/icons/lshnovel.png";
 exports.site = "https://lshnovel.com/";
-exports.protected = false;
 const pluginId = exports.id;
 const baseUrl = exports.site;
 const popularNovels = function (page, { filters }) {

@@ -28,7 +28,6 @@ exports.icon = "";
 exports.version = "1.0.0";
 exports.site = "https://red.novel.tl";
 exports.filters = [{ "key": "tags", "label": "Тэги", "values": [{ "label": "Героиня красавица", "value": 81 }, { "label": "Герой влюбляется первым", "value": 561 }, { "label": "Главный герой — мужчина", "value": 419 }, { "label": "Дружба", "value": 293 }, { "label": "Жизнь в одиночку", "value": 396 }, { "label": "Сложные семейные отношения", "value": 149 }], "inputType": filterInputs_1.FilterInputs.Checkbox }];
-exports["protected"] = false;
 const baseUrl = exports.site;
 const domain = baseUrl.split('//')[1];
 const popularNovels = function (page, { filters }) {

@@ -17,7 +17,6 @@
     export const version = "1.0.0";
     export const site = "https://www.novelmt.com/";
     // export const filters: Filter[] = [];
-    exports["protected"] = false;
     
     const baseUrl = site;
     

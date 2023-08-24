@@ -8,7 +8,7 @@ export const name = "LightNovelReader";
 export const icon = "src/en/lightnovelreader/icon.png";
 export const version = "1.0.0";
 export const site = "https://lightnovelreader.org";
-exports.protected = false;
+
 
 const baseUrl = site;
 

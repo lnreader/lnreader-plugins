@@ -7,7 +7,7 @@ export const name = "Fast Novel";
 export const version = "1.0.0";
 export const icon = "src/en/fastnovel/icon.png";
 export const site = "https://fastnovel.org/";
-exports.protected = false;
+
 
 const pluginId = id;
 const baseUrl = site;

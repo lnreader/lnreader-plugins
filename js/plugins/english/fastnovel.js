@@ -17,7 +17,6 @@ exports.name = "Fast Novel";
 exports.version = "1.0.0";
 exports.icon = "src/en/fastnovel/icon.png";
 exports.site = "https://fastnovel.org/";
-exports.protected = false;
 const pluginId = exports.id;
 const baseUrl = exports.site;
 const popularNovels = function (page) {

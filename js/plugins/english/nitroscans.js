@@ -17,7 +17,6 @@ exports.name = "Nitroscans";
 exports.version = "1.0.0";
 exports.icon = "src/en/nitroscans/icon.png";
 exports.site = "https://nitroscans.com/";
-exports.protected = false;
 const baseUrl = exports.site;
 const popularNovels = function (page) {
     return __awaiter(this, void 0, void 0, function* () {

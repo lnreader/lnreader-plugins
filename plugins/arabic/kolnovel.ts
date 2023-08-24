@@ -8,7 +8,7 @@ export const name = "KolNovel";
 export const version = "1.0.0";
 export const icon = "multisrc/wpmangastream/icons/kolnovel.png";
 export const site = "https://kolnovel.com/";
-module.exports.protected = false;
+
 
 const pluginId = id;
 const baseUrl = site;

@@ -17,7 +17,6 @@ exports.name = "LightNovelPub";
 exports.version = "1.0.0";
 exports.icon = "src/en/lightnovelpub/icon.png";
 exports.site = "https://www.lightnovelpub.com/";
-exports.protected = true;
 const baseUrl = exports.site;
 const pluginId = exports.id;
 const headers = {

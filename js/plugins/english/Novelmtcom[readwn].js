@@ -25,7 +25,6 @@ exports.icon = "multisrc/readwn/icon/novelmt.png";
 exports.version = "1.0.0";
 exports.site = "https://www.novelmt.com/";
 // export const filters: Filter[] = [];
-exports["protected"] = false;
 const baseUrl = exports.site;
 const popularNovels = function (page, { filters, showLatestNovels }) {
     return __awaiter(this, void 0, void 0, function* () {

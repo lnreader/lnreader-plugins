@@ -28,7 +28,6 @@ exports.icon = "";
 exports.version = "1.0.0";
 exports.site = "https://tsundoku.novel.tl";
 exports.filters = [{ "key": "tags", "label": "Тэги", "values": [{ "label": "Боги", "value": 318 }, { "label": "Боевая академия", "value": 75 }, { "label": "Вампиры", "value": 742 }, { "label": "Влияние прошлого", "value": 517 }, { "label": "Война", "value": 750 }, { "label": "Главная героиня — женщина", "value": 277 }, { "label": "Главный герой — мужчина", "value": 419 }, { "label": "Демоны", "value": 193 }, { "label": "Драконы", "value": 218 }, { "label": "Королевская особа", "value": 596 }, { "label": "Коррупция", "value": 157 }, { "label": "Магия", "value": 412 }, { "label": "Мастер подземелий", "value": 222 }, { "label": "Мечи и магия", "value": 697 }, { "label": "Мечники", "value": 698 }, { "label": "Монстры", "value": 454 }, { "label": "Недооцененный главный герой", "value": 734 }, { "label": "От слабого к сильному", "value": 752 }, { "label": "R-15", "value": 570 }, { "label": "R-18", "value": 571 }], "inputType": filterInputs_1.FilterInputs.Checkbox }];
-exports["protected"] = false;
 const baseUrl = exports.site;
 const domain = baseUrl.split('//')[1];
 const popularNovels = function (page, { filters }) {

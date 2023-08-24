@@ -17,7 +17,6 @@
     export const version = "1.0.0";
     export const site = "https://sferdrakon.novel.tl";
     export const filters: Filter[] = [{"key":"tags","label":"Тэги","values":[{"label":"Главный герой — мужчина","value":419},{"label":"Демоны","value":193},{"label":"Драконы","value":218},{"label":"Есть аниме-адаптация","value":10},{"label":"Есть видеоигра","value":13},{"label":"Есть манга-адаптация","value":14},{"label":"Звероподобные","value":79},{"label":"Изнасилование","value":574},{"label":"Королевская особа","value":596},{"label":"Магия","value":412},{"label":"Магия призыва","value":694},{"label":"Наездники на драконах","value":216},{"label":"Рыцари","value":383},{"label":"Цундере","value":728},{"label":"Эльфы","value":235}],"inputType":FilterInputs.Checkbox}];
-    exports["protected"] = false;
     
     const baseUrl = site;
     const domain = baseUrl.split('//')[1];

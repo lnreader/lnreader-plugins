@@ -15,7 +15,7 @@ export const name = "Hako";
 export const icon = "src/vi/hakolightnovel/icon.png"; // The relative path to the icon without @icons . For example: 'src/vi/hakolightnovel/icon.png'
 export const version = "1.0.0"; // xx.xx.xx
 export const site = baseUrl; // the link to the site
-exports["protected"] = true;
+
 
 export const popularNovels: Plugin.popularNovels = async (pageNo) => {
     const novels: Novel.Item[] = [];

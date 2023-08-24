@@ -17,7 +17,6 @@ exports.name = "MTL Reader";
 exports.version = "1.0.0";
 exports.icon = "src/en/mtlreader/icon.png";
 exports.site = "https://mtlreader.com/";
-exports.protected = false;
 const pluginId = exports.id;
 const baseUrl = exports.site;
 const popularNovels = function (page) {

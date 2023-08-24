@@ -175,4 +175,3 @@ const fetchImage = function (url, init) {
     });
 };
 exports.fetchImage = fetchImage;
-exports.protected = false;

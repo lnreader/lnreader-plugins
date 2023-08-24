@@ -53,7 +53,6 @@ export namespace Plugin {
         version: string;
         icon: string;
         site: string;
-        protected?: boolean;
         popularNovels: popularNovels;
         parseNovelAndChapters: parseNovelAndChapters;
         parseChapter: parseChapter;

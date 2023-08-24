@@ -17,7 +17,6 @@
     export const version = "1.0.0";
     export const site = "https://original.novel.tl";
     export const filters: Filter[] = [{"key":"tags","label":"Тэги","values":[{"label":"Агрессивные персонажи","value":26},{"label":"Академия","value":5},{"label":"Андроиды","value":37},{"label":"Антимагия","value":41},{"label":"Аристократия","value":51},{"label":"Артефакты","value":58},{"label":"Брошенные дети","value":1},{"label":"Вероломные герои/плетение интриг","value":424},{"label":"Взросление персонажа","value":24},{"label":"Владелец уникального оружия","value":736},{"label":"Герой-извращенец","value":521},{"label":"Главный герой не человек","value":488},{"label":"Государственные интриги","value":212},{"label":"Душещипательная история","value":335},{"label":"Жестокие персонажи","value":4},{"label":"Зверолюди","value":39},{"label":"Знания из прошлой жизни","value":553},{"label":"Искусственный интеллект","value":59},{"label":"Конфликт в семье","value":261},{"label":"Королевства","value":382}],"inputType":FilterInputs.Checkbox}];
-    exports["protected"] = false;
     
     const baseUrl = site;
     const domain = baseUrl.split('//')[1];

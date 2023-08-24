@@ -24,7 +24,6 @@ exports.name = "Hako";
 exports.icon = "src/vi/hakolightnovel/icon.png"; // The relative path to the icon without @icons . For example: 'src/vi/hakolightnovel/icon.png'
 exports.version = "1.0.0"; // xx.xx.xx
 exports.site = baseUrl; // the link to the site
-exports["protected"] = true;
 const popularNovels = (pageNo) => __awaiter(void 0, void 0, void 0, function* () {
     const novels = [];
     const link = baseUrl + "/danh-sach?truyendich=1&sapxep=topthang&page=" + pageNo;

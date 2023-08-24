@@ -161,4 +161,4 @@ export const searchNovels: Plugin.searchNovels = async function (searchTerm) {
 };
 export const fetchImage: Plugin.fetchImage = (...args) => fetchFile(...args);
 
-exports.protected = false;
+

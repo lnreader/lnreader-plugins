@@ -8,7 +8,7 @@ export const name = "Light Novel Brasil";
 export const version = "1.0.0";
 export const icon = "multisrc/wpmangastream/icons/lightnovelbrasil.png";
 export const site = "https://lightnovelbrasil.com/";
-exports.protected = false;
+
 
 const pluginId = id;
 const baseUrl = site;

@@ -17,7 +17,6 @@
     export const version = "1.0.0";
     export const site = "https://ruranobe.ru";
     export const filters: Filter[] = [{"key":"tags","label":"Тэги","values":[{"label":"Автоматы","value":64},{"label":"Агрессивные персонажи","value":26},{"label":"Ад","value":338},{"label":"Адаптация манги","value":8},{"label":"Академия","value":5},{"label":"Алхимия","value":27},{"label":"Альтернативная реальность","value":30},{"label":"Амнезия","value":31},{"label":"Анабиоз","value":170},{"label":"Ангелы","value":38},{"label":"Андроиды","value":37},{"label":"Антигерой","value":43},{"label":"Антимагия","value":41},{"label":"Апатичный главный герой","value":46},{"label":"Апокалипсис","value":47},{"label":"Аристократия","value":51},{"label":"Артефакты","value":58},{"label":"Асоциальный главный герой","value":42},{"label":"R-15","value":570},{"label":"R-18","value":571}],"inputType":FilterInputs.Checkbox}];
-    exports["protected"] = false;
     
     const baseUrl = site;
     const domain = baseUrl.split('//')[1];

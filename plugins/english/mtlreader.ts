@@ -7,7 +7,7 @@ export const name = "MTL Reader";
 export const version = "1.0.0";
 export const icon = "src/en/mtlreader/icon.png";
 export const site = "https://mtlreader.com/";
-exports.protected = false;
+
 
 const pluginId = id;
 const baseUrl = site;

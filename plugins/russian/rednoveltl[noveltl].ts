@@ -17,7 +17,6 @@
     export const version = "1.0.0";
     export const site = "https://red.novel.tl";
     export const filters: Filter[] = [{"key":"tags","label":"Тэги","values":[{"label":"Героиня красавица","value":81},{"label":"Герой влюбляется первым","value":561},{"label":"Главный герой — мужчина","value":419},{"label":"Дружба","value":293},{"label":"Жизнь в одиночку","value":396},{"label":"Сложные семейные отношения","value":149}],"inputType":FilterInputs.Checkbox}];
-    exports["protected"] = false;
     
     const baseUrl = site;
     const domain = baseUrl.split('//')[1];

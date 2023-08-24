@@ -8,7 +8,7 @@ export const name = "Liebe Schnee Hiver Novel";
 export const version = "1.0.0";
 export const icon = "multisrc/wpmangastream/icons/lshnovel.png";
 export const site = "https://lshnovel.com/";
-exports.protected = false;
+
 
 const pluginId = id;
 const baseUrl = site;

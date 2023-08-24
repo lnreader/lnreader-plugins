@@ -19,7 +19,6 @@ exports.name = "Early Novel";
 exports.version = "1.0.0";
 exports.icon = "multisrc/madara/icons/latestnovel.png";
 exports.site = "https://earlynovel.net/";
-module.exports.protected = false;
 const pluginId = exports.id;
 const baseUrl = exports.site;
 const popularNovels = function (page) {

@@ -15,7 +15,6 @@ export const icon = ""; // The relative path to the icon without @icons . For ex
 export const version = "0.0.0"; // xx.xx.xx
 export const site = ""; // the link to the site
 // export const filters: Filter[] = [];
-exports["protected"] = false; // true if this site protect its resources (images) and you have to define headers or smt to bypass
 
 export const popularNovels: Plugin.popularNovels = async function (
     page,

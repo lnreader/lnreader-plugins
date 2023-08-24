@@ -7,7 +7,7 @@ export const name = "Light Novel Updates";
 export const version = "1.0.0";
 export const icon = "src/en/lightnovelupdates/icon.png";
 export const site = "https://www.lightnovelupdates.com/";
-exports.protected = false;
+
 
 const pluginId = id;
 const baseUrl = site;

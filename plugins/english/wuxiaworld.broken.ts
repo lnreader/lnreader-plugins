@@ -7,7 +7,7 @@ export const name = "Wuxia World (WIP)";
 export const version = "0.5.0";
 export const icon = "src/en/wuxiaworld/icon.png";
 export const site = "https://www.wuxiaworld.com/";
-exports.protected = true;
+
 
 const pluginId = id;
 const baseUrl = site;

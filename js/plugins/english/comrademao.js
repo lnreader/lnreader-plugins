@@ -144,4 +144,3 @@ const searchNovels = function (searchTerm) {
 exports.searchNovels = searchNovels;
 const fetchImage = (...args) => (0, fetch_1.fetchFile)(...args);
 exports.fetchImage = fetchImage;
-exports.protected = false;

@@ -17,7 +17,6 @@
     export const version = "1.0.0";
     export const site = "https://japit.novel.tl";
     export const filters: Filter[] = [{"key":"tags","label":"Тэги","values":[{"label":"Академия","value":5},{"label":"Андроиды","value":37},{"label":"Беззаботный герой","value":115},{"label":"Боги","value":318},{"label":"Богини","value":316},{"label":"Вампиры","value":742},{"label":"Везучий главный герой","value":411},{"label":"Влияние прошлого","value":517},{"label":"Внезапное обогащение","value":691},{"label":"Военные хроники","value":749},{"label":"Война","value":750},{"label":"Воспоминания прошлого","value":283},{"label":"Герои","value":341},{"label":"Героиня красавица","value":81},{"label":"Герой влюбляется первым","value":561},{"label":"Герой красавец","value":329},{"label":"Герой-бесстыдник","value":632},{"label":"Герой-извращенец","value":521},{"label":"Герой-трудяга","value":330},{"label":"R-15","value":570}],"inputType":FilterInputs.Checkbox}];
-    exports["protected"] = false;
     
     const baseUrl = site;
     const domain = baseUrl.split('//')[1];

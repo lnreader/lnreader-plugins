@@ -7,7 +7,7 @@ export const name = "Nitroscans";
 export const version = "1.0.0";
 export const icon = "src/en/nitroscans/icon.png";
 export const site = "https://nitroscans.com/";
-exports.protected = false;
+
 
 const baseUrl = site;
 

@@ -28,7 +28,6 @@ exports.icon = "";
 exports.version = "1.0.0";
 exports.site = "https://axel.znovel.space";
 exports.filters = [{ "key": "tags", "label": "Тэги", "values": [{ "label": "Богини", "value": 316 }, { "label": "Везучий главный герой", "value": 411 }, { "label": "Виртуальная реальность", "value": 744 }, { "label": "Высокомерный герой", "value": 56 }, { "label": "Герой-извращенец", "value": 521 }, { "label": "Главная героиня — женщина", "value": 277 }, { "label": "Главный герой — мужчина", "value": 419 }, { "label": "Дворяне", "value": 487 }, { "label": "Девочки-волшебницы", "value": 415 }, { "label": "Демоны", "value": 193 }, { "label": "Дружба", "value": 293 }, { "label": "Есть аниме-адаптация", "value": 10 }, { "label": "Есть видеоигра", "value": 13 }, { "label": "Есть манга-адаптация", "value": 14 }, { "label": "Игра на выживание", "value": 696 }, { "label": "Из грязи в князи", "value": 542 }, { "label": "Королевская особа", "value": 596 }, { "label": "Ленивый главный герой", "value": 389 }, { "label": "Маги", "value": 757 }, { "label": "Магические технологии", "value": 417 }], "inputType": filterInputs_1.FilterInputs.Checkbox }];
-exports["protected"] = false;
 const baseUrl = exports.site;
 const domain = baseUrl.split('//')[1];
 const popularNovels = function (page, { filters }) {

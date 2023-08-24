@@ -17,7 +17,6 @@
     export const version = "1.0.0";
     export const site = "https://si.novel.tl";
     export const filters: Filter[] = [{"key":"tags","label":"Тэги","values":[{"label":"Аристократия","value":51},{"label":"Война","value":750},{"label":"Главная героиня — женщина","value":277},{"label":"Драконы","value":218},{"label":"Древний Китай","value":34},{"label":"Жестокие персонажи","value":4},{"label":"Злобные благородные девы","value":743},{"label":"Комедийный подтекст","value":147},{"label":"Культивация","value":171},{"label":"Магия","value":412},{"label":"Отомэ-игры","value":504},{"label":"Перерождение в другом мире","value":580},{"label":"Перерождение в другом мире","value":720},{"label":"Повелитель демонов","value":191},{"label":"Попаданец в другой мир","value":723},{"label":"Смерть","value":185},{"label":"Средневековье","value":436},{"label":"Фэнтези","value":267},{"label":"Харизматичный протагонист","value":120},{"label":"Хитрый главный герой","value":173}],"inputType":FilterInputs.Checkbox}];
-    exports["protected"] = false;
     
     const baseUrl = site;
     const domain = baseUrl.split('//')[1];

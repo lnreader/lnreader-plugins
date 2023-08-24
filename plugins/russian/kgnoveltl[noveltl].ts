@@ -17,7 +17,6 @@
     export const version = "1.0.0";
     export const site = "https://kg.novel.tl";
     export const filters: Filter[] = [{"key":"tags","label":"Тэги","values":[{"label":"Алхимия","value":27},{"label":"Андроиды","value":37},{"label":"Анти-рост персонажа","value":25},{"label":"Антигерой","value":43},{"label":"Апатичный главный герой","value":46},{"label":"Аристократия","value":51},{"label":"Асоциальный главный герой","value":42},{"label":"Ассасины","value":61},{"label":"Беззаботный герой","value":115},{"label":"Безработные","value":377},{"label":"Бессмертные","value":359},{"label":"Библиотека","value":393},{"label":"Боги","value":318},{"label":"Боевая академия","value":75},{"label":"Бывший герой","value":290},{"label":"Ведьмы","value":756},{"label":"Везучий главный герой","value":411},{"label":"Верные подданные","value":410},{"label":"Взросление персонажа","value":24},{"label":"R-15","value":570}],"inputType":FilterInputs.Checkbox}];
-    exports["protected"] = false;
     
     const baseUrl = site;
     const domain = baseUrl.split('//')[1];

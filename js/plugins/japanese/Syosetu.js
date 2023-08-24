@@ -22,7 +22,6 @@ exports.name = "Syosetu";
 exports.icon = "src/jp/syosetu/icon.png";
 exports.version = "1.0.0";
 exports.site = "https//yomou.syosetu.com/";
-exports.protected = false;
 const searchUrl = (pagenum, order) => {
     return `https://yomou.syosetu.com/search.php?order=${order || "hyoka"}${pagenum !== undefined
         ? `&p=${pagenum <= 1 || pagenum > 100 ? "1" : pagenum}` // check if pagenum is between 1 and 100

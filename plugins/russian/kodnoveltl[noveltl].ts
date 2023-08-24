@@ -17,7 +17,6 @@
     export const version = "1.0.0";
     export const site = "https://kod.novel.tl";
     export const filters: Filter[] = [{"key":"tags","label":"Тэги","values":[{"label":"Актёрское искусство","value":7},{"label":"Забота о детях","value":127},{"label":"Управление бизнесом","value":109},{"label":"Шоу-бизнес","value":642}],"inputType":FilterInputs.Checkbox}];
-    exports["protected"] = false;
     
     const baseUrl = site;
     const domain = baseUrl.split('//')[1];

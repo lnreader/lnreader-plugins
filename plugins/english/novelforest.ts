@@ -7,7 +7,7 @@ export const name = "Novel Forest (Broken)";
 export const version = "1.0.0";
 export const icon = "src/en/novelforest/icon.png";
 export const site = "https://novelforest.com/";
-exports.protected = false;
+
 
 const pluginId = id;
 const baseUrl = site;

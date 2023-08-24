@@ -7,7 +7,7 @@ export const name = "Foxaholic";
 export const version = "1.0.0";
 export const icon = "src/en/foxaholic/icon.png";
 export const site = "https://www.foxaholic.com/";
-module.exports.protected = false;
+
 
 const pluginId = id;
 const baseUrl = site;

@@ -9,7 +9,7 @@ export const name = "Free Novel Updates (Broken)";
 export const version = "1.0.0";
 export const icon = "src/en/freenovelupdates/icon.png";
 export const site = "https://www.freenovelupdates.com";
-exports.protected = false;
+
 
 const pluginId = id;
 const baseUrl = site;

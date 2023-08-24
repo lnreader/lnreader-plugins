@@ -28,7 +28,6 @@ exports.icon = "";
 exports.version = "1.0.0";
 exports.site = "https://nightnovel.online";
 exports.filters = [{ "key": "tags", "label": "Тэги", "values": [{ "label": "Альтернативная реальность", "value": 30 }, { "label": "Амнезия", "value": 31 }, { "label": "Анал", "value": 33 }, { "label": "Ангелы", "value": 38 }, { "label": "Аристократия", "value": 51 }, { "label": "Артефакты", "value": 58 }, { "label": "Ассасины", "value": 61 }, { "label": "Банды", "value": 302 }, { "label": "БДСМ", "value": 77 }, { "label": "Беременность", "value": 551 }, { "label": "Боги", "value": 318 }, { "label": "Богини", "value": 316 }, { "label": "Боевая академия", "value": 75 }, { "label": "Божественная сила", "value": 317 }, { "label": "Влияние прошлого", "value": 517 }, { "label": "Враги становятся союзниками", "value": 238 }, { "label": "Вынужденные условия проживания", "value": 287 }, { "label": "Герои", "value": 341 }, { "label": "Героиня красавица", "value": 81 }, { "label": "R-18", "value": 571 }], "inputType": filterInputs_1.FilterInputs.Checkbox }];
-exports["protected"] = false;
 const baseUrl = exports.site;
 const domain = baseUrl.split('//')[1];
 const popularNovels = function (page, { filters }) {

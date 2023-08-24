@@ -17,7 +17,6 @@ exports.name = "Foxaholic";
 exports.version = "1.0.0";
 exports.icon = "src/en/foxaholic/icon.png";
 exports.site = "https://www.foxaholic.com/";
-module.exports.protected = false;
 const pluginId = exports.id;
 const baseUrl = exports.site;
 const popularNovels = function (page) {

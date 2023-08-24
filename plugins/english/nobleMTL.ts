@@ -8,7 +8,7 @@ export const name = "NobleMTL";
 export const version = "1.0.0";
 export const icon = "src/en/noblemtl/icon.png";
 export const site = "https://www.noblemtl.com/";
-exports.protected = false;
+
 
 export const popularNovels: Plugin.popularNovels = async function (
     page,

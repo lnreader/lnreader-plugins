@@ -17,7 +17,6 @@
     export const version = "1.0.0";
     export const site = "https://ukr.novel.tl";
     export const filters: Filter[] = [{"key":"tags","label":"Тэги","values":[{"label":"Альтернативная реальность","value":30},{"label":"Апатичный главный герой","value":46},{"label":"Асоциальный главный герой","value":42},{"label":"Владелец уникального оружия","value":736},{"label":"Гарем рабов","value":656},{"label":"Герои","value":341},{"label":"Героиня красавица","value":81},{"label":"Герой использует щит","value":636},{"label":"Герой-трудяга","value":330},{"label":"Главный герой — мужчина","value":419},{"label":"Глухой к любви герой","value":194},{"label":"Демоны","value":193},{"label":"Друзья детства","value":128},{"label":"Есть аниме-адаптация","value":10},{"label":"Есть манга-адаптация","value":14},{"label":"Есть CD дорама-адаптация","value":12},{"label":"Зверолюди","value":39},{"label":"Магия","value":412},{"label":"Магия призыва","value":694},{"label":"От слабого к сильному","value":752}],"inputType":FilterInputs.Checkbox}];
-    exports["protected"] = false;
     
     const baseUrl = site;
     const domain = baseUrl.split('//')[1];

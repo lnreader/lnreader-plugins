@@ -28,7 +28,6 @@ exports.icon = "";
 exports.version = "1.0.0";
 exports.site = "https://snailulitka.novel.tl";
 exports.filters = [{ "key": "tags", "label": "Тэги", "values": [{ "label": "Алхимия", "value": 27 }, { "label": "Ассасины", "value": 61 }, { "label": "Бедный главный герой", "value": 541 }, { "label": "Богачи", "value": 753 }, { "label": "Виртуальная реальность", "value": 744 }, { "label": "Война", "value": 750 }, { "label": "Геймеры", "value": 301 }, { "label": "Героиня красавица", "value": 81 }, { "label": "Герой красавец", "value": 329 }, { "label": "Гильдии", "value": 324 }, { "label": "Главный герой - гений", "value": 308 }, { "label": "Главный герой — знаменитость", "value": 263 }, { "label": "Главный герой — мужчина", "value": 419 }, { "label": "Дворфы", "value": 224 }, { "label": "Драконы", "value": 218 }, { "label": "Есть маньхуа-адаптация", "value": 15 }, { "label": "Игровая рейтинговая система", "value": 300 }, { "label": "Книги навыков", "value": 654 }, { "label": "Лекари", "value": 334 }, { "label": "Месть", "value": 588 }], "inputType": filterInputs_1.FilterInputs.Checkbox }];
-exports["protected"] = false;
 const baseUrl = exports.site;
 const domain = baseUrl.split('//')[1];
 const popularNovels = function (page, { filters }) {

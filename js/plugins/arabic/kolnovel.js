@@ -18,7 +18,6 @@ exports.name = "KolNovel";
 exports.version = "1.0.0";
 exports.icon = "multisrc/wpmangastream/icons/kolnovel.png";
 exports.site = "https://kolnovel.com/";
-module.exports.protected = false;
 const pluginId = exports.id;
 const baseUrl = exports.site;
 const popularNovels = function (page, { filters }) {

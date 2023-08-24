@@ -7,7 +7,7 @@ export const name = "NovelFull";
 export const version = "1.0.0";
 export const icon = "src/en/novelfull/icon.png";
 export const site = "https://novelfull.com/";
-exports.protected = false;
+
 
 const baseUrl = site;
 

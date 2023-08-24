@@ -7,7 +7,7 @@ export const name = "Novel Hold";
 export const version = "1.0.0";
 export const icon = "src/en/novelhold/icon.png";
 export const site = "https://novelhold.com/";
-exports.protected = false;
+
 
 const baseUrl = site;
 

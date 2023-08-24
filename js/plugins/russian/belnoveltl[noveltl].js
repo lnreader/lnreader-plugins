@@ -24,7 +24,6 @@ exports.icon = "";
 exports.version = "1.0.0";
 exports.site = "https://bel.novel.tl";
 exports.filters = [];
-exports["protected"] = false;
 const baseUrl = exports.site;
 const domain = baseUrl.split('//')[1];
 const popularNovels = function (page, { filters }) {

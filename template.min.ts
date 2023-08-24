@@ -16,7 +16,6 @@ export const icon = "";
 export const version = "0.0.0";
 export const site = "";
 // export const filters: Filter[] = [];
-exports["protected"] = false;
 
 export const popularNovels: Plugin.popularNovels = async function (
     page,

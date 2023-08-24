@@ -18,7 +18,6 @@ exports.name = "Light Novel Brasil";
 exports.version = "1.0.0";
 exports.icon = "multisrc/wpmangastream/icons/lightnovelbrasil.png";
 exports.site = "https://lightnovelbrasil.com/";
-exports.protected = false;
 const pluginId = exports.id;
 const baseUrl = exports.site;
 const popularNovels = function (page, { filters }) {

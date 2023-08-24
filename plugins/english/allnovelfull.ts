@@ -197,4 +197,4 @@ export const fetchImage: Plugin.fetchImage = async function (url, init) {
     return await fetchFile(url, init);
 };
 
-exports.protected = false;
+

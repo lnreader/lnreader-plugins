@@ -16,7 +16,6 @@
     export const icon = "";
     export const version = "1.0.0";
     export const site = "https://erolate.com";
-    exports["protected"] = false;
     
     const baseUrl = site;
     

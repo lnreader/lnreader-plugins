@@ -9,7 +9,7 @@ export const name = "Early Novel";
 export const version = "1.0.0";
 export const icon = "multisrc/madara/icons/latestnovel.png";
 export const site = "https://earlynovel.net/";
-module.exports.protected = false;
+
 
 const pluginId = id;
 const baseUrl = site;

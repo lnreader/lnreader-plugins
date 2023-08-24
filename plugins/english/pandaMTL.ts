@@ -8,7 +8,7 @@ export const name = "PandaMTL";
 export const version = "1.0.0";
 export const icon = "src/en/wordpress/icon.png";
 export const site = "https://www.pandamtl.com/";
-exports.protected = false;
+
 
 const pluginId = id;
 const baseUrl = site;

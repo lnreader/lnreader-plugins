@@ -28,7 +28,6 @@ exports.icon = "";
 exports.version = "1.0.0";
 exports.site = "https://kod.novel.tl";
 exports.filters = [{ "key": "tags", "label": "Тэги", "values": [{ "label": "Актёрское искусство", "value": 7 }, { "label": "Забота о детях", "value": 127 }, { "label": "Управление бизнесом", "value": 109 }, { "label": "Шоу-бизнес", "value": 642 }], "inputType": filterInputs_1.FilterInputs.Checkbox }];
-exports["protected"] = false;
 const baseUrl = exports.site;
 const domain = baseUrl.split('//')[1];
 const popularNovels = function (page, { filters }) {
