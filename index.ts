@@ -15,6 +15,7 @@ const dirname = path.join(__dirname, "..");
 
 app.use(bodyParser.json());
 app.use("/static", express.static(path.join(dirname, "test_web", "static")));
+app.use("/icons", express.static(path.join(dirname, "icons")));
 app.get("/all_plugins", (req, res) => {
     const allPlugins = pluginApi.all_plugins();
     res.json(allPlugins);

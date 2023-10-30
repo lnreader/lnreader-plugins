@@ -10,29 +10,31 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.fetchImage = exports.filters = exports.searchNovels = exports.parseChapter = exports.parseNovelAndChapters = exports.popularNovels = exports.icon = exports.version = exports.site = exports.name = exports.id = void 0;
-const cheerio_1 = require("cheerio");
+const filterInputs_1 = require("@libs/filterInputs");
 const fetch_1 = require("@libs/fetch");
 const novelStatus_1 = require("@libs/novelStatus");
-const filterInputs_1 = require("@libs/filterInputs");
+const cheerio_1 = require("cheerio");
 exports.id = "jaomix.ru";
 exports.name = "Jaomix";
 exports.site = "https://jaomix.ru";
 exports.version = "1.0.0";
 exports.icon = "src/ru/jaomix/icon.png";
-const baseUrl = exports.site;
 const popularNovels = function (page, { showLatestNovels, filters }) {
     return __awaiter(this, void 0, void 0, function* () {
-        let url = baseUrl + "/?searchrn&sortby=";
-        url += showLatestNovels ? "upd" : (filters === null || filters === void 0 ? void 0 : filters.sort) || "count";
-        if (filters) {
-            if (Array.isArray(filters.type) && filters.type.length) {
-                url += filters.type.map((i) => `&lang[]=${i}`).join("");
-            }
-            if (Array.isArray(filters.genres) && filters.genres.length) {
-                url += filters.genres.map((i) => `&genre[]=${i}`).join("");
-            }
+        let url = exports.site + "/?searchrn";
+        if ((filters === null || filters === void 0 ? void 0 : filters.lang) instanceof Array) {
+            url += filters.lang.map((lang, idx) => `&lang[${idx}]=${lang}`).join("");
         }
-        url += `&page=${page}`;
+        if ((filters === null || filters === void 0 ? void 0 : filters.genre) instanceof Array) {
+            url += filters.genre.map((genre, idx) => `&genre[${idx}]=${genre}`).join("");
+        }
+        if ((filters === null || filters === void 0 ? void 0 : filters.delgenre) instanceof Array) {
+            url += filters.delgenre.map((genre, idx) => `&delgenre[${idx}]=del ${genre}`).join("");
+        }
+        url += "&sortcountchapt=" + ((filters === null || filters === void 0 ? void 0 : filters.sortcountchapt) || "1");
+        url += "&sortdaycreate=" + ((filters === null || filters === void 0 ? void 0 : filters.sortdaycreate) || "1");
+        url += "&sortby=" + (showLatestNovels ? "upd" : (filters === null || filters === void 0 ? void 0 : filters.sortby) || "topweek");
+        url += "&gpage=" + page;
         const result = yield (0, fetch_1.fetchApi)(url);
         let body = yield result.text();
         const loadedCheerio = (0, cheerio_1.load)(body);
@@ -83,11 +85,12 @@ const parseNovelAndChapters = function (novelUrl) {
         });
         const chapters = [];
         loadedCheerio(".download-chapter div.title").each(function () {
-            chapters.push({
-                name: loadedCheerio(this).find("a").attr("title"),
-                releaseTime: loadedCheerio(this).find("time").text(),
-                url: loadedCheerio(this).find("a").attr("href"),
-            });
+            const name = loadedCheerio(this).find("a").attr("title");
+            const releaseTime = loadedCheerio(this).find("time").text();
+            const url = loadedCheerio(this).find("a").attr("href");
+            if (!name || !url)
+                return;
+            chapters.push({ name, releaseTime, url });
         });
         novel.chapters = chapters.reverse();
         return novel;
@@ -107,7 +110,7 @@ const parseChapter = function (chapterUrl) {
 exports.parseChapter = parseChapter;
 const searchNovels = function (searchTerm) {
     return __awaiter(this, void 0, void 0, function* () {
-        const url = `${baseUrl}/?searchrn=${searchTerm}&but=Поиск по названию&sortby=upd`;
+        const url = `${exports.site}/?searchrn=${searchTerm}&but=Поиск по названию&sortby=upd`;
         const result = yield (0, fetch_1.fetchApi)(url);
         let body = yield result.text();
         const loadedCheerio = (0, cheerio_1.load)(body);
@@ -133,30 +136,53 @@ const searchNovels = function (searchTerm) {
 exports.searchNovels = searchNovels;
 exports.filters = [
     {
-        key: "sort",
-        label: "Сортировка",
+        key: "sortby",
+        label: "Сортировка:",
         values: [
-            { label: "Имя", value: "alphabet" },
-            { label: "Просмотры", value: "count" },
-            { label: "Дате добавления", value: "new" },
-            { label: "Дате обновления", value: "upd" },
+            { label: "Топ недели", value: "topweek" },
+            { label: "По алфавиту", value: "alphabet" },
+            { label: "По дате обновления", value: "upd" },
+            { label: "По дате создания", value: "new" },
+            { label: "По просмотрам", value: "count" },
+            { label: "Топ года", value: "topyear" },
+            { label: "Топ дня", value: "topday" },
+            { label: "Топ за все время", value: "alltime" },
+            { label: "Топ месяца", value: "topmonth" },
         ],
         inputType: filterInputs_1.FilterInputs.Picker,
     },
     {
-        key: "type",
-        label: "Тип",
+        key: "sortdaycreate",
+        label: "Дата добавления:",
         values: [
-            { label: "Английский", value: "Английский" },
-            { label: "Китайский", value: "Китайский" },
-            { label: "Корейский", value: "Корейский" },
-            { label: "Японский", value: "Японский" },
+            { label: "Любое", value: "1" },
+            { label: "От 120 до 180 дней", value: "1218" },
+            { label: "От 180 до 365 дней", value: "1836" },
+            { label: "От 30 до 60 дней", value: "3060" },
+            { label: "От 365 дней", value: "365" },
+            { label: "От 60 до 90 дней", value: "6090" },
+            { label: "От 90 до 120 дней", value: "9012" },
+            { label: "Послед. 30 дней", value: "30" },
         ],
-        inputType: filterInputs_1.FilterInputs.Checkbox,
+        inputType: filterInputs_1.FilterInputs.Picker,
     },
     {
-        key: "genres",
-        label: "Жанры",
+        key: "sortcountchapt",
+        label: "Количество глав:",
+        values: [
+            { label: "Любое кол-во глав", value: "1" },
+            { label: "До 500", value: "500" },
+            { label: "От 1000 до 2000", value: "1020" },
+            { label: "От 2000 до 3000", value: "2030" },
+            { label: "От 3000 до 4000", value: "3040" },
+            { label: "От 4000", value: "400" },
+            { label: "От 500 до 1000", value: "510" },
+        ],
+        inputType: filterInputs_1.FilterInputs.Picker,
+    },
+    {
+        key: "genre",
+        label: "Жанры:",
         values: [
             { label: "Боевые Искусства", value: "Боевые Искусства" },
             { label: "Виртуальный Мир", value: "Виртуальный Мир" },
@@ -203,6 +229,69 @@ exports.filters = [
             { label: "Xianxia", value: "Xianxia" },
             { label: "Xuanhuan", value: "Xuanhuan" },
             { label: "Yaoi", value: "Yaoi" },
+        ],
+        inputType: filterInputs_1.FilterInputs.Checkbox,
+    },
+    {
+        key: "delgenre",
+        label: "Исключить жанры:",
+        values: [
+            { label: "Боевые Искусства", value: "Боевые Искусства" },
+            { label: "Виртуальный Мир", value: "Виртуальный Мир" },
+            { label: "Гарем", value: "Гарем" },
+            { label: "Детектив", value: "Детектив" },
+            { label: "Драма", value: "Драма" },
+            { label: "Игра", value: "Игра" },
+            { label: "Истории из жизни", value: "Истории из жизни" },
+            { label: "Исторический", value: "Исторический" },
+            { label: "История", value: "История" },
+            { label: "Исэкай", value: "Исэкай" },
+            { label: "Комедия", value: "Комедия" },
+            { label: "Меха", value: "Меха" },
+            { label: "Мистика", value: "Мистика" },
+            { label: "Научная Фантастика", value: "Научная Фантастика" },
+            { label: "Повседневность", value: "Повседневность" },
+            { label: "Постапокалипсис", value: "Постапокалипсис" },
+            { label: "Приключения", value: "Приключения" },
+            { label: "Психология", value: "Психология" },
+            { label: "Романтика", value: "Романтика" },
+            { label: "Сверхъестественное", value: "Сверхъестественное" },
+            { label: "Сёнэн", value: "Сёнэн" },
+            { label: "Сёнэн-ай", value: "Сёнэн-ай" },
+            { label: "Спорт", value: "Спорт" },
+            { label: "Сэйнэн", value: "Сэйнэн" },
+            { label: "Сюаньхуа", value: "Сюаньхуа" },
+            { label: "Трагедия", value: "Трагедия" },
+            { label: "Триллер", value: "Триллер" },
+            { label: "Фантастика", value: "Фантастика" },
+            { label: "Фэнтези", value: "Фэнтези" },
+            { label: "Хоррор", value: "Хоррор" },
+            { label: "Школьная жизнь", value: "Школьная жизнь" },
+            { label: "Шоунен", value: "Шоунен" },
+            { label: "Экшн", value: "Экшн" },
+            { label: "Этти", value: "Этти" },
+            { label: "Юри", value: "Юри" },
+            { label: "Adult", value: "Adult" },
+            { label: "Ecchi", value: "Ecchi" },
+            { label: "Josei", value: "Josei" },
+            { label: "Lolicon", value: "Lolicon" },
+            { label: "Mature", value: "Mature" },
+            { label: "Shoujo", value: "Shoujo" },
+            { label: "Wuxia", value: "Wuxia" },
+            { label: "Xianxia", value: "Xianxia" },
+            { label: "Xuanhuan", value: "Xuanhuan" },
+            { label: "Yaoi", value: "Yaoi" },
+        ],
+        inputType: filterInputs_1.FilterInputs.Checkbox,
+    },
+    {
+        key: "lang",
+        label: "Выбрать языки:",
+        values: [
+            { label: "Английский", value: "Английский" },
+            { label: "Китайский", value: "Китайский" },
+            { label: "Корейский", value: "Корейский" },
+            { label: "Японский", value: "Японский" },
         ],
         inputType: filterInputs_1.FilterInputs.Checkbox,
     },

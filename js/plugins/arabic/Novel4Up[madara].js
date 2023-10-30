@@ -12,9 +12,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchImage = exports.searchNovels = exports.parseChapter = exports.parseNovelAndChapters = exports.popularNovels = exports.site = exports.version = exports.icon = exports.name = exports.id = void 0;
+exports.filters = exports.fetchImage = exports.searchNovels = exports.parseChapter = exports.parseNovelAndChapters = exports.popularNovels = exports.site = exports.version = exports.icon = exports.name = exports.id = void 0;
 const cheerio_1 = require("cheerio");
 const fetch_1 = require("@libs/fetch");
+const filterInputs_1 = require("@libs/filterInputs");
 const defaultCover_1 = require("@libs/defaultCover");
 const novelStatus_1 = require("@libs/novelStatus");
 const parseMadaraDate_1 = require("@libs/parseMadaraDate");
@@ -25,12 +26,17 @@ exports.icon = "multisrc/madara/icons/novel4up.png";
 exports.version = "1.0.0";
 exports.site = "https://novel4up.com/";
 const baseUrl = exports.site;
-const popularNovels = (pageNo, { showLatestNovels }) => __awaiter(void 0, void 0, void 0, function* () {
+const popularNovels = (pageNo, { filters, showLatestNovels }) => __awaiter(void 0, void 0, void 0, function* () {
     const novels = [];
-    const sortOrder = showLatestNovels
-        ? '?m_orderby=latest'
-        : '/?m_orderby=rating';
-    let url = exports.site + "novel" + '/page/' + pageNo + sortOrder;
+    let url = exports.site;
+    if (filters === null || filters === void 0 ? void 0 : filters.genres) {
+        url += "novel-genre/" + filters.genres + '/';
+    }
+    else {
+        url += "novel/";
+    }
+    url += '/page/' + pageNo + '/' +
+        '?m_orderby=' + (showLatestNovels ? 'latest' : ((filters === null || filters === void 0 ? void 0 : filters.sort) || 'rating'));
     const body = yield (0, fetch_1.fetchApi)(url).then(res => res.text());
     const loadedCheerio = (0, cheerio_1.load)(body);
     loadedCheerio('.manga-title-badges').remove();
@@ -170,3 +176,4 @@ const fetchImage = (url) => __awaiter(void 0, void 0, void 0, function* () {
     return yield (0, fetch_1.fetchFile)(url);
 });
 exports.fetchImage = fetchImage;
+exports.filters = [{ "key": "sort", "label": "ترتيب حسب:", "values": [{ "label": "أ-ي", "value": "alphabet" }, { "label": "الأحدث", "value": "latest" }, { "label": "الأكثر مشاهدة", "value": "views" }, { "label": "التقييم", "value": "rating" }, { "label": "الجديد", "value": "new-manga" }, { "label": "الشائع", "value": "trending" }], "inputType": filterInputs_1.FilterInputs.Picker }, { "key": "genres", "label": "التصنيفات", "values": [{ "label": "أكشن", "value": "action" }, { "label": "الخارق للطبيعة", "value": "supernatural" }, { "label": "تاريخي", "value": "historical" }, { "label": "تحقيق", "value": "detective" }, { "label": "تراجيديا", "value": "tragedy" }, { "label": "حريم", "value": "harem" }, { "label": "حياة مدرسية", "value": "school-life" }, { "label": "خيال علمي", "value": "sci-fi" }, { "label": "دراما", "value": "drama" }, { "label": "رعب", "value": "horror" }, { "label": "رومانسي", "value": "romance" }, { "label": "رياضة", "value": "sports" }, { "label": "سحر", "value": "magic" }, { "label": "شريحة من الحياة", "value": "slice-of-life" }, { "label": "شوانهوا", "value": "xuanhuan" }, { "label": "شوجو", "value": "shoujo" }, { "label": "شونين", "value": "shounen" }, { "label": "غموض", "value": "mystery" }, { "label": "فانتازيا", "value": "fantasy" }, { "label": "فنون قتال", "value": "martial-arts" }, { "label": "كوميديا", "value": "comedy" }, { "label": "مغامرة", "value": "adventure" }, { "label": "ميكا", "value": "mecha" }, { "label": "نفسي", "value": "psychological" }, { "label": "ون شوت", "value": "one-shot" }, { "label": "ووشيا", "value": "wuxia" }], "inputType": filterInputs_1.FilterInputs.Picker }];

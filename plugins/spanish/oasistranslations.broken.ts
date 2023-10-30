@@ -1,6 +1,6 @@
 import { fetchFile, fetchApi } from "@libs/fetch";
 import { Chapter, Novel, Plugin } from "@typings/plugin";
-import cheerio from "cheerio";
+import { load as parseHTML } from "cheerio";
 
 export const id = "oasisTL.wp";
 export const name = "Oasis Translations";
@@ -16,7 +16,7 @@ export const popularNovels: Plugin.popularNovels = async function (page) {
     const result = await fetchApi(url);
     const body = await result.text();
 
-    let loadedCheerio = cheerio.load(body);
+    let loadedCheerio = parseHTML(body);
 
     let novels: Novel.Item[] = [];
 
@@ -51,7 +51,7 @@ export const parseNovelAndChapters: Plugin.parseNovelAndChapters =
         const result = await fetchApi(url);
         const body = await result.text();
 
-        let loadedCheerio = cheerio.load(body);
+        let loadedCheerio = parseHTML(body);
 
         let novel: Novel.instance = { url };
 
@@ -113,7 +113,7 @@ export const parseChapter: Plugin.parseChapter = async function (chapterUrl) {
     const result = await fetchApi(url);
     const body = await result.text();
 
-    let loadedCheerio = cheerio.load(body);
+    let loadedCheerio = parseHTML(body);
 
     loadedCheerio("div#jp-post-flair").remove();
 
@@ -130,7 +130,7 @@ export const searchNovels: Plugin.searchNovels = async function (searchTerm) {
     const result = await fetchApi(url);
     const body = await result.text();
 
-    let loadedCheerio = cheerio.load(body);
+    let loadedCheerio = parseHTML(body);
 
     let novels: Novel.Item[] = [];
     loadedCheerio(".menu-item-1819")
@@ -160,3 +160,5 @@ export const searchNovels: Plugin.searchNovels = async function (searchTerm) {
 
     return novels;
 };
+
+export const fetchImage: Plugin.fetchImage = fetchFile;

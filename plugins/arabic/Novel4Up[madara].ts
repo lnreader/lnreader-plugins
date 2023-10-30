@@ -2,6 +2,7 @@
 import { load as parseHTML } from "cheerio";
 import { fetchFile, fetchApi } from "@libs/fetch";
 import { Novel, Plugin, Chapter } from "@typings/plugin";
+import { FilterInputs } from "@libs/filterInputs";
 import { defaultCover } from "@libs/defaultCover";
 import { NovelStatus } from "@libs/novelStatus"
 import { parseMadaraDate } from "@libs/parseMadaraDate";
@@ -14,18 +15,23 @@ export const version = "1.0.0";
 export const site = "https://novel4up.com/";
 const baseUrl = site;
 
-export const popularNovels: Plugin.popularNovels = async (pageNo, {showLatestNovels}) => {
+export const popularNovels: Plugin.popularNovels = async (pageNo, {filters, showLatestNovels}) => {
     const novels: Novel.Item[] = [];
-    const sortOrder = showLatestNovels
-    ? '?m_orderby=latest'
-    : '/?m_orderby=rating';
 
-    let url = site + "novel" + '/page/' + pageNo + sortOrder;
+    let url = site;
+
+    if (filters?.genres) {
+        url += "novel-genre/" + filters.genres + '/';
+    } else {
+        url += "novel/";
+    }
+
+    url += '/page/' + pageNo + '/' + 
+        '?m_orderby=' + (showLatestNovels ? 'latest' : (filters?.sort || 'rating'));
 
     const body = await fetchApi(url).then(res => res.text());
 
     const loadedCheerio = parseHTML(body);
-
 
     loadedCheerio('.manga-title-badges').remove();
 
@@ -203,3 +209,5 @@ export const searchNovels: Plugin.searchNovels = async (searchTerm) => {
 export const fetchImage: Plugin.fetchImage = async (url) => {
     return await fetchFile(url);
 };
+
+export const filters = [{"key":"sort","label":"ترتيب حسب:","values":[{"label":"أ-ي","value":"alphabet"},{"label":"الأحدث","value":"latest"},{"label":"الأكثر مشاهدة","value":"views"},{"label":"التقييم","value":"rating"},{"label":"الجديد","value":"new-manga"},{"label":"الشائع","value":"trending"}],"inputType":FilterInputs.Picker},{"key":"genres","label":"التصنيفات","values":[{"label":"أكشن","value":"action"},{"label":"الخارق للطبيعة","value":"supernatural"},{"label":"تاريخي","value":"historical"},{"label":"تحقيق","value":"detective"},{"label":"تراجيديا","value":"tragedy"},{"label":"حريم","value":"harem"},{"label":"حياة مدرسية","value":"school-life"},{"label":"خيال علمي","value":"sci-fi"},{"label":"دراما","value":"drama"},{"label":"رعب","value":"horror"},{"label":"رومانسي","value":"romance"},{"label":"رياضة","value":"sports"},{"label":"سحر","value":"magic"},{"label":"شريحة من الحياة","value":"slice-of-life"},{"label":"شوانهوا","value":"xuanhuan"},{"label":"شوجو","value":"shoujo"},{"label":"شونين","value":"shounen"},{"label":"غموض","value":"mystery"},{"label":"فانتازيا","value":"fantasy"},{"label":"فنون قتال","value":"martial-arts"},{"label":"كوميديا","value":"comedy"},{"label":"مغامرة","value":"adventure"},{"label":"ميكا","value":"mecha"},{"label":"نفسي","value":"psychological"},{"label":"ون شوت","value":"one-shot"},{"label":"ووشيا","value":"wuxia"}],"inputType":FilterInputs.Picker}];

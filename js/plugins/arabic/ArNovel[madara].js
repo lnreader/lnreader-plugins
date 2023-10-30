@@ -12,9 +12,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchImage = exports.searchNovels = exports.parseChapter = exports.parseNovelAndChapters = exports.popularNovels = exports.site = exports.version = exports.icon = exports.name = exports.id = void 0;
+exports.filters = exports.fetchImage = exports.searchNovels = exports.parseChapter = exports.parseNovelAndChapters = exports.popularNovels = exports.site = exports.version = exports.icon = exports.name = exports.id = void 0;
 const cheerio_1 = require("cheerio");
 const fetch_1 = require("@libs/fetch");
+const filterInputs_1 = require("@libs/filterInputs");
 const defaultCover_1 = require("@libs/defaultCover");
 const novelStatus_1 = require("@libs/novelStatus");
 const parseMadaraDate_1 = require("@libs/parseMadaraDate");
@@ -25,12 +26,17 @@ exports.icon = "multisrc/madara/icons/arnovel.png";
 exports.version = "1.0.0";
 exports.site = "https://arnovel.me/";
 const baseUrl = exports.site;
-const popularNovels = (pageNo, { showLatestNovels }) => __awaiter(void 0, void 0, void 0, function* () {
+const popularNovels = (pageNo, { filters, showLatestNovels }) => __awaiter(void 0, void 0, void 0, function* () {
     const novels = [];
-    const sortOrder = showLatestNovels
-        ? '?m_orderby=latest'
-        : '/?m_orderby=rating';
-    let url = exports.site + "novel" + '/page/' + pageNo + sortOrder;
+    let url = exports.site;
+    if (filters === null || filters === void 0 ? void 0 : filters.genres) {
+        url += "home/novel-genre/" + filters.genres + '/';
+    }
+    else {
+        url += "novel/";
+    }
+    url += '/page/' + pageNo + '/' +
+        '?m_orderby=' + (showLatestNovels ? 'latest' : ((filters === null || filters === void 0 ? void 0 : filters.sort) || 'rating'));
     const body = yield (0, fetch_1.fetchApi)(url).then(res => res.text());
     const loadedCheerio = (0, cheerio_1.load)(body);
     loadedCheerio('.manga-title-badges').remove();
@@ -170,3 +176,4 @@ const fetchImage = (url) => __awaiter(void 0, void 0, void 0, function* () {
     return yield (0, fetch_1.fetchFile)(url);
 });
 exports.fetchImage = fetchImage;
+exports.filters = [{ "key": "sort", "label": "الترتيب حسب", "values": [{ "label": "A-Z", "value": "alphabet" }, { "label": "الآخير", "value": "latest" }, { "label": "الأكثر مشاهدة", "value": "views" }, { "label": "التقييم", "value": "rating" }, { "label": "جديد", "value": "new-manga" }, { "label": "شائع", "value": "trending" }], "inputType": filterInputs_1.FilterInputs.Picker }, { "key": "genres", "label": "التصنيفات", "values": [{ "label": "أكشن", "value": "%d8%a3%d9%83%d8%b4%d9%86" }, { "label": "إتشي", "value": "%d8%a5%d8%aa%d8%b4%d9%80%d9%8a" }, { "label": "بالغ", "value": "%d8%a8%d8%a7%d9%84%d8%ba" }, { "label": "تاريخي", "value": "%d8%aa%d8%a7%d8%b1%d9%8a%d8%ae%d9%8a" }, { "label": "تراجدي", "value": "%d8%aa%d8%b1%d8%a7%d8%ac%d8%af%d9%8a" }, { "label": "جوسي", "value": "%d8%ac%d9%88%d8%b3%d9%8a" }, { "label": "حريم", "value": "%d8%ad%d8%b1%d9%8a%d9%85" }, { "label": "حياة مدرسية", "value": "%d8%ad%d9%8a%d8%a7%d8%a9-%d9%85%d8%af%d8%b1%d8%b3%d9%8a%d8%a9" }, { "label": "خارق لطبيعية", "value": "%d8%ae%d8%a7%d8%b1%d9%82-%d9%84%d8%b7%d8%a8%d9%8a%d8%b9%d9%8a%d8%a9" }, { "label": "خيال", "value": "%d8%ae%d9%8a%d8%a7%d9%84" }, { "label": "خيال علمي", "value": "%d8%ae%d9%8a%d8%a7%d9%84-%d8%b9%d9%84%d9%85%d9%8a" }, { "label": "دراما", "value": "%d8%af%d8%b1%d8%a7%d9%85%d8%a7" }, { "label": "راشد", "value": "%d8%b1%d8%a7%d8%b4%d8%af" }, { "label": "رعب", "value": "%d8%b1%d8%b9%d8%a8" }, { "label": "رومنسي", "value": "%d8%b1%d9%88%d9%85%d9%86%d8%b3%d9%8a" }, { "label": "رياضي", "value": "%d8%b1%d9%8a%d8%a7%d8%b6%d9%8a" }, { "label": "سينين", "value": "%d8%b3%d9%8a%d9%86%d9%8a%d9%86" }, { "label": "شريحة من الحياة", "value": "%d8%b4%d8%b1%d9%8a%d8%ad%d8%a9-%d9%85%d9%86-%d8%a7%d9%84%d8%ad%d9%8a%d8%a7%d8%a9" }, { "label": "شوجو", "value": "%d8%b4%d9%88%d8%ac%d9%88" }, { "label": "شونين", "value": "%d8%b4%d9%88%d9%86%d9%8a%d9%86" }, { "label": "غموض", "value": "%d8%ba%d9%85%d9%88%d8%b6" }, { "label": "فنون قتال", "value": "%d9%81%d9%86%d9%88%d9%86-%d9%82%d8%aa%d8%a7%d9%84" }, { "label": "كوميديا", "value": "%d9%83%d9%88%d9%85%d9%8a%d8%af%d9%8a%d8%a7" }, { "label": "مغامرات", "value": "%d9%85%d8%ba%d8%a7%d9%85%d8%b1%d8%a7%d8%aa" }, { "label": "منتهية", "value": "%d9%85%d9%86%d8%aa%d9%87%d9%8a%d8%a9" }, { "label": "ميكا", "value": "%d9%85%d9%8a%d9%83%d8%a7" }, { "label": "نفسي", "value": "%d9%86%d9%81%d8%b3%d9%8a" }], "inputType": filterInputs_1.FilterInputs.Picker }];

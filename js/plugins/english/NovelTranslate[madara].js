@@ -12,9 +12,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchImage = exports.searchNovels = exports.parseChapter = exports.parseNovelAndChapters = exports.popularNovels = exports.site = exports.version = exports.icon = exports.name = exports.id = void 0;
+exports.filters = exports.fetchImage = exports.searchNovels = exports.parseChapter = exports.parseNovelAndChapters = exports.popularNovels = exports.site = exports.version = exports.icon = exports.name = exports.id = void 0;
 const cheerio_1 = require("cheerio");
 const fetch_1 = require("@libs/fetch");
+const filterInputs_1 = require("@libs/filterInputs");
 const defaultCover_1 = require("@libs/defaultCover");
 const novelStatus_1 = require("@libs/novelStatus");
 const parseMadaraDate_1 = require("@libs/parseMadaraDate");
@@ -25,12 +26,17 @@ exports.icon = "multisrc/madara/icons/noveltranslate.png";
 exports.version = "1.0.0";
 exports.site = "https://noveltranslate.com/";
 const baseUrl = exports.site;
-const popularNovels = (pageNo, { showLatestNovels }) => __awaiter(void 0, void 0, void 0, function* () {
+const popularNovels = (pageNo, { filters, showLatestNovels }) => __awaiter(void 0, void 0, void 0, function* () {
     const novels = [];
-    const sortOrder = showLatestNovels
-        ? '?m_orderby=latest'
-        : '/?m_orderby=rating';
-    let url = exports.site + "all-novels" + '/page/' + pageNo + sortOrder;
+    let url = exports.site;
+    if (filters === null || filters === void 0 ? void 0 : filters.genres) {
+        url += "manga-genre/" + filters.genres + '/';
+    }
+    else {
+        url += "all-novels/";
+    }
+    url += '/page/' + pageNo + '/' +
+        '?m_orderby=' + (showLatestNovels ? 'latest' : ((filters === null || filters === void 0 ? void 0 : filters.sort) || 'rating'));
     const body = yield (0, fetch_1.fetchApi)(url).then(res => res.text());
     const loadedCheerio = (0, cheerio_1.load)(body);
     loadedCheerio('.manga-title-badges').remove();
@@ -170,3 +176,4 @@ const fetchImage = (url) => __awaiter(void 0, void 0, void 0, function* () {
     return yield (0, fetch_1.fetchFile)(url);
 });
 exports.fetchImage = fetchImage;
+exports.filters = [{ "key": "sort", "label": "Order by", "values": [{ "label": "Rating", "value": "rating" }, { "label": "A-Z", "value": "alphabet" }, { "label": "Latest", "value": "latest" }, { "label": "Most Views", "value": "views" }, { "label": "New", "value": "new-manga" }, { "label": "Trending", "value": "trending" }], "inputType": filterInputs_1.FilterInputs.Picker }, { "key": "genres", "label": "GENRES", "values": [{ "label": "Action", "value": "action" }, { "label": "Adult", "value": "adult" }, { "label": "Adventure", "value": "adventure" }, { "label": "Bleach", "value": "bleach" }, { "label": "Chinese", "value": "chinese" }, { "label": "Comedy", "value": "comedy" }, { "label": "Conan", "value": "conan" }, { "label": "cooking", "value": "cooking" }, { "label": "Dragon Ball", "value": "dragon-ball" }, { "label": "Drama", "value": "drama" }, { "label": "Ecchi", "value": "ecchi" }, { "label": "Erciyuan", "value": "erciyuan" }, { "label": "Fairy Tail", "value": "fairy-tail" }, { "label": "Faloo", "value": "faloo" }, { "label": "Fan-Fiction", "value": "fan-fiction" }, { "label": "Fantasy", "value": "fantasy" }, { "label": "FoodWars!", "value": "foodwars" }, { "label": "Game", "value": "game" }, { "label": "Gender Bender", "value": "gender-bender" }, { "label": "Harem", "value": "harem" }, { "label": "Historical", "value": "historical" }, { "label": "Horror", "value": "horror" }, { "label": "Hunter x Hunter", "value": "hunter-x-hunter" }, { "label": "Isekai", "value": "isekai" }, { "label": "Japanese", "value": "japanese" }, { "label": "Jojo", "value": "jojo" }, { "label": "Josei", "value": "josei" }, { "label": "Korean", "value": "korean" }, { "label": "Martial Arts", "value": "martial-arts" }, { "label": "Marvel", "value": "marvel" }, { "label": "Mature", "value": "mature" }, { "label": "Mecha", "value": "mecha" }, { "label": "Military", "value": "military" }, { "label": "Mystery", "value": "mystery" }, { "label": "Naruto", "value": "naruto" }, { "label": "One piece", "value": "one-piece" }, { "label": "Pokemon", "value": "pokemon" }, { "label": "Political", "value": "political" }, { "label": "Psychological", "value": "psychological" }, { "label": "Romance", "value": "romance" }, { "label": "School Life", "value": "school-life" }, { "label": "Sci-fi", "value": "sci-fi" }, { "label": "Seinen", "value": "seinen" }, { "label": "Shoujo", "value": "shoujo" }, { "label": "Shoujo Ai", "value": "shoujo-ai" }, { "label": "Shounen", "value": "shounen" }, { "label": "Shounen Ai", "value": "shounen-ai" }, { "label": "Slice of Life", "value": "slice-of-life" }, { "label": "Smut", "value": "smut" }, { "label": "Sport", "value": "sport" }, { "label": "Sports", "value": "sports" }, { "label": "Supernatural", "value": "supernatural" }, { "label": "System", "value": "system" }, { "label": "Toriko", "value": "toriko" }, { "label": "Tragedy", "value": "tragedy" }, { "label": "Urban", "value": "urban" }, { "label": "Urban Life", "value": "urban-life" }, { "label": "Wuxia", "value": "wuxia" }, { "label": "Xianxia", "value": "xianxia" }, { "label": "Xuanhuan", "value": "xuanhuan" }, { "label": "Yaoi", "value": "yaoi" }, { "label": "Yuri", "value": "yuri" }], "inputType": filterInputs_1.FilterInputs.Picker }];

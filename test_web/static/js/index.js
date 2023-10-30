@@ -20,8 +20,11 @@ const display_search = (arr) => {
     search_results.html('');
     arr.slice(0, 15).forEach(plugin => {
         search_results.append(`
-            <div>
-                <button data-require="${plugin.requirePath}" onclick="test_plugin(this)" type="button" class="search-item btn btn-light btn-outline-primary btn-md btn-block">${plugin.lang}/${plugin.name}</button>
+            <div style="display: flex; align-items: center;">
+                <button style="display: flex; align-items: center; height: 30px; flex-shrink: 0;" data-require="${plugin.requirePath}" onclick="test_plugin(this)" type="button" class="search-item btn btn-light btn-outline-primary btn-md btn-block">
+                    <img src="./icons/${plugin.icon}" style="height: 100%; object-fit: contain; margin-right: 10px;">
+                    ${plugin.lang}/${plugin.name}
+                </button>
             </div>
         `)
     });

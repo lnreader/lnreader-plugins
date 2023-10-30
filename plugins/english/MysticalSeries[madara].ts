@@ -2,6 +2,7 @@
 import { load as parseHTML } from "cheerio";
 import { fetchFile, fetchApi } from "@libs/fetch";
 import { Novel, Plugin, Chapter } from "@typings/plugin";
+import { FilterInputs } from "@libs/filterInputs";
 import { defaultCover } from "@libs/defaultCover";
 import { NovelStatus } from "@libs/novelStatus"
 import { parseMadaraDate } from "@libs/parseMadaraDate";
@@ -14,18 +15,23 @@ export const version = "1.0.0";
 export const site = "https://mysticalmerries.com/";
 const baseUrl = site;
 
-export const popularNovels: Plugin.popularNovels = async (pageNo, {showLatestNovels}) => {
+export const popularNovels: Plugin.popularNovels = async (pageNo, {filters, showLatestNovels}) => {
     const novels: Novel.Item[] = [];
-    const sortOrder = showLatestNovels
-    ? '?m_orderby=latest'
-    : '/?m_orderby=rating';
 
-    let url = site + "series" + '/page/' + pageNo + sortOrder;
+    let url = site;
+
+    if (filters?.genres) {
+        url += "genre/" + filters.genres + '/';
+    } else {
+        url += "series/";
+    }
+
+    url += '/page/' + pageNo + '/' + 
+        '?m_orderby=' + (showLatestNovels ? 'latest' : (filters?.sort || 'rating'));
 
     const body = await fetchApi(url).then(res => res.text());
 
     const loadedCheerio = parseHTML(body);
-
 
     loadedCheerio('.manga-title-badges').remove();
 
@@ -203,3 +209,5 @@ export const searchNovels: Plugin.searchNovels = async (searchTerm) => {
 export const fetchImage: Plugin.fetchImage = async (url) => {
     return await fetchFile(url);
 };
+
+export const filters = [{"key":"sort","label":"Order by","values":[{"label":"Rating","value":"rating"},{"label":"A-Z","value":"alphabet"},{"label":"Latest","value":"latest"},{"label":"Most Views","value":"views"},{"label":"New","value":"new-manga"},{"label":"Trending","value":"trending"}],"inputType":FilterInputs.Picker},{"key":"genres","label":"GENRES","values":[{"label":"Action","value":"action"},{"label":"Adaptation","value":"adaptation"},{"label":"Adventure","value":"adventure"},{"label":"bilibili","value":"bilibili"},{"label":"Chinese Novel","value":"chinese-novel"},{"label":"Comedy","value":"comedy"},{"label":"Crossdressing","value":"crossdressing"},{"label":"Drama","value":"drama"},{"label":"Dropped","value":"dropped"},{"label":"Family","value":"family"},{"label":"Fantasy","value":"fantasy"},{"label":"Gender Bender","value":"gender-bender"},{"label":"Historical","value":"historical"},{"label":"Horror","value":"horror"},{"label":"Isekai","value":"isekai"},{"label":"Korean Novel","value":"korean-novell"},{"label":"Manga","value":"manga"},{"label":"Manhua","value":"manhua"},{"label":"Manhwa","value":"manhwa"},{"label":"Modern Romance","value":"modern-romance"},{"label":"Mystery","value":"mystery"},{"label":"Office Workers","value":"office-workers"},{"label":"One shot","value":"one-shot"},{"label":"Pilot Novel","value":"pilot-novel"},{"label":"R15","value":"r15"},{"label":"R19","value":"r19"},{"label":"Regression","value":"regression"},{"label":"Reincarnation","value":"reincarnation"},{"label":"Reverse Harem","value":"reverse-harem"},{"label":"Romance Fantasy","value":"romance-fantasy"},{"label":"School Life","value":"school-life"},{"label":"Sci-fi","value":"sci-fi"},{"label":"Slice of Life","value":"slice-of-life"},{"label":"Smut","value":"smut"},{"label":"Supernatural","value":"supernatural"},{"label":"Violence","value":"violence"}],"inputType":FilterInputs.Picker}];

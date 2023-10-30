@@ -12,25 +12,31 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchImage = exports.searchNovels = exports.parseChapter = exports.parseNovelAndChapters = exports.popularNovels = exports.site = exports.version = exports.icon = exports.name = exports.id = void 0;
+exports.filters = exports.fetchImage = exports.searchNovels = exports.parseChapter = exports.parseNovelAndChapters = exports.popularNovels = exports.site = exports.version = exports.icon = exports.name = exports.id = void 0;
 const cheerio_1 = require("cheerio");
 const fetch_1 = require("@libs/fetch");
+const filterInputs_1 = require("@libs/filterInputs");
 const defaultCover_1 = require("@libs/defaultCover");
 const novelStatus_1 = require("@libs/novelStatus");
 const parseMadaraDate_1 = require("@libs/parseMadaraDate");
 const dayjs_1 = __importDefault(require("dayjs"));
 exports.id = "novelr18";
-exports.name = "NovelR18  [madara]";
+exports.name = "NovelR18 [madara]";
 exports.icon = "multisrc/madara/icons/novelr18.png";
 exports.version = "1.0.0";
 exports.site = "https://novelr18.com/";
 const baseUrl = exports.site;
-const popularNovels = (pageNo, { showLatestNovels }) => __awaiter(void 0, void 0, void 0, function* () {
+const popularNovels = (pageNo, { filters, showLatestNovels }) => __awaiter(void 0, void 0, void 0, function* () {
     const novels = [];
-    const sortOrder = showLatestNovels
-        ? '?m_orderby=latest'
-        : '/?m_orderby=rating';
-    let url = exports.site + "novel" + '/page/' + pageNo + sortOrder;
+    let url = exports.site;
+    if (filters === null || filters === void 0 ? void 0 : filters.genres) {
+        url += "novel-genre/" + filters.genres + '/';
+    }
+    else {
+        url += "novel/";
+    }
+    url += '/page/' + pageNo + '/' +
+        '?m_orderby=' + (showLatestNovels ? 'latest' : ((filters === null || filters === void 0 ? void 0 : filters.sort) || 'rating'));
     const body = yield (0, fetch_1.fetchApi)(url).then(res => res.text());
     const loadedCheerio = (0, cheerio_1.load)(body);
     loadedCheerio('.manga-title-badges').remove();
@@ -170,3 +176,4 @@ const fetchImage = (url) => __awaiter(void 0, void 0, void 0, function* () {
     return yield (0, fetch_1.fetchFile)(url);
 });
 exports.fetchImage = fetchImage;
+exports.filters = [{ "key": "sort", "label": "Sort by :", "values": [{ "label": "Rating", "value": "rating" }, { "label": "A-Z", "value": "alphabet" }, { "label": "Latest Update", "value": "latest" }, { "label": "Most Views", "value": "views" }, { "label": "Newly Added Novels", "value": "new-manga" }, { "label": "Trending", "value": "trending" }], "inputType": filterInputs_1.FilterInputs.Picker }];

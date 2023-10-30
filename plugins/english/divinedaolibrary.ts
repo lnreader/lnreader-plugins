@@ -7,7 +7,7 @@ export const id = "DDL.com";
 export const name = "Divine Dao Library";
 export const site = "https://www.divinedaolibrary.com/";
 export const version = "1.0.0";
-export const icon = "src/`en/divinedaolibrary/icon.png";
+export const icon = "src/en/divinedaolibrary/icon.png";
 
 const baseUrl = site;
 

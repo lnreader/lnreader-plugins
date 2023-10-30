@@ -17,7 +17,7 @@ exports.id = "DDL.com";
 exports.name = "Divine Dao Library";
 exports.site = "https://www.divinedaolibrary.com/";
 exports.version = "1.0.0";
-exports.icon = "src/`en/divinedaolibrary/icon.png";
+exports.icon = "src/en/divinedaolibrary/icon.png";
 const baseUrl = exports.site;
 const popularNovels = function (page) {
     return __awaiter(this, void 0, void 0, function* () {

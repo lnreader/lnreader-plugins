@@ -10,5 +10,6 @@ export const languages = {
     Russian: "русский язык",
     Spanish: "español, castellano",
     Turkish: "Türkçe",
+    Ukraine: "Україна",
     Vietnamese: "Tiếng Việt",
 } as const;

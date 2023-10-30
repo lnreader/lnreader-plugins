@@ -10,44 +10,52 @@ export const generateAll: ScrpitGeneratorFunction = function () {
 };
 
 const generator = function generator(sourceJson: sourceData) {
-    const { pluginId, baseUrl, sourceName, options } = sourceJson;
+    const { id, sourceSite, sourceName, options } = sourceJson;
     const lang = options?.lang || "English";
-    const path = options?.path || {
-        novels: "novel",
-        novel: "novel",
-        chapter: "novel",
+    const path = {
+        genres: options?.path?.genres || "novel-genre",
+        novels: options?.path?.novels || "novel",
+        novel: options?.path?.novel || "novel",
+        chapter: options?.path?.chapter || "novel",
     };
     const useNewChapterEndpoint = options?.useNewChapterEndpoint || false;
     const iconFileName = sourceName.replace(/\s+/g, "").toLowerCase();
-
+    const filters = sourceJson.filters;
+    const filetersString = JSON.stringify(filters).replace(/(\"inputType\":)\s*\"([^\"]+)\"/g, "$1FilterInputs.$2");
     const pluginScript = `
 import { load as parseHTML } from "cheerio";
 import { fetchFile, fetchApi } from "@libs/fetch";
 import { Novel, Plugin, Chapter } from "@typings/plugin";
+import { FilterInputs } from "@libs/filterInputs";
 import { defaultCover } from "@libs/defaultCover";
 import { NovelStatus } from "@libs/novelStatus"
 import { parseMadaraDate } from "@libs/parseMadaraDate";
 import dayjs from "dayjs";
 
-export const id = "${pluginId}";
+export const id = "${id}";
 export const name = "${sourceName} [madara]";
 export const icon = "multisrc/madara/icons/${iconFileName}.png";
 export const version = "1.0.0";
-export const site = "${baseUrl}";
+export const site = "${sourceSite}";
 const baseUrl = site;
 
-export const popularNovels: Plugin.popularNovels = async (pageNo, {showLatestNovels}) => {
+export const popularNovels: Plugin.popularNovels = async (pageNo, {filters, showLatestNovels}) => {
     const novels: Novel.Item[] = [];
-    const sortOrder = showLatestNovels
-    ? '?m_orderby=latest'
-    : '/?m_orderby=rating';
 
-    let url = site + "${path.novels}" + '/page/' + pageNo + sortOrder;
+    let url = site;
+
+    if (filters?.genres) {
+        url += "${path.genres}/" + filters.genres + '/';
+    } else {
+        url += "${path.novels}/";
+    }
+
+    url += '/page/' + pageNo + '/' + 
+        '?m_orderby=' + (showLatestNovels ? 'latest' : (filters?.sort || 'rating'));
 
     const body = await fetchApi(url).then(res => res.text());
 
     const loadedCheerio = parseHTML(body);
-
 
     loadedCheerio('.manga-title-badges').remove();
 
@@ -224,7 +232,9 @@ export const searchNovels: Plugin.searchNovels = async (searchTerm) => {
 
 export const fetchImage: Plugin.fetchImage = async (url) => {
     return await fetchFile(url);
-};`;
+};
+
+export const filters = ${filetersString};`;
 
     return {
         lang,

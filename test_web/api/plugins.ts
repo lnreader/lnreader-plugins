@@ -25,13 +25,14 @@ export const all_plugins = (): PluginList => {
                 plugin.split(".")[0]
             }`;
             const instance = require(requirePath);
-            const { id, name, version } = instance;
+            const { id, name, version, icon } = instance;
             const info: Plugin.Info = {
                 id,
                 name,
                 lang: languageNative,
                 version,
                 requirePath,
+                icon,
             }; // lang: language with native name
             res[info.lang].push(info);
         });

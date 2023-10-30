@@ -46,6 +46,7 @@ export namespace Plugin {
         lang: (typeof languages)[keyof typeof languages];
         version: string;
         requirePath: string;
+        icon: string;
     }
     export interface instance {
         id: string;

@@ -144,7 +144,7 @@
 			"lang": "English",
 			"version": "1.0.0",
 			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/english/divinedaolibrary.js",
-			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/`en/divinedaolibrary/icon.png"
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/en/divinedaolibrary/icon.png"
 		},
 		{
 			"id": "earlynovel",
@@ -237,13 +237,22 @@
 			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/multisrc/madara/icons/lightnovelheaven.png"
 		},
 		{
+			"id": "LNR.org",
+			"name": "LightNovelReader",
+			"site": "https://lightnovelreader.org",
+			"lang": "English",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/english/LightNovelReader.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/en/lightnovelreader/icon.png"
+		},
+		{
 			"id": "Ltnovel.com",
 			"name": "Ltnovel.com",
 			"site": "https://www.ltnovel.com/",
 			"lang": "English",
 			"version": "1.0.0",
 			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/english/Ltnovelcom[readwn].js",
-			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/multisrc/readwn/icon/ltnovel.png"
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/multisrc/readwn/icons/ltnovel.png"
 		},
 		{
 			"id": "lunarletters",
@@ -396,7 +405,7 @@
 			"lang": "English",
 			"version": "1.0.0",
 			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/english/Novelmtcom[readwn].js",
-			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/multisrc/readwn/icon/novelmt.png"
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/multisrc/readwn/icons/novelmt.png"
 		},
 		{
 			"id": "novelmultiverse",
@@ -418,7 +427,7 @@
 		},
 		{
 			"id": "novelr18",
-			"name": "NovelR18  [madara]",
+			"name": "NovelR18 [madara]",
 			"site": "https://novelr18.com/",
 			"lang": "English",
 			"version": "1.0.0",
@@ -486,7 +495,7 @@
 			"lang": "English",
 			"version": "1.0.0",
 			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/english/Readwncom[readwn].js",
-			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/multisrc/readwn/icon/readwn.png"
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/multisrc/readwn/icons/readwn.png"
 		},
 		{
 			"id": "sleeptTLS",
@@ -639,6 +648,17 @@
 			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/jp/syosetu/icon.png"
 		}
 	],
+	"한국어, 조선말": [
+		{
+			"id": "agit.xyz",
+			"name": "Agitoon",
+			"site": "https://agit501.xyz/",
+			"lang": "한국어, 조선말",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/korean/Agitoon.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/kr/agitoon/agit.png"
+		}
+	],
 	"Português": [
 		{
 			"id": "lightnovelbrasil",
@@ -652,22 +672,22 @@
 	],
 	"русский язык": [
 		{
-			"id": "axel.znovel",
-			"name": "Аксел",
-			"site": "https://axel.znovel.space",
+			"id": "AT",
+			"name": "Автор Тудей",
+			"site": "https://author.today",
 			"lang": "русский язык",
 			"version": "1.0.0",
-			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/russian/axelznovelspace[noveltl].js",
-			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/"
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/russian/authortoday.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/ru/authortoday/icon.png"
 		},
 		{
-			"id": "bel.novel",
-			"name": "Белманга",
-			"site": "https://bel.novel.tl",
+			"id": "bookriver",
+			"name": "Bookriver",
+			"site": "https://bookriver.ru",
 			"lang": "русский язык",
 			"version": "1.0.0",
-			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/russian/belnoveltl[noveltl].js",
-			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/"
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/russian/bookriver.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/ru/bookriver/icon.png"
 		},
 		{
 			"id": "erolate",
@@ -676,7 +696,25 @@
 			"lang": "русский язык",
 			"version": "1.0.0",
 			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/russian/Erolate[rulate].js",
-			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/"
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/multisrc/rulate/icons/erolate.png"
+		},
+		{
+			"id": "ficbook",
+			"name": "ficbook",
+			"site": "https://ficbook.net",
+			"lang": "русский язык",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/russian/ficbook.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/ru/ficbook/icon.png"
+		},
+		{
+			"id": "freedlit.space",
+			"name": "LitSpace",
+			"site": "https://freedlit.space",
+			"lang": "русский язык",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/russian/LitSpace.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/ru/freedlit/icon.png"
 		},
 		{
 			"id": "jaomix.ru",
@@ -688,94 +726,49 @@
 			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/ru/jaomix/icon.png"
 		},
 		{
-			"id": "japit.novel",
-			"name": "Japit Comics",
-			"site": "https://japit.novel.tl",
+			"id": "ReN",
+			"name": "Renovels",
+			"site": "https://renovels.org",
 			"lang": "русский язык",
 			"version": "1.0.0",
-			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/russian/japitnoveltl[noveltl].js",
-			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/"
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/russian/renovels.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/ru/renovels/icon.png"
 		},
 		{
-			"id": "kg.novel",
-			"name": "Карманная галактика",
-			"site": "https://kg.novel.tl",
+			"id": "RLIB",
+			"name": "RanobeLib",
+			"site": "https://ranobelib.me",
 			"lang": "русский язык",
 			"version": "1.0.0",
-			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/russian/kgnoveltl[noveltl].js",
-			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/"
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/russian/ranobelib.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/ru/ranobelib/icon.png"
 		},
 		{
-			"id": "kod.novel",
-			"name": "K.O.D.",
-			"site": "https://kod.novel.tl",
+			"id": "RNBH.org",
+			"name": "RanobeHub",
+			"site": "https://ranobehub.org/",
 			"lang": "русский язык",
 			"version": "1.0.0",
-			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/russian/kodnoveltl[noveltl].js",
-			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/"
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/russian/ranobehub.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/ru/ranobehub/icon.png"
 		},
 		{
-			"id": "nightnovel",
-			"name": "Nightnovel",
-			"site": "https://nightnovel.online",
+			"id": "RNRF",
+			"name": "РанобэРФ",
+			"site": "https://ранобэ.рф",
 			"lang": "русский язык",
 			"version": "1.0.0",
-			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/russian/nightnovelonline[noveltl].js",
-			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/"
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/russian/ranoberf.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/ru/ranoberf/icon.png"
 		},
 		{
-			"id": "original.novel",
-			"name": "Авторские работы",
-			"site": "https://original.novel.tl",
+			"id": "TL",
+			"name": "NovelTL",
+			"site": "https://novel.tl",
 			"lang": "русский язык",
 			"version": "1.0.0",
-			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/russian/originalnoveltl[noveltl].js",
-			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/"
-		},
-		{
-			"id": "red.novel",
-			"name": "Север и Юг",
-			"site": "https://red.novel.tl",
-			"lang": "русский язык",
-			"version": "1.0.0",
-			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/russian/rednoveltl[noveltl].js",
-			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/"
-		},
-		{
-			"id": "ruranobe",
-			"name": "РуРанобэ",
-			"site": "https://ruranobe.ru",
-			"lang": "русский язык",
-			"version": "1.0.0",
-			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/russian/ruranoberu[noveltl].js",
-			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/"
-		},
-		{
-			"id": "sferdrakon.novel",
-			"name": "Уголок дракона",
-			"site": "https://sferdrakon.novel.tl",
-			"lang": "русский язык",
-			"version": "1.0.0",
-			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/russian/sferdrakonnoveltl[noveltl].js",
-			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/"
-		},
-		{
-			"id": "si.novel",
-			"name": "Сказочные истории",
-			"site": "https://si.novel.tl",
-			"lang": "русский язык",
-			"version": "1.0.0",
-			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/russian/sinoveltl[noveltl].js",
-			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/"
-		},
-		{
-			"id": "snailulitka.novel",
-			"name": "Snailulitka",
-			"site": "https://snailulitka.novel.tl",
-			"lang": "русский язык",
-			"version": "1.0.0",
-			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/russian/snailulitkanoveltl[noveltl].js",
-			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/"
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/russian/novelTL.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/ru/noveltl/icon.png"
 		},
 		{
 			"id": "tl.rulate",
@@ -784,25 +777,7 @@
 			"lang": "русский язык",
 			"version": "1.0.0",
 			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/russian/Rulate[rulate].js",
-			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/"
-		},
-		{
-			"id": "tsundoku.novel",
-			"name": "TsundokuTrans",
-			"site": "https://tsundoku.novel.tl",
-			"lang": "русский язык",
-			"version": "1.0.0",
-			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/russian/tsundokunoveltl[noveltl].js",
-			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/"
-		},
-		{
-			"id": "ukr.novel",
-			"name": "Переклади українською мовою",
-			"site": "https://ukr.novel.tl",
-			"lang": "русский язык",
-			"version": "1.0.0",
-			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/russian/ukrnoveltl[noveltl].js",
-			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/"
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/multisrc/rulate/icons/rulate.png"
 		}
 	],
 	"español, castellano": [
@@ -823,6 +798,15 @@
 			"version": "1.0.0",
 			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/spanish/novelasligera.js",
 			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/es/novelasligera/icon.png"
+		},
+		{
+			"id": "skynovels.net",
+			"name": "SkyNovels",
+			"site": "https://www.skynovels.net/",
+			"lang": "español, castellano",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/spanish/skynovels.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/es/skynovels/icon.png"
 		},
 		{
 			"id": "TNL.com",
@@ -879,6 +863,17 @@
 			"version": "1.0.0",
 			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/turkish/WebNovelOku[madara].js",
 			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/multisrc/madara/icons/webnoveloku.png"
+		}
+	],
+	"Україна": [
+		{
+			"id": "smakolykytl",
+			"name": "Смаколики",
+			"site": "https://smakolykytl.site/",
+			"lang": "Україна",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/js/plugins/ukraine/smakolykytl.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/ua/smakolykytl/icon.png"
 		}
 	],
 	"Tiếng Việt": [

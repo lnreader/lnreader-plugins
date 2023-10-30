@@ -12,9 +12,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchImage = exports.searchNovels = exports.parseChapter = exports.parseNovelAndChapters = exports.popularNovels = exports.site = exports.version = exports.icon = exports.name = exports.id = void 0;
+exports.filters = exports.fetchImage = exports.searchNovels = exports.parseChapter = exports.parseNovelAndChapters = exports.popularNovels = exports.site = exports.version = exports.icon = exports.name = exports.id = void 0;
 const cheerio_1 = require("cheerio");
 const fetch_1 = require("@libs/fetch");
+const filterInputs_1 = require("@libs/filterInputs");
 const defaultCover_1 = require("@libs/defaultCover");
 const novelStatus_1 = require("@libs/novelStatus");
 const parseMadaraDate_1 = require("@libs/parseMadaraDate");
@@ -25,12 +26,17 @@ exports.icon = "multisrc/madara/icons/mysticalseries.png";
 exports.version = "1.0.0";
 exports.site = "https://mysticalmerries.com/";
 const baseUrl = exports.site;
-const popularNovels = (pageNo, { showLatestNovels }) => __awaiter(void 0, void 0, void 0, function* () {
+const popularNovels = (pageNo, { filters, showLatestNovels }) => __awaiter(void 0, void 0, void 0, function* () {
     const novels = [];
-    const sortOrder = showLatestNovels
-        ? '?m_orderby=latest'
-        : '/?m_orderby=rating';
-    let url = exports.site + "series" + '/page/' + pageNo + sortOrder;
+    let url = exports.site;
+    if (filters === null || filters === void 0 ? void 0 : filters.genres) {
+        url += "genre/" + filters.genres + '/';
+    }
+    else {
+        url += "series/";
+    }
+    url += '/page/' + pageNo + '/' +
+        '?m_orderby=' + (showLatestNovels ? 'latest' : ((filters === null || filters === void 0 ? void 0 : filters.sort) || 'rating'));
     const body = yield (0, fetch_1.fetchApi)(url).then(res => res.text());
     const loadedCheerio = (0, cheerio_1.load)(body);
     loadedCheerio('.manga-title-badges').remove();
@@ -170,3 +176,4 @@ const fetchImage = (url) => __awaiter(void 0, void 0, void 0, function* () {
     return yield (0, fetch_1.fetchFile)(url);
 });
 exports.fetchImage = fetchImage;
+exports.filters = [{ "key": "sort", "label": "Order by", "values": [{ "label": "Rating", "value": "rating" }, { "label": "A-Z", "value": "alphabet" }, { "label": "Latest", "value": "latest" }, { "label": "Most Views", "value": "views" }, { "label": "New", "value": "new-manga" }, { "label": "Trending", "value": "trending" }], "inputType": filterInputs_1.FilterInputs.Picker }, { "key": "genres", "label": "GENRES", "values": [{ "label": "Action", "value": "action" }, { "label": "Adaptation", "value": "adaptation" }, { "label": "Adventure", "value": "adventure" }, { "label": "bilibili", "value": "bilibili" }, { "label": "Chinese Novel", "value": "chinese-novel" }, { "label": "Comedy", "value": "comedy" }, { "label": "Crossdressing", "value": "crossdressing" }, { "label": "Drama", "value": "drama" }, { "label": "Dropped", "value": "dropped" }, { "label": "Family", "value": "family" }, { "label": "Fantasy", "value": "fantasy" }, { "label": "Gender Bender", "value": "gender-bender" }, { "label": "Historical", "value": "historical" }, { "label": "Horror", "value": "horror" }, { "label": "Isekai", "value": "isekai" }, { "label": "Korean Novel", "value": "korean-novell" }, { "label": "Manga", "value": "manga" }, { "label": "Manhua", "value": "manhua" }, { "label": "Manhwa", "value": "manhwa" }, { "label": "Modern Romance", "value": "modern-romance" }, { "label": "Mystery", "value": "mystery" }, { "label": "Office Workers", "value": "office-workers" }, { "label": "One shot", "value": "one-shot" }, { "label": "Pilot Novel", "value": "pilot-novel" }, { "label": "R15", "value": "r15" }, { "label": "R19", "value": "r19" }, { "label": "Regression", "value": "regression" }, { "label": "Reincarnation", "value": "reincarnation" }, { "label": "Reverse Harem", "value": "reverse-harem" }, { "label": "Romance Fantasy", "value": "romance-fantasy" }, { "label": "School Life", "value": "school-life" }, { "label": "Sci-fi", "value": "sci-fi" }, { "label": "Slice of Life", "value": "slice-of-life" }, { "label": "Smut", "value": "smut" }, { "label": "Supernatural", "value": "supernatural" }, { "label": "Violence", "value": "violence" }], "inputType": filterInputs_1.FilterInputs.Picker }];

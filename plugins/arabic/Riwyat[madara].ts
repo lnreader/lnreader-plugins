@@ -2,6 +2,7 @@
 import { load as parseHTML } from "cheerio";
 import { fetchFile, fetchApi } from "@libs/fetch";
 import { Novel, Plugin, Chapter } from "@typings/plugin";
+import { FilterInputs } from "@libs/filterInputs";
 import { defaultCover } from "@libs/defaultCover";
 import { NovelStatus } from "@libs/novelStatus"
 import { parseMadaraDate } from "@libs/parseMadaraDate";
@@ -14,18 +15,23 @@ export const version = "1.0.0";
 export const site = "https://riwyat.com/";
 const baseUrl = site;
 
-export const popularNovels: Plugin.popularNovels = async (pageNo, {showLatestNovels}) => {
+export const popularNovels: Plugin.popularNovels = async (pageNo, {filters, showLatestNovels}) => {
     const novels: Novel.Item[] = [];
-    const sortOrder = showLatestNovels
-    ? '?m_orderby=latest'
-    : '/?m_orderby=rating';
 
-    let url = site + "novel" + '/page/' + pageNo + sortOrder;
+    let url = site;
+
+    if (filters?.genres) {
+        url += "novel-genre/" + filters.genres + '/';
+    } else {
+        url += "novel/";
+    }
+
+    url += '/page/' + pageNo + '/' + 
+        '?m_orderby=' + (showLatestNovels ? 'latest' : (filters?.sort || 'rating'));
 
     const body = await fetchApi(url).then(res => res.text());
 
     const loadedCheerio = parseHTML(body);
-
 
     loadedCheerio('.manga-title-badges').remove();
 
@@ -203,3 +209,5 @@ export const searchNovels: Plugin.searchNovels = async (searchTerm) => {
 export const fetchImage: Plugin.fetchImage = async (url) => {
     return await fetchFile(url);
 };
+
+export const filters = [{"key":"sort","label":"Order by","values":[{"label":"Rating","value":"rating"},{"label":"A-Z","value":"alphabet"},{"label":"Latest","value":"latest"},{"label":"Most Views","value":"views"},{"label":"New","value":"new-manga"},{"label":"Trending","value":"trending"}],"inputType":FilterInputs.Picker},{"key":"genres","label":"GENRES","values":[{"label":"أكشن","value":"%d8%a3%d9%83%d8%b4%d9%86"},{"label":"أيتشي","value":"%d8%a3%d9%8a%d8%aa%d8%b4%d9%8a"},{"label":"استراتجي","value":"%d8%a7%d8%b3%d8%aa%d8%b1%d8%a7%d8%aa%d8%ac%d9%8a"},{"label":"العصر الحديث","value":"%d8%a7%d9%84%d8%b9%d8%b5%d8%b1-%d8%a7%d9%84%d8%ad%d8%af%d9%8a%d8%ab"},{"label":"انتقام","value":"%d8%a7%d9%86%d8%aa%d9%82%d8%a7%d9%85"},{"label":"بالغ","value":"%d8%a8%d8%a7%d9%84%d8%ba"},{"label":"بناء مملكة","value":"%d8%a8%d9%86%d8%a7%d8%a1-%d9%85%d9%85%d9%84%d9%83%d8%a9"},{"label":"بوليسي","value":"%d8%a8%d9%88%d9%84%d9%8a%d8%b3%d9%8a"},{"label":"تاريخي","value":"%d8%aa%d8%a7%d8%b1%d9%8a%d8%ae%d9%8a"},{"label":"جوسي","value":"%d8%ac%d9%88%d8%b3%d9%8a"},{"label":"حريم","value":"%d8%ad%d8%b1%d9%8a%d9%85"},{"label":"حياة يومية","value":"%d8%ad%d9%8a%d8%a7%d8%a9-%d9%8a%d9%88%d9%85%d9%8a%d8%a9"},{"label":"خيال","value":"%d8%ae%d9%8a%d8%a7%d9%84"},{"label":"خيال علمي","value":"%d8%ae%d9%8a%d8%a7%d9%84-%d8%b9%d9%84%d9%85%d9%8a"},{"label":"دراما","value":"%d8%af%d8%b1%d8%a7%d9%85%d8%a7"},{"label":"رعب","value":"%d8%b1%d8%b9%d8%a8"},{"label":"رومانسية","value":"%d8%b1%d9%88%d9%85%d8%a7%d9%86%d8%b3%d9%8a%d8%a9"},{"label":"رياضي","value":"%d8%b1%d9%8a%d8%a7%d8%b6%d9%8a"},{"label":"زيانشيا","value":"xianxia"},{"label":"سنين","value":"%d8%b3%d9%86%d9%8a%d9%86"},{"label":"شريحة حياة","value":"%d8%b4%d8%b1%d9%8a%d8%ad%d8%a9-%d8%ad%d9%8a%d8%a7%d8%a9"},{"label":"شوانهوان","value":"xuanhuan"},{"label":"شوجو","value":"%d8%b4%d9%88%d8%ac%d9%88"},{"label":"شونين","value":"%d8%b4%d9%88%d9%86%d9%8a%d9%86"},{"label":"شيانشيا","value":"%d8%b4%d9%8a%d8%a7%d9%86%d8%b4%d9%8a%d8%a7"},{"label":"عسكري","value":"%d8%b9%d8%b3%d9%83%d8%b1%d9%8a"},{"label":"غموض","value":"%d8%ba%d9%85%d9%88%d8%b6"},{"label":"فانتازيا","value":"%d9%81%d8%a7%d9%86%d8%aa%d8%a7%d8%b2%d9%8a%d8%a7"},{"label":"فنون قتالية","value":"%d9%81%d9%86%d9%88%d9%86-%d9%82%d8%aa%d8%a7%d9%84%d9%8a%d8%a9"},{"label":"قوى خارقة","value":"%d9%82%d9%88%d9%89-%d8%ae%d8%a7%d8%b1%d9%82%d8%a9"},{"label":"كوميديا","value":"%d9%83%d9%88%d9%85%d9%8a%d8%af%d9%8a%d8%a7"},{"label":"كوميك","value":"%d9%83%d9%88%d9%85%d9%8a%d9%83"},{"label":"للكبار","value":"%d9%84%d9%84%d9%83%d8%a8%d8%a7%d8%b1"},{"label":"مأساة","value":"%d9%85%d8%a3%d8%b3%d8%a7%d8%a9"},{"label":"مانجا","value":"%d9%85%d8%a7%d9%86%d8%ac%d8%a7"},{"label":"مانها","value":"%d9%85%d8%a7%d9%86%d9%87%d8%a7"},{"label":"مانهوا","value":"%d9%85%d8%a7%d9%86%d9%87%d9%88%d8%a7"},{"label":"مدرسي","value":"%d9%85%d8%af%d8%b1%d8%b3%d9%8a"},{"label":"مصاصي دماء","value":"%d9%85%d8%b5%d8%a7%d8%b5%d9%8a-%d8%af%d9%85%d8%a7%d8%a1"},{"label":"مغامرة","value":"%d9%85%d8%ba%d8%a7%d9%85%d8%b1%d8%a9"},{"label":"مكتملة","value":"%d9%85%d9%83%d8%aa%d9%85%d9%84%d8%a9"},{"label":"نفسي","value":"%d9%86%d9%81%d8%b3%d9%8a"},{"label":"نهاية العالم","value":"%d9%86%d9%87%d8%a7%d9%8a%d8%a9-%d8%a7%d9%84%d8%b9%d8%a7%d9%84%d9%85"},{"label":"واب تون","value":"%d9%88%d8%a7%d8%a8-%d8%aa%d9%88%d9%86"},{"label":"وان شوت","value":"%d9%88%d8%a7%d9%86-%d8%b4%d9%88%d8%aa"}],"inputType":FilterInputs.Picker}];

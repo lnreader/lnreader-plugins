@@ -12,9 +12,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchImage = exports.searchNovels = exports.parseChapter = exports.parseNovelAndChapters = exports.popularNovels = exports.site = exports.version = exports.icon = exports.name = exports.id = void 0;
+exports.filters = exports.fetchImage = exports.searchNovels = exports.parseChapter = exports.parseNovelAndChapters = exports.popularNovels = exports.site = exports.version = exports.icon = exports.name = exports.id = void 0;
 const cheerio_1 = require("cheerio");
 const fetch_1 = require("@libs/fetch");
+const filterInputs_1 = require("@libs/filterInputs");
 const defaultCover_1 = require("@libs/defaultCover");
 const novelStatus_1 = require("@libs/novelStatus");
 const parseMadaraDate_1 = require("@libs/parseMadaraDate");
@@ -25,12 +26,17 @@ exports.icon = "multisrc/madara/icons/hizomanga.png";
 exports.version = "1.0.0";
 exports.site = "https://hizomanga.com/";
 const baseUrl = exports.site;
-const popularNovels = (pageNo, { showLatestNovels }) => __awaiter(void 0, void 0, void 0, function* () {
+const popularNovels = (pageNo, { filters, showLatestNovels }) => __awaiter(void 0, void 0, void 0, function* () {
     const novels = [];
-    const sortOrder = showLatestNovels
-        ? '?m_orderby=latest'
-        : '/?m_orderby=rating';
-    let url = exports.site + "serie" + '/page/' + pageNo + sortOrder;
+    let url = exports.site;
+    if (filters === null || filters === void 0 ? void 0 : filters.genres) {
+        url += "manga-genre/" + filters.genres + '/';
+    }
+    else {
+        url += "serie/";
+    }
+    url += '/page/' + pageNo + '/' +
+        '?m_orderby=' + (showLatestNovels ? 'latest' : ((filters === null || filters === void 0 ? void 0 : filters.sort) || 'rating'));
     const body = yield (0, fetch_1.fetchApi)(url).then(res => res.text());
     const loadedCheerio = (0, cheerio_1.load)(body);
     loadedCheerio('.manga-title-badges').remove();
@@ -170,3 +176,4 @@ const fetchImage = (url) => __awaiter(void 0, void 0, void 0, function* () {
     return yield (0, fetch_1.fetchFile)(url);
 });
 exports.fetchImage = fetchImage;
+exports.filters = [{ "key": "sort", "label": "ترتيب حسب", "values": [{ "label": "A-Z", "value": "alphabet" }, { "label": "New", "value": "new-manga" }, { "label": "الأحدث", "value": "latest" }, { "label": "الأكثر مشاهدة", "value": "views" }, { "label": "التقييم", "value": "rating" }, { "label": "الرائج", "value": "trending" }], "inputType": filterInputs_1.FilterInputs.Picker }, { "key": "genres", "label": "التصنيفات", "values": [{ "label": "آلات", "value": "mechanisms" }, { "label": "أكشن", "value": "action" }, { "label": "إثارة", "value": "excitement" }, { "label": "إيسكاي", "value": "%d8%a5%d9%8a%d8%b3%d9%83%d8%a7%d9%8a" }, { "label": "الحياة اليومية", "value": "slice-of-life" }, { "label": "الحياة مدرسية", "value": "school-life" }, { "label": "تاريخي", "value": "historical" }, { "label": "تراجيدي", "value": "tragic" }, { "label": "جريمة", "value": "%d8%ac%d8%b1%d9%8a%d9%85%d8%a9" }, { "label": "جندر بندر", "value": "%d8%ac%d9%86%d8%af%d8%b1-%d8%a8%d9%86%d8%af%d8%b1" }, { "label": "جوسي", "value": "josei" }, { "label": "حريم", "value": "harem" }, { "label": "خارق للطبيعة", "value": "supernatural" }, { "label": "خيال", "value": "fantasy" }, { "label": "خيال علمي", "value": "sci-fi" }, { "label": "دراما", "value": "drama" }, { "label": "دموي", "value": "%d8%af%d9%85%d9%88%d9%8a" }, { "label": "راشد", "value": "mature" }, { "label": "رعب", "value": "horror" }, { "label": "رومانسي", "value": "romance" }, { "label": "رياضة", "value": "sports" }, { "label": "زمنكاني", "value": "my-time" }, { "label": "زومبي", "value": "%d8%b2%d9%88%d9%85%d8%a8%d9%8a" }, { "label": "سينين", "value": "seinen" }, { "label": "شريحة من الحياة", "value": "%d8%b4%d8%b1%d9%8a%d8%ad%d8%a9-%d9%85%d9%86-%d8%a7%d9%84%d8%ad%d9%8a%d8%a7%d8%a9" }, { "label": "شوجو", "value": "shoujo" }, { "label": "شونين", "value": "shounen" }, { "label": "طبي", "value": "%d8%b7%d8%a8%d9%8a" }, { "label": "غموض", "value": "ambiguity" }, { "label": "فنون قتالية", "value": "martial-arts" }, { "label": "قوة خارقة", "value": "superpower" }, { "label": "كوميدي", "value": "comedy" }, { "label": "مغامرات", "value": "adventure" }, { "label": "نفسي", "value": "psychological" }], "inputType": filterInputs_1.FilterInputs.Picker }];

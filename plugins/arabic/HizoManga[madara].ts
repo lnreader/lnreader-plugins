@@ -2,6 +2,7 @@
 import { load as parseHTML } from "cheerio";
 import { fetchFile, fetchApi } from "@libs/fetch";
 import { Novel, Plugin, Chapter } from "@typings/plugin";
+import { FilterInputs } from "@libs/filterInputs";
 import { defaultCover } from "@libs/defaultCover";
 import { NovelStatus } from "@libs/novelStatus"
 import { parseMadaraDate } from "@libs/parseMadaraDate";
@@ -14,18 +15,23 @@ export const version = "1.0.0";
 export const site = "https://hizomanga.com/";
 const baseUrl = site;
 
-export const popularNovels: Plugin.popularNovels = async (pageNo, {showLatestNovels}) => {
+export const popularNovels: Plugin.popularNovels = async (pageNo, {filters, showLatestNovels}) => {
     const novels: Novel.Item[] = [];
-    const sortOrder = showLatestNovels
-    ? '?m_orderby=latest'
-    : '/?m_orderby=rating';
 
-    let url = site + "serie" + '/page/' + pageNo + sortOrder;
+    let url = site;
+
+    if (filters?.genres) {
+        url += "manga-genre/" + filters.genres + '/';
+    } else {
+        url += "serie/";
+    }
+
+    url += '/page/' + pageNo + '/' + 
+        '?m_orderby=' + (showLatestNovels ? 'latest' : (filters?.sort || 'rating'));
 
     const body = await fetchApi(url).then(res => res.text());
 
     const loadedCheerio = parseHTML(body);
-
 
     loadedCheerio('.manga-title-badges').remove();
 
@@ -203,3 +209,5 @@ export const searchNovels: Plugin.searchNovels = async (searchTerm) => {
 export const fetchImage: Plugin.fetchImage = async (url) => {
     return await fetchFile(url);
 };
+
+export const filters = [{"key":"sort","label":"ترتيب حسب","values":[{"label":"A-Z","value":"alphabet"},{"label":"New","value":"new-manga"},{"label":"الأحدث","value":"latest"},{"label":"الأكثر مشاهدة","value":"views"},{"label":"التقييم","value":"rating"},{"label":"الرائج","value":"trending"}],"inputType":FilterInputs.Picker},{"key":"genres","label":"التصنيفات","values":[{"label":"آلات","value":"mechanisms"},{"label":"أكشن","value":"action"},{"label":"إثارة","value":"excitement"},{"label":"إيسكاي","value":"%d8%a5%d9%8a%d8%b3%d9%83%d8%a7%d9%8a"},{"label":"الحياة اليومية","value":"slice-of-life"},{"label":"الحياة مدرسية","value":"school-life"},{"label":"تاريخي","value":"historical"},{"label":"تراجيدي","value":"tragic"},{"label":"جريمة","value":"%d8%ac%d8%b1%d9%8a%d9%85%d8%a9"},{"label":"جندر بندر","value":"%d8%ac%d9%86%d8%af%d8%b1-%d8%a8%d9%86%d8%af%d8%b1"},{"label":"جوسي","value":"josei"},{"label":"حريم","value":"harem"},{"label":"خارق للطبيعة","value":"supernatural"},{"label":"خيال","value":"fantasy"},{"label":"خيال علمي","value":"sci-fi"},{"label":"دراما","value":"drama"},{"label":"دموي","value":"%d8%af%d9%85%d9%88%d9%8a"},{"label":"راشد","value":"mature"},{"label":"رعب","value":"horror"},{"label":"رومانسي","value":"romance"},{"label":"رياضة","value":"sports"},{"label":"زمنكاني","value":"my-time"},{"label":"زومبي","value":"%d8%b2%d9%88%d9%85%d8%a8%d9%8a"},{"label":"سينين","value":"seinen"},{"label":"شريحة من الحياة","value":"%d8%b4%d8%b1%d9%8a%d8%ad%d8%a9-%d9%85%d9%86-%d8%a7%d9%84%d8%ad%d9%8a%d8%a7%d8%a9"},{"label":"شوجو","value":"shoujo"},{"label":"شونين","value":"shounen"},{"label":"طبي","value":"%d8%b7%d8%a8%d9%8a"},{"label":"غموض","value":"ambiguity"},{"label":"فنون قتالية","value":"martial-arts"},{"label":"قوة خارقة","value":"superpower"},{"label":"كوميدي","value":"comedy"},{"label":"مغامرات","value":"adventure"},{"label":"نفسي","value":"psychological"}],"inputType":FilterInputs.Picker}];

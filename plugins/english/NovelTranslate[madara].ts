@@ -2,6 +2,7 @@
 import { load as parseHTML } from "cheerio";
 import { fetchFile, fetchApi } from "@libs/fetch";
 import { Novel, Plugin, Chapter } from "@typings/plugin";
+import { FilterInputs } from "@libs/filterInputs";
 import { defaultCover } from "@libs/defaultCover";
 import { NovelStatus } from "@libs/novelStatus"
 import { parseMadaraDate } from "@libs/parseMadaraDate";
@@ -14,18 +15,23 @@ export const version = "1.0.0";
 export const site = "https://noveltranslate.com/";
 const baseUrl = site;
 
-export const popularNovels: Plugin.popularNovels = async (pageNo, {showLatestNovels}) => {
+export const popularNovels: Plugin.popularNovels = async (pageNo, {filters, showLatestNovels}) => {
     const novels: Novel.Item[] = [];
-    const sortOrder = showLatestNovels
-    ? '?m_orderby=latest'
-    : '/?m_orderby=rating';
 
-    let url = site + "all-novels" + '/page/' + pageNo + sortOrder;
+    let url = site;
+
+    if (filters?.genres) {
+        url += "manga-genre/" + filters.genres + '/';
+    } else {
+        url += "all-novels/";
+    }
+
+    url += '/page/' + pageNo + '/' + 
+        '?m_orderby=' + (showLatestNovels ? 'latest' : (filters?.sort || 'rating'));
 
     const body = await fetchApi(url).then(res => res.text());
 
     const loadedCheerio = parseHTML(body);
-
 
     loadedCheerio('.manga-title-badges').remove();
 
@@ -203,3 +209,5 @@ export const searchNovels: Plugin.searchNovels = async (searchTerm) => {
 export const fetchImage: Plugin.fetchImage = async (url) => {
     return await fetchFile(url);
 };
+
+export const filters = [{"key":"sort","label":"Order by","values":[{"label":"Rating","value":"rating"},{"label":"A-Z","value":"alphabet"},{"label":"Latest","value":"latest"},{"label":"Most Views","value":"views"},{"label":"New","value":"new-manga"},{"label":"Trending","value":"trending"}],"inputType":FilterInputs.Picker},{"key":"genres","label":"GENRES","values":[{"label":"Action","value":"action"},{"label":"Adult","value":"adult"},{"label":"Adventure","value":"adventure"},{"label":"Bleach","value":"bleach"},{"label":"Chinese","value":"chinese"},{"label":"Comedy","value":"comedy"},{"label":"Conan","value":"conan"},{"label":"cooking","value":"cooking"},{"label":"Dragon Ball","value":"dragon-ball"},{"label":"Drama","value":"drama"},{"label":"Ecchi","value":"ecchi"},{"label":"Erciyuan","value":"erciyuan"},{"label":"Fairy Tail","value":"fairy-tail"},{"label":"Faloo","value":"faloo"},{"label":"Fan-Fiction","value":"fan-fiction"},{"label":"Fantasy","value":"fantasy"},{"label":"FoodWars!","value":"foodwars"},{"label":"Game","value":"game"},{"label":"Gender Bender","value":"gender-bender"},{"label":"Harem","value":"harem"},{"label":"Historical","value":"historical"},{"label":"Horror","value":"horror"},{"label":"Hunter x Hunter","value":"hunter-x-hunter"},{"label":"Isekai","value":"isekai"},{"label":"Japanese","value":"japanese"},{"label":"Jojo","value":"jojo"},{"label":"Josei","value":"josei"},{"label":"Korean","value":"korean"},{"label":"Martial Arts","value":"martial-arts"},{"label":"Marvel","value":"marvel"},{"label":"Mature","value":"mature"},{"label":"Mecha","value":"mecha"},{"label":"Military","value":"military"},{"label":"Mystery","value":"mystery"},{"label":"Naruto","value":"naruto"},{"label":"One piece","value":"one-piece"},{"label":"Pokemon","value":"pokemon"},{"label":"Political","value":"political"},{"label":"Psychological","value":"psychological"},{"label":"Romance","value":"romance"},{"label":"School Life","value":"school-life"},{"label":"Sci-fi","value":"sci-fi"},{"label":"Seinen","value":"seinen"},{"label":"Shoujo","value":"shoujo"},{"label":"Shoujo Ai","value":"shoujo-ai"},{"label":"Shounen","value":"shounen"},{"label":"Shounen Ai","value":"shounen-ai"},{"label":"Slice of Life","value":"slice-of-life"},{"label":"Smut","value":"smut"},{"label":"Sport","value":"sport"},{"label":"Sports","value":"sports"},{"label":"Supernatural","value":"supernatural"},{"label":"System","value":"system"},{"label":"Toriko","value":"toriko"},{"label":"Tragedy","value":"tragedy"},{"label":"Urban","value":"urban"},{"label":"Urban Life","value":"urban-life"},{"label":"Wuxia","value":"wuxia"},{"label":"Xianxia","value":"xianxia"},{"label":"Xuanhuan","value":"xuanhuan"},{"label":"Yaoi","value":"yaoi"},{"label":"Yuri","value":"yuri"}],"inputType":FilterInputs.Picker}];

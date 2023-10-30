@@ -1,6 +1,6 @@
 import { fetchApi, fetchFile } from "@libs/fetch";
 import { Chapter, Novel, Plugin } from "@typings/plugin";
-import cheerio from "cheerio";
+import { load as parseHTML } from "cheerio";
 import { defaultCover } from "@libs/defaultCover";
 
 const pluginId = "awuxia.com";
@@ -24,7 +24,7 @@ export const popularNovels: Plugin.popularNovels = async function (page) {
     });
     const body = await result.text();
 
-    let loadedCheerio = cheerio.load(body);
+    let loadedCheerio = parseHTML(body);
 
     let novels: Novel.Item[] = [];
 
@@ -62,7 +62,7 @@ export const parseNovelAndChapters: Plugin.parseNovelAndChapters =
         const result = await fetchApi(url);
         const body = await result.text();
 
-        let loadedCheerio = cheerio.load(body);
+        let loadedCheerio = parseHTML(body);
 
         let novel: Novel.instance = { url };
 
@@ -152,7 +152,7 @@ export const parseChapter: Plugin.parseChapter = async function (chapterUrl) {
     const result = await fetchApi(url);
     const body = await result.text();
 
-    let loadedCheerio = cheerio.load(body);
+    let loadedCheerio = parseHTML(body);
 
     let chapterText = loadedCheerio(".post-body.entry-content").html();
 
@@ -165,7 +165,7 @@ export const searchNovels: Plugin.searchNovels = async (searchTerm) => {
     const result = await fetchApi(url);
     const body = await result.text();
 
-    let loadedCheerio = cheerio.load(body);
+    let loadedCheerio = parseHTML(body);
 
     let novels: Novel.Item[] = [];
 

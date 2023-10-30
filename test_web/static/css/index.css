@@ -16,6 +16,7 @@
     padding: 0.375rem 0;
     border-radius: 5px;
     background-color: white;
+    z-index: 3;
 }
 
 .btn.disabled, .btn:disabled{
