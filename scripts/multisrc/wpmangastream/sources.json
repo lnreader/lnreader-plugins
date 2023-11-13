@@ -1,0 +1,16 @@
+[
+    {
+        "id": "lightnovelfr",
+        "sourceSite": "https://lightnovelfr.com/",
+        "sourceName": "Ligh Novel FR",
+		"lang": "French",
+		"reverseChapters": true
+    },
+    {
+        "id": "kol-novel",
+        "sourceSite": "https://kolnovel.com/",
+        "sourceName": "Kol Novel",
+        "lang": "arabic",
+        "reverseChapters": true
+    }
+]

@@ -28,6 +28,15 @@
 			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/multisrc/madara/icons/hizomanga.png"
 		},
 		{
+			"id": "kol-novel",
+			"name": "Kol Novel[wpmangastream]",
+			"site": "https://kolnovel.com/",
+			"lang": "العربية",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/arabic/KolNovel[wpmangastream].js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/multisrc/wpmangastream/icons/kol-novel.png"
+		},
+		{
 			"id": "kolnovel",
 			"name": "KolNovel",
 			"site": "https://kolnovel.lol/",
@@ -390,6 +399,35 @@
 			"version": "1.0.0",
 			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/english/ZinnNovel[madara].js",
 			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/multisrc/madara/icons/zinnnovel.png"
+		}
+	],
+	"français, française": [
+		{
+			"id": "chireads.com",
+			"name": "Chireads",
+			"site": "https://chireads.com",
+			"lang": "français, française",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/french/chireads.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/fr/chireads/icon.png"
+		},
+		{
+			"id": "lightnovelfr",
+			"name": "Ligh Novel FR[wpmangastream]",
+			"site": "https://lightnovelfr.com/",
+			"lang": "français, française",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/french/LighNovelFR[wpmangastream].js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/multisrc/wpmangastream/icons/lightnovelfr.png"
+		},
+		{
+			"id": "NDG.com",
+			"name": "NovelDeGlace",
+			"site": "https://noveldeglace.com/",
+			"lang": "français, française",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/french/noveldeglace.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/fr/noveldeglace/icon.png"
 		}
 	],
 	"Bahasa Indonesia": [
