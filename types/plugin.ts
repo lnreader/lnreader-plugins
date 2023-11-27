@@ -4,7 +4,16 @@ export namespace Plugin {
     export interface ChapterItem {
         name: string;
         url: string;
-        releaseTime?: string | null;
+        /**
+         * ```js
+         * Timestamp or string in ISO format 
+         * e.g: `1699792274365` or `2023-11-12T12:31:14.365Z` or `2030-11-12`
+         * or whatever you can create a Date object by new Date(releaseTime) or dayjs(releaseTime)
+         * ```
+         */
+        releaseTime?: string | number | null;
+        chapterNumber?: number;
+        volumn?: number;  
     }
     export interface NovelItem {
         name: string;

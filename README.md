@@ -80,6 +80,7 @@ const  githubBranch  =  'plugins';
 ```
 
 - Note: You dont have to remove your own json files when creating a PR.
+- Note: You dont have to modify the .dist/LNReader when PR. There's already action for that job.
 
 ----------
 
