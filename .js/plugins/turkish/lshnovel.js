@@ -48,11 +48,11 @@ var LSHNovel = /** @class */ (function () {
         this.version = "1.0.0";
         this.userAgent = "";
         this.cookieString = "";
-        this.filters = [
-            {
-                key: "order",
+        this.filters = {
+            order: {
+                value: "popular",
                 label: "Önerilen",
-                values: [
+                options: [
                     { label: "Varsayılan", value: "" },
                     { label: "A-Z", value: "title" },
                     { label: "Z-A", value: "titlereverse" },
@@ -60,35 +60,35 @@ var LSHNovel = /** @class */ (function () {
                     { label: "Son Eklenenler", value: "latest" },
                     { label: "Bestimiz", value: "popular" },
                 ],
-                inputType: filterInputs_1.FilterInputs.Picker,
+                type: filterInputs_1.FilterTypes.Picker,
             },
-            {
-                key: "status",
+            status: {
                 label: "Statü",
-                values: [
+                value: "",
+                options: [
                     { label: "Tümü", value: "" },
                     { label: "Ongoing", value: "ongoing" },
                     { label: "Hiatus", value: "hiatus" },
                     { label: "Completed", value: "completed" },
                 ],
-                inputType: filterInputs_1.FilterInputs.Picker,
+                type: filterInputs_1.FilterTypes.Picker,
             },
-            {
-                key: "type",
+            type: {
+                value: [],
                 label: "Tür",
-                values: [
+                options: [
                     { label: "Çeviri Novel", value: "ceviri-novel" },
                     { label: "Liz-Chan", value: "liz-chan" },
                     { label: "Manhwa", value: "manhwa" },
                     { label: "Orijinal Novel", value: "orijinal-novel" },
                     { label: "Web Novel", value: "web-novel" },
                 ],
-                inputType: filterInputs_1.FilterInputs.Checkbox,
+                type: filterInputs_1.FilterTypes.CheckboxGroup,
             },
-            {
-                key: "genres",
+            genres: {
+                value: [],
                 label: "Kategori",
-                values: [
+                options: [
                     { label: "+18", value: "18" },
                     { label: "Action", value: "action" },
                     { label: "Adult", value: "adult" },
@@ -124,9 +124,9 @@ var LSHNovel = /** @class */ (function () {
                     { label: "Tragedy", value: "tragedy" },
                     { label: "Yaoi", value: "yaoi" },
                 ],
-                inputType: filterInputs_1.FilterInputs.Checkbox,
+                type: filterInputs_1.FilterTypes.CheckboxGroup,
             },
-        ];
+        };
     }
     LSHNovel.prototype.popularNovels = function (pageNo, _a) {
         var filters = _a.filters;
@@ -136,15 +136,13 @@ var LSHNovel = /** @class */ (function () {
                 switch (_b.label) {
                     case 0:
                         link = "".concat(this.site, "series/?page=").concat(pageNo);
-                        if (filters) {
-                            if (Array.isArray(filters.genres) && filters.genres.length) {
-                                link += filters.genres.map(function (i) { return "&genre[]=".concat(i); }).join("");
-                            }
-                            if (Array.isArray(filters.type) && filters.type.length)
-                                link += filters.type.map(function (i) { return "&lang[]=".concat(i); }).join("");
+                        if (filters.genres.value.length) {
+                            link += filters.genres.value.map(function (i) { return "&genre[]=".concat(i); }).join("");
                         }
-                        link += "&status=" + ((filters === null || filters === void 0 ? void 0 : filters.status) ? filters.status : "");
-                        link += "&order=" + ((filters === null || filters === void 0 ? void 0 : filters.order) ? filters.order : "popular");
+                        if (filters.type.value.length)
+                            link += filters.type.value.map(function (i) { return "&lang[]=".concat(i); }).join("");
+                        link += "&status=" + filters.status;
+                        link += "&order=" + filters.order;
                         headers = new Headers();
                         if (this.cookieString) {
                             headers.append("cookie", this.cookieString);
@@ -175,7 +173,6 @@ var LSHNovel = /** @class */ (function () {
             });
         });
     };
-    ;
     LSHNovel.prototype.parseNovelAndChapters = function (novelUrl) {
         return __awaiter(this, void 0, void 0, function () {
             var url, headers, result, body, loadedCheerio, novel, chapter;
@@ -204,7 +201,12 @@ var LSHNovel = /** @class */ (function () {
                                 loadedCheerio("img.wp-post-image").attr("src");
                         loadedCheerio("div.spe > span").each(function () {
                             var detailName = loadedCheerio(this).find("b").text().trim();
-                            var detail = loadedCheerio(this).find('b').remove().end().text().trim();
+                            var detail = loadedCheerio(this)
+                                .find("b")
+                                .remove()
+                                .end()
+                                .text()
+                                .trim();
                             switch (detailName) {
                                 case "Yazar:":
                                     novel.author = detail;

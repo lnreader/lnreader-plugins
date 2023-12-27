@@ -1,35 +1,35 @@
 import { load as parseHTML } from "cheerio";
 import { fetchApi, fetchFile } from "@libs/fetch";
-import { Filter, FilterInputs } from "@libs/filterInputs";
+import { FilterTypes, Filters } from "@libs/filterInputs";
 import { Plugin } from "@typings/plugin";
 
 class KolNovel implements Plugin.PluginBase {
     id = "kolnovel";
     name = "KolNovel";
-    icon = "multisrc/wpmangastream/icons/kolnovel.png"
+    icon = "multisrc/wpmangastream/icons/kolnovel.png";
     site = "https://kolnovel.lol/";
     version = "1.0.0";
     userAgent = "";
     cookieString = "";
-    async popularNovels(pageNo: number, {filters}: Plugin.PopularNovelsOptions): Promise<Plugin.NovelItem[]> {
+    async popularNovels(
+        pageNo: number,
+        { filters }: Plugin.PopularNovelsOptions<typeof this.filters>
+    ): Promise<Plugin.NovelItem[]> {
         let link = `${this.site}series/?page=${pageNo}`;
 
-        if (filters) {
-            if (Array.isArray(filters.genres) && filters.genres.length) {
-                link += filters.genres.map((i) => `&genre[]=${i}`).join("");
-            }
+        if (filters.genres.value.length)
+            link += filters.genres.value.map((i) => `&genre[]=${i}`).join("");
+        if (filters.type.value.length)
+            link += filters.type.value.map((i) => `&lang[]=${i}`).join("");
 
-            if (Array.isArray(filters.type) && filters.type.length)
-                link += filters.type.map((i) => `&lang[]=${i}`).join("");
-        }
         link += "&status=" + (filters?.status ? filters.status : "");
 
         link += "&order=" + (filters?.order ? filters.order : "popular");
         const headers = new Headers();
-        if(this.cookieString){
+        if (this.cookieString) {
             headers.append("cookie", this.cookieString);
         }
-        const body = await fetchApi(link, {headers}).then((result) =>
+        const body = await fetchApi(link, { headers }).then((result) =>
             result.text()
         );
 
@@ -59,10 +59,10 @@ class KolNovel implements Plugin.PluginBase {
     async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
         const url = novelUrl;
         const headers = new Headers();
-        if(this.cookieString){
+        if (this.cookieString) {
             headers.append("cookie", this.cookieString);
         }
-        const result = await fetch(url, {headers});
+        const result = await fetch(url, { headers });
         const body = await result.text();
 
         let loadedCheerio = parseHTML(body);
@@ -136,30 +136,33 @@ class KolNovel implements Plugin.PluginBase {
     }
     async parseChapter(chapterUrl: string): Promise<string> {
         const headers = new Headers();
-        if(this.cookieString){
+        if (this.cookieString) {
             headers.append("cookie", this.cookieString);
         }
-        const result = await fetch(chapterUrl, {headers});
+        const result = await fetch(chapterUrl, { headers });
         const body = await result.text();
-    
+
         const loadedCheerio = parseHTML(body);
 
-        loadedCheerio('.epcontent > div, i').remove();
-        let ignore = loadedCheerio('article > style').text().trim().split(',');
+        loadedCheerio(".epcontent > div, i").remove();
+        let ignore = loadedCheerio("article > style").text().trim().split(",");
         ignore.push(...(ignore.pop()?.match(/^\.\w+/) || []));
-        ignore.map(tag => loadedCheerio(`p${tag}`).remove());
+        ignore.map((tag) => loadedCheerio(`p${tag}`).remove());
 
-        let chapterText = loadedCheerio('.epcontent').html() || "";
-    
+        let chapterText = loadedCheerio(".epcontent").html() || "";
+
         return chapterText;
     }
-    async searchNovels(searchTerm: string, pageNo?: number | undefined): Promise<Plugin.NovelItem[]> {
+    async searchNovels(
+        searchTerm: string,
+        pageNo?: number | undefined
+    ): Promise<Plugin.NovelItem[]> {
         const url = `${this.site}?s=${searchTerm}`;
         const headers = new Headers();
-        if(this.cookieString){
+        if (this.cookieString) {
             headers.append("cookie", this.cookieString);
         }
-        const result = await fetchApi(url, {headers});
+        const result = await fetchApi(url, { headers });
         const body = await result.text();
 
         const loadedCheerio = parseHTML(body);
@@ -186,140 +189,140 @@ class KolNovel implements Plugin.PluginBase {
     async fetchImage(url: string): Promise<string | undefined> {
         return await fetchFile(url);
     }
-    filters = [
-        {
-            key: "order",
+    filters = {
+        order: {
             label: "ترتيب حسب",
-            values: [
+            options: [
                 { label: "الإعداد الأولي", value: "" },
-    
+
                 { label: "A-Z", value: "title" },
-    
+
                 { label: "Z-A", value: "titlereverse" },
-    
+
                 { label: "أخر التحديثات", value: "update" },
-    
+
                 { label: "أخر ما تم إضافته", value: "latest" },
-    
+
                 { label: "الرائجة", value: "popular" },
             ],
-            inputType: FilterInputs.Picker,
+            value: "",
+            type: FilterTypes.Picker,
         },
-        {
-            key: "status",
+        status: {
+            value: "",
             label: "الحالة",
-            values: [
+            options: [
                 { label: "All", value: "" },
-    
+
                 { label: "Ongoing", value: "ongoing" },
-    
+
                 { label: "Hiatus", value: "hiatus" },
-    
+
                 { label: "Completed", value: "completed" },
             ],
-            inputType: FilterInputs.Picker,
+            type: FilterTypes.Picker,
         },
-        {
-            key: "type",
+        type: {
+            value: [],
             label: "النوع",
-            values: [
+            options: [
                 { label: "إنجليزية", value: "english" },
-    
+
                 { label: "روايةلايت", value: "light-novel" },
-    
+
                 { label: "روايةويب", value: "web-novel" },
-    
+
                 { label: "صينية", value: "chinese" },
-    
+
                 { label: "عربية", value: "arabic" },
-    
+
                 { label: "كورية", value: "korean" },
-    
+
                 { label: "يابانية", value: "japanese" },
             ],
-            inputType: FilterInputs.Checkbox,
+            type: FilterTypes.CheckboxGroup,
         },
-        {
-            key: "genres",
+        genres: {
+            value: [],
             label: "تصنيف",
-            values: [
+            options: [
                 { label: "Wuxia", value: "wuxia" },
-    
+
                 { label: "Xianxia", value: "xianxia" },
-    
+
                 { label: "XUANHUAN", value: "xuanhuan" },
-    
+
                 { label: "أكشن", value: "action" },
-    
+
                 { label: "إثارة", value: "excitement" },
-    
+
                 { label: "إنتقالالىعالمأخر", value: "isekai" },
-    
+
                 { label: "إيتشي", value: "etchi" },
-    
+
                 { label: "الخيالالعلمي", value: "sci-fi" },
-    
+
                 { label: "بوليسي", value: "policy" },
-    
+
                 { label: "تاريخي", value: "historical" },
-    
+
                 { label: "تحقيقات", value: "%d8%aa%d8%ad%d9%82%d9%8a%d9%82" },
-    
+
                 { label: "تقمصشخصيات", value: "rpg" },
-    
+
                 { label: "جريمة", value: "crime" },
-    
+
                 { label: "جوسى", value: "josei" },
-    
+
                 { label: "حريم", value: "harem" },
-    
+
                 { label: "حياةمدرسية", value: "school-life" },
-    
+
                 { label: "خيالي(فانتازيا)", value: "fantasy" },
-    
+
                 { label: "دراما", value: "drama" },
-    
+
                 { label: "رعب", value: "horror" },
-    
+
                 { label: "رومانسي", value: "romantic" },
-    
+
                 { label: "سحر", value: "magic" },
-    
+
                 { label: "سينن", value: "senen" },
-    
+
                 { label: "شريحةمنالحياة", value: "slice-of-life" },
-    
+
                 { label: "شوجو", value: "shojo" },
-    
+
                 { label: "شونين", value: "shonen" },
-    
+
                 { label: "طبي", value: "medical" },
-    
+
                 { label: "ظواهرخارقةللطبيعة", value: "supernatural" },
-    
+
                 { label: "غموض", value: "mysteries" },
-    
+
                 { label: "فنونالقتال", value: "martial-arts" },
-    
+
                 { label: "قوىخارقة", value: "superpower" },
-    
+
                 { label: "كوميدي", value: "comedy" },
-    
+
                 { label: "مأساوي", value: "tragedy" },
-    
+
                 { label: "مابعدالكارثة", value: "after-the-disaster" },
-    
+
                 { label: "مغامرة", value: "adventure" },
-    
+
                 { label: "ميكا", value: "mechanical" },
-    
+
                 { label: "ناضج", value: "mature" },
-    
+
                 { label: "نفسي", value: "psychological" },
             ],
-            inputType: FilterInputs.Checkbox,
+            type: FilterTypes.CheckboxGroup,
         },
-    ];
+    } satisfies Filters;
 }
 
 export default new KolNovel();

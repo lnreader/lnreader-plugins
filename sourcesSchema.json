@@ -1,0 +1,87 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "additionalProperties": { "type": "string" },
+            "id": {
+                "type": "string"
+            },
+            "sourceSite": {
+                "type": "string"
+            },
+            "sourceName": {
+                "type": "string"
+            },
+            "filters": {
+                "type": "object",
+                "patternProperties": {
+                    ".*": {
+                        "type": "object",
+                        "properties": {
+                            "label": {
+                                "type": "string"
+                            },
+                            "options": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "label": {
+                                            "type": "string"
+                                        },
+                                        "value": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "additionalProperties": false,
+                                    "required": ["label", "value"]
+                                }
+                            },
+                            "value": {
+                                "type": "string"
+                            },
+                            "type": {
+                                "type": "string"
+                            }
+                        },
+                        "required": ["label", "options", "type", "value"]
+                    }
+                }
+            },
+            "options": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "object",
+                        "properties": {
+                            "genres": {
+                                "type": "string"
+                            },
+                            "novels": {
+                                "type": "string"
+                            },
+                            "novel": {
+                                "type": "string"
+                            },
+                            "chapter": {
+                                "type": "string"
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "useNewChapterEndpoint": {
+                        "type": "boolean"
+                    },
+                    "lang": {
+                        "type": "string"
+                    }
+                },
+                "additionalProperties": false,
+                "required": ["lang"]
+            }
+        },
+        "required": ["id", "sourceSite", "sourceName"]
+    }
+}

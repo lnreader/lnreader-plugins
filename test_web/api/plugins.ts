@@ -3,6 +3,7 @@ import { languages } from "@libs/languages";
 import path from "path";
 import { PluginList } from "@typings/types";
 import { Plugin, isPlugin } from "@typings/plugin";
+import { Filters } from "@libs/filterInputs";
 const root = path.dirname(require?.main?.filename || "");
 
 export const all_plugins = (): PluginList => {
@@ -43,18 +44,20 @@ export const all_plugins = (): PluginList => {
 const getPlugin = async (
     requirePath: string
 ): Promise<Plugin.PluginBase | null> => {
+    console.log("loading plugin", requirePath);
     const plugin = await require(requirePath).default;
+    console.log(plugin);
     if (isPlugin(plugin)) return plugin;
+    console.log("Not a plugin!");
     return null;
 };
 
-export const getFilter = async (
-    pluginRequirePath: string
-) => (await getPlugin(pluginRequirePath))?.filters;
+export const getFilter = async (pluginRequirePath: string) =>
+    (await getPlugin(pluginRequirePath))?.filters;
 
 export const popularNovels = async (
     pluginRequirePath: string,
-    options: Plugin.PopularNovelsOptions
+    options: Plugin.PopularNovelsOptions<Filters>
 ) => (await getPlugin(pluginRequirePath))?.popularNovels(1, options);
 
 export const searchNovels = async (

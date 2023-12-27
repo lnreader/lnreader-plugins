@@ -1,4 +1,4 @@
-import { Filter } from "@libs/filterInputs";
+import { FilterToValues, Filters } from "@libs/filterInputs";
 import { languages } from "@libs/languages";
 export namespace Plugin {
     export interface ChapterItem {
@@ -31,9 +31,11 @@ export namespace Plugin {
         status?: string;
         chapters?: ChapterItem[];
     }
-    export interface PopularNovelsOptions {
+    export interface PopularNovelsOptions<
+        Q extends Filters | undefined = Filters | undefined
+    > {
         showLatestNovels?: boolean;
-        filters?: Record<string, string | string[]>;
+        filters: Q extends undefined ? undefined : FilterToValues<Q>;
     }
     export interface PluginItem {
         id: string;
@@ -45,26 +47,29 @@ export namespace Plugin {
     }
 
     export interface PluginBase {
-        id: string,
-        name: string,
-        /** 
-         * Relative path without icon. E.g: 
+        id: string;
+        name: string;
+        /**
+         * Relative path without icon. E.g:
          * ```js
          * "src/vi/hakolightnovel/icon.png"
          * ```
          */
         icon: string;
         site: string;
-        filters?: Filter[];
+        filters?: Filters;
         version: string;
         userAgent: string;
         cookieString: string;
-        popularNovels(pageNo: number, options: PopularNovelsOptions): Promise<NovelItem[]>;
+        popularNovels(
+            pageNo: number,
+            options: PopularNovelsOptions<Filters>
+        ): Promise<NovelItem[]>;
         parseNovelAndChapters(novelUrl: string): Promise<SourceNovel>;
         parseChapter(chapterUrl: string): Promise<string>;
         searchNovels(searchTerm: string, pageNo?: number): Promise<NovelItem[]>;
         /**
-         * 
+         *
          * @param url Image url
          * @returns {string} Base64 of image
          * @example

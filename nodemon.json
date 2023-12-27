@@ -1,5 +1,5 @@
 {   
     "ext": "js,mjs,json,ts",
-    "ignore": [".js/**", "test_web/**"],
+    "ignore": [".js/**"],
     "exec": "tsc && node ./.js/index.js"
 }

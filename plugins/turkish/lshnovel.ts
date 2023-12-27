@@ -1,6 +1,6 @@
 import { load as parseHTML } from "cheerio";
 import { fetchApi, fetchFile } from "@libs/fetch";
-import { Filter, FilterInputs } from "@libs/filterInputs";
+import { FilterTypes, Filters } from "@libs/filterInputs";
 import { Plugin } from "@typings/plugin";
 
 class LSHNovel implements Plugin.PluginBase {
@@ -11,26 +11,28 @@ class LSHNovel implements Plugin.PluginBase {
     version = "1.0.0";
     userAgent = "";
     cookieString = "";
-    async popularNovels(pageNo: number, {filters}: Plugin.PopularNovelsOptions): Promise<Plugin.NovelItem[]> {
+    async popularNovels(
+        pageNo: number,
+        { filters }: Plugin.PopularNovelsOptions<typeof this.filters>
+    ): Promise<Plugin.NovelItem[]> {
         let link = `${this.site}series/?page=${pageNo}`;
 
-        if (filters) {
-            if (Array.isArray(filters.genres) && filters.genres.length) {
-                link += filters.genres.map((i) => `&genre[]=${i}`).join("");
-            }
-
-            if (Array.isArray(filters.type) && filters.type.length)
-                link += filters.type.map((i) => `&lang[]=${i}`).join("");
+        if (filters.genres.value.length) {
+            link += filters.genres.value.map((i) => `&genre[]=${i}`).join("");
         }
-        link += "&status=" + (filters?.status ? filters.status : "");
 
-        link += "&order=" + (filters?.order ? filters.order : "popular");
+        if (filters.type.value.length)
+            link += filters.type.value.map((i) => `&lang[]=${i}`).join("");
+
+        link += "&status=" + filters.status;
+
+        link += "&order=" + filters.order;
 
         const headers = new Headers();
-        if(this.cookieString){
+        if (this.cookieString) {
             headers.append("cookie", this.cookieString);
         }
-        const body = await fetchApi(link, {headers}).then((result) =>
+        const body = await fetchApi(link, { headers }).then((result) =>
             result.text()
         );
 
@@ -57,15 +59,15 @@ class LSHNovel implements Plugin.PluginBase {
         });
 
         return novels;
-    };
+    }
 
     async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
         const url = novelUrl;
         const headers = new Headers();
-        if(this.cookieString){
+        if (this.cookieString) {
             headers.append("cookie", this.cookieString);
         }
-        const result = await fetchApi(url, {headers});
+        const result = await fetchApi(url, { headers });
         const body = await result.text();
 
         let loadedCheerio = parseHTML(body);
@@ -83,7 +85,12 @@ class LSHNovel implements Plugin.PluginBase {
 
         loadedCheerio("div.spe > span").each(function () {
             const detailName = loadedCheerio(this).find("b").text().trim();
-            const detail = loadedCheerio(this).find('b').remove().end().text().trim();
+            const detail = loadedCheerio(this)
+                .find("b")
+                .remove()
+                .end()
+                .text()
+                .trim();
 
             switch (detailName) {
                 case "Yazar:":
@@ -139,10 +146,10 @@ class LSHNovel implements Plugin.PluginBase {
     }
     async parseChapter(chapterUrl: string): Promise<string> {
         const headers = new Headers();
-        if(this.cookieString){
+        if (this.cookieString) {
             headers.append("cookie", this.cookieString);
         }
-        const result = await fetchApi(chapterUrl, {headers});
+        const result = await fetchApi(chapterUrl, { headers });
         const body = await result.text();
 
         const loadedCheerio = parseHTML(body);
@@ -152,13 +159,16 @@ class LSHNovel implements Plugin.PluginBase {
         return chapterText;
     }
 
-    async searchNovels(searchTerm: string, pageNo?: number | undefined): Promise<Plugin.NovelItem[]> {
+    async searchNovels(
+        searchTerm: string,
+        pageNo?: number | undefined
+    ): Promise<Plugin.NovelItem[]> {
         const url = `${this.site}?s=${searchTerm}`;
         const headers = new Headers();
-        if(this.cookieString){
+        if (this.cookieString) {
             headers.append("cookie", this.cookieString);
         }
-        const result = await fetchApi(url, {headers});
+        const result = await fetchApi(url, { headers });
         const body = await result.text();
 
         const loadedCheerio = parseHTML(body);
@@ -184,12 +194,11 @@ class LSHNovel implements Plugin.PluginBase {
         return await fetchFile(url);
     }
 
-
-    filters = [
-        {
-            key: "order",
+    filters = {
+        order: {
+            value: "popular",
             label: "Önerilen",
-            values: [
+            options: [
                 { label: "Varsayılan", value: "" },
 
                 { label: "A-Z", value: "title" },
@@ -202,12 +211,12 @@ class LSHNovel implements Plugin.PluginBase {
 
                 { label: "Bestimiz", value: "popular" },
             ],
-            inputType: FilterInputs.Picker,
+            type: FilterTypes.Picker,
         },
-        {
-            key: "status",
+        status: {
             label: "Statü",
-            values: [
+            value: "",
+            options: [
                 { label: "Tümü", value: "" },
 
                 { label: "Ongoing", value: "ongoing" },
@@ -216,12 +225,12 @@ class LSHNovel implements Plugin.PluginBase {
 
                 { label: "Completed", value: "completed" },
             ],
-            inputType: FilterInputs.Picker,
+            type: FilterTypes.Picker,
         },
-        {
-            key: "type",
+        type: {
+            value: [],
             label: "Tür",
-            values: [
+            options: [
                 { label: "Çeviri Novel", value: "ceviri-novel" },
 
                 { label: "Liz-Chan", value: "liz-chan" },
@@ -232,12 +241,12 @@ class LSHNovel implements Plugin.PluginBase {
 
                 { label: "Web Novel", value: "web-novel" },
             ],
-            inputType: FilterInputs.Checkbox,
+            type: FilterTypes.CheckboxGroup,
         },
-        {
-            key: "genres",
+        genres: {
+            value: [],
             label: "Kategori",
-            values: [
+            options: [
                 { label: "+18", value: "18" },
 
                 { label: "Action", value: "action" },
@@ -306,9 +315,9 @@ class LSHNovel implements Plugin.PluginBase {
 
                 { label: "Yaoi", value: "yaoi" },
             ],
-            inputType: FilterInputs.Checkbox,
+            type: FilterTypes.CheckboxGroup,
         },
-    ];
+    } satisfies Filters;
 }
 
 export default new LSHNovel();

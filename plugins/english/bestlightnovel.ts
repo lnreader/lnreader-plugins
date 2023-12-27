@@ -3,19 +3,24 @@ import { Plugin } from "@typings/plugin";
 import { defaultCover } from "@libs/defaultCover";
 import { fetchFile } from "@libs/fetch";
 import { NovelStatus } from "@libs/novelStatus";
-import { Filter } from "@libs/filterInputs";
 
 class BLN implements Plugin.PluginBase {
     id = "BLN.com";
     name = "BestLightNovel";
     icon = "src/en/bestlightnovel/icon.png";
     site = "https://bestlightnovel.com/";
-    filter?: Filter[] | undefined;
+    filter?: undefined;
     version = "1.0.0";
     userAgent = "";
     cookieString = "";
-    async popularNovels(pageNo: number, options: Plugin.PopularNovelsOptions): Promise<Plugin.NovelItem[]> {
-        const url = this.site + "novel_list?type=topview&category=all&state=all&page=1" + pageNo;
+    async popularNovels(
+        pageNo: number,
+        options: Plugin.PopularNovelsOptions
+    ): Promise<Plugin.NovelItem[]> {
+        const url =
+            this.site +
+            "novel_list?type=topview&category=all&state=all&page=1" +
+            pageNo;
 
         const result = await fetch(url);
         if (!result.ok) {
@@ -137,32 +142,35 @@ class BLN implements Plugin.PluginBase {
 
         return chapterText;
     }
-    async searchNovels(searchTerm: string, pageNo?: number | undefined): Promise<Plugin.NovelItem[]> {
+    async searchNovels(
+        searchTerm: string,
+        pageNo?: number | undefined
+    ): Promise<Plugin.NovelItem[]> {
         const url = `${this.site}search_novels/${searchTerm}`;
 
         const result = await fetch(url);
         const body = await result.text();
-    
+
         let loadedCheerio = cheerioload(body);
-    
+
         let novels: Plugin.NovelItem[] = [];
-    
+
         loadedCheerio(".update_item.list_category").each(function () {
             const novelName = loadedCheerio(this).find("h3 > a").text();
             const novelCover = loadedCheerio(this).find("img").attr("src");
             const novelUrl = loadedCheerio(this).find("h3 > a").attr("href");
-    
+
             if (!novelUrl) {
                 // TODO: Handle error
                 console.error("No novel url!");
                 return;
             }
-    
+
             const novel = { name: novelName, cover: novelCover, url: novelUrl };
-    
+
             novels.push(novel);
         });
-    
+
         return novels;
     }
     async fetchImage(url: string): Promise<string | undefined> {
@@ -171,4 +179,3 @@ class BLN implements Plugin.PluginBase {
 }
 
 export default new BLN();
-

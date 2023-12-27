@@ -48,11 +48,11 @@ var LightNovelBrasil = /** @class */ (function () {
         this.version = "1.0.0";
         this.userAgent = "";
         this.cookieString = "";
-        this.filters = [
-            {
-                key: "order",
+        this.filters = {
+            order: {
                 label: "Sort By",
-                values: [
+                value: "",
+                options: [
                     { label: "Default", value: "" },
                     { label: "A-Z", value: "title" },
                     { label: "Z-A", value: "titlereverse" },
@@ -60,23 +60,23 @@ var LightNovelBrasil = /** @class */ (function () {
                     { label: "Latest Added", value: "latest" },
                     { label: "Popular", value: "popular" },
                 ],
-                inputType: filterInputs_1.FilterInputs.Picker,
+                type: filterInputs_1.FilterTypes.Picker,
             },
-            {
-                key: "status",
+            status: {
                 label: "Status",
-                values: [
+                value: "",
+                options: [
                     { label: "All", value: "" },
                     { label: "Ongoing", value: "ongoing" },
                     { label: "Hiatus", value: "hiatus" },
                     { label: "Completed", value: "completed" },
                 ],
-                inputType: filterInputs_1.FilterInputs.Picker,
+                type: filterInputs_1.FilterTypes.Picker,
             },
-            {
-                key: "type",
+            type: {
                 label: "Type",
-                values: [
+                value: [],
+                options: [
                     { label: "Chinese novel", value: "chinese-novel" },
                     { label: "habyeol", value: "habyeol" },
                     { label: "korean novel", value: "korean-novel" },
@@ -84,12 +84,12 @@ var LightNovelBrasil = /** @class */ (function () {
                     { label: "삼심", value: "%ec%82%bc%ec%8b%ac" },
                     { label: "호곡", value: "%ed%98%b8%ea%b3%a1" },
                 ],
-                inputType: filterInputs_1.FilterInputs.Checkbox,
+                type: filterInputs_1.FilterTypes.CheckboxGroup,
             },
-            {
-                key: "genres",
+            genres: {
+                value: [],
                 label: "Genres",
-                values: [
+                options: [
                     { label: "A.I", value: "a.i" },
                     { label: "Academy", value: "academy" },
                     { label: "Action", value: "action" },
@@ -177,9 +177,9 @@ var LightNovelBrasil = /** @class */ (function () {
                     { label: "Yandere", value: "yandere" },
                     { label: "Yuri", value: "yuri" },
                 ],
-                inputType: filterInputs_1.FilterInputs.Checkbox,
+                type: filterInputs_1.FilterTypes.CheckboxGroup,
             },
-        ];
+        };
     }
     LightNovelBrasil.prototype.popularNovels = function (pageNo, _a) {
         var filters = _a.filters;
@@ -189,13 +189,10 @@ var LightNovelBrasil = /** @class */ (function () {
                 switch (_b.label) {
                     case 0:
                         link = "".concat(this.site, "series/?page=").concat(pageNo);
-                        if (filters) {
-                            if (Array.isArray(filters.genres) && filters.genres.length) {
-                                link += filters.genres.map(function (i) { return "&genre[]=".concat(i); }).join("");
-                            }
-                            if (Array.isArray(filters.type) && filters.type.length)
-                                link += filters.type.map(function (i) { return "&lang[]=".concat(i); }).join("");
-                        }
+                        if (filters.genres.value.length)
+                            link += filters.genres.value.map(function (i) { return "&genre[]=".concat(i); }).join("");
+                        if (filters.type.value.length)
+                            link += filters.type.value.map(function (i) { return "&lang[]=".concat(i); }).join("");
                         link += "&status=" + ((filters === null || filters === void 0 ? void 0 : filters.status) ? filters.status : "");
                         link += "&order=" + ((filters === null || filters === void 0 ? void 0 : filters.order) ? filters.order : "popular");
                         headers = new Headers();
@@ -228,7 +225,6 @@ var LightNovelBrasil = /** @class */ (function () {
             });
         });
     };
-    ;
     LightNovelBrasil.prototype.parseNovelAndChapters = function (novelUrl) {
         return __awaiter(this, void 0, void 0, function () {
             var url, headers, result, body, loadedCheerio, novel, chapter;
@@ -257,7 +253,12 @@ var LightNovelBrasil = /** @class */ (function () {
                                 loadedCheerio("img.wp-post-image").attr("src");
                         loadedCheerio("div.spe > span").each(function () {
                             var detailName = loadedCheerio(this).find("b").text().trim();
-                            var detail = loadedCheerio(this).find('b').remove().end().text().trim();
+                            var detail = loadedCheerio(this)
+                                .find("b")
+                                .remove()
+                                .end()
+                                .text()
+                                .trim();
                             switch (detailName) {
                                 case "Autor:":
                                 case "Author:":

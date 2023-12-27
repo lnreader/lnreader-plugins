@@ -14,7 +14,6 @@ export const icon = "src/jp/syosetu/icon.png";
 export const version = "1.0.0";
 export const site = "https//yomou.syosetu.com/";
 
-
 const searchUrl = (pagenum?: number, order?: string) => {
     return `https://yomou.syosetu.com/search.php?order=${order || "hyoka"}${
         pagenum !== undefined

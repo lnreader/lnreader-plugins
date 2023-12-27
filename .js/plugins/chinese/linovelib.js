@@ -49,11 +49,11 @@ var Linovelib = /** @class */ (function () {
         this.version = "1.0.0";
         this.userAgent = "";
         this.cookieString = "";
-        this.filters = [
-            {
-                key: "sort",
+        this.filters = {
+            sort: {
                 label: "Sort By",
-                values: [
+                value: "monthvisit",
+                options: [
                     { label: "月点击榜", value: "monthvisit" },
                     { label: "周点击榜", value: "weekvisit" },
                     { label: "月推荐榜", value: "monthvote" },
@@ -67,9 +67,9 @@ var Linovelib = /** @class */ (function () {
                     { label: "收藏榜", value: "goodnum" },
                     { label: "新书榜", value: "newhot" },
                 ],
-                inputType: filterInputs_1.FilterInputs.Picker,
+                type: filterInputs_1.FilterTypes.Picker,
             },
-        ];
+        };
     }
     Linovelib.prototype.popularNovels = function (pageNo, _a) {
         var filters = _a.filters;
@@ -80,7 +80,7 @@ var Linovelib = /** @class */ (function () {
                 switch (_b.label) {
                     case 0:
                         link = "".concat(this.site, "/top/");
-                        link += ((filters === null || filters === void 0 ? void 0 : filters.sort) ? filters.sort : "monthvisit");
+                        link += filters.sort;
                         link += "/".concat(pageNo, ".html");
                         headers = new Headers();
                         if (this.cookieString) {
@@ -94,11 +94,11 @@ var Linovelib = /** @class */ (function () {
                         loadedCheerio = (0, cheerio_1.load)(body);
                         novels = [];
                         loadedCheerio(".module-rank-booklist .book-layout").each(function (i, el) {
-                            var url = loadedCheerio(el).attr('href');
-                            var novelName = loadedCheerio(el).find('.book-title').text();
+                            var url = loadedCheerio(el).attr("href");
+                            var novelName = loadedCheerio(el).find(".book-title").text();
                             var novelCover = loadedCheerio(el)
-                                .find('img.book-cover')
-                                .attr('data-src');
+                                .find("img.book-cover")
+                                .attr("data-src");
                             var novelUrl = _this.site + url;
                             if (!url)
                                 return;
@@ -114,7 +114,6 @@ var Linovelib = /** @class */ (function () {
             });
         });
     };
-    ;
     Linovelib.prototype.parseNovelAndChapters = function (novelUrl) {
         var _a;
         return __awaiter(this, void 0, void 0, function () {
@@ -139,14 +138,14 @@ var Linovelib = /** @class */ (function () {
                             url: url,
                             chapters: [],
                         };
-                        novel.name = loadedCheerio('#bookDetailWrapper .book-title').text();
-                        novel.cover = loadedCheerio('#bookDetailWrapper img.book-cover').attr('src');
-                        novel.summary = loadedCheerio('#bookSummary content').text();
-                        novel.author = loadedCheerio('#bookDetailWrapper .book-rand-a a').text();
+                        novel.name = loadedCheerio("#bookDetailWrapper .book-title").text();
+                        novel.cover = loadedCheerio("#bookDetailWrapper img.book-cover").attr("src");
+                        novel.summary = loadedCheerio("#bookSummary content").text();
+                        novel.author = loadedCheerio("#bookDetailWrapper .book-rand-a a").text();
                         // TODO: Need some regex and dirty selector to get it
                         // Need to look into how to translate that message
                         novel.status = undefined;
-                        novel.genres = loadedCheerio('.tag-small.red')
+                        novel.genres = loadedCheerio(".tag-small.red")
                             .children("a")
                             .map(function (i, el) { return loadedCheerio(el).text(); })
                             .toArray()
@@ -154,7 +153,7 @@ var Linovelib = /** @class */ (function () {
                         chapter = [];
                         idPattern = /\/(\d+)\.html/;
                         novelId = (_a = url.match(idPattern)) === null || _a === void 0 ? void 0 : _a[1];
-                        chaptersUrl = this.site + loadedCheerio('#btnReadBook').attr('href');
+                        chaptersUrl = this.site + loadedCheerio("#btnReadBook").attr("href");
                         return [4 /*yield*/, (0, fetch_1.fetchApi)(chaptersUrl, { headers: headers })];
                     case 3:
                         chaptersResult = _b.sent();
@@ -162,14 +161,14 @@ var Linovelib = /** @class */ (function () {
                     case 4:
                         chaptersBody = _b.sent();
                         chaptersLoadedCheerio = (0, cheerio_1.load)(chaptersBody);
-                        chaptersLoadedCheerio('#volumes .chapter-li').each(function (i, el) {
-                            if (chaptersLoadedCheerio(el).hasClass('chapter-bar')) {
+                        chaptersLoadedCheerio("#volumes .chapter-li").each(function (i, el) {
+                            if (chaptersLoadedCheerio(el).hasClass("chapter-bar")) {
                                 volumeName = chaptersLoadedCheerio(el).text();
                             }
                             else {
                                 var urlPart = chaptersLoadedCheerio(el)
-                                    .find('.chapter-li-a')
-                                    .attr('href');
+                                    .find(".chapter-li-a")
+                                    .attr("href");
                                 var chapterIdMatch = urlPart === null || urlPart === void 0 ? void 0 : urlPart.match(idPattern);
                                 // Sometimes the href attribute does not contain the url, but javascript:cid(0).
                                 // Increment the previous chapter ID should result in the right URL
@@ -182,8 +181,8 @@ var Linovelib = /** @class */ (function () {
                             }
                             var chapterUrl = "".concat(_this.site, "/novel/").concat(novelId, "/").concat(chapterId, ".html");
                             var chapterName = volumeName +
-                                ' — ' +
-                                chaptersLoadedCheerio(el).find('.chapter-index').text().trim();
+                                " — " +
+                                chaptersLoadedCheerio(el).find(".chapter-index").text().trim();
                             var releaseDate = null;
                             if (!chapterId)
                                 return;
@@ -213,110 +212,110 @@ var Linovelib = /** @class */ (function () {
                         chapterText = "", pageText = "";
                         pageNumber = 1;
                         skillgg = {
-                            '\u201c': '\u300c',
-                            '\u201d': '\u300d',
-                            '\u2018': '\u300e',
-                            '\u2019': '\u300f',
-                            '\ue82c': '\u7684',
-                            '\ue852': '\u4e00',
-                            '\ue82d': '\u662f',
-                            '\ue819': '\u4e86',
-                            '\ue856': '\u6211',
-                            '\ue857': '\u4e0d',
-                            '\ue816': '\u4eba',
-                            '\ue83c': '\u5728',
-                            '\ue830': '\u4ed6',
-                            '\ue82e': '\u6709',
-                            '\ue836': '\u8fd9',
-                            '\ue859': '\u4e2a',
-                            '\ue80a': '\u4e0a',
-                            '\ue855': '\u4eec',
-                            '\ue842': '\u6765',
-                            '\ue858': '\u5230',
-                            '\ue80b': '\u65f6',
-                            '\ue81f': '\u5927',
-                            '\ue84a': '\u5730',
-                            '\ue853': '\u4e3a',
-                            '\ue81e': '\u5b50',
-                            '\ue822': '\u4e2d',
-                            '\ue813': '\u4f60',
-                            '\ue85b': '\u8bf4',
-                            '\ue807': '\u751f',
-                            '\ue818': '\u56fd',
-                            '\ue810': '\u5e74',
-                            '\ue812': '\u7740',
-                            '\ue851': '\u5c31',
-                            '\ue801': '\u90a3',
-                            '\ue80c': '\u548c',
-                            '\ue815': '\u8981',
-                            '\ue84c': '\u5979',
-                            '\ue840': '\u51fa',
-                            '\ue848': '\u4e5f',
-                            '\ue835': '\u5f97',
-                            '\ue800': '\u91cc',
-                            '\ue826': '\u540e',
-                            '\ue863': '\u81ea',
-                            '\ue861': '\u4ee5',
-                            '\ue854': '\u4f1a',
-                            '\ue827': '\u5bb6',
-                            '\ue83b': '\u53ef',
-                            '\ue85d': '\u4e0b',
-                            '\ue84d': '\u800c',
-                            '\ue862': '\u8fc7',
-                            '\ue81c': '\u5929',
-                            '\ue81d': '\u53bb',
-                            '\ue860': '\u80fd',
-                            '\ue843': '\u5bf9',
-                            '\ue82f': '\u5c0f',
-                            '\ue802': '\u591a',
-                            '\ue831': '\u7136',
-                            '\ue84b': '\u4e8e',
-                            '\ue837': '\u5fc3',
-                            '\ue829': '\u5b66',
-                            '\ue85e': '\u4e48',
-                            '\ue83a': '\u4e4b',
-                            '\ue832': '\u90fd',
-                            '\ue808': '\u597d',
-                            '\ue841': '\u770b',
-                            '\ue821': '\u8d77',
-                            '\ue845': '\u53d1',
-                            '\ue803': '\u5f53',
-                            '\ue828': '\u6ca1',
-                            '\ue81b': '\u6210',
-                            '\ue83e': '\u53ea',
-                            '\ue820': '\u5982',
-                            '\ue84e': '\u4e8b',
-                            '\ue85a': '\u628a',
-                            '\ue806': '\u8fd8',
-                            '\ue83f': '\u7528',
-                            '\ue833': '\u7b2c',
-                            '\ue811': '\u6837',
-                            '\ue804': '\u9053',
-                            '\ue814': '\u60f3',
-                            '\ue80f': '\u4f5c',
-                            '\ue84f': '\u79cd',
-                            '\ue80e': '\u5f00',
-                            '\ue823': '\u7f8e',
-                            '\ue849': '\u4e73',
-                            '\ue805': '\u9634',
-                            '\ue809': '\u6db2',
-                            '\ue81a': '\u830e',
-                            '\ue844': '\u6b32',
-                            '\ue847': '\u547b',
-                            '\ue850': '\u8089',
-                            '\ue824': '\u4ea4',
-                            '\ue85f': '\u6027',
-                            '\ue817': '\u80f8',
-                            '\ue85c': '\u79c1',
-                            '\ue838': '\u7a74',
-                            '\ue82a': '\u6deb',
-                            '\ue83d': '\u81c0',
-                            '\ue82b': '\u8214',
-                            '\ue80d': '\u5c04',
-                            '\ue839': '\u8131',
-                            '\ue834': '\u88f8',
-                            '\ue846': '\u9a9a',
-                            '\ue825': '\u5507',
+                            "\u201c": "\u300c",
+                            "\u201d": "\u300d",
+                            "\u2018": "\u300e",
+                            "\u2019": "\u300f",
+                            "\ue82c": "\u7684",
+                            "\ue852": "\u4e00",
+                            "\ue82d": "\u662f",
+                            "\ue819": "\u4e86",
+                            "\ue856": "\u6211",
+                            "\ue857": "\u4e0d",
+                            "\ue816": "\u4eba",
+                            "\ue83c": "\u5728",
+                            "\ue830": "\u4ed6",
+                            "\ue82e": "\u6709",
+                            "\ue836": "\u8fd9",
+                            "\ue859": "\u4e2a",
+                            "\ue80a": "\u4e0a",
+                            "\ue855": "\u4eec",
+                            "\ue842": "\u6765",
+                            "\ue858": "\u5230",
+                            "\ue80b": "\u65f6",
+                            "\ue81f": "\u5927",
+                            "\ue84a": "\u5730",
+                            "\ue853": "\u4e3a",
+                            "\ue81e": "\u5b50",
+                            "\ue822": "\u4e2d",
+                            "\ue813": "\u4f60",
+                            "\ue85b": "\u8bf4",
+                            "\ue807": "\u751f",
+                            "\ue818": "\u56fd",
+                            "\ue810": "\u5e74",
+                            "\ue812": "\u7740",
+                            "\ue851": "\u5c31",
+                            "\ue801": "\u90a3",
+                            "\ue80c": "\u548c",
+                            "\ue815": "\u8981",
+                            "\ue84c": "\u5979",
+                            "\ue840": "\u51fa",
+                            "\ue848": "\u4e5f",
+                            "\ue835": "\u5f97",
+                            "\ue800": "\u91cc",
+                            "\ue826": "\u540e",
+                            "\ue863": "\u81ea",
+                            "\ue861": "\u4ee5",
+                            "\ue854": "\u4f1a",
+                            "\ue827": "\u5bb6",
+                            "\ue83b": "\u53ef",
+                            "\ue85d": "\u4e0b",
+                            "\ue84d": "\u800c",
+                            "\ue862": "\u8fc7",
+                            "\ue81c": "\u5929",
+                            "\ue81d": "\u53bb",
+                            "\ue860": "\u80fd",
+                            "\ue843": "\u5bf9",
+                            "\ue82f": "\u5c0f",
+                            "\ue802": "\u591a",
+                            "\ue831": "\u7136",
+                            "\ue84b": "\u4e8e",
+                            "\ue837": "\u5fc3",
+                            "\ue829": "\u5b66",
+                            "\ue85e": "\u4e48",
+                            "\ue83a": "\u4e4b",
+                            "\ue832": "\u90fd",
+                            "\ue808": "\u597d",
+                            "\ue841": "\u770b",
+                            "\ue821": "\u8d77",
+                            "\ue845": "\u53d1",
+                            "\ue803": "\u5f53",
+                            "\ue828": "\u6ca1",
+                            "\ue81b": "\u6210",
+                            "\ue83e": "\u53ea",
+                            "\ue820": "\u5982",
+                            "\ue84e": "\u4e8b",
+                            "\ue85a": "\u628a",
+                            "\ue806": "\u8fd8",
+                            "\ue83f": "\u7528",
+                            "\ue833": "\u7b2c",
+                            "\ue811": "\u6837",
+                            "\ue804": "\u9053",
+                            "\ue814": "\u60f3",
+                            "\ue80f": "\u4f5c",
+                            "\ue84f": "\u79cd",
+                            "\ue80e": "\u5f00",
+                            "\ue823": "\u7f8e",
+                            "\ue849": "\u4e73",
+                            "\ue805": "\u9634",
+                            "\ue809": "\u6db2",
+                            "\ue81a": "\u830e",
+                            "\ue844": "\u6b32",
+                            "\ue847": "\u547b",
+                            "\ue850": "\u8089",
+                            "\ue824": "\u4ea4",
+                            "\ue85f": "\u6027",
+                            "\ue817": "\u80f8",
+                            "\ue85c": "\u79c1",
+                            "\ue838": "\u7a74",
+                            "\ue82a": "\u6deb",
+                            "\ue83d": "\u81c0",
+                            "\ue82b": "\u8214",
+                            "\ue80d": "\u5c04",
+                            "\ue839": "\u8131",
+                            "\ue834": "\u88f8",
+                            "\ue846": "\u9a9a",
+                            "\ue825": "\u5507",
                         };
                         addPage = function (pageCheerio) { return __awaiter(_this, void 0, void 0, function () {
                             var formatPage;
@@ -327,25 +326,26 @@ var Linovelib = /** @class */ (function () {
                                         formatPage = function () { return __awaiter(_this, void 0, void 0, function () {
                                             return __generator(this, function (_a) {
                                                 // Remove JS
-                                                pageCheerio('#ccacontent .cgo').remove();
+                                                pageCheerio("#ccacontent .cgo").remove();
                                                 // Load lazyloaded images
-                                                pageCheerio('#ccacontent img.imagecontent').each(function (i, el) {
+                                                pageCheerio("#ccacontent img.imagecontent").each(function (i, el) {
                                                     // Sometimes images are either in data-src or src
-                                                    var imgSrc = pageCheerio(el).attr('data-src') || pageCheerio(el).attr('src');
+                                                    var imgSrc = pageCheerio(el).attr("data-src") ||
+                                                        pageCheerio(el).attr("src");
                                                     if (imgSrc) {
                                                         // The original CDN URL is locked behind a CF-like challenge, switch the URL to bypass that
                                                         // There are no react-native-url-polyfill lib, can't use URL API
                                                         var regex = /\/\/.+\.com\//;
-                                                        var imgUrl = imgSrc.replace(regex, '//img.linovelib.com/');
+                                                        var imgUrl = imgSrc.replace(regex, "//img.linovelib.com/");
                                                         // Clean up img element
                                                         pageCheerio(el)
-                                                            .attr('src', imgUrl)
-                                                            .removeAttr('data-src')
-                                                            .removeClass('lazyload');
+                                                            .attr("src", imgUrl)
+                                                            .removeAttr("data-src")
+                                                            .removeClass("lazyload");
                                                     }
                                                 });
                                                 // Recover the original character
-                                                pageText = pageCheerio('#ccacontent').html() || "";
+                                                pageText = pageCheerio("#ccacontent").html() || "";
                                                 pageText = pageText.replace(/./g, function (char) { return skillgg[char] || char; });
                                                 return [2 /*return*/, Promise.resolve()];
                                             });
@@ -354,11 +354,11 @@ var Linovelib = /** @class */ (function () {
                                     case 1:
                                         _a.sent();
                                         chapterName =
-                                            pageCheerio('#atitle + h3').text() +
-                                                ' — ' +
-                                                pageCheerio('#atitle').text();
+                                            pageCheerio("#atitle + h3").text() +
+                                                " — " +
+                                                pageCheerio("#atitle").text();
                                         if (chapterText === "") {
-                                            chapterText = '<h2>' + chapterName + '</h2>';
+                                            chapterText = "<h2>" + chapterName + "</h2>";
                                         }
                                         chapterText += pageText;
                                         return [2 /*return*/];
@@ -380,7 +380,9 @@ var Linovelib = /** @class */ (function () {
                                     case 3:
                                         _a.sent();
                                         pageHasNextPage =
-                                            pageCheerio('#footlink a:last').text() === '下一页' ? true : false;
+                                            pageCheerio("#footlink a:last").text() === "下一页"
+                                                ? true
+                                                : false;
                                         return [2 /*return*/, { pageCheerio: pageCheerio, pageHasNextPage: pageHasNextPage }];
                                 }
                             });
@@ -393,7 +395,7 @@ var Linovelib = /** @class */ (function () {
                         hasNextPage = page.pageHasNextPage;
                         if (hasNextPage === true) {
                             pageNumber++;
-                            url = chapterUrl.replace(/\.html/gi, "_".concat(pageNumber) + '.html');
+                            url = chapterUrl.replace(/\.html/gi, "_".concat(pageNumber) + ".html");
                         }
                         _a.label = 3;
                     case 3:
@@ -425,12 +427,14 @@ var Linovelib = /** @class */ (function () {
                             var _a;
                             return __generator(this, function (_b) {
                                 loadSearchResults = function () {
-                                    pageCheerio('.book-ol .book-layout').each(function (i, el) {
-                                        var nUrl = pageCheerio(el).attr('href');
-                                        var novelName = pageCheerio(el).find('.book-title').text();
+                                    pageCheerio(".book-ol .book-layout").each(function (i, el) {
+                                        var nUrl = pageCheerio(el).attr("href");
+                                        var novelName = pageCheerio(el)
+                                            .find(".book-title")
+                                            .text();
                                         var novelCover = pageCheerio(el)
-                                            .find('img.book-cover')
-                                            .attr('data-src');
+                                            .find("img.book-cover")
+                                            .attr("data-src");
                                         var novelUrl = _this.site + nUrl;
                                         if (!nUrl)
                                             return;
@@ -441,20 +445,20 @@ var Linovelib = /** @class */ (function () {
                                         });
                                     });
                                 };
-                                novelResults = pageCheerio('.book-ol a.book-layout');
+                                novelResults = pageCheerio(".book-ol a.book-layout");
                                 if (novelResults.length === 0) {
-                                    (0, showToast_1.showToast)('Bypass check by searching in Webview');
+                                    (0, showToast_1.showToast)("Bypass check by searching in Webview");
                                 }
                                 else {
                                     loadSearchResults();
                                 }
                                 if (redirect.length) {
                                     novels.length = 0;
-                                    novelName = pageCheerio('#bookDetailWrapper .book-title').text();
-                                    novelCover = pageCheerio('#bookDetailWrapper img.book-cover').attr('src');
+                                    novelName = pageCheerio("#bookDetailWrapper .book-title").text();
+                                    novelCover = pageCheerio("#bookDetailWrapper img.book-cover").attr("src");
                                     novelUrl = this.site +
-                                        ((_a = pageCheerio('#btnReadBook').attr('href')) === null || _a === void 0 ? void 0 : _a.slice(0, -8)) +
-                                        '.html';
+                                        ((_a = pageCheerio("#btnReadBook").attr("href")) === null || _a === void 0 ? void 0 : _a.slice(0, -8)) +
+                                        ".html";
                                     novels.push({
                                         name: novelName,
                                         url: novelUrl,
@@ -475,16 +479,16 @@ var Linovelib = /** @class */ (function () {
                                     case 2:
                                         body = _a.sent();
                                         pageCheerio = (0, cheerio_1.load)(body);
-                                        redirect = pageCheerio('div.book-layout').text();
+                                        redirect = pageCheerio("div.book-layout").text();
                                         return [4 /*yield*/, addPage(pageCheerio, redirect)];
                                     case 3:
                                         _a.sent();
-                                        NextPage = pageCheerio('.next').attr('href');
+                                        NextPage = pageCheerio(".next").attr("href");
                                         if (!NextPage) {
                                             NoNextPage === true;
                                         }
                                         else {
-                                            NoNextPage = NextPage === '#' ? true : false;
+                                            NoNextPage = NextPage === "#" ? true : false;
                                         }
                                         return [2 /*return*/, { pageCheerio: pageCheerio, NoNextPage: NoNextPage }];
                                 }
@@ -509,7 +513,6 @@ var Linovelib = /** @class */ (function () {
             });
         });
     };
-    ;
     Linovelib.prototype.fetchImage = function (url) {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {

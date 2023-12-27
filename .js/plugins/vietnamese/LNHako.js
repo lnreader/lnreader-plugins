@@ -82,7 +82,9 @@ var HakoPlugin = /** @class */ (function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        link = this.site + "/danh-sach?truyendich=1&sapxep=topthang&page=" + pageNo;
+                        link = this.site +
+                            "/danh-sach?truyendich=1&sapxep=topthang&page=" +
+                            pageNo;
                         return [4 /*yield*/, fetch(link)];
                     case 1:
                         result = _a.sent();
@@ -113,7 +115,8 @@ var HakoPlugin = /** @class */ (function () {
                         body = _a.sent();
                         loadedCheerio = (0, cheerio_1.load)(body);
                         novel.name = loadedCheerio(".series-name").text();
-                        background = loadedCheerio(".series-cover > .a6-ratio > div").attr("style") || "";
+                        background = loadedCheerio(".series-cover > .a6-ratio > div").attr("style") ||
+                            "";
                         novelCover = background.substring(background.indexOf("http"), background.length - 2);
                         novel.cover = novelCover
                             ? (0, isAbsoluteUrl_1.isUrlAbsolute)(novelCover)

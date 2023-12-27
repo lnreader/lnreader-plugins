@@ -1,0 +1,94 @@
+:root {
+    --main-bg: rgb(24, 26, 27);
+    --highlight-bg: rgb(28, 31, 32);
+    --btn-secondary-color: rgb(33, 37, 38);
+    --text-color: rgb(182, 176, 166);
+    --light-text-color: rgb(232, 230, 227);
+    --dark-border-color: rgb(60, 65, 68);
+    --hr-color: rgb(50, 55, 57);
+}
+
+.darkmode {
+    color-scheme: dark;
+    background-color: var(--main-bg);
+    select,
+    input {
+        background-color: var(--main-bg);
+        color: var(--text-color);
+        border-color: var(--dark-border-color);
+    }
+    .navbar {
+        background-color: var(--main-bg);
+        color: white;
+        label {
+            color: var(--text-color);
+            background-color: var(--main-bg);
+            border-color: var(--dark-border-color);
+        }
+        form > input {
+            background-color: var(--main-bg);
+            color: var(--text-color);
+            border-color: var(--dark-border-color);
+        }
+    }
+    button.btn-secondary {
+        background-color: var(--btn-secondary-color);
+        &:focus {
+            box-shadow: none;
+        }
+    }
+    #search-results {
+        background-color: var(--main-bg);
+        color: var(--text-color);
+    }
+    .chapter-item {
+        .info-item,
+        .info-value,
+        .info-item .btn,
+        .info-item samp {
+            color: var(--light-text-color);
+        }
+        samp {
+            background-color: var(--main-bg);
+        }
+    }
+    .novel-item {
+        .info-item,
+        .info-value,
+        .info-item .btn,
+        .info-item samp {
+            color: var(--light-text-color);
+        }
+        samp {
+            background-color: var(--main-bg);
+        }
+    }
+    .form-control {
+        color: rgb(182, 176, 166);
+        background-color: var(--main-bg);
+        border-color: var(--dark-border-color);
+    }
+    .test-wrapper {
+        background-color: var(--highlight-bg);
+        color: var(--text-color);
+        input {
+            &[type="text"] {
+                background-color: var(--main-bg);
+                border-color: var(--dark-border-color);
+            }
+        }
+    }
+    .modal-content {
+        background-color: var(--main-bg);
+        .close {
+            color: var(--text-color);
+            text-shadow: var(--main-bg) 0px 1px 0px;
+        }
+        .modal-header {
+            border-bottom: 2px solid var(--hr-color);
+        }
+        .modal-footer {
+            border-top: 2px solid var(--hr-color);
+        }
+    }
+}

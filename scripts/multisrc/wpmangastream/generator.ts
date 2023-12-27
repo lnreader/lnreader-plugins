@@ -3,8 +3,9 @@ import list from "./sources.json";
 
 type sourceData = (typeof list)[number];
 
-export const generateAll: ScrpitGeneratorFunction = function () {
+export const generateAll: ScrpitGeneratorFunction = function (name) {
     return list.map((source) => {
+        console.log(`[${name}] Generating:`, source.id);
         return generator(source);
     });
 };
@@ -13,8 +14,8 @@ const generator = function generator(sourceJson: sourceData) {
     const pluginId = sourceJson.id;
     const sourceName = sourceJson.sourceName;
     const site = sourceJson.sourceSite;
-	const reverseChapters = sourceJson.reverseChapters;
-    const iconFileName = sourceName.split('.')[0].toLowerCase() + '.png';
+    const reverseChapters = sourceJson.reverseChapters;
+    const iconFileName = sourceName.split(".")[0].toLowerCase() + ".png";
     const pluginScript = `
 import { CheerioAPI, load } from "cheerio";
 import { fetchApi, fetchFile } from "@libs/fetch";
@@ -181,7 +182,7 @@ class LightNovelFRPlugin implements Plugin.PluginBase {
 }
 
 export default new LightNovelFRPlugin();`;
-	
+
     return {
         lang: sourceJson.lang,
         filename: sourceName,

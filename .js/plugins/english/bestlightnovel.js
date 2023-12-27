@@ -56,7 +56,9 @@ var BLN = /** @class */ (function () {
             return __generator(this, function (_c) {
                 switch (_c.label) {
                     case 0:
-                        url = this.site + "novel_list?type=topview&category=all&state=all&page=1" + pageNo;
+                        url = this.site +
+                            "novel_list?type=topview&category=all&state=all&page=1" +
+                            pageNo;
                         return [4 /*yield*/, fetch(url)];
                     case 1:
                         result = _c.sent();

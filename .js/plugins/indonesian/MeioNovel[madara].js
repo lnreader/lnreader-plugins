@@ -40,21 +40,24 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var fetch_1 = require("@libs/fetch");
+var filterInputs_1 = require("@libs/filterInputs");
 var cheerio_1 = require("cheerio");
 var defaultCover_1 = require("@libs/defaultCover");
 var novelStatus_1 = require("@libs/novelStatus");
 var parseMadaraDate_1 = require("@libs/parseMadaraDate");
 var dayjs_1 = __importDefault(require("dayjs"));
 var MadaraDefaultPath = {
-    novels: 'novel',
-    novel: 'novel',
-    chapter: 'novel'
+    novels: "novel",
+    novel: "novel",
+    chapter: "novel",
 };
 var MadaraPlugin = /** @class */ (function () {
     function MadaraPlugin(metadata) {
         this.id = metadata.id;
         this.name = metadata.sourceName + "[madara]";
-        var iconFileName = metadata.sourceName.replace(/\s+/g, "").toLowerCase();
+        var iconFileName = metadata.sourceName
+            .replace(/\s+/g, "")
+            .toLowerCase();
         this.icon = "multisrc/madara/icons/".concat(iconFileName, ".png");
         this.site = metadata.sourceSite;
         this.version = "1.0.0";
@@ -77,22 +80,32 @@ var MadaraPlugin = /** @class */ (function () {
                             url += ((_e = (_d = this.options) === null || _d === void 0 ? void 0 : _d.path) === null || _e === void 0 ? void 0 : _e.genres) + filters.genres;
                         }
                         else {
-                            url += ((_g = (_f = this.options) === null || _f === void 0 ? void 0 : _f.path) === null || _g === void 0 ? void 0 : _g.novels) ? this.options.path.novels : MadaraDefaultPath.novels;
+                            url += ((_g = (_f = this.options) === null || _f === void 0 ? void 0 : _f.path) === null || _g === void 0 ? void 0 : _g.novels)
+                                ? this.options.path.novels
+                                : MadaraDefaultPath.novels;
                         }
-                        url += '/page/' + pageNo + '/' +
-                            '?m_orderby=' + (showLatestNovels ? 'latest' : ((filters === null || filters === void 0 ? void 0 : filters.sort) || 'rating'));
+                        url +=
+                            "/page/" +
+                                pageNo +
+                                "/" +
+                                "?m_orderby=" +
+                                (showLatestNovels ? "latest" : (filters === null || filters === void 0 ? void 0 : filters.sort) || "rating");
                         return [4 /*yield*/, (0, fetch_1.fetchApi)(url).then(function (res) { return res.text(); })];
                     case 1:
                         body = _h.sent();
                         loadedCheerio = (0, cheerio_1.load)(body);
-                        loadedCheerio('.manga-title-badges').remove();
-                        loadedCheerio('.page-item-detail').each(function () {
-                            var novelName = loadedCheerio(this).find('.post-title').text().trim();
-                            var image = loadedCheerio(this).find('img');
-                            var novelCover = image.attr('data-src') || image.attr('src');
-                            var novelUrl = loadedCheerio(this).find('.post-title')
-                                .find('a')
-                                .attr('href') || '';
+                        loadedCheerio(".manga-title-badges").remove();
+                        loadedCheerio(".page-item-detail").each(function () {
+                            var novelName = loadedCheerio(this)
+                                .find(".post-title")
+                                .text()
+                                .trim();
+                            var image = loadedCheerio(this).find("img");
+                            var novelCover = image.attr("data-src") || image.attr("src");
+                            var novelUrl = loadedCheerio(this)
+                                .find(".post-title")
+                                .find("a")
+                                .attr("href") || "";
                             var novel = {
                                 name: novelName,
                                 cover: novelCover,
@@ -119,71 +132,78 @@ var MadaraPlugin = /** @class */ (function () {
                     case 1:
                         body = _b.sent();
                         loadedCheerio = (0, cheerio_1.load)(body);
-                        loadedCheerio('.manga-title-badges, #manga-title span').remove();
+                        loadedCheerio(".manga-title-badges, #manga-title span").remove();
                         novel.name =
-                            loadedCheerio('.post-title h1').text().trim() ||
-                                loadedCheerio('#manga-title h1').text();
+                            loadedCheerio(".post-title h1").text().trim() ||
+                                loadedCheerio("#manga-title h1").text();
                         novel.cover =
-                            loadedCheerio('.summary_image > a > img').attr('data-lazy-src') ||
-                                loadedCheerio('.summary_image > a > img').attr('data-src') ||
-                                loadedCheerio('.summary_image > a > img').attr('src') ||
+                            loadedCheerio(".summary_image > a > img").attr("data-lazy-src") ||
+                                loadedCheerio(".summary_image > a > img").attr("data-src") ||
+                                loadedCheerio(".summary_image > a > img").attr("src") ||
                                 defaultCover_1.defaultCover;
-                        loadedCheerio('.post-content_item, .post-content').each(function () {
-                            var detailName = loadedCheerio(this).find('h5').text().trim();
-                            var detail = loadedCheerio(this).find('.summary-content').text().trim();
+                        loadedCheerio(".post-content_item, .post-content").each(function () {
+                            var detailName = loadedCheerio(this).find("h5").text().trim();
+                            var detail = loadedCheerio(this)
+                                .find(".summary-content")
+                                .text()
+                                .trim();
                             switch (detailName) {
-                                case 'Genre(s)':
-                                case 'التصنيفات':
-                                    novel.genres = detail.replace(/[\\t\\n]/g, ',');
+                                case "Genre(s)":
+                                case "التصنيفات":
+                                    novel.genres = detail.replace(/[\\t\\n]/g, ",");
                                     break;
-                                case 'Author(s)':
-                                case 'المؤلف':
-                                case 'المؤلف (ين)':
+                                case "Author(s)":
+                                case "المؤلف":
+                                case "المؤلف (ين)":
                                     novel.author = detail;
                                     break;
-                                case 'Status':
-                                case 'الحالة':
+                                case "Status":
+                                case "الحالة":
                                     novel.status =
-                                        detail.includes('OnGoing') || detail.includes('مستمرة')
+                                        detail.includes("OnGoing") || detail.includes("مستمرة")
                                             ? novelStatus_1.NovelStatus.Ongoing
                                             : novelStatus_1.NovelStatus.Completed;
                                     break;
                             }
                         });
-                        loadedCheerio('div.summary__content .code-block,script').remove();
+                        loadedCheerio("div.summary__content .code-block,script").remove();
                         novel.summary =
-                            loadedCheerio('div.summary__content').text().trim() ||
-                                loadedCheerio('#tab-manga-about').text().trim() ||
-                                loadedCheerio('.post-content_item h5:contains("Summary")').next().text().trim();
+                            loadedCheerio("div.summary__content").text().trim() ||
+                                loadedCheerio("#tab-manga-about").text().trim() ||
+                                loadedCheerio('.post-content_item h5:contains("Summary")')
+                                    .next()
+                                    .text()
+                                    .trim();
                         if (!(((_a = this.options) === null || _a === void 0 ? void 0 : _a.useNewChapterEndpoint) !== true)) return [3 /*break*/, 3];
-                        novelId = loadedCheerio('.rating-post-id').attr('value') ||
-                            loadedCheerio('#manga-chapters-holder').attr('data-id') || '';
+                        novelId = loadedCheerio(".rating-post-id").attr("value") ||
+                            loadedCheerio("#manga-chapters-holder").attr("data-id") ||
+                            "";
                         formData = new FormData();
                         formData.append("action", "manga_get_chapters");
                         formData.append("manga", novelId);
-                        return [4 /*yield*/, (0, fetch_1.fetchApi)(this.site + 'wp-admin/admin-ajax.php', {
-                                method: 'POST',
+                        return [4 /*yield*/, (0, fetch_1.fetchApi)(this.site + "wp-admin/admin-ajax.php", {
+                                method: "POST",
                                 body: formData,
-                            })
-                                .then(function (res) { return res.text(); })];
+                            }).then(function (res) { return res.text(); })];
                     case 2:
                         html = _b.sent();
                         return [3 /*break*/, 5];
-                    case 3: return [4 /*yield*/, (0, fetch_1.fetchApi)(novelUrl + 'ajax/chapters/', { method: 'POST' })
-                            .then(function (res) { return res.text(); })];
+                    case 3: return [4 /*yield*/, (0, fetch_1.fetchApi)(novelUrl + "ajax/chapters/", {
+                            method: "POST",
+                        }).then(function (res) { return res.text(); })];
                     case 4:
                         html = _b.sent();
                         _b.label = 5;
                     case 5:
-                        if (html !== '0') {
+                        if (html !== "0") {
                             loadedCheerio = (0, cheerio_1.load)(html);
                         }
                         chapters = [];
-                        loadedCheerio('.wp-manga-chapter').each(function () {
-                            var chapterName = loadedCheerio(this).find('a').text().trim();
+                        loadedCheerio(".wp-manga-chapter").each(function () {
+                            var chapterName = loadedCheerio(this).find("a").text().trim();
                             var releaseDate = null;
                             releaseDate = loadedCheerio(this)
-                                .find('span.chapter-release-date')
+                                .find("span.chapter-release-date")
                                 .text()
                                 .trim();
                             if (releaseDate) {
@@ -193,10 +213,14 @@ var MadaraPlugin = /** @class */ (function () {
                                 /**
                                  * Insert current date
                                  */
-                                releaseDate = (0, dayjs_1.default)().format('LL');
+                                releaseDate = (0, dayjs_1.default)().format("LL");
                             }
-                            var chapterUrl = loadedCheerio(this).find('a').attr('href') || '';
-                            chapters.push({ name: chapterName, releaseTime: releaseDate, url: chapterUrl });
+                            var chapterUrl = loadedCheerio(this).find("a").attr("href") || "";
+                            chapters.push({
+                                name: chapterName,
+                                releaseTime: releaseDate,
+                                url: chapterUrl,
+                            });
                         });
                         novel.chapters = chapters.reverse();
                         return [2 /*return*/, novel];
@@ -213,9 +237,10 @@ var MadaraPlugin = /** @class */ (function () {
                     case 1:
                         body = _a.sent();
                         loadedCheerio = (0, cheerio_1.load)(body);
-                        chapterText = loadedCheerio('.text-left').html() ||
-                            loadedCheerio('.text-right').html() ||
-                            loadedCheerio('.entry-content').html() || "";
+                        chapterText = loadedCheerio(".text-left").html() ||
+                            loadedCheerio(".text-right").html() ||
+                            loadedCheerio(".entry-content").html() ||
+                            "";
                         return [2 /*return*/, chapterText];
                 }
             });
@@ -233,14 +258,17 @@ var MadaraPlugin = /** @class */ (function () {
                     case 1:
                         body = _a.sent();
                         loadedCheerio = (0, cheerio_1.load)(body);
-                        loadedCheerio('.c-tabs-item__content').each(function () {
-                            var novelName = loadedCheerio(this).find('.post-title').text().trim();
-                            var image = loadedCheerio(this).find('img');
-                            var novelCover = image.attr('data-src') || image.attr('src');
+                        loadedCheerio(".c-tabs-item__content").each(function () {
+                            var novelName = loadedCheerio(this)
+                                .find(".post-title")
+                                .text()
+                                .trim();
+                            var image = loadedCheerio(this).find("img");
+                            var novelCover = image.attr("data-src") || image.attr("src");
                             var novelUrl = loadedCheerio(this)
-                                .find('.post-title')
-                                .find('a')
-                                .attr('href') || '';
+                                .find(".post-title")
+                                .find("a")
+                                .attr("href") || "";
                             var novel = {
                                 name: novelName,
                                 cover: novelCover,
@@ -265,5 +293,5 @@ var MadaraPlugin = /** @class */ (function () {
     };
     return MadaraPlugin;
 }());
-var plugin = new MadaraPlugin({ "id": "meionovel", "sourceSite": "https://meionovel.id/", "sourceName": "MeioNovel", "filters": [{ "key": "sort", "label": "Order by", "values": [{ "label": "Rating", "value": "rating" }, { "label": "A-Z", "value": "alphabet" }, { "label": "Latest", "value": "latest" }, { "label": "Most Views", "value": "views" }, { "label": "New", "value": "new-manga" }, { "label": "Trending", "value": "trending" }], "inputType": 1 }, { "key": "genres", "label": "GENRES", "values": [{ "label": "Action", "value": "action" }, { "label": "Adventure", "value": "adventure" }, { "label": "Comedy", "value": "comedy" }, { "label": "Cooking", "value": "cooking" }, { "label": "Drama", "value": "drama" }, { "label": "Ecchi", "value": "ecchi" }, { "label": "Fanfiction", "value": "fanfiction" }, { "label": "Fantasy", "value": "fantasy" }, { "label": "Gender Bender", "value": "gender-bender" }, { "label": "Harem", "value": "harem" }, { "label": "Historical", "value": "historical" }, { "label": "Horror", "value": "horror" }, { "label": "Isekai", "value": "isekai" }, { "label": "Josei", "value": "josei" }, { "label": "Magic", "value": "magic" }, { "label": "Martial Arts", "value": "martial-arts" }, { "label": "Mature", "value": "mature" }, { "label": "Mecha", "value": "mecha" }, { "label": "Mystery", "value": "mystery" }, { "label": "One shot", "value": "one-shot" }, { "label": "Psychological", "value": "psychological" }, { "label": "Reverse Harem", "value": "reverse-harem" }, { "label": "Romance", "value": "romance" }, { "label": "School Life", "value": "school-life" }, { "label": "Sci-fi", "value": "sci-fi" }, { "label": "Seinen", "value": "seinen" }, { "label": "Shoujo", "value": "shoujo" }, { "label": "Shoujo Ai", "value": "shoujo-ai" }, { "label": "Shounen", "value": "shounen" }, { "label": "Shounen Ai", "value": "shounen-ai" }, { "label": "Slice of Life", "value": "slice-of-life" }, { "label": "Smut", "value": "smut" }, { "label": "Sports", "value": "sports" }, { "label": "Supernatural", "value": "supernatural" }, { "label": "Tragedy", "value": "tragedy" }, { "label": "Virtual Reality", "value": "virtual-reality" }, { "label": "Wuxia", "value": "wuxia" }, { "label": "Xianxia", "value": "xianxia" }, { "label": "Xuanhuan", "value": "xuanhuan" }, { "label": "Yuri", "value": "yuri" }], "inputType": 1 }], "options": { "useNewChapterEndpoint": true, "lang": "Indonesian" } });
+var plugin = new MadaraPlugin({ "id": "meionovel", "sourceSite": "https://meionovel.id/", "sourceName": "MeioNovel", "filters": { "sort": { "label": "Order by", "value": "", "options": [{ "label": "Default", "value": "" }, { "label": "Rating", "value": "rating" }, { "label": "A-Z", "value": "alphabet" }, { "label": "Latest", "value": "latest" }, { "label": "Most Views", "value": "views" }, { "label": "New", "value": "new-manga" }, { "label": "Trending", "value": "trending" }], "type": filterInputs_1.FilterTypes.Picker }, "genres": { "label": "GENRES", "value": "", "options": [{ "label": "NONE", "value": "" }, { "label": "Action", "value": "action" }, { "label": "Adventure", "value": "adventure" }, { "label": "Comedy", "value": "comedy" }, { "label": "Cooking", "value": "cooking" }, { "label": "Drama", "value": "drama" }, { "label": "Ecchi", "value": "ecchi" }, { "label": "Fanfiction", "value": "fanfiction" }, { "label": "Fantasy", "value": "fantasy" }, { "label": "Gender Bender", "value": "gender-bender" }, { "label": "Harem", "value": "harem" }, { "label": "Historical", "value": "historical" }, { "label": "Horror", "value": "horror" }, { "label": "Isekai", "value": "isekai" }, { "label": "Josei", "value": "josei" }, { "label": "Magic", "value": "magic" }, { "label": "Martial Arts", "value": "martial-arts" }, { "label": "Mature", "value": "mature" }, { "label": "Mecha", "value": "mecha" }, { "label": "Mystery", "value": "mystery" }, { "label": "One shot", "value": "one-shot" }, { "label": "Psychological", "value": "psychological" }, { "label": "Reverse Harem", "value": "reverse-harem" }, { "label": "Romance", "value": "romance" }, { "label": "School Life", "value": "school-life" }, { "label": "Sci-fi", "value": "sci-fi" }, { "label": "Seinen", "value": "seinen" }, { "label": "Shoujo", "value": "shoujo" }, { "label": "Shoujo Ai", "value": "shoujo-ai" }, { "label": "Shounen", "value": "shounen" }, { "label": "Shounen Ai", "value": "shounen-ai" }, { "label": "Slice of Life", "value": "slice-of-life" }, { "label": "Smut", "value": "smut" }, { "label": "Sports", "value": "sports" }, { "label": "Supernatural", "value": "supernatural" }, { "label": "Tragedy", "value": "tragedy" }, { "label": "Virtual Reality", "value": "virtual-reality" }, { "label": "Wuxia", "value": "wuxia" }, { "label": "Xianxia", "value": "xianxia" }, { "label": "Xuanhuan", "value": "xuanhuan" }, { "label": "Yuri", "value": "yuri" }], "type": filterInputs_1.FilterTypes.Picker } }, "options": { "useNewChapterEndpoint": true, "lang": "Indonesian" } });
 exports.default = plugin;

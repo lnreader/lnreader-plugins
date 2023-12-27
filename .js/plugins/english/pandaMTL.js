@@ -48,11 +48,11 @@ var PandaMTL = /** @class */ (function () {
         this.version = "1.0.0";
         this.userAgent = "";
         this.cookieString = "";
-        this.filters = [
-            {
-                key: "order",
+        this.filters = {
+            order: {
                 label: "Sort By",
-                values: [
+                value: "",
+                options: [
                     { label: "Default", value: "" },
                     { label: "A-Z", value: "title" },
                     { label: "Z-A", value: "titlereverse" },
@@ -60,32 +60,32 @@ var PandaMTL = /** @class */ (function () {
                     { label: "Latest Added", value: "latest" },
                     { label: "Popular", value: "popular" },
                 ],
-                inputType: filterInputs_1.FilterInputs.Picker,
+                type: filterInputs_1.FilterTypes.Picker,
             },
-            {
-                key: "status",
+            status: {
                 label: "Status",
-                values: [
+                value: "",
+                options: [
                     { label: "All", value: "" },
                     { label: "Ongoing", value: "ongoing" },
                     { label: "Hiatus", value: "hiatus" },
                     { label: "Completed", value: "completed" },
                 ],
-                inputType: filterInputs_1.FilterInputs.Picker,
+                type: filterInputs_1.FilterTypes.Picker,
             },
-            {
-                key: "type",
+            type: {
+                value: [],
                 label: "Type",
-                values: [
+                options: [
                     { label: "Light Novel (KR)", value: "light-novel-kr" },
                     { label: "Web Novel", value: "web-novel" },
                 ],
-                inputType: filterInputs_1.FilterInputs.Checkbox,
+                type: filterInputs_1.FilterTypes.CheckboxGroup,
             },
-            {
-                key: "genres",
+            genres: {
                 label: "Genres",
-                values: [
+                value: [],
+                options: [
                     { label: "Action", value: "action" },
                     { label: "Adult", value: "adult" },
                     { label: "Adventure", value: "adventure" },
@@ -106,9 +106,9 @@ var PandaMTL = /** @class */ (function () {
                     { label: "Supernatural", value: "supernatural" },
                     { label: "Tragedy", value: "tragedy" },
                 ],
-                inputType: filterInputs_1.FilterInputs.Checkbox,
+                type: filterInputs_1.FilterTypes.CheckboxGroup,
             },
-        ];
+        };
     }
     PandaMTL.prototype.popularNovels = function (pageNo, _a) {
         var filters = _a.filters;
@@ -118,13 +118,11 @@ var PandaMTL = /** @class */ (function () {
                 switch (_b.label) {
                     case 0:
                         link = "".concat(this.site, "series/?page=").concat(pageNo);
-                        if (filters) {
-                            if (Array.isArray(filters.genres) && filters.genres.length) {
-                                link += filters.genres.map(function (i) { return "&genre[]=".concat(i); }).join("");
-                            }
-                            if (Array.isArray(filters.type) && filters.type.length)
-                                link += filters.type.map(function (i) { return "&lang[]=".concat(i); }).join("");
+                        if (filters.genres.value.length) {
+                            link += filters.genres.value.map(function (i) { return "&genre[]=".concat(i); }).join("");
                         }
+                        if (filters.type.value.length)
+                            link += filters.type.value.map(function (i) { return "&lang[]=".concat(i); }).join("");
                         link += "&status=" + ((filters === null || filters === void 0 ? void 0 : filters.status) ? filters.status : "");
                         link += "&order=" + ((filters === null || filters === void 0 ? void 0 : filters.order) ? filters.order : "popular");
                         headers = new Headers();

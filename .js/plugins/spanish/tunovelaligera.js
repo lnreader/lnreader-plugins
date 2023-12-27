@@ -51,11 +51,11 @@ var TuNovelaLigera = /** @class */ (function () {
         this.version = "1.0.0";
         this.userAgent = "";
         this.cookieString = "";
-        this.filters = [
-            {
-                key: "order",
+        this.filters = {
+            order: {
+                value: "?m_orderby=rating",
                 label: "Ordenado por",
-                values: [
+                options: [
                     { label: "Lo mas reciente", value: "?m_orderby=latest" },
                     { label: "A-Z", value: "?m_orderby=alphabet" },
                     { label: "Clasificación", value: "?m_orderby=rating" },
@@ -63,12 +63,13 @@ var TuNovelaLigera = /** @class */ (function () {
                     { label: "Mas visto", value: "?m_orderby=views" },
                     { label: "Nuevo", value: "?m_orderby=new-manga" },
                 ],
-                inputType: filterInputs_1.FilterInputs.Picker,
+                type: filterInputs_1.FilterTypes.Picker,
             },
-            {
-                key: "genres",
+            genres: {
+                value: "",
                 label: "Generos",
-                values: [
+                options: [
+                    { label: "None", value: "" },
                     { label: "Acción", value: "accion" },
                     { label: "Adulto", value: "adulto" },
                     { label: "Artes Marciales", value: "artes-marciales" },
@@ -102,7 +103,10 @@ var TuNovelaLigera = /** @class */ (function () {
                     { label: "Realismo Mágico", value: "realismo-magico" },
                     { label: "Recuento de vida", value: "recuento-de-vida" },
                     { label: "Romance", value: "romance" },
-                    { label: "Romance contemporáneo", value: "romance-contemporaneo" },
+                    {
+                        label: "Romance contemporáneo",
+                        value: "romance-contemporaneo",
+                    },
                     { label: "Romance Moderno", value: "romance-moderno" },
                     { label: "Seinen", value: "seinen" },
                     { label: "Shoujo", value: "shoujo" },
@@ -117,9 +121,9 @@ var TuNovelaLigera = /** @class */ (function () {
                     { label: "Xuanhuan", value: "xuanhuan" },
                     { label: "Yaoi", value: "yaoi" },
                 ],
-                inputType: filterInputs_1.FilterInputs.Picker,
+                type: filterInputs_1.FilterTypes.Picker,
             },
-        ];
+        };
     }
     TuNovelaLigera.prototype.popularNovels = function (pageNo, _a) {
         var filters = _a.filters;
@@ -129,9 +133,9 @@ var TuNovelaLigera = /** @class */ (function () {
                 switch (_b.label) {
                     case 0:
                         link = "".concat(this.site);
-                        link += ((filters === null || filters === void 0 ? void 0 : filters.genres) ? "genero/" + filters.genres : "novelas");
+                        link += filters.genres ? "genero/" + filters.genres : "novelas";
                         link += "/page/".concat(pageNo);
-                        link += ((filters === null || filters === void 0 ? void 0 : filters.order) ? filters.order : "?m_orderby=rating");
+                        link += filters.order;
                         headers = new Headers();
                         if (this.cookieString) {
                             headers.append("cookie", this.cookieString);
@@ -162,7 +166,6 @@ var TuNovelaLigera = /** @class */ (function () {
             });
         });
     };
-    ;
     TuNovelaLigera.prototype.parseNovelAndChapters = function (novelUrl) {
         return __awaiter(this, void 0, void 0, function () {
             var url, headers, result, body, loadedCheerio, novel, novelCover, chapter, delay, lastPage, getChapters, getPageChapters, _a, _b;
@@ -192,7 +195,7 @@ var TuNovelaLigera = /** @class */ (function () {
                         novel.cover =
                             novelCover.attr("data-src") ||
                                 novelCover.attr("src") ||
-                                novelCover.attr('data-cfsrc') ||
+                                novelCover.attr("data-cfsrc") ||
                                 defaultCover_1.defaultCover;
                         loadedCheerio(".post-content_item").each(function () {
                             var detailName = loadedCheerio(this)
@@ -223,15 +226,15 @@ var TuNovelaLigera = /** @class */ (function () {
                         chapter = [];
                         delay = function (ms) { return new Promise(function (res) { return setTimeout(res, ms); }); };
                         lastPage = 1;
-                        lastPage = +loadedCheerio('.lcp_paginator li:last').prev().text();
+                        lastPage = +loadedCheerio(".lcp_paginator li:last").prev().text();
                         getChapters = function () { return __awaiter(_this, void 0, void 0, function () {
                             var n, novelName, formData, result, text;
                             return __generator(this, function (_a) {
                                 switch (_a.label) {
                                     case 0:
-                                        n = url.split('/');
+                                        n = url.split("/");
                                         novelName = n[4];
-                                        (0, showToast_1.showToast)('Cargando desde Archivo...');
+                                        (0, showToast_1.showToast)("Cargando desde Archivo...");
                                         formData = new FormData();
                                         formData.append("action", "madara_load_more");
                                         formData.append("page", "0");
@@ -241,7 +244,7 @@ var TuNovelaLigera = /** @class */ (function () {
                                         return [4 /*yield*/, (0, fetch_1.fetchApi)("".concat(this.site, "wp-admin/admin-ajax.php"), {
                                                 method: "POST",
                                                 body: formData,
-                                                headers: headers
+                                                headers: headers,
                                             })];
                                     case 1:
                                         result = _a.sent();
@@ -249,13 +252,13 @@ var TuNovelaLigera = /** @class */ (function () {
                                     case 2:
                                         text = _a.sent();
                                         loadedCheerio = (0, cheerio_1.load)(text);
-                                        loadedCheerio('.heading').each(function (i, el) {
+                                        loadedCheerio(".heading").each(function (i, el) {
                                             var chapterName = loadedCheerio(el)
                                                 .text()
-                                                .replace(/[\t\n]/g, '')
+                                                .replace(/[\t\n]/g, "")
                                                 .trim();
                                             var releaseDate = null;
-                                            var chapterUrl = loadedCheerio(el).find('a').attr('href') || "";
+                                            var chapterUrl = loadedCheerio(el).find("a").attr("href") || "";
                                             chapter.push({
                                                 name: chapterName,
                                                 url: chapterUrl,
@@ -285,17 +288,17 @@ var TuNovelaLigera = /** @class */ (function () {
                                                     case 2:
                                                         chaptersHTML = _b.sent();
                                                         chapterCheerio = (0, cheerio_1.load)(chaptersHTML);
-                                                        chapterCheerio('.lcp_catlist li').each(function (i, el) {
+                                                        chapterCheerio(".lcp_catlist li").each(function (i, el) {
                                                             var chapterName = chapterCheerio(el)
-                                                                .find('a')
+                                                                .find("a")
                                                                 .text()
-                                                                .replace(/[\t\n]/g, '')
+                                                                .replace(/[\t\n]/g, "")
                                                                 .trim();
                                                             var releaseDate = chapterCheerio(el)
-                                                                .find('span')
+                                                                .find("span")
                                                                 .text()
                                                                 .trim();
-                                                            var chapterUrl = chapterCheerio(el).find('a').attr('href') || "";
+                                                            var chapterUrl = chapterCheerio(el).find("a").attr("href") || "";
                                                             chapter.push({
                                                                 name: chapterName,
                                                                 releaseTime: releaseDate,
@@ -329,7 +332,7 @@ var TuNovelaLigera = /** @class */ (function () {
                     case 3:
                         _a.chapters = _c.sent();
                         if (!!novel.chapters.length) return [3 /*break*/, 6];
-                        (0, showToast_1.showToast)('¡Archivo no encontrado!');
+                        (0, showToast_1.showToast)("¡Archivo no encontrado!");
                         return [4 /*yield*/, delay(1000)];
                     case 4:
                         _c.sent();
@@ -360,14 +363,13 @@ var TuNovelaLigera = /** @class */ (function () {
                     case 2:
                         body = _a.sent();
                         loadedCheerio = (0, cheerio_1.load)(body);
-                        loadedCheerio("#hola_siguiente").next().find('div').remove();
+                        loadedCheerio("#hola_siguiente").next().find("div").remove();
                         chapterText = loadedCheerio("#hola_siguiente").next().html() || "";
                         return [2 /*return*/, chapterText];
                 }
             });
         });
     };
-    ;
     TuNovelaLigera.prototype.searchNovels = function (searchTerm, pageNo) {
         return __awaiter(this, void 0, void 0, function () {
             var url, result, body, loadedCheerio, novels;
@@ -400,7 +402,6 @@ var TuNovelaLigera = /** @class */ (function () {
             });
         });
     };
-    ;
     TuNovelaLigera.prototype.fetchImage = function (url) {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {

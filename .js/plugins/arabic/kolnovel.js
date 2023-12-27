@@ -48,11 +48,10 @@ var KolNovel = /** @class */ (function () {
         this.version = "1.0.0";
         this.userAgent = "";
         this.cookieString = "";
-        this.filters = [
-            {
-                key: "order",
+        this.filters = {
+            order: {
                 label: "ترتيب حسب",
-                values: [
+                options: [
                     { label: "الإعداد الأولي", value: "" },
                     { label: "A-Z", value: "title" },
                     { label: "Z-A", value: "titlereverse" },
@@ -60,23 +59,24 @@ var KolNovel = /** @class */ (function () {
                     { label: "أخر ما تم إضافته", value: "latest" },
                     { label: "الرائجة", value: "popular" },
                 ],
-                inputType: filterInputs_1.FilterInputs.Picker,
+                value: "",
+                type: filterInputs_1.FilterTypes.Picker,
             },
-            {
-                key: "status",
+            status: {
+                value: "",
                 label: "الحالة",
-                values: [
+                options: [
                     { label: "All", value: "" },
                     { label: "Ongoing", value: "ongoing" },
                     { label: "Hiatus", value: "hiatus" },
                     { label: "Completed", value: "completed" },
                 ],
-                inputType: filterInputs_1.FilterInputs.Picker,
+                type: filterInputs_1.FilterTypes.Picker,
             },
-            {
-                key: "type",
+            type: {
+                value: [],
                 label: "النوع",
-                values: [
+                options: [
                     { label: "إنجليزية", value: "english" },
                     { label: "روايةلايت", value: "light-novel" },
                     { label: "روايةويب", value: "web-novel" },
@@ -85,12 +85,12 @@ var KolNovel = /** @class */ (function () {
                     { label: "كورية", value: "korean" },
                     { label: "يابانية", value: "japanese" },
                 ],
-                inputType: filterInputs_1.FilterInputs.Checkbox,
+                type: filterInputs_1.FilterTypes.CheckboxGroup,
             },
-            {
-                key: "genres",
+            genres: {
+                value: [],
                 label: "تصنيف",
-                values: [
+                options: [
                     { label: "Wuxia", value: "wuxia" },
                     { label: "Xianxia", value: "xianxia" },
                     { label: "XUANHUAN", value: "xuanhuan" },
@@ -129,9 +129,9 @@ var KolNovel = /** @class */ (function () {
                     { label: "ناضج", value: "mature" },
                     { label: "نفسي", value: "psychological" },
                 ],
-                inputType: filterInputs_1.FilterInputs.Checkbox,
+                type: filterInputs_1.FilterTypes.CheckboxGroup,
             },
-        ];
+        };
     }
     KolNovel.prototype.popularNovels = function (pageNo, _a) {
         var filters = _a.filters;
@@ -141,13 +141,10 @@ var KolNovel = /** @class */ (function () {
                 switch (_b.label) {
                     case 0:
                         link = "".concat(this.site, "series/?page=").concat(pageNo);
-                        if (filters) {
-                            if (Array.isArray(filters.genres) && filters.genres.length) {
-                                link += filters.genres.map(function (i) { return "&genre[]=".concat(i); }).join("");
-                            }
-                            if (Array.isArray(filters.type) && filters.type.length)
-                                link += filters.type.map(function (i) { return "&lang[]=".concat(i); }).join("");
-                        }
+                        if (filters.genres.value.length)
+                            link += filters.genres.value.map(function (i) { return "&genre[]=".concat(i); }).join("");
+                        if (filters.type.value.length)
+                            link += filters.type.value.map(function (i) { return "&lang[]=".concat(i); }).join("");
                         link += "&status=" + ((filters === null || filters === void 0 ? void 0 : filters.status) ? filters.status : "");
                         link += "&order=" + ((filters === null || filters === void 0 ? void 0 : filters.order) ? filters.order : "popular");
                         headers = new Headers();
@@ -271,11 +268,11 @@ var KolNovel = /** @class */ (function () {
                     case 2:
                         body = _b.sent();
                         loadedCheerio = (0, cheerio_1.load)(body);
-                        loadedCheerio('.epcontent > div, i').remove();
-                        ignore = loadedCheerio('article > style').text().trim().split(',');
+                        loadedCheerio(".epcontent > div, i").remove();
+                        ignore = loadedCheerio("article > style").text().trim().split(",");
                         ignore.push.apply(ignore, (((_a = ignore.pop()) === null || _a === void 0 ? void 0 : _a.match(/^\.\w+/)) || []));
                         ignore.map(function (tag) { return loadedCheerio("p".concat(tag)).remove(); });
-                        chapterText = loadedCheerio('.epcontent').html() || "";
+                        chapterText = loadedCheerio(".epcontent").html() || "";
                         return [2 /*return*/, chapterText];
                 }
             });
