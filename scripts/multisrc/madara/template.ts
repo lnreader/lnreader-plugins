@@ -14,7 +14,8 @@ interface MadaraOptionPath {
     chapter?: string;
 }
 
-const MadaraDefaultPath: MadaraOptionPath = {
+const MadaraDefaultPath = {
+    genres: "novel-genre",
     novels: "novel",
     novel: "novel",
     chapter: "novel",
@@ -69,12 +70,12 @@ class MadaraPlugin implements Plugin.PluginBase {
         const novels: Plugin.NovelItem[] = [];
 
         let url = this.site;
-        if (filters?.genres && this.options?.path?.genres) {
-            url += this.options?.path?.genres + filters.genres;
+        if (filters?.genres?.value) {
+            url += (this.options?.path?.genres || MadaraDefaultPath.genres) +
+                "/" + 
+                filters.genres.value;
         } else {
-            url += this.options?.path?.novels
-                ? this.options.path.novels
-                : MadaraDefaultPath.novels;
+            url += this.options?.path?.novels || MadaraDefaultPath.novels;
         }
 
         url +=
@@ -82,7 +83,7 @@ class MadaraPlugin implements Plugin.PluginBase {
             pageNo +
             "/" +
             "?m_orderby=" +
-            (showLatestNovels ? "latest" : filters?.sort || "rating");
+            (showLatestNovels ? "latest" : filters?.sort?.value || "rating");
 
         const body = await fetchApi(url).then((res) => res.text());
 

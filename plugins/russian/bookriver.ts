@@ -1,5 +1,5 @@
 import { Plugin } from "@typings/plugin";
-import { FilterInputs } from "@libs/filterInputs";
+import { FilterTypes, Filters } from "@libs/filterInputs";
 import { fetchApi, fetchFile } from "@libs/fetch";
 import { NovelStatus } from "@libs/novelStatus";
 import { load as parseHTML } from "cheerio";
@@ -19,12 +19,12 @@ class Bookriver implements Plugin.PluginBase {
     { showLatestNovels, filters }: Plugin.PopularNovelsOptions,
   ): Promise<Plugin.NovelItem[]> {
     let url = this.site + `/genre?page=${pageNo}&perPage=24&sortingType=`;
-    url += showLatestNovels ? "last-update" : filters?.sort || "bestseller";
+    url += showLatestNovels
+      ? "last-update"
+      : filters?.sort?.value || "bestseller";
 
-    if (filters) {
-      if (Array.isArray(filters.genres) && filters.genres.length) {
-        url += "&g=" + filters.genres.join(",");
-      }
+    if (filters?.genres?.value instanceof Array && filters?.genres?.value.length) {
+      url += "&g=" + filters.genres.value.join(",");
     }
 
     const result = await fetchApi(url);
@@ -118,56 +118,38 @@ class Bookriver implements Plugin.PluginBase {
   }
   fetchImage = fetchFile;
 
-  filters = [
-    {
-      key: "sort",
+  filters = {
+    sort: {
       label: "Сортировка",
-      values: [
+      value: "",
+      options: [
         { label: "Бестселлеры", value: "bestseller" },
         { label: "Дате добавления", value: "newest" },
         { label: "Дате обновления", value: "last-update" },
       ],
-      inputType: FilterInputs.Picker,
+      type: FilterTypes.Picker,
     },
-    {
-      key: "genres",
+    genres: {
       label: "жанры",
-      values: [
-        {
-          label: "Альтернативная история",
-          value: "alternativnaya-istoriya",
-        },
+      value: [],
+      options: [
+        { label: "Альтернативная история", value: "alternativnaya-istoriya" },
         { label: "Боевая фантастика", value: "boevaya-fantastika" },
         { label: "Боевое фэнтези", value: "boevoe-fentezi" },
         { label: "Бытовое фэнтези", value: "bytovoe-fentezi" },
-        {
-          label: "Героическая фантастика",
-          value: "geroicheskaya-fantastika",
-        },
+        { label: "Героическая фантастика", value: "geroicheskaya-fantastika" },
         { label: "Героическое фэнтези", value: "geroicheskoe-fentezi" },
         { label: "Городское фэнтези", value: "gorodskoe-fentezi" },
         { label: "Детектив", value: "detektiv" },
-        {
-          label: "Детективная фантастика",
-          value: "detektivnaya-fantastika",
-        },
+        { label: "Детективная фантастика", value: "detektivnaya-fantastika" },
         { label: "Жёсткая эротика", value: "zhyostkaya-erotika" },
         { label: "Исторический детектив", value: "istoricheskii-detektiv" },
-        {
-          label: "Исторический любовный роман",
-          value: "istoricheskii-lyubovnyi-roman",
-        },
+        { label: "Исторический любовный роман", value: "istoricheskii-lyubovnyi-roman" },
         { label: "Историческое фэнтези", value: "istoricheskoe-fentezi" },
         { label: "Киберпанк", value: "kiberpank" },
         { label: "Классический детектив", value: "klassicheskii-detektiv" },
-        {
-          label: "Короткий любовный роман",
-          value: "korotkii-lyubovnyi-roman",
-        },
-        {
-          label: "Космическая фантастика",
-          value: "kosmicheskaya-fantastika",
-        },
+        { label: "Короткий любовный роман", value: "korotkii-lyubovnyi-roman" },
+        { label: "Космическая фантастика", value: "kosmicheskaya-fantastika" },
         { label: "Криминальный детектив", value: "kriminalnyi-detektiv" },
         { label: "ЛитРПГ", value: "litrpg" },
         { label: "Любовная фантастика", value: "lyubovnaya-fantastika" },
@@ -176,27 +158,15 @@ class Bookriver implements Plugin.PluginBase {
         { label: "Мистика", value: "mistika" },
         { label: "Молодежная проза", value: "molodezhnaya-proza" },
         { label: "Научная фантастика", value: "nauchnaya-fantastika" },
-        {
-          label: "Остросюжетный любовный роман",
-          value: "ostrosyuzhetnyi-lyubovnyi-roman",
-        },
+        { label: "Остросюжетный любовный роман", value: "ostrosyuzhetnyi-lyubovnyi-roman" },
         { label: "Политический детектив", value: "politicheskii-detektiv" },
         { label: "Попаданцы", value: "popadantsy" },
         { label: "Постапокалипсис", value: "postapokalipsis" },
-        {
-          label: "Приключенческое фэнтези",
-          value: "priklyuchencheskoe-fentezi",
-        },
-        {
-          label: "Романтическая эротика",
-          value: "romanticheskaya-erotika",
-        },
+        { label: "Приключенческое фэнтези", value: "priklyuchencheskoe-fentezi" },
+        { label: "Романтическая эротика", value: "romanticheskaya-erotika" },
         { label: "С элементами эротики", value: "s-elementami-erotiki" },
         { label: "Славянское фэнтези", value: "slavyanskoe-fentezi" },
-        {
-          label: "Современный любовный роман",
-          value: "sovremennyi-lyubovnyi-roman",
-        },
+        { label: "Современный любовный роман", value: "sovremennyi-lyubovnyi-roman" },
         { label: "Социальная фантастика", value: "sotsialnaya-fantastika" },
         { label: "Тёмное фэнтези", value: "temnoe-fentezi" },
         { label: "Фантастика", value: "fantastika" },
@@ -204,24 +174,15 @@ class Bookriver implements Plugin.PluginBase {
         { label: "Шпионский детектив", value: "shpionskii-detektiv" },
         { label: "Эпическое фэнтези", value: "epicheskoe-fentezi" },
         { label: "Эротика", value: "erotika" },
-        {
-          label: "Эротическая фантастика",
-          value: "eroticheskaya-fantastika",
-        },
+        { label: "Эротическая фантастика", value: "eroticheskaya-fantastika" },
         { label: "Эротический фанфик", value: "eroticheskii-fanfik" },
         { label: "Эротическое фэнтези", value: "eroticheskoe-fentezi" },
-        {
-          label: "Юмористический детектив",
-          value: "yumoristicheskii-detektiv",
-        },
-        {
-          label: "Юмористическое фэнтези",
-          value: "yumoristicheskoe-fentezi",
-        },
+        { label: "Юмористический детектив", value: "yumoristicheskii-detektiv" },
+        { label: "Юмористическое фэнтези", value: "yumoristicheskoe-fentezi" },
       ],
-      inputType: FilterInputs.Checkbox,
+      type: FilterTypes.CheckboxGroup,
     },
-  ];
+  } satisfies Filters;
 }
 export default new Bookriver();
 

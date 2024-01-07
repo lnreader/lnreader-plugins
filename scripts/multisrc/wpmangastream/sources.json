@@ -1,16 +1,20 @@
 [
-    {
-        "id": "lightnovelfr",
-        "sourceSite": "https://lightnovelfr.com/",
-        "sourceName": "Ligh Novel FR",
-		"lang": "French",
-		"reverseChapters": true
-    },
-    {
-        "id": "kol-novel",
-        "sourceSite": "https://kolnovel.com/",
-        "sourceName": "Kol Novel",
-        "lang": "arabic",
-        "reverseChapters": true
+  {
+    "id": "lightnovelfr",
+    "sourceSite": "https://lightnovelfr.com/",
+    "sourceName": "Ligh Novel FR",
+    "options": {
+      "lang": "French",
+      "reverseChapters": true
     }
+  },
+  {
+    "id": "kol-novel",
+    "sourceSite": "https://kolnovel.com/",
+    "sourceName": "Kol Novel",
+    "options": {
+      "lang": "arabic",
+      "reverseChapters": true
+    }
+  }
 ]

@@ -9,6 +9,7 @@ export async function fetchApi(
         "User-Agent": defaultUserAgentString,
         ...init?.headers,
     };
+    console.log(url, { ...init, headers })
     return await fetch(url, { ...init, headers });
 }
 

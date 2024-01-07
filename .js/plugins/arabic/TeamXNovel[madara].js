@@ -46,6 +46,7 @@ var novelStatus_1 = require("@libs/novelStatus");
 var parseMadaraDate_1 = require("@libs/parseMadaraDate");
 var dayjs_1 = __importDefault(require("dayjs"));
 var MadaraDefaultPath = {
+    genres: "novel-genre",
     novels: "novel",
     novel: "novel",
     chapter: "novel",
@@ -75,20 +76,20 @@ var MadaraPlugin = /** @class */ (function () {
                     case 0:
                         novels = [];
                         url = this.site;
-                        if ((filters === null || filters === void 0 ? void 0 : filters.genres) && ((_c = (_b = this.options) === null || _b === void 0 ? void 0 : _b.path) === null || _c === void 0 ? void 0 : _c.genres)) {
-                            url += ((_e = (_d = this.options) === null || _d === void 0 ? void 0 : _d.path) === null || _e === void 0 ? void 0 : _e.genres) + filters.genres;
+                        if ((_b = filters === null || filters === void 0 ? void 0 : filters.genres) === null || _b === void 0 ? void 0 : _b.value) {
+                            url += (((_d = (_c = this.options) === null || _c === void 0 ? void 0 : _c.path) === null || _d === void 0 ? void 0 : _d.genres) || MadaraDefaultPath.genres) +
+                                "/" +
+                                filters.genres.value;
                         }
                         else {
-                            url += ((_g = (_f = this.options) === null || _f === void 0 ? void 0 : _f.path) === null || _g === void 0 ? void 0 : _g.novels)
-                                ? this.options.path.novels
-                                : MadaraDefaultPath.novels;
+                            url += ((_f = (_e = this.options) === null || _e === void 0 ? void 0 : _e.path) === null || _f === void 0 ? void 0 : _f.novels) || MadaraDefaultPath.novels;
                         }
                         url +=
                             "/page/" +
                                 pageNo +
                                 "/" +
                                 "?m_orderby=" +
-                                (showLatestNovels ? "latest" : (filters === null || filters === void 0 ? void 0 : filters.sort) || "rating");
+                                (showLatestNovels ? "latest" : ((_g = filters === null || filters === void 0 ? void 0 : filters.sort) === null || _g === void 0 ? void 0 : _g.value) || "rating");
                         return [4 /*yield*/, (0, fetch_1.fetchApi)(url).then(function (res) { return res.text(); })];
                     case 1:
                         body = _h.sent();

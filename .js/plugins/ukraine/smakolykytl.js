@@ -113,7 +113,7 @@ var Smakolykytl = /** @class */ (function () {
                             .flat()
                             .map(function (tags) { return tags === null || tags === void 0 ? void 0 : tags.title; })
                             .filter(function (tags) { return tags; });
-                        if (tags.length > 0) {
+                        if (tags.length) {
                             novel.genres = tags.join(", ");
                         }
                         chapters = [];

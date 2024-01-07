@@ -1,5 +1,5 @@
 import { Plugin } from "@typings/plugin";
-import { FilterInputs } from "@libs/filterInputs";
+import { FilterTypes, Filters } from "@libs/filterInputs";
 import { fetchApi, fetchFile } from "@libs/fetch";
 import { NovelStatus } from "@libs/novelStatus";
 import { load as parseHTML } from "cheerio";
@@ -14,19 +14,26 @@ class freedlit implements Plugin.PluginBase {
   cookieString = "";
 
   async popularNovels(
-    pageNo: number,
-    { showLatestNovels, filters }: Plugin.PopularNovelsOptions,
+    page: number,
+    { showLatestNovels, filters }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
-    let url = this.site + "/books/";
-    url += (filters?.genre || "all") + "?sort=";
-    url += showLatestNovels ? "recent" : filters?.sort || "popular";
-    url += "&status=" + (filters?.status || "all");
-    url += "&access=" + (filters?.access || "all");
-    url += "&adult=" + (filters?.adult || "hide");
-    url += "&page=" + pageNo;
+    let url = this.site + "/get-books/all/list/" + page + "?sort=";
+    url += showLatestNovels ? "recent" : filters?.sort?.value || "popular";
+    url += "&status=" + (filters?.status?.value || "all");
+    url += "&access=" + (filters?.access?.value || "all");
+    url += "&adult=" + (filters?.adult?.value || "hide");
 
-    const result = await fetchApi(url);
-    const body = await result.text();
+    if (filters?.genre?.value?.include?.length) {
+      url += filters.genre.value.include
+        .map(id => '&genres_included[]=' + id).join("");
+    }
+
+    if (filters?.genre?.value?.exclude?.length) {
+      url += filters.genre.value.exclude
+        .map(id => '&genres_excluded[]=' + id).join("");
+    }
+
+    const body = await fetchApi(url).then((res) => res.text());
     const loadedCheerio = parseHTML(body);
 
     const novels: Plugin.NovelItem[] = [];
@@ -46,16 +53,15 @@ class freedlit implements Plugin.PluginBase {
   }
 
   async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
-    const result = await fetchApi(novelUrl);
-    const body = await result.text();
+    const body = await fetchApi(novelUrl).then((res) => res.text());
     const loadedCheerio = parseHTML(body);
 
     const novel: Plugin.SourceNovel = {
       url: novelUrl,
-      name: loadedCheerio(".book-info > h4").text(),
+      name: loadedCheerio(".book-info h4").text(),
       cover: loadedCheerio(".book-cover > div > img").attr("src")?.trim(),
       summary: loadedCheerio("#nav-home").text()?.trim(),
-      author: loadedCheerio(".book-info > h5 > a").text(),
+      author: loadedCheerio(".book-info h5 > a").text(),
       genres: loadedCheerio(".genre-list > a")
         .map((index, element) => loadedCheerio(element).text())
         .get()
@@ -64,10 +70,10 @@ class freedlit implements Plugin.PluginBase {
 
     const chapters: Plugin.ChapterItem[] = [];
 
-    loadedCheerio("#nav-contents > div").each(function () {
-      const name = loadedCheerio(this).find("a").text();
+    loadedCheerio("a.chapter-line").each(function () {
+      const name = loadedCheerio(this).find("h6").text();
       const releaseTime = loadedCheerio(this).find('span[class="date"]').text();
-      const url = loadedCheerio(this).find("a").attr("href");
+      const url = loadedCheerio(this).attr("href");
       if (!name || !url) return;
 
       chapters.push({ name, releaseTime, url });
@@ -78,24 +84,19 @@ class freedlit implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterUrl: string): Promise<string> {
-    const result = await fetchApi(chapterUrl);
-    const body = await result.text();
+    const body = await fetchApi(chapterUrl).then((res) => res.text());
     const loadedCheerio = parseHTML(body);
-
-    loadedCheerio('div[class="standart-block"]').remove();
-    loadedCheerio('div[class="mobile-block"]').remove();
-    const chapterText = loadedCheerio('div[class="chapter"]').html();
-
-    return chapterText || "";
+  
+    loadedCheerio("div.mobile-block").remove();
+    loadedCheerio("div.standart-block").remove();
+  
+    const chapterText = loadedCheerio('div[class="chapter"]').html() || "";
+    return chapterText;
   }
 
-  async searchNovels(
-    searchTerm: string,
-    //page: number | undefined = 1,
-  ): Promise<Plugin.NovelItem[]> {
+  async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
     const url = `${this.site}/search?query=${searchTerm}&type=all`;
-    const result = await fetchApi(url);
-    const body = await result.text();
+    const body = await fetchApi(url).then((res) => res.text());
     const loadedCheerio = parseHTML(body);
 
     const novels: Plugin.NovelItem[] = [];
@@ -112,23 +113,23 @@ class freedlit implements Plugin.PluginBase {
   }
   fetchImage = fetchFile;
 
-  filters = [
-    {
-      key: "sort",
+  filters = {
+    sort: {
       label: "Сортировка:",
-      values: [
+      value: "",
+      options: [
         { label: "По популярности", value: "popular" },
         { label: "По количеству комментариев", value: "comments" },
         { label: "По количеству лайков", value: "likes" },
         { label: "По новизне", value: "recent" },
         { label: "По просмотрам", value: "views" },
       ],
-      inputType: FilterInputs.Picker,
+      type: FilterTypes.Picker,
     },
-    {
-      key: "genre",
+    genre: {
       label: "Жанры:",
-      values: [
+      value: { include: [], exclude: [] },
+      options: [
         { label: "Любой жанр", value: "all" },
         { label: "Альтернативная история", value: "alternative-history" },
         { label: "Антиутопия", value: "dystopia" },
@@ -146,10 +147,7 @@ class freedlit implements Plugin.PluginBase {
         { label: "Документальная проза", value: "biography" },
         { label: "Историческая проза", value: "historical-fiction" },
         { label: "Исторический детектив", value: "historical-mystery" },
-        {
-          label: "Исторический любовный роман",
-          value: "historical-romantic-novel",
-        },
+        { label: "Исторический любовный роман", value: "historical-romantic-novel" },
         { label: "Историческое фэнтези", value: "historical-fantasy" },
         { label: "Киберпанк", value: "cyberpunk" },
         { label: "Космическая фантастика", value: "cosmic-fiction" },
@@ -207,38 +205,38 @@ class freedlit implements Plugin.PluginBase {
         { label: "Юмористическое фэнтези", value: "humor-fantasy" },
         { label: "RPS", value: "rps" },
       ],
-      inputType: FilterInputs.Picker,
+      type: FilterTypes.ExcludableCheckboxGroup,
     },
-    {
-      key: "status",
+    status: {
       label: "Статус:",
-      values: [
+      value: "",
+      options: [
         { label: "Любой статус", value: "all" },
         { label: "В процессе", value: "in-process" },
         { label: "Завершено", value: "finished" },
       ],
-      inputType: FilterInputs.Picker,
+      type: FilterTypes.Picker,
     },
-    {
-      key: "access",
+    access: {
       label: "Доступ:",
-      values: [
+      value: "",
+      options: [
         { label: "Любой доступ", value: "all" },
         { label: "Бесплатные", value: "free" },
         { label: "Платные", value: "paid" },
       ],
-      inputType: FilterInputs.Picker,
+      type: FilterTypes.Picker,
     },
-    {
-      key: "adult",
+    adult: {
       label: "Возрастные ограничения:",
-      values: [
+      value: "",
+      options: [
         { label: "Скрыть 18+", value: "hide" },
         { label: "Показать +18", value: "show" },
       ],
-      inputType: FilterInputs.Picker,
+      type: FilterTypes.Picker,
     },
-  ];
+  } satisfies Filters;
 }
 
 export default new freedlit();

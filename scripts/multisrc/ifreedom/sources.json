@@ -1,0 +1,14 @@
+[
+  {
+    "id": "ifreedom",
+    "sourceSite": "https://ifreedom.su",
+    "sourceName": "Свободный Мир Ранобэ",
+    "filters": {}
+  },
+  {
+    "id": "bookhamster",
+    "sourceSite": "https://bookhamster.ru",
+    "sourceName": "Bookhamster",
+    "filters": {}
+  }
+]

@@ -1,5 +1,5 @@
 import { Plugin } from "@typings/plugin";
-import { FilterInputs } from "@libs/filterInputs";
+import { FilterTypes, Filters } from "@libs/filterInputs";
 import { fetchApi, fetchFile } from "@libs/fetch";
 import { NovelStatus } from "@libs/novelStatus";
 import { load as parseHTML } from "cheerio";
@@ -21,12 +21,12 @@ class ficbook implements Plugin.PluginBase {
     const baseUrl = this.site;
     let url = baseUrl;
 
-    if (filters?.directions) {
-      url += "/popular-fanfics/" + filters.directions;
-    } else if (filters?.tags) {
-      url += "/tags/" + filters.tags + "?p=" + pageNo;
+    if (filters?.directions?.value) {
+      url += "/popular-fanfics/" + filters.directions.value;
+    } else if (filters?.tags?.value) {
+      url += "/tags/" + filters.tags.value + "?p=" + pageNo;
     } else {
-      url += "/" + (filters?.sort || "fanfiction") + "?p=" + pageNo;
+      url += "/" + (filters?.sort?.value || "fanfiction") + "?p=" + pageNo;
     }
 
     const result = await fetchApi(url);
@@ -170,20 +170,21 @@ class ficbook implements Plugin.PluginBase {
   }
   fetchImage = fetchFile;
 
-  filters = [
-    {
-      key: "sort",
+  filters = {
+    sort: {
       label: "Сортировка:",
-      values: [
+      value: "",
+      options: [
         { label: "Горячие работы", value: "fanfiction" },
         { label: "Популярные ", value: "popular-fanfics" },
       ],
-      inputType: FilterInputs.Picker,
+      type: FilterTypes.Picker,
     },
-    {
-      key: "directions",
+    directions: {
       label: "Направление:",
-      values: [
+      value: "",
+      options: [
+        { label: "Все", value: "" },
         { label: "Джен", value: "gen" },
         { label: "Гет", value: "het" },
         { label: "Слэш", value: "slash-fics-3712917" },
@@ -192,12 +193,13 @@ class ficbook implements Plugin.PluginBase {
         { label: "Смешанный", value: "mixed" },
         { label: "Другой", value: "other" },
       ],
-      inputType: FilterInputs.Picker,
+      type: FilterTypes.Picker,
     },
-    {
-      key: "tags",
+    tags: {
       label: "Тэги:",
-      values: [
+      value: "",
+      options: [
+        { label: "Все", value: "" },
         { label: "#1fic1week", value: "884" },
         { label: "#7daystowrite", value: "2961" },
         { label: "#Бинго_ТФ", value: "1458" },
@@ -1310,10 +1312,7 @@ class ficbook implements Plugin.PluginBase {
         { label: "Нетаймори", value: "2323" },
         { label: "Неторопливое повествование", value: "1815" },
         { label: "Нетрадиционное использование Силы", value: "2520" },
-        {
-          label: "Неумышленное употребление наркотических веществ",
-          value: "1192",
-        },
+        { label: "Неумышленное употребление наркотических веществ", value: "1192" },
         { label: "Неуставные отношения", value: "1396" },
         { label: "Нефилимы", value: "1086" },
         { label: "Неформальный брак", value: "1355" },
@@ -1921,10 +1920,7 @@ class ficbook implements Plugin.PluginBase {
         { label: "Секс при посторонних", value: "2514" },
         { label: "Секс с воображаемыми партнерами", value: "2276" },
         { label: "Секс с использованием магии", value: "1563" },
-        {
-          label: "Секс с использованием одурманивающих веществ",
-          value: "2635",
-        },
+        { label: "Секс с использованием одурманивающих веществ", value: "2635" },
         { label: "Секс с использованием посторонних предметов", value: "1661" },
         { label: "Секс с использованием сверхспособностей", value: "2610" },
         { label: "Секс со смертельным исходом", value: "1171" },
@@ -2615,9 +2611,9 @@ class ficbook implements Plugin.PluginBase {
         { label: "XVIII век", value: "248" },
         { label: "XX век", value: "1004" },
       ],
-      inputType: FilterInputs.Picker,
+      type: FilterTypes.Picker,
     },
-  ];
+  } satisfies Filters;
 }
 
 export default new ficbook();

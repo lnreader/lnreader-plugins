@@ -1,5 +1,5 @@
 import { Plugin } from "@typings/plugin";
-import { FilterInputs } from "@libs/filterInputs";
+import { FilterTypes, Filters } from "@libs/filterInputs";
 import { defaultCover } from "@libs/defaultCover";
 import { fetchApi, fetchFile } from "@libs/fetch";
 import { NovelStatus } from "@libs/novelStatus";
@@ -22,7 +22,7 @@ class RNRF implements Plugin.PluginBase {
     let url = this.site + "/books?order=";
     url += showLatestNovels
       ? "lastPublishedChapter"
-      : filters?.sort || "popular";
+      : filters?.sort?.value || "popular";
     url += "&page=" + pageNo;
 
     const result = await fetchApi(url);
@@ -71,7 +71,7 @@ class RNRF implements Plugin.PluginBase {
     const chapters: Plugin.ChapterItem[] = [];
 
     book?.chapters?.forEach((chapter) => {
-      if (!chapter?.isDonate || chapter?.isUserPaid) {
+      if (!chapter.isDonate || chapter.isUserPaid) {
         chapters.push({
           name: chapter.title,
           releaseTime: dayjs(chapter.publishedAt).format("LLL"),
@@ -131,19 +131,19 @@ class RNRF implements Plugin.PluginBase {
   }
   fetchImage = fetchFile;
 
-  filters = [
-    {
-      key: "sort",
+  filters = {
+    sort: {
       label: "Сортировка",
-      values: [
+      value: "",
+      options: [
         { label: "Рейтинг", value: "popular" },
         { label: "Дате добавления", value: "new" },
         { label: "Дате обновления", value: "lastPublishedChapter" },
         { label: "Законченные", value: "completed" },
       ],
-      inputType: FilterInputs.Picker,
+      type: FilterTypes.Picker,
     },
-  ];
+  } satisfies Filters;
 }
 export default new RNRF();
 

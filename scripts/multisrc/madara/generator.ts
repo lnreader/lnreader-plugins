@@ -13,7 +13,7 @@ export const generateAll: ScrpitGeneratorFunction = function (name) {
                 let d = false;
                 const filters: Filters = {};
                 for (const k in p.filters) {
-                    const f = p.filters[k as "sort" | "genres"];
+                    const f = p.filters[k as keyof typeof p.filters];
                     if (f) {
                         filters[k] = {
                             ...f,
@@ -39,10 +39,9 @@ const generator = function generator(metadata: MadaraMetadata) {
 
     const pluginScript = `
 ${madaraTemplate}
-const plugin = new MadaraPlugin(${JSON.stringify(metadata).replace(
-        /"type":"Picker"/g,
-        `"type":FilterTypes.Picker`
-    )});
+const plugin = new MadaraPlugin(${
+    JSON.stringify(metadata).replace(/"type":"([^"]+)"/g, '"type":FilterTypes.$1')
+});
 export default plugin;
     `;
     return {
