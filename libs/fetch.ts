@@ -1,16 +1,44 @@
-const defaultUserAgentString =
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36";
-
 export async function fetchApi(
     url: string,
-    init?: RequestInit,
+    init?: {
+        headers?: Record<string,string> | Headers;
+        [x: string]: string | Record<string,string> | undefined | FormData | Headers;
+    },
 ) {
-    const headers = {
-        "User-Agent": defaultUserAgentString,
-        ...init?.headers,
-    };
-    console.log(url, { ...init, headers })
-    return await fetch(url, { ...init, headers });
+    let userAgent: string | undefined;
+    try {
+        // get your user agent when you open localhost:3000
+        const getUserAgent = (await import('../index.js')).getUserAgent;
+        userAgent = getUserAgent();
+    }catch{
+        // nothing to do
+    }
+
+    // there're 2 type of Headers, plain object {} or Headers instance
+    if(userAgent) {
+        if(init?.headers) {
+            if(init.headers instanceof Headers){ 
+                if(!init.headers.get('User-Agent')){
+                    init.headers.set('User-Agent', userAgent);
+                }
+            }else{
+                init.headers = {
+                    "User-agent": userAgent,
+                    ...init.headers
+                }
+            }
+        }else{
+            init = {
+                ...init,
+                headers: {
+                    "User-Agent": userAgent
+                }
+            }
+        }
+    }
+
+    console.log(url, init);
+    return await fetch(url, init);
 }
 
 export const fetchFile = async function (url: string, init?: RequestInit) {

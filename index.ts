@@ -6,6 +6,15 @@ import express from "express";
 import bodyParser from "body-parser";
 import * as pluginApi from "./test_web/api/plugins";
 import localizedFormat from "dayjs/plugin/localizedFormat";
+interface GlobalState {
+    UserAgent?: string,
+}
+let globalState: GlobalState = {
+}
+
+export const getUserAgent = () => {
+    return globalState.UserAgent;
+};
 
 const app = express();
 const port = 3000;
@@ -17,6 +26,8 @@ app.use(bodyParser.json());
 app.use("/static", express.static(path.join(dirname, "test_web", "static")));
 app.use("/icons", express.static(path.join(dirname, "icons")));
 app.get("/all_plugins", (req, res) => {
+    globalState.UserAgent = req.headers["user-agent"];
+    console.log(globalState);
     const allPlugins = pluginApi.all_plugins();
     res.json(allPlugins);
 });

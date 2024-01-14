@@ -6,7 +6,7 @@
     "scripts": {
         "start": "nodemon",
         "test": "exit 0",
-        "json": "tsc && node ./.js/scripts/json_plugins.js && git add plugins && git add .dist && git add .js/plugins",
+        "json": "tsc && rm ./.js/index.js && node ./.js/scripts/json_plugins.js && git add plugins && git add .dist && git add .js/plugins",
         "generate": "ts-node ./scripts/multisrc/generate.ts && tsc",
         "clearMulti": "ts-node ./scripts/clearMultisrc.ts",
         "less": "npx less ./test_web/static/css/index.less ./test_web/static/css/index.css"
