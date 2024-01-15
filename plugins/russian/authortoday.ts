@@ -15,8 +15,7 @@ class AuthorToday implements Plugin.PluginBase {
   icon = "src/ru/authortoday/icon.png";
   site = "https://author.today";
   version = "1.0.0";
-  userAgent = "";
-  cookieString = "";
+  userAgent = "";
 
   async popularNovels(
     pageNo: number,

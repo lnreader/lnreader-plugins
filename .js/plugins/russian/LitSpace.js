@@ -47,7 +47,6 @@ var freedlit = /** @class */ (function () {
         this.version = "1.0.0";
         this.icon = "src/ru/freedlit/icon.png";
         this.userAgent = "";
-        this.cookieString = "";
         this.fetchImage = fetch_1.fetchFile;
         this.filters = {
             sort: {

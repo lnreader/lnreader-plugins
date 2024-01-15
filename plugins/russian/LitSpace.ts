@@ -10,8 +10,7 @@ class freedlit implements Plugin.PluginBase {
   site = "https://freedlit.space";
   version = "1.0.0";
   icon = "src/ru/freedlit/icon.png";
-  userAgent = "";
-  cookieString = "";
+  userAgent = "";
 
   async popularNovels(
     page: number,

@@ -1,16 +1,44 @@
-const defaultUserAgentString =
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36";
-
 export async function fetchApi(
     url: string,
-    init?: RequestInit,
+    init?: {
+        headers?: Record<string,string> | Headers;
+        [x: string]: string | Record<string,string> | undefined | FormData | Headers;
+    },
 ) {
-    const headers = {
-        "User-Agent": defaultUserAgentString,
-        ...init?.headers,
-    };
-    console.log(url, { ...init, headers })
-    return await fetch(url, { ...init, headers });
+    let defaultHeaders: {
+        'User-Agent'?: string,
+        'Cookie'?: string,
+    } = {};
+    try {
+        const getHeaders = (await import('../index.js')).getHeaders;
+        defaultHeaders = getHeaders();
+    }catch{
+        // nothing to do
+    }
+
+    if(init?.headers) {
+        if(init.headers instanceof Headers){ 
+            if(!init.headers.get('User-Agent') && defaultHeaders['User-Agent']){
+                init.headers.set('User-Agent', defaultHeaders['User-Agent']);
+            }
+            if(defaultHeaders.Cookie) {
+                init.headers.set('Cookie', defaultHeaders.Cookie);
+            }
+        }else{
+            init.headers = {
+                ...defaultHeaders,
+                ...init.headers,
+            };
+        }
+    }else{
+        init = {
+            ...init,
+            headers: defaultHeaders
+        }
+    }
+
+    console.log(url, init);
+    return await fetch(url, init);
 }
 
 export const fetchFile = async function (url: string, init?: RequestInit) {

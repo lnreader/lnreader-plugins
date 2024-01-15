@@ -46,7 +46,6 @@ var FTest = /** @class */ (function () {
         this.site = "https://noblemtl.com/";
         this.version = "1.0.0";
         this.userAgent = "";
-        this.cookieString = "";
         this.filters = {
             picker: {
                 type: filterInputs_1.FilterTypes.Picker,

@@ -46,7 +46,6 @@ var ChireadsPlugin = /** @class */ (function () {
         this.site = "https://chireads.com";
         this.version = "1.0.0";
         this.userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36";
-        this.cookieString = "''";
     }
     ChireadsPlugin.prototype.parseNovels = function (loadedCheerio) {
         return [];

@@ -922,6 +922,23 @@ class PluginWrapper {
     }
 }
 
+$("#add-cookie-btn").on("click", () => {
+    const cookie = $('#cookie').val();
+    fetch('/add_cookie', {
+        method: 'POST',
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            'cookie': cookie,
+        }),
+    }).then(() => {
+        $('#cookie').val('');
+        $('#cookie-content').text(`: ${cookie}`);
+    })
+        
+})
+
 $(".popularNovels-btn").on("click", () =>
     state.current_plugin?.getPopularNovels()
 );

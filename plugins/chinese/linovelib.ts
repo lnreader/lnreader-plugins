@@ -10,8 +10,7 @@ class Linovelib implements Plugin.PluginBase {
     icon = "src/cn/linovelib/icon.png";
     site = "https://w.linovelib.com";
     version = "1.0.0";
-    userAgent = "";
-    cookieString = "";
+    userAgent = "";
     async popularNovels(
         pageNo: number,
         { filters }: Plugin.PopularNovelsOptions<typeof this.filters>
@@ -23,9 +22,6 @@ class Linovelib implements Plugin.PluginBase {
         link += `/${pageNo}.html`;
 
         const headers = new Headers();
-        if (this.cookieString) {
-            headers.append("cookie", this.cookieString);
-        }
         const body = await fetchApi(link, { headers }).then((result) =>
             result.text()
         );
@@ -60,9 +56,6 @@ class Linovelib implements Plugin.PluginBase {
     async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
         const url = novelUrl;
         const headers = new Headers();
-        if (this.cookieString) {
-            headers.append("cookie", this.cookieString);
-        }
         const result = await fetchApi(url, { headers });
         const body = await result.text();
 
@@ -151,9 +144,6 @@ class Linovelib implements Plugin.PluginBase {
 
     async parseChapter(chapterUrl: string): Promise<string> {
         const headers = new Headers();
-        if (this.cookieString) {
-            headers.append("cookie", this.cookieString);
-        }
         let chapterName,
             chapterText = "",
             hasNextPage,
@@ -461,9 +451,6 @@ class Linovelib implements Plugin.PluginBase {
         const searchUrl = `${this.site}/search/`;
         const Term = encodeURI(searchTerm);
         const headers = new Headers();
-        if (this.cookieString) {
-            headers.append("cookie", this.cookieString);
-        }
         let NextPage, NoNextPage: boolean, DeadEnd;
         pageNo = 1;
         const novels: Plugin.NovelItem[] = [];

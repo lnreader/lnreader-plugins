@@ -40,10 +40,6 @@ npm install
 ```
 npm start
 ```
-or
-```
-nodemon
-```
 
 + Then open http://localhost:3000
 

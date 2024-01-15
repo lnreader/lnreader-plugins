@@ -1,17 +1,17 @@
 {
     "name": "lnreader-plugins",
     "version": "1.0.0",
-    "description": "",
+    "description": "Plugins repo for LNReader",
     "main": "index.js",
     "scripts": {
-        "start": "nodemon",
+        "start": "tsc-watch --onSuccess \"node ./.js/index.js\"",
         "test": "exit 0",
-        "json": "tsc && node ./.js/scripts/json_plugins.js && git add plugins && git add .dist && git add .js/plugins",
+        "json": "tsc && rm ./.js/index.js && node ./.js/scripts/json_plugins.js && git add plugins && git add .dist && git add .js/plugins",
         "generate": "ts-node ./scripts/multisrc/generate.ts && tsc",
         "clearMulti": "ts-node ./scripts/clearMultisrc.ts",
         "less": "npx less ./test_web/static/css/index.less ./test_web/static/css/index.css"
     },
-    "author": "",
+    "author": "LNReader",
     "license": "MIT",
     "dependencies": {
         "body-parser": "^1.20.2",
@@ -38,8 +38,8 @@
         "@types/express": "^4.17.17",
         "@types/jquery": "^3.5.28",
         "@types/node": "^20.3.1",
-        "nodemon": "^2.0.22",
-        "pre-commit": "^1.2.2"
+        "pre-commit": "^1.2.2",
+        "tsc-watch": "^6.0.4"
     },
     "pre-commit": [
         "json"

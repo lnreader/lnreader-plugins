@@ -46,7 +46,6 @@ var FreeWebNovel = /** @class */ (function () {
         this.version = "1.0.0";
         this.icon = "src/en/freewebnovel/icon.png";
         this.userAgent = "";
-        this.cookieString = "";
         this.fetchImage = fetch_1.fetchFile;
     }
     FreeWebNovel.prototype.popularNovels = function (page, _a) {

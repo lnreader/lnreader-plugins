@@ -50,6 +50,14 @@
             </script>
     </nav>
     <div id="test-container">
+        <div class="test-wrapper" id="add-cookie">
+            <div class="form-group">
+                <label for="cookie">Cookie 🍪</label> <span id="cookie-content"></span> 
+                <input type="email" class="form-control" id="cookie" aria-describedby="cookieHelp" placeholder="cf_clearance=abcxyzblalba">
+                <small id="cookieHelp" class="form-text text-muted">Add cookie into headers to bypass cloudflare</small>
+                <button type="button" class="btn btn-primary" id="add-cookie-btn">Add</button>
+            </div>
+        </div>
         <div class="test-wrapper" id="popularNovels">
             <div class="modal-container">
                 <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#filtersModal">

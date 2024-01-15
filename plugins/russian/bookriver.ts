@@ -11,8 +11,7 @@ class Bookriver implements Plugin.PluginBase {
   site = "https://bookriver.ru";
   version = "1.0.0";
   icon = "src/ru/bookriver/icon.png";
-  userAgent = "";
-  cookieString = "";
+  userAgent = "";
 
   async popularNovels(
     pageNo: number,

@@ -50,7 +50,6 @@ var Smakolykytl = /** @class */ (function () {
         this.version = "1.0.0";
         this.icon = "src/ua/smakolykytl/icon.png";
         this.userAgent = "";
-        this.cookieString = "";
         this.fetchImage = fetch_1.fetchFile;
     }
     Smakolykytl.prototype.popularNovels = function (pageNo, _a) {

@@ -19,7 +19,6 @@ class IfreedomPlugin implements Plugin.PluginBase {
   site: string;
   version: string;
   userAgent: string;
-  cookieString: string;
   filters?: Filters;
 
   constructor(metadata: IfreedomMetadata) {
@@ -29,7 +28,6 @@ class IfreedomPlugin implements Plugin.PluginBase {
     this.site = metadata.sourceSite;
     this.version = "1.0.0";
     this.userAgent = "";
-    this.cookieString = "";
     this.filters = metadata.filters;
   }
 

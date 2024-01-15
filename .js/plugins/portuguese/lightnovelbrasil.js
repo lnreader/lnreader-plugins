@@ -47,7 +47,6 @@ var LightNovelBrasil = /** @class */ (function () {
         this.site = "https://lightnovelbrasil.com/";
         this.version = "1.0.0";
         this.userAgent = "";
-        this.cookieString = "";
         this.filters = {
             order: {
                 label: "Sort By",
@@ -196,9 +195,6 @@ var LightNovelBrasil = /** @class */ (function () {
                         link += "&status=" + ((filters === null || filters === void 0 ? void 0 : filters.status) ? filters.status : "");
                         link += "&order=" + ((filters === null || filters === void 0 ? void 0 : filters.order) ? filters.order : "popular");
                         headers = new Headers();
-                        if (this.cookieString) {
-                            headers.append("cookie", this.cookieString);
-                        }
                         return [4 /*yield*/, (0, fetch_1.fetchApi)(link, { headers: headers }).then(function (result) {
                                 return result.text();
                             })];
@@ -233,9 +229,6 @@ var LightNovelBrasil = /** @class */ (function () {
                     case 0:
                         url = novelUrl;
                         headers = new Headers();
-                        if (this.cookieString) {
-                            headers.append("cookie", this.cookieString);
-                        }
                         return [4 /*yield*/, (0, fetch_1.fetchApi)(url, { headers: headers })];
                     case 1:
                         result = _a.sent();
@@ -312,9 +305,6 @@ var LightNovelBrasil = /** @class */ (function () {
                 switch (_a.label) {
                     case 0:
                         headers = new Headers();
-                        if (this.cookieString) {
-                            headers.append("cookie", this.cookieString);
-                        }
                         return [4 /*yield*/, (0, fetch_1.fetchApi)(chapterUrl, { headers: headers })];
                     case 1:
                         result = _a.sent();
@@ -336,9 +326,6 @@ var LightNovelBrasil = /** @class */ (function () {
                     case 0:
                         url = "".concat(this.site, "?s=").concat(searchTerm);
                         headers = new Headers();
-                        if (this.cookieString) {
-                            headers.append("cookie", this.cookieString);
-                        }
                         return [4 /*yield*/, (0, fetch_1.fetchApi)(url, { headers: headers })];
                     case 1:
                         result = _a.sent();

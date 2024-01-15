@@ -9,7 +9,7 @@ class HakoPlugin implements Plugin.PluginBase {
     site: string;
     version: string;
     userAgent: string;
-    cookieString: string;
+
     constructor() {
         this.id = "ln.hako";
         this.name = "Hako";
@@ -17,7 +17,6 @@ class HakoPlugin implements Plugin.PluginBase {
         this.site = "https://ln.hako.vn";
         this.version = "1.0.0";
         this.userAgent = "";
-        this.cookieString = "";
     }
     parseNovels(loadedCheerio: CheerioAPI) {
         const novels: Plugin.NovelItem[] = [];

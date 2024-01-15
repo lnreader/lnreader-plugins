@@ -6,6 +6,19 @@ import express from "express";
 import bodyParser from "body-parser";
 import * as pluginApi from "./test_web/api/plugins";
 import localizedFormat from "dayjs/plugin/localizedFormat";
+interface GlobalState {
+    UserAgent?: string,
+    Cookie?: string,
+}
+let globalState: GlobalState = {
+}
+
+export const getHeaders = () => {
+    return {
+       'User-Agent': globalState.UserAgent,
+       'Cookie': globalState.Cookie, 
+    };
+};
 
 const app = express();
 const port = 3000;
@@ -13,6 +26,14 @@ const host = "localhost";
 
 const dirname = path.join(__dirname, "..");
 
+app.use((req, res, next) => {
+    globalState.UserAgent = req.headers["user-agent"];
+    console.log('---------');
+    console.log('default headers: ', globalState);
+    console.log('---------');
+    console.log();
+    next();
+});
 app.use(bodyParser.json());
 app.use("/static", express.static(path.join(dirname, "test_web", "static")));
 app.use("/icons", express.static(path.join(dirname, "icons")));
@@ -20,6 +41,14 @@ app.get("/all_plugins", (req, res) => {
     const allPlugins = pluginApi.all_plugins();
     res.json(allPlugins);
 });
+app.post("/add_cookie", async (req, res) => {
+    globalState.Cookie = req.body['cookie'];
+    console.log('---------');
+    console.log('default headers: ', globalState);
+    console.log('---------');
+    console.log();
+    res.json({});
+}); 
 app.post("/filters", async (req, res) => {
     const filters = await pluginApi.getFilter(req.body['pluginRequirePath']);
     res.json(filters || []);

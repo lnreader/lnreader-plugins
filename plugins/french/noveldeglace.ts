@@ -10,7 +10,7 @@ class NovelDeGlacePlugin implements Plugin.PluginBase{
     site: string;
     version: string;
     userAgent: string;
-    cookieString: string;
+
     constructor() {
         this.id = "NDG.com";
         this.name = "NovelDeGlace";
@@ -18,7 +18,6 @@ class NovelDeGlacePlugin implements Plugin.PluginBase{
         this.site = "https://noveldeglace.com/";
         this.version = "1.0.0";
         this.userAgent = "''";
-        this.cookieString = "''";
     }
 
     async popularNovels(page: number): Promise<Plugin.NovelItem[]> {

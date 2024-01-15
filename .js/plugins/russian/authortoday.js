@@ -55,7 +55,6 @@ var AuthorToday = /** @class */ (function () {
         this.site = "https://author.today";
         this.version = "1.0.0";
         this.userAgent = "";
-        this.cookieString = "";
         this.fetchImage = fetch_1.fetchFile;
         this.filters = {
             sort: {

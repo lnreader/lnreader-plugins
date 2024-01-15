@@ -9,8 +9,7 @@ class FTest implements Plugin.PluginBase {
     icon = "src/en/noblemtl/icon.png";
     site = "https://noblemtl.com/";
     version = "1.0.0";
-    userAgent = "";
-    cookieString = "";
+    userAgent = "";
     async popularNovels(
         pageNo: number,
         { filters }: Plugin.PopularNovelsOptions<typeof this.filters>

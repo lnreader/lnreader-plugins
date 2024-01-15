@@ -42,7 +42,6 @@ class MadaraPlugin implements Plugin.PluginBase {
     site: string;
     version: string;
     userAgent: string;
-    cookieString: string;
     options?: MadaraOptions;
     filters?: Filters | undefined;
 
@@ -56,7 +55,6 @@ class MadaraPlugin implements Plugin.PluginBase {
         this.site = metadata.sourceSite;
         this.version = "1.0.0";
         this.userAgent = "";
-        this.cookieString = "";
         this.options = metadata.options;
         this.filters = metadata.filters;
     }

@@ -60,7 +60,6 @@ export namespace Plugin {
         filters?: Filters;
         version: string;
         userAgent: string;
-        cookieString: string;
         popularNovels(
             pageNo: number,
             options: PopularNovelsOptions<Filters>
@@ -110,7 +109,6 @@ export const isPlugin = (p: any): p is Plugin.PluginBase => {
         "icon",
         "site",
         "userAgent",
-        "cookieString",
     ];
     for (let i = 0; i < requireds_fields.length; i++) {
         const key = requireds_fields[i];

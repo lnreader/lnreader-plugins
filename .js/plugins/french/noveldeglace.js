@@ -47,7 +47,6 @@ var NovelDeGlacePlugin = /** @class */ (function () {
         this.site = "https://noveldeglace.com/";
         this.version = "1.0.0";
         this.userAgent = "''";
-        this.cookieString = "''";
     }
     NovelDeGlacePlugin.prototype.popularNovels = function (page) {
         return __awaiter(this, void 0, void 0, function () {

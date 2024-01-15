@@ -47,7 +47,6 @@ var WPmangaStreamPlugin = /** @class */ (function () {
         this.site = metadata.sourceSite;
         this.version = "1.0.0";
         this.userAgent = "";
-        this.cookieString = "";
         this.options = metadata.options;
     }
     WPmangaStreamPlugin.prototype.popularNovels = function (page) {

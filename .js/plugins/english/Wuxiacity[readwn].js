@@ -50,7 +50,6 @@ var ReadwnPlugin = /** @class */ (function () {
         this.site = metadata.sourceSite;
         this.version = "1.0.0";
         this.userAgent = "";
-        this.cookieString = "";
         this.filters = metadata.filters;
     }
     ReadwnPlugin.prototype.popularNovels = function (pageNo, _a) {

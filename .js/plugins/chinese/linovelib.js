@@ -48,7 +48,6 @@ var Linovelib = /** @class */ (function () {
         this.site = "https://w.linovelib.com";
         this.version = "1.0.0";
         this.userAgent = "";
-        this.cookieString = "";
         this.filters = {
             sort: {
                 label: "Sort By",
@@ -83,9 +82,6 @@ var Linovelib = /** @class */ (function () {
                         link += filters.sort;
                         link += "/".concat(pageNo, ".html");
                         headers = new Headers();
-                        if (this.cookieString) {
-                            headers.append("cookie", this.cookieString);
-                        }
                         return [4 /*yield*/, (0, fetch_1.fetchApi)(link, { headers: headers }).then(function (result) {
                                 return result.text();
                             })];
@@ -124,9 +120,6 @@ var Linovelib = /** @class */ (function () {
                     case 0:
                         url = novelUrl;
                         headers = new Headers();
-                        if (this.cookieString) {
-                            headers.append("cookie", this.cookieString);
-                        }
                         return [4 /*yield*/, (0, fetch_1.fetchApi)(url, { headers: headers })];
                     case 1:
                         result = _b.sent();
@@ -206,9 +199,6 @@ var Linovelib = /** @class */ (function () {
                 switch (_a.label) {
                     case 0:
                         headers = new Headers();
-                        if (this.cookieString) {
-                            headers.append("cookie", this.cookieString);
-                        }
                         chapterText = "", pageText = "";
                         pageNumber = 1;
                         skillgg = {
@@ -416,9 +406,6 @@ var Linovelib = /** @class */ (function () {
                         searchUrl = "".concat(this.site, "/search/");
                         Term = encodeURI(searchTerm);
                         headers = new Headers();
-                        if (this.cookieString) {
-                            headers.append("cookie", this.cookieString);
-                        }
                         pageNo = 1;
                         novels = [];
                         addPage = function (pageCheerio, redirect) { return __awaiter(_this, void 0, void 0, function () {

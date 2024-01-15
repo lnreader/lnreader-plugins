@@ -12,8 +12,7 @@ class TuNovelaLigera implements Plugin.PluginBase {
     icon = "src/es/tunovelaligera/icon.png";
     site = "https://tunovelaligera.com/";
     version = "1.0.0";
-    userAgent = "";
-    cookieString = "";
+    userAgent = "";
 
     async popularNovels(
         pageNo: number,
@@ -28,9 +27,6 @@ class TuNovelaLigera implements Plugin.PluginBase {
         link += filters.order;
 
         const headers = new Headers();
-        if (this.cookieString) {
-            headers.append("cookie", this.cookieString);
-        }
         const result = await fetchApi(link, { headers });
         const body = await result.text();
 
@@ -59,9 +55,6 @@ class TuNovelaLigera implements Plugin.PluginBase {
     async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
         const url = novelUrl;
         const headers = new Headers();
-        if (this.cookieString) {
-            headers.append("cookie", this.cookieString);
-        }
         const result = await fetchApi(url, { headers });
         const body = await result.text();
 
@@ -209,9 +202,6 @@ class TuNovelaLigera implements Plugin.PluginBase {
 
     async parseChapter(chapterUrl: string): Promise<string> {
         const headers = new Headers();
-        if (this.cookieString) {
-            headers.append("cookie", this.cookieString);
-        }
         const result = await fetchApi(chapterUrl);
         const body = await result.text();
 

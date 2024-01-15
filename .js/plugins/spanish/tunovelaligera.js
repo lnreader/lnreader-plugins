@@ -50,7 +50,6 @@ var TuNovelaLigera = /** @class */ (function () {
         this.site = "https://tunovelaligera.com/";
         this.version = "1.0.0";
         this.userAgent = "";
-        this.cookieString = "";
         this.filters = {
             order: {
                 value: "?m_orderby=rating",
@@ -137,9 +136,6 @@ var TuNovelaLigera = /** @class */ (function () {
                         link += "/page/".concat(pageNo);
                         link += filters.order;
                         headers = new Headers();
-                        if (this.cookieString) {
-                            headers.append("cookie", this.cookieString);
-                        }
                         return [4 /*yield*/, (0, fetch_1.fetchApi)(link, { headers: headers })];
                     case 1:
                         result = _b.sent();
@@ -175,9 +171,6 @@ var TuNovelaLigera = /** @class */ (function () {
                     case 0:
                         url = novelUrl;
                         headers = new Headers();
-                        if (this.cookieString) {
-                            headers.append("cookie", this.cookieString);
-                        }
                         return [4 /*yield*/, (0, fetch_1.fetchApi)(url, { headers: headers })];
                     case 1:
                         result = _c.sent();
@@ -353,9 +346,6 @@ var TuNovelaLigera = /** @class */ (function () {
                 switch (_a.label) {
                     case 0:
                         headers = new Headers();
-                        if (this.cookieString) {
-                            headers.append("cookie", this.cookieString);
-                        }
                         return [4 /*yield*/, (0, fetch_1.fetchApi)(chapterUrl)];
                     case 1:
                         result = _a.sent();

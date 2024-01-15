@@ -11,8 +11,7 @@ class BLN implements Plugin.PluginBase {
     site = "https://bestlightnovel.com/";
     filter?: undefined;
     version = "1.0.0";
-    userAgent = "";
-    cookieString = "";
+    userAgent = "";
     async popularNovels(
         pageNo: number,
         options: Plugin.PopularNovelsOptions

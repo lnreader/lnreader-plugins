@@ -9,8 +9,7 @@ class KolNovel implements Plugin.PluginBase {
     icon = "multisrc/wpmangastream/icons/kolnovel.png";
     site = "https://kolnovel.lol/";
     version = "1.0.0";
-    userAgent = "";
-    cookieString = "";
+    userAgent = "";
     async popularNovels(
         pageNo: number,
         { filters }: Plugin.PopularNovelsOptions<typeof this.filters>
@@ -26,9 +25,6 @@ class KolNovel implements Plugin.PluginBase {
 
         link += "&order=" + (filters?.order ? filters.order : "popular");
         const headers = new Headers();
-        if (this.cookieString) {
-            headers.append("cookie", this.cookieString);
-        }
         const body = await fetchApi(link, { headers }).then((result) =>
             result.text()
         );
@@ -59,9 +55,6 @@ class KolNovel implements Plugin.PluginBase {
     async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
         const url = novelUrl;
         const headers = new Headers();
-        if (this.cookieString) {
-            headers.append("cookie", this.cookieString);
-        }
         const result = await fetch(url, { headers });
         const body = await result.text();
 
@@ -136,9 +129,6 @@ class KolNovel implements Plugin.PluginBase {
     }
     async parseChapter(chapterUrl: string): Promise<string> {
         const headers = new Headers();
-        if (this.cookieString) {
-            headers.append("cookie", this.cookieString);
-        }
         const result = await fetch(chapterUrl, { headers });
         const body = await result.text();
 
@@ -159,9 +149,6 @@ class KolNovel implements Plugin.PluginBase {
     ): Promise<Plugin.NovelItem[]> {
         const url = `${this.site}?s=${searchTerm}`;
         const headers = new Headers();
-        if (this.cookieString) {
-            headers.append("cookie", this.cookieString);
-        }
         const result = await fetchApi(url, { headers });
         const body = await result.text();
 

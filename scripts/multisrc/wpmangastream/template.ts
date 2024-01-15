@@ -22,7 +22,6 @@ class WPmangaStreamPlugin implements Plugin.PluginBase {
   site: string;
   version: string;
   userAgent: string;
-  cookieString: string;
   options?: WPmangaStreamOptions;
 
   constructor(metadata: WPmangaStreamMetadata) {
@@ -32,7 +31,6 @@ class WPmangaStreamPlugin implements Plugin.PluginBase {
     this.site = metadata.sourceSite;
     this.version = "1.0.0";
     this.userAgent = "";
-    this.cookieString = "";
     this.options = metadata.options;
   }
 

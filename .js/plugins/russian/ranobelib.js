@@ -53,7 +53,6 @@ var RLIB = /** @class */ (function () {
         this.icon = "src/ru/ranobelib/icon.png";
         this.ui = undefined;
         this.userAgent = "";
-        this.cookieString = "";
         this.fetchImage = fetch_1.fetchFile;
         this.filters = {
             sort: {

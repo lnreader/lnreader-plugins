@@ -10,8 +10,7 @@ class Jaomix implements Plugin.PluginBase {
   site = "https://jaomix.ru";
   version = "1.0.0";
   icon = "src/ru/jaomix/icon.png";
-  userAgent = "";
-  cookieString = "";
+  userAgent = "";
 
   async popularNovels(
     pageNo: number,
