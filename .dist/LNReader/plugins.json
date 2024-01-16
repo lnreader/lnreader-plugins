@@ -95,6 +95,15 @@
 			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/multisrc/madara/icons/firstkissnovel.png"
 		},
 		{
+			"id": "anf.net",
+			"name": "AllNovelFull",
+			"site": "https://allnovelfull.net",
+			"lang": "English",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/english/allnovelfull.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/en/allnovelfull/icon.png"
+		},
+		{
 			"id": "BLN.com",
 			"name": "BestLightNovel",
 			"site": "https://bestlightnovel.com/",
@@ -122,6 +131,15 @@
 			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/multisrc/madara/icons/clicknovel.png"
 		},
 		{
+			"id": "comrademao",
+			"name": "Comrade Mao",
+			"site": "https://comrademao.com/",
+			"lang": "English",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/english/comrademao.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/en/comrademao/icon.png"
+		},
+		{
 			"id": "cratenovel",
 			"name": "CrateNovel[madara]",
 			"site": "https://cratenovel.com/",
@@ -138,6 +156,24 @@
 			"version": "1.0.0",
 			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/english/DaoNovel[madara].js",
 			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/multisrc/madara/icons/daonovel.png"
+		},
+		{
+			"id": "DDL.com",
+			"name": "Divine Dao Library",
+			"site": "https://www.divinedaolibrary.com/",
+			"lang": "English",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/english/divinedaolibrary.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/en/divinedaolibrary/icon.png"
+		},
+		{
+			"id": "earlynovel",
+			"name": "Early Novel",
+			"site": "https://earlynovel.net/",
+			"lang": "English",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/english/earlynovel.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/multisrc/madara/icons/latestnovel.png"
 		},
 		{
 			"id": "fanTLS",
