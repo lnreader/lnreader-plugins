@@ -194,15 +194,6 @@
 			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/multisrc/madara/icons/freenovelme.png"
 		},
 		{
-			"id": "ftest",
-			"name": "Filter Test",
-			"site": "https://noblemtl.com/",
-			"lang": "English",
-			"version": "1.0.0",
-			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/english/filterTests.js",
-			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/en/noblemtl/icon.png"
-		},
-		{
 			"id": "FWN.com",
 			"name": "Web NOVEL",
 			"site": "https://freewebnovel.com",
