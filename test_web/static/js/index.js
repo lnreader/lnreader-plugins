@@ -45,6 +45,40 @@ const plugin_search = $("#plugin");
 /** @type {JQuery<HTMLDivElement>} */
 const search_results = $("#search-results");
 
+const getHeaders = () => {
+    /** @type {Record<string,string>} */
+    const headers = {};
+    const els = document.querySelectorAll(".headerinfo").forEach((el) => {
+        /** @type {HTMLSpanElement | null} */
+        const nameSpan = el.querySelector(".headername");
+        /** @type {HTMLSpanElement | null} */
+        const valueSpan = el.querySelector(".headervalue");
+        if (nameSpan && valueSpan) {
+            const { innerText: name } = nameSpan;
+            const { innerText: value } = valueSpan;
+            if (typeof name === "string" && typeof value === "string") {
+                headers[name] = value;
+            }
+        }
+    });
+    return headers;
+};
+
+/**
+ *
+ * @param {string} path
+ * @param {RequestInit | undefined} init
+ */
+const fetchFromAPI = async (path, init = undefined) => {
+    if (init) {
+        init.headers = {
+            ...init.headers,
+            "x-custom-headers": JSON.stringify(getHeaders()),
+        };
+    }
+    return fetch(path, init);
+};
+
 const loadPluginsIntoSearchBar = () => {
     const { language, keyword } = state.plugin_search;
     const plugins = language ? state.all_plugins[language] : state.plugin_infos;
@@ -59,7 +93,7 @@ const loadPluginsIntoSearchBar = () => {
         : plugins;
 };
 
-fetch("/all_plugins")
+fetchFromAPI("/all_plugins")
     .then((res) => res.json())
     .then((/** @type {PluginList} */ all) => {
         state.all_plugins = all;
@@ -410,7 +444,7 @@ class PluginWrapper {
         try {
             /** @type {Filters} */
             const filters = await (
-                await fetch("/filters", {
+                await fetchFromAPI("/filters", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -548,7 +582,7 @@ class PluginWrapper {
         try {
             /** @type {NovelItem[] | {error:string}} */
             const novels = await (
-                await fetch(`/popularNovels/`, {
+                await fetchFromAPI(`/popularNovels/`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -592,7 +626,7 @@ class PluginWrapper {
         try {
             /** @type {NovelItem[] | {error:string}} */
             const novels = await (
-                await fetch(`/searchNovels/`, {
+                await fetchFromAPI(`/searchNovels/`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -633,7 +667,7 @@ class PluginWrapper {
         try {
             /** @type {SourceNovel  | {error:string}} */
             const sourceNovel = await (
-                await fetch(`/parseNovelAndChapters/`, {
+                await fetchFromAPI(`/parseNovelAndChapters/`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -687,7 +721,7 @@ class PluginWrapper {
         spinner.show();
         try {
             const chapterText = await (
-                await fetch(`/parseChapter/`, {
+                await fetchFromAPI(`/parseChapter/`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -898,7 +932,7 @@ class PluginWrapper {
         spinner.show();
         try {
             const base64 = await (
-                await fetch(`/fetchImage/`, {
+                await fetchFromAPI(`/fetchImage/`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -922,23 +956,6 @@ class PluginWrapper {
     }
 }
 
-$("#add-cookie-btn").on("click", () => {
-    const cookie = $('#cookie').val();
-    fetch('/add_cookie', {
-        method: 'POST',
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            'cookie': cookie,
-        }),
-    }).then(() => {
-        $('#cookie').val('');
-        $('#cookie-content').text(`: ${cookie}`);
-    })
-        
-})
-
 $(".popularNovels-btn").on("click", () =>
     state.current_plugin?.getPopularNovels()
 );
@@ -953,6 +970,93 @@ $(".parseNovelAndChapters-btn").on("click", () =>
 
 $(".parseChapter-btn").on("click", () => state.current_plugin?.getChapter());
 $(".fetchImage-btn").on("click", () => state.current_plugin?.fetchImage());
+
+/** @type {Record<string,string>} */
+let lastCopiedHeaders = {};
+
+const checkIfHeadersChanged = () => {
+    const currentHeaders = getHeaders();
+
+    const headers = new Set(Object.keys(currentHeaders));
+    // quick exit if all custom headers removed
+    if (headers.size <= 2) {
+        $("#headersnotcopied").css({ display: "none" });
+        return;
+    }
+
+    // get a list of all headers
+    for (const headername of Object.keys(lastCopiedHeaders)) {
+        headers.add(headername);
+    }
+
+    headers.delete("Cookie");
+    headers.delete("User-Agent");
+
+    let headersChanged = false;
+    // check if they're all the same
+    for (const headername of Array.from(headers)) {
+        if (currentHeaders[headername] !== lastCopiedHeaders[headername])
+            headersChanged = true;
+    }
+
+    if (headersChanged) $("#headersnotcopied").css({ display: "block" });
+    else $("#headersnotcopied").css({ display: "none" });
+};
+
+// get all header inputs and check if headers changed after
+$(".headerinfo > span[contenteditable='true']").each((_, inputElement) => {
+    $(inputElement).on("input", checkIfHeadersChanged);
+});
+
+$("#addheaderbtn").on("click", () => {
+    /**
+     <div class="headerinfo" data-headername="Cookie">
+        <span class="headername" onclick="this.nextElementSibling.nextElementSibling.focus()">Cookie</span><b>:&nbsp;</b>
+        <span class="headervalue" contenteditable="true" ></span>
+    </div>
+     */
+    const nameSpan = $("<span>").addClass("headername");
+    const valueSpan = $("<span>").addClass("headervalue");
+    const separator = $("<b>").html(":&nbsp;");
+    const clearButton = $("<button>")
+        .text("Clear")
+        .addClass("headereditbutton")
+        .on("click", () => {
+            valueSpan.text("");
+            checkIfHeadersChanged();
+        });
+    const removeButton = $("<button>")
+        .text("Remove")
+        .addClass("headereditbutton");
+    nameSpan[0].contentEditable = "true";
+    valueSpan[0].contentEditable = "true";
+    nameSpan.on("input", checkIfHeadersChanged);
+    valueSpan.on("input", checkIfHeadersChanged);
+    const headerinfo = $("<div>")
+        .append(nameSpan, separator, valueSpan, clearButton, removeButton)
+        .attr("class", "headerinfo");
+    removeButton.on("click", () => {
+        headerinfo.remove();
+        checkIfHeadersChanged();
+    });
+    $("#headerinfos").append(headerinfo);
+});
+
+$("#copyascode").on("click", async () => {
+    const headers = getHeaders();
+    const strippedHeaders = {
+        ...headers,
+    };
+    delete strippedHeaders["Cookie"];
+    delete strippedHeaders["User-Agent"];
+    await navigator.clipboard.writeText(
+        JSON.stringify(strippedHeaders, null, 4)
+    );
+    lastCopiedHeaders = headers;
+    checkIfHeadersChanged();
+    $("#headerscopied").css({ display: "block" });
+    setTimeout(() => $("#headerscopied").css({ display: "none" }), 1000);
+});
 
 const currentWrapper = () => state.current_plugin || emptyPluginWrapper;
 
@@ -1088,20 +1192,26 @@ const refreshPreviewSettings = () => {
 
 // JQuery document.body.onload
 $(() => {
+    /** @type {JQuery<HTMLSpanElement>} */
+    const userAgentInput = $('[data-headername="User-Agent"] .headervalue');
+    if (userAgentInput.length) {
+        userAgentInput.text(navigator.userAgent);
+    }
+    // TODO read the values from localstorage
     state.plugin_search.keyword = plugin_search[0].value;
     PluginWrapper.previewSettings.sanitize = false;
     Promise.allSettled([
-        fetch("static/html/template.html")
+        fetchFromAPI("static/html/template.html")
             .then((r) => r.text())
             .then((t) => {
                 PluginWrapper.previewSettings.htmlTemplate = t;
             }),
-        fetch(
+        fetchFromAPI(
             "https://raw.githubusercontent.com/LNReader/lnreader/plugins/android/app/src/main/assets/css/index.css"
         )
             .then((r) => r.text())
             .then((t) => (PluginWrapper.previewSettings.fillCSS = t)),
-        fetch(
+        fetchFromAPI(
             "https://raw.githubusercontent.com/LNReader/lnreader/plugins/android/app/src/main/assets/js/index.js"
         )
             .then((r) => r.text())
@@ -1132,4 +1242,6 @@ $(() => {
         );
     }
     refreshPreviewSettings();
+    lastCopiedHeaders = getHeaders();
+    checkIfHeadersChanged();
 });

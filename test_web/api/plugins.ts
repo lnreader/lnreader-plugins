@@ -6,6 +6,8 @@ import { Plugin, isPlugin } from "@typings/plugin";
 import { Filters } from "@libs/filterInputs";
 const root = path.dirname(require?.main?.filename || "");
 
+export const fetchHeaders: Record<string, string> = {}
+
 export const all_plugins = (): PluginList => {
     const res: PluginList = {};
     for (let languageEnglish in languages) {

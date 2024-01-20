@@ -50,16 +50,30 @@
             </script>
     </nav>
     <div id="test-container">
-        <div class="test-wrapper" id="add-cookie">
+        <div class="test-wrapper" id="headerChanger">
             <div class="form-group">
-                <label for="cookie">Cookie 🍪</label> <span id="cookie-content"></span> 
-                <input type="email" class="form-control" id="cookie" aria-describedby="cookieHelp" placeholder="cf_clearance=abcxyzblalba">
-                <small id="cookieHelp" class="form-text text-muted">Add cookie into headers to bypass cloudflare</small>
-                <button type="button" class="btn btn-primary" id="add-cookie-btn">Add</button>
-            </div>
+                <div class="title">Headers</div>
+                <div id="headerinfos">
+                    <div class="headerinfo" data-headername="User-Agent">
+                        <span class="headername" >User-Agent</span><b>:</b>
+                        <span class="headervalue"></span>
+                    </div>
+                    <div class="headerinfo">
+                        <span class="headername">Cookie</span><b>:&nbsp;</b>
+                        <span class="headervalue" contenteditable="true" ></span>
+                    </div>
+                </div>
+                <button id="addheaderbtn" class="btn-secondary pl-1 pr-1">Add header</button>
+                <button id="copyascode" class="btn-secondary pl-1 pr-1">Copy as code</button>
+                <div id="headersnotcopied">Remember to copy the headers into the plugin file after changing them!</div>
+                <div id="headerscopied" display="none">Copied</div>
+            </div> 
         </div>
         <div class="test-wrapper" id="popularNovels">
-            <div class="modal-container">
+            <div class="title">
+                popularNovels
+            </div>
+            <div style="display: inline-block;" class="modal-container">
                 <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#filtersModal">
                     Filters
                 </button>
@@ -82,12 +96,9 @@
                     </div>
                 </div>
             </div>
-            <div class="title">
-                popularNovels
-                <button type="button" class="btn btn-primary popularNovels-btn">fetch</button>
-                <div class="spinner-border" role="status">
-                    <span class="sr-only">Loading...</span>
-                </div>
+            <button type="button" class="btn btn-primary popularNovels-btn">fetch</button>
+            <div class="spinner-border" role="status">
+                <span class="sr-only">Loading...</span>
             </div>
             <div class="novel-list">
             </div>

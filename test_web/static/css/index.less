@@ -228,6 +228,7 @@
 }
 
 #popularNovels,
+#headerChanger,
 #searchNovels,
 #parseNovelAndChapters,
 #parseChapter,
@@ -235,6 +236,36 @@
     min-width: 95%;
     max-width: 95%;
     margin-inline: auto;
+}
+
+.headerinfo {
+    margin-bottom: 5px;
+    span[contenteditable="true"] {
+        border: 1px solid black;
+        padding: 3px 10px;
+        display: inline;
+    }
+}
+
+#headersnotcopied,
+#headerscopied {
+    font-size: 1.3rem;
+}
+
+#headersnotcopied {
+    color: red;
+    display: none;
+}
+
+#headerscopied {
+    color: green;
+    display: none;
+}
+
+.headereditbutton {
+    margin-left: 5px;
+    border: none;
+    padding-inline: 5px;
 }
 
 #popularNovels,
