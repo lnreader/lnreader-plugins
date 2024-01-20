@@ -185,6 +185,15 @@
 			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/multisrc/madara/icons/fanstranslations.png"
 		},
 		{
+			"id": "foxaholic",
+			"name": "Foxaholic",
+			"site": "https://www.foxaholic.com/",
+			"lang": "English",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/english/foxaholic.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/en/foxaholic/icon.png"
+		},
+		{
 			"id": "freenovel.me",
 			"name": "FreeNovelMe[madara]",
 			"site": "https://freenovel.me/",
@@ -284,6 +293,24 @@
 			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/multisrc/madara/icons/neosekaitranslations.png"
 		},
 		{
+			"id": "NF.me",
+			"name": "NovelFull",
+			"site": "https://novelfull.me/",
+			"lang": "English",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/english/NovelFullMe.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/en/novelfullme/icon.png"
+		},
+		{
+			"id": "nitromanga",
+			"name": "Nitro Manga",
+			"site": "https://nitromanga.com/",
+			"lang": "English",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/english/nitromanga.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/en/nitromanga/icon.png"
+		},
+		{
 			"id": "noblemtl",
 			"name": "NobleMTL",
 			"site": "https://noblemtl.com/",
@@ -309,6 +336,15 @@
 			"version": "1.0.0",
 			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/english/NoobchanTranslation[madara].js",
 			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/multisrc/madara/icons/noobchantranslation.png"
+		},
+		{
+			"id": "novelbin",
+			"name": "Novel Bin",
+			"site": "https://novelmax.net/",
+			"lang": "English",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/english/novelbin.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/en/novelbin/icon.png"
 		},
 		{
 			"id": "novelmultiverse",
