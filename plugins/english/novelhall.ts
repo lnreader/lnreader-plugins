@@ -4,7 +4,7 @@ import { Plugin } from "@typings/plugin";
 import { Filters } from "@libs/filterInputs";
 
 class NovelHall implements Plugin.PluginBase {
-    id = "novelhold";
+    id = "novelhall";
     name = "Novel Hall";
     version = "1.0.0";
     icon = "src/en/novelhall/icon.png";

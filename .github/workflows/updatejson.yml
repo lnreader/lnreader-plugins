@@ -3,7 +3,7 @@ name: Update json files
 on:
     push:
         branches:
-            - plugins
+            - master
 
 jobs:
     updatejson:
@@ -25,7 +25,7 @@ jobs:
                   {
                       "githubUsername": "LNReader",
                       "githubRepository": "lnreader-sources",
-                      "githubBranch": "plugins"
+                      "githubBranch": "master"
                   }
                   EOF
             - name: Update json files

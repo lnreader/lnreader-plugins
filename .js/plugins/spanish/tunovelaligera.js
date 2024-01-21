@@ -39,7 +39,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var cheerio_1 = require("cheerio");
 var fetch_1 = require("@libs/fetch");
 var filterInputs_1 = require("@libs/filterInputs");
-var showToast_1 = require("@libs/showToast");
 var defaultCover_1 = require("@libs/defaultCover");
 var novelStatus_1 = require("@libs/novelStatus");
 var TuNovelaLigera = /** @class */ (function () {
@@ -226,7 +225,6 @@ var TuNovelaLigera = /** @class */ (function () {
                                     case 0:
                                         n = url.split("/");
                                         novelName = n[4];
-                                        (0, showToast_1.showToast)("Cargando desde Archivo...");
                                         formData = new FormData();
                                         formData.append("action", "madara_load_more");
                                         formData.append("page", "0");
@@ -272,7 +270,6 @@ var TuNovelaLigera = /** @class */ (function () {
                                                 switch (_b.label) {
                                                     case 0:
                                                         chaptersUrl = "".concat(novelUrl, "?lcp_page0=").concat(i);
-                                                        (0, showToast_1.showToast)("Cargando desde la p\u00E1gina ".concat(i, "/").concat(lastPage, "..."));
                                                         return [4 /*yield*/, (0, fetch_1.fetchApi)(chaptersUrl, { headers: headers })];
                                                     case 1:
                                                         result_1 = _b.sent();
@@ -324,7 +321,6 @@ var TuNovelaLigera = /** @class */ (function () {
                     case 3:
                         _a.chapters = _c.sent();
                         if (!!novel.chapters.length) return [3 /*break*/, 6];
-                        (0, showToast_1.showToast)("¡Archivo no encontrado!");
                         return [4 /*yield*/, delay(1000)];
                     case 4:
                         _c.sent();

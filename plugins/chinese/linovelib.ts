@@ -2,7 +2,6 @@ import { CheerioAPI, load as parseHTML } from "cheerio";
 import { fetchApi, fetchFile } from "@libs/fetch";
 import { FilterTypes, Filters } from "@libs/filterInputs";
 import { Plugin } from "@typings/plugin";
-import { showToast } from "@libs/showToast";
 
 class Linovelib implements Plugin.PluginBase {
     id = "linovelib";
@@ -10,7 +9,8 @@ class Linovelib implements Plugin.PluginBase {
     icon = "src/cn/linovelib/icon.png";
     site = "https://w.linovelib.com";
     version = "1.0.0";
-
+
+
     async popularNovels(
         pageNo: number,
         { filters }: Plugin.PopularNovelsOptions<typeof this.filters>
@@ -480,7 +480,6 @@ class Linovelib implements Plugin.PluginBase {
 
             const novelResults = pageCheerio(".book-ol a.book-layout");
             if (novelResults.length === 0) {
-                showToast("Bypass check by searching in Webview");
             } else {
                 loadSearchResults();
             }

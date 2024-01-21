@@ -40,7 +40,7 @@ var cheerio_1 = require("cheerio");
 var fetch_1 = require("@libs/fetch");
 var NovelHall = /** @class */ (function () {
     function NovelHall() {
-        this.id = "novelhold";
+        this.id = "novelhall";
         this.name = "Novel Hall";
         this.version = "1.0.0";
         this.icon = "src/en/novelhall/icon.png";

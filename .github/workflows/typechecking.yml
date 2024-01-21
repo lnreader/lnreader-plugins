@@ -3,7 +3,7 @@ name: Update json files
 on:
     pull_request:
         branches:
-            - plugins
+            - master
 
 jobs:
     typechecking:
@@ -23,7 +23,7 @@ jobs:
                   {
                       "githubUsername": "LNReader",
                       "githubRepository": "lnreader-sources",
-                      "githubBranch": "plugins"
+                      "githubBranch": "master"
                   }
                   EOF
                   tsc

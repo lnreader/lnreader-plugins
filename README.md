@@ -2,82 +2,85 @@
 
 # LNReader Plugins
 
+  
+
 <p>
+
+  
 
 <img  alt="GitHub issues by-label"  src="https://img.shields.io/github/issues/lnreader/lnreader-sources/Source%20Request?color=success&label=source%20requests">
 
+  
+
 <img  alt="GitHub issues by-label"  src="https://img.shields.io/github/issues/lnreader/lnreader-sources/Bug?color=red&label=bugs">
+
+  
 
 </p>
 
+  
+
 Repository to host plugins and related issues, and requests for [LNReader](https://github.com/LNReader/lnreader).
-## Prerequisites
-- Nodejs >= 18
-## Contributing 
 
-1. Choose your language in [plugins/](./plugins)
+## Installing
 
-+ If your language doenst exist or you need some other packages, please request us. We will add it soon.
+- Prerequisites: Nodejs >= 18
+1. `npm install`
+2.  Create `config.json` file in root dir
 
-2. Write your scripts
-
-+ See example: [Hako](./plugins/vietnamese/LNHako.ts)
-
-Multisrc: [multisrc](./scripts/multisrc)
-
-## Test your script
-
-We use expressjs to make an UI web for testing.
-
-1. Installing
-
+```json
+{
+	"githubUsername": "<username>",
+	"githubRepository": "<repo>",
+	"githubBranch": "<branch>"
+}
 ```
-npm install
-```
-
-2. Running
-
-```
-npm start
-```
-
-+ Then open http://localhost:3000
-
-3. Testing
-
-+ Find you plugin
-
-+ Check if all functions of your plugin work properly
-
-#### No need to reload webpage after changing your plugin script.
-
-----------
-
-If you want to test plugin in app side, remember to config these things.
-
-
-1. Create `config.json` file in root dir
-2. Add your github infomation. Here is an example.
+Example
 ```json
 {
 	"githubUsername": "LNReader",
 	"githubRepository": "lnreader-sources",
-	"githubBranch": "plugins"
+	"githubBranch": "master"
 }
 ```
-3. Just commit and push it. And you will see your own json files in github fork: dist/`username`/
+## Contributing
 
-also in [pluginManager.ts](https://github.com/LNReader/lnreader/blob/plugins/src/plugins/pluginManager.ts) (app repo)
+1. Choose your language in [plugins](./plugins)
+2. Write your scripts
+
+
+
+## Examples: 
++ [Hako](./plugins/vietnamese/LNHako.ts)
++ Multisrc: [multisrc](./scripts/multisrc)
+
+## Testing
+- If you are making a [multisrc](./scripts/multisrc):  `npm run generate`
+- `npm start`
+- Open http://localhost:3000 and test  
+
+### If you want to test in app side.
+
+- Commit and push changes. Check your own json files in github fork: `.dist/<username>/`
+
+- Change these in [pluginManager.ts](https://github.com/LNReader/lnreader/blob/master/src/plugins/pluginManager.ts) (app repo) to yours
+
+  
 
 ```ts
-const  githubUsername  =  'LNReader';
-const  githubRepository  =  'lnreader-sources';
-const  githubBranch  =  'plugins';
+const  githubUsername = 'LNReader';
+const  githubRepository = 'lnreader-sources';
+const  githubBranch = 'master';
 ```
 
-- Note: You dont have to remove your own json files when creating a PR.
-- Note: You dont have to modify the .dist/LNReader when PR. There's already action for that job.
+ 
+
+- Note: No need to modify `.dist` folder when opening PR. There's already action for that job.
+
+  
 
 ----------
+
+  
 
 The developer of this application does not have any affiliation with the content providers available.

@@ -39,7 +39,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var cheerio_1 = require("cheerio");
 var fetch_1 = require("@libs/fetch");
 var filterInputs_1 = require("@libs/filterInputs");
-var showToast_1 = require("@libs/showToast");
 var EarlyNovelPlugin = /** @class */ (function () {
     function EarlyNovelPlugin() {
         this.id = "earlynovel";
@@ -161,7 +160,6 @@ var EarlyNovelPlugin = /** @class */ (function () {
             return __generator(this, function (_c) {
                 switch (_c.label) {
                     case 0:
-                        (0, showToast_1.showToast)("Early Novel may take 20-30 seconds");
                         url = novelUrl;
                         headers = new Headers();
                         return [4 /*yield*/, (0, fetch_1.fetchApi)(url, { headers: headers })];

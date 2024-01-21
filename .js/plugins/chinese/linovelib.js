@@ -39,7 +39,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var cheerio_1 = require("cheerio");
 var fetch_1 = require("@libs/fetch");
 var filterInputs_1 = require("@libs/filterInputs");
-var showToast_1 = require("@libs/showToast");
 var Linovelib = /** @class */ (function () {
     function Linovelib() {
         this.id = "linovelib";
@@ -433,7 +432,6 @@ var Linovelib = /** @class */ (function () {
                                 };
                                 novelResults = pageCheerio(".book-ol a.book-layout");
                                 if (novelResults.length === 0) {
-                                    (0, showToast_1.showToast)("Bypass check by searching in Webview");
                                 }
                                 else {
                                     loadSearchResults();

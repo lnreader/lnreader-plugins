@@ -13,7 +13,6 @@ export namespace Plugin {
          */
         releaseTime?: string | number | null;
         chapterNumber?: number;
-        volumn?: number;  
     }
     export interface NovelItem {
         name: string;

@@ -1,6 +1,5 @@
 import { load as parseHTML } from "cheerio";
 import { fetchApi, fetchFile } from "@libs/fetch";
-import { showToast } from "@libs/showToast";
 import { isUrlAbsolute } from "@libs/isAbsoluteUrl";
 import { Novel, Plugin } from "@typings/plugin";
 
@@ -117,8 +116,6 @@ export const parseChapter: Plugin.parseChapter = async function (chapterUrl) {
 };
 
 export const searchNovels: Plugin.searchNovels = async function (searchTerm) {
-    showToast("Search is not available in this source");
-
     return [];
 };
 

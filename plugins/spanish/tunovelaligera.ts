@@ -1,8 +1,7 @@
-import { CheerioAPI, load as parseHTML } from "cheerio";
+import { load as parseHTML } from "cheerio";
 import { fetchApi, fetchFile } from "@libs/fetch";
 import { FilterTypes, Filters } from "@libs/filterInputs";
 import { Plugin } from "@typings/plugin";
-import { showToast } from "@libs/showToast";
 import { defaultCover } from "@libs/defaultCover";
 import { NovelStatus } from "@libs/novelStatus";
 
@@ -116,8 +115,6 @@ class TuNovelaLigera implements Plugin.PluginBase {
         const getChapters = async () => {
             const n = url.split("/");
             const novelName = n[4];
-            showToast("Cargando desde Archivo...");
-
             const formData = new FormData();
             formData.append("action", "madara_load_more");
             formData.append("page", "0");
@@ -158,7 +155,6 @@ class TuNovelaLigera implements Plugin.PluginBase {
         const getPageChapters = async () => {
             for (let i = 1; i <= lastPage; i++) {
                 const chaptersUrl = `${novelUrl}?lcp_page0=${i}`;
-                showToast(`Cargando desde la página ${i}/${lastPage}...`);
                 const result = await fetchApi(chaptersUrl, { headers });
                 const chaptersHTML = await result.text();
 
@@ -193,7 +189,6 @@ class TuNovelaLigera implements Plugin.PluginBase {
         novel.chapters = await getChapters();
 
         if (!novel.chapters.length) {
-            showToast("¡Archivo no encontrado!");
             await delay(1000);
             novel.chapters = await getPageChapters();
         }

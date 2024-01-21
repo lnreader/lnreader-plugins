@@ -1,7 +1,6 @@
 import { CheerioAPI, load as parseHTML } from "cheerio";
 import { fetchApi, fetchFile } from "@libs/fetch";
 import { FilterTypes, Filters } from "@libs/filterInputs";
-import { showToast } from "@libs/showToast";
 import { Plugin } from "@typings/plugin";
 import { defaultCover } from "@libs/defaultCover";
 
@@ -60,7 +59,6 @@ class EarlyNovelPlugin implements Plugin.PluginBase {
     }
 
     async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
-        showToast("Early Novel may take 20-30 seconds");
         const url = novelUrl;
         const headers = new Headers();
         const result = await fetchApi(url, { headers });

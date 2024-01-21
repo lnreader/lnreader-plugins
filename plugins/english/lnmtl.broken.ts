@@ -1,6 +1,5 @@
 import { load as parseHTML } from "cheerio";
 import { fetchApi, fetchFile } from "@libs/fetch";
-import { showToast } from "@libs/showToast";
 import { Chapter, Novel, Plugin } from "@typings/plugin";
 
 const pluginId = "lnmtl";
@@ -36,8 +35,6 @@ export const popularNovels: Plugin.popularNovels = async function (page) {
 
 export const parseNovelAndChapters: Plugin.parseNovelAndChapters =
     async function (novelUrl) {
-        showToast("LNMTL might take around 20-30 seconds.");
-
         const url = novelUrl;
 
         const body = await fetchApi(url, {}, pluginId).then((r) => r.text());
