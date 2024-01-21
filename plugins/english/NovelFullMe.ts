@@ -5,7 +5,7 @@ import { Filters } from "@libs/filterInputs";
 
 class NovelFull implements Plugin.PluginBase {
     id = "NF.me";
-    name = "NovelFull";
+    name = "NovelFullMe";
     site = "https://novelfull.me/";
     version = "1.0.0";
     filters?: Filters | undefined;

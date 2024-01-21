@@ -1,25 +1,23 @@
 import { load as parseHTML } from "cheerio";
 import { fetchApi, fetchFile } from "@libs/fetch";
-import { Chapter, Novel, Plugin } from "@typings/plugin";
+import { Plugin } from "@typings/plugin";
+import { Filters } from "@libs/filterInputs";
 
-export const id = "LightNovelUpdates";
-export const name = "Light Novel Updates";
-export const version = "1.0.0";
-export const icon = "src/en/lightnovelupdates/icon.png";
-export const site = "https://www.lightnovelupdates.com/";
+class LightNovelUpdates implements Plugin.PluginBase {
+    id = "LightNovelUpdates";
+    name = "Light Novel Updates";
+    version = "1.0.0";
+    icon = "src/en/lightnovelupdates/icon.png";
+    site = "https://www.lightnovelupdates.com/";
+    baseUrl = this.site;
+    async popularNovels(pageNo: number, options: Plugin.PopularNovelsOptions<Filters>): Promise<Plugin.NovelItem[]> {
+        let url = `${this.baseUrl}novel/page/${pageNo}/?m_orderby=rating`;
 
-
-const pluginId = id;
-const baseUrl = site;
-
-export const popularNovels: Plugin.popularNovels = async function (page) {
-    let url = `${baseUrl}novel/page/${page}/?m_orderby=rating`;
-
-    const body = await fetchApi(url, {}, pluginId).then((r) => r.text());
+    const body = await fetchApi(url).then((r) => r.text());
 
     const loadedCheerio = parseHTML(body);
 
-    let novels: Novel.Item[] = [];
+    let novels: Plugin.NovelItem[] = [];
 
     loadedCheerio(".page-item-detail").each(function () {
         const novelName = loadedCheerio(this).find(".h5 > a").text();
@@ -38,17 +36,15 @@ export const popularNovels: Plugin.popularNovels = async function (page) {
     });
 
     return novels;
-};
-
-export const parseNovelAndChapters: Plugin.parseNovelAndChapters =
-    async function (novelUrl) {
+    }
+    async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
         const url = novelUrl;
 
-        const body = await fetchApi(url, {}, pluginId).then((r) => r.text());
+        const body = await fetchApi(url).then((r) => r.text());
 
         let loadedCheerio = parseHTML(body);
 
-        const novel: Novel.instance = {
+        const novel: Plugin.SourceNovel = {
             url,
             chapters: [],
         };
@@ -82,7 +78,7 @@ export const parseNovelAndChapters: Plugin.parseNovelAndChapters =
 
         novel.summary = loadedCheerio("div.summary__content").text();
 
-        const chapter: Chapter.Item[] = [];
+        const chapter: Plugin.ChapterItem[] = [];
 
         const novelId = loadedCheerio(".rating-post-id").attr("value")!;
 
@@ -96,7 +92,6 @@ export const parseNovelAndChapters: Plugin.parseNovelAndChapters =
                 method: "POST",
                 body: formData,
             },
-            pluginId
         );
         const text = await data.text();
 
@@ -119,23 +114,20 @@ export const parseNovelAndChapters: Plugin.parseNovelAndChapters =
         novel.chapters = chapter.reverse();
 
         return novel;
-    };
+    }
+    async parseChapter(chapterUrl: string): Promise<string> {
+        const chapterText = 'unable to load';
 
-export const parseChapter: Plugin.parseChapter = async function (chapterUrl) {
-    const chapterText = (await NovelUpdatesScraper.parseChapter(chapterUrl))
-        .chapterText;
+        return chapterText;
+    }
+    async searchNovels(searchTerm: string, pageNo: number): Promise<Plugin.NovelItem[]> {
+        const url = `${this.baseUrl}?s=${searchTerm}&post_type=wp-manga&m_orderby=rating`;
 
-    return chapterText;
-};
-
-export const searchNovels: Plugin.searchNovels = async function (searchTerm) {
-    const url = `${baseUrl}?s=${searchTerm}&post_type=wp-manga&m_orderby=rating`;
-
-    const body = await fetchApi(url, {}, pluginId).then((r) => r.text());
+    const body = await fetchApi(url).then((r) => r.text());
 
     const loadedCheerio = parseHTML(body);
 
-    let novels: Novel.Item[] = [];
+    let novels: Plugin.NovelItem[] = [];
 
     loadedCheerio(".c-tabs-item__content").each(function () {
         const novelName = loadedCheerio(this).find(".h4 > a").text();
@@ -151,11 +143,11 @@ export const searchNovels: Plugin.searchNovels = async function (searchTerm) {
         });
     });
     return novels;
-};
+    }
+    async fetchImage(url: string): Promise<string | undefined> {
+        return fetchFile(url);
+    }
 
-export const fetchImage: Plugin.fetchImage = async function (url) {
-    const headers = {
-        Referer: baseUrl,
-    };
-    return await fetchFile(url, { headers: headers });
-};
+}
+
+export default new LightNovelUpdates();
