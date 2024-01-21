@@ -221,6 +221,33 @@
 			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/multisrc/madara/icons/guavaread.png"
 		},
 		{
+			"id": "lightnovelpub",
+			"name": "LightNovelPub",
+			"site": "https://www.lightnovelpub.com/",
+			"lang": "English",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/english/lightnovelpub.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/en/lightnovelpub/icon.png"
+		},
+		{
+			"id": "LightNovelUpdates",
+			"name": "Light Novel Updates",
+			"site": "https://www.lightnovelupdates.com/",
+			"lang": "English",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/english/lightnovelupdates.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/en/lightnovelupdates/icon.png"
+		},
+		{
+			"id": "lightnovelworld",
+			"name": "LightNovelWorld",
+			"site": "https://www.webnovelworld.org/",
+			"lang": "English",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/english/lightnovelworld.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/en/lightnovelworld/icon.png"
+		},
+		{
 			"id": "lnheaven",
 			"name": "LightNovelHeaven[madara]",
 			"site": "https://lightnovelheaven.com/",
@@ -266,6 +293,15 @@
 			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/multisrc/madara/icons/mtl-novel.png"
 		},
 		{
+			"id": "mtlnovel",
+			"name": "MTL Novel",
+			"site": "https://www.mtlnovel.com/",
+			"lang": "English",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/english/mtlnovel.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/en/mtlnovel/icon.png"
+		},
+		{
 			"id": "mtlnovel.club",
 			"name": "MTLNovel.Club[madara]",
 			"site": "https://mtlnovel.club/",
@@ -273,6 +309,15 @@
 			"version": "1.0.0",
 			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/english/MTLNovelClub[madara].js",
 			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/multisrc/madara/icons/mtlnovel.club.png"
+		},
+		{
+			"id": "mtlreader",
+			"name": "MTL Reader",
+			"site": "https://mtlreader.com/",
+			"lang": "English",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/english/mtlreader.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/en/mtlreader/icon.png"
 		},
 		{
 			"id": "mysticalmerries",
@@ -294,7 +339,7 @@
 		},
 		{
 			"id": "NF.me",
-			"name": "NovelFull",
+			"name": "NovelFullMe",
 			"site": "https://novelfull.me/",
 			"lang": "English",
 			"version": "1.0.0",
@@ -309,6 +354,15 @@
 			"version": "1.0.0",
 			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/english/nitromanga.js",
 			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/en/nitromanga/icon.png"
+		},
+		{
+			"id": "NO.net",
+			"name": "novelsOnline",
+			"site": "https://novelsonline.net",
+			"lang": "English",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/english/NovelOnline.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/coverNotAvailable.jpg"
 		},
 		{
 			"id": "noblemtl",
@@ -345,6 +399,24 @@
 			"version": "1.0.0",
 			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/english/novelbin.js",
 			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/en/novelbin/icon.png"
+		},
+		{
+			"id": "novelfull",
+			"name": "NovelFull",
+			"site": "https://novelfull.com/",
+			"lang": "English",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/english/novelfull.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/en/novelfull/icon.png"
+		},
+		{
+			"id": "novelhold",
+			"name": "Novel Hall",
+			"site": "https://novelhall.com/",
+			"lang": "English",
+			"version": "1.0.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/english/novelhall.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/en/novelhall/icon.png"
 		},
 		{
 			"id": "novelmultiverse",
@@ -390,6 +462,15 @@
 			"version": "1.0.0",
 			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/english/NovelTranslate[madara].js",
 			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/multisrc/madara/icons/noveltranslate.png"
+		},
+		{
+			"id": "novelupdates",
+			"name": "Novel Updates",
+			"site": "https://www.novelupdates.com/",
+			"lang": "English",
+			"version": "0.5.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/english/novelupdates.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/en/novelupdates/icon.png"
 		},
 		{
 			"id": "onlymtl",
@@ -480,6 +561,15 @@
 			"version": "1.0.0",
 			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/english/Wuxiap[readwn].js",
 			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/multisrc/readwn/icons/wuxiap.png"
+		},
+		{
+			"id": "wuxiaworld",
+			"name": "Wuxia World",
+			"site": "https://www.wuxiaworld.com/",
+			"lang": "English",
+			"version": "0.5.0",
+			"url": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/.js/plugins/english/wuxiaworld.js",
+			"iconUrl": "https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/icons/src/en/wuxiaworld/icon.png"
 		},
 		{
 			"id": "wuxiaworld.site",
