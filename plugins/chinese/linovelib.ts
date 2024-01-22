@@ -1,5 +1,5 @@
 import { CheerioAPI, load as parseHTML } from "cheerio";
-import { fetchApi, fetchFile } from "@libs/fetch";
+import { fetchText, fetchFile } from "@libs/fetch";
 import { FilterTypes, Filters } from "@libs/filterInputs";
 import { Plugin } from "@typings/plugin";
 
@@ -7,9 +7,8 @@ class Linovelib implements Plugin.PluginBase {
     id = "linovelib";
     name = "Linovelib";
     icon = "src/cn/linovelib/icon.png";
-    site = "https://w.linovelib.com";
-    version = "1.0.0";
-
+    site = "https://www.bilinovel.com";
+    version = "1.0.1";
 
     async popularNovels(
         pageNo: number,
@@ -17,14 +16,11 @@ class Linovelib implements Plugin.PluginBase {
     ): Promise<Plugin.NovelItem[]> {
         let link = `${this.site}/top/`;
 
-        link += filters.sort;
+        link += filters.sort.value;
 
         link += `/${pageNo}.html`;
 
-        const headers = new Headers();
-        const body = await fetchApi(link, { headers }).then((result) =>
-            result.text()
-        );
+        const body = await fetchText(link);
 
         const loadedCheerio = parseHTML(body);
 
@@ -35,7 +31,7 @@ class Linovelib implements Plugin.PluginBase {
 
             const novelName = loadedCheerio(el).find(".book-title").text();
             const novelCover = loadedCheerio(el)
-                .find("img.book-cover")
+                .find("div.book-cover > img")
                 .attr("data-src");
             const novelUrl = this.site + url;
 
@@ -55,9 +51,7 @@ class Linovelib implements Plugin.PluginBase {
 
     async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
         const url = novelUrl;
-        const headers = new Headers();
-        const result = await fetchApi(url, { headers });
-        const body = await result.text();
+        const body = await fetchText(url);
 
         let loadedCheerio = parseHTML(body);
 
@@ -78,9 +72,8 @@ class Linovelib implements Plugin.PluginBase {
             "#bookDetailWrapper .book-rand-a a"
         ).text();
 
-        // TODO: Need some regex and dirty selector to get it
-        // Need to look into how to translate that message
-        novel.status = undefined;
+        const meta = loadedCheerio("#bookDetailWrapper .book-meta").text()
+        novel.status = meta.includes("完结") ? "完结" : "连载";
 
         novel.genres = loadedCheerio(".tag-small.red")
             .children("a")
@@ -96,16 +89,16 @@ class Linovelib implements Plugin.PluginBase {
 
         const chaptersUrl =
             this.site + loadedCheerio("#btnReadBook").attr("href");
-        const chaptersResult = await fetchApi(chaptersUrl, { headers });
-        const chaptersBody = await chaptersResult.text();
+        const chaptersBody = await fetchText(chaptersUrl);
 
         const chaptersLoadedCheerio = parseHTML(chaptersBody);
 
         let volumeName: string, chapterId: number;
 
-        chaptersLoadedCheerio("#volumes .chapter-li").each((i, el) => {
+        chaptersLoadedCheerio("#volumes .chapter-li:not(.volume-cover)").each((i, el) => {
             if (chaptersLoadedCheerio(el).hasClass("chapter-bar")) {
                 volumeName = chaptersLoadedCheerio(el).text();
+                return;
             } else {
                 const urlPart = chaptersLoadedCheerio(el)
                     .find(".chapter-li-a")
@@ -143,7 +136,6 @@ class Linovelib implements Plugin.PluginBase {
     }
 
     async parseChapter(chapterUrl: string): Promise<string> {
-        const headers = new Headers();
         let chapterName,
             chapterText = "",
             hasNextPage,
@@ -371,32 +363,26 @@ class Linovelib implements Plugin.PluginBase {
         const addPage = async (pageCheerio: CheerioAPI) => {
             const formatPage = async () => {
                 // Remove JS
-                pageCheerio("#ccacontent .cgo").remove();
+                pageCheerio("#acontentz .adsbygoogle").remove();
+                pageCheerio("#acontentz script").remove();
 
                 // Load lazyloaded images
-                pageCheerio("#ccacontent img.imagecontent").each((i, el) => {
+                pageCheerio("#acontentz img.imagecontent").each((i, el) => {
                     // Sometimes images are either in data-src or src
                     const imgSrc =
                         pageCheerio(el).attr("data-src") ||
                         pageCheerio(el).attr("src");
                     if (imgSrc) {
-                        // The original CDN URL is locked behind a CF-like challenge, switch the URL to bypass that
-                        // There are no react-native-url-polyfill lib, can't use URL API
-                        const regex = /\/\/.+\.com\//;
-                        const imgUrl = imgSrc.replace(
-                            regex,
-                            "//img.linovelib.com/"
-                        );
                         // Clean up img element
                         pageCheerio(el)
-                            .attr("src", imgUrl)
+                            .attr("src", imgSrc)
                             .removeAttr("data-src")
                             .removeClass("lazyload");
                     }
                 });
 
                 // Recover the original character
-                pageText = pageCheerio("#ccacontent").html() || "";
+                pageText = pageCheerio("#acontentz").html() || "";
                 pageText = pageText.replace(
                     /./g,
                     (char) => skillgg[char] || char
@@ -417,8 +403,7 @@ class Linovelib implements Plugin.PluginBase {
         };
 
         const loadPage = async (url: string) => {
-            const result = await fetchApi(url, { headers });
-            const body = await result.text();
+            const body = await fetchText(url);
             const pageCheerio = parseHTML(body);
             await addPage(pageCheerio);
             pageHasNextPage =
@@ -448,94 +433,100 @@ class Linovelib implements Plugin.PluginBase {
         searchTerm: string,
         pageNo?: number | undefined
     ): Promise<Plugin.NovelItem[]> {
-        const searchUrl = `${this.site}/search/`;
-        const Term = encodeURI(searchTerm);
-        const headers = new Headers();
-        let NextPage, NoNextPage: boolean, DeadEnd;
-        pageNo = 1;
+        const url = `${this.site}/search/${encodeURI(searchTerm)}_${pageNo}.html`;
+        const body = await fetchText(url);
+
+        const pageCheerio = parseHTML(body);
+
         const novels: Plugin.NovelItem[] = [];
 
-        const addPage = async (pageCheerio: CheerioAPI, redirect: string) => {
-            const loadSearchResults = () => {
-                pageCheerio(".book-ol .book-layout").each((i, el) => {
-                    let nUrl = pageCheerio(el).attr("href");
+        // const addPage = async (pageCheerio: CheerioAPI, redirect: string) => {
+        //     const loadSearchResults = () => {
+        //         pageCheerio(".book-ol .book-layout").each((i, el) => {
+        //             let nUrl = pageCheerio(el).attr("href");
 
-                    const novelName = pageCheerio(el)
-                        .find(".book-title")
-                        .text();
-                    const novelCover = pageCheerio(el)
-                        .find("img.book-cover")
-                        .attr("data-src");
-                    const novelUrl = this.site + nUrl;
+        //             const novelName = pageCheerio(el)
+        //                 .find(".book-title")
+        //                 .text();
+        //             const novelCover = pageCheerio(el)
+        //                 .find("div.book-cover > img")
+        //                 .attr("data-src");
+        //             const novelUrl = this.site + nUrl;
 
-                    if (!nUrl) return;
+        //             if (!nUrl) return;
 
-                    novels.push({
-                        name: novelName,
-                        url: novelUrl,
-                        cover: novelCover,
-                    });
-                });
-            };
+        //             novels.push({
+        //                 name: novelName,
+        //                 url: novelUrl,
+        //                 cover: novelCover,
+        //             });
+        //         });
+        //     };
 
-            const novelResults = pageCheerio(".book-ol a.book-layout");
-            if (novelResults.length === 0) {
-            } else {
-                loadSearchResults();
-            }
+        //     const novelResults = pageCheerio(".book-ol a.book-layout");
+        //     if (novelResults.length === 0) {
+        //     } else {
+        //         loadSearchResults();
+        //     }
 
-            if (redirect.length) {
-                novels.length = 0;
-                const novelName = pageCheerio(
-                    "#bookDetailWrapper .book-title"
-                ).text();
+        //     if (redirect.length) {
+        //         novels.length = 0;
+        //         const novelName = pageCheerio(
+        //             "#bookDetailWrapper .book-title"
+        //         ).text();
 
-                const novelCover = pageCheerio(
-                    "#bookDetailWrapper img.book-cover"
-                ).attr("src");
-                const novelUrl =
-                    this.site +
-                    pageCheerio("#btnReadBook").attr("href")?.slice(0, -8) +
-                    ".html";
-                novels.push({
-                    name: novelName,
-                    url: novelUrl,
-                    cover: novelCover,
-                });
-            }
-        };
+        //         const novelCover = pageCheerio(
+        //             "#bookDetailWrapper div.book-cover > img"
+        //         ).attr("src");
+        //         const novelUrl =
+        //             this.site +
+        //             pageCheerio("#btnReadBook").attr("href")?.slice(0, -8) +
+        //             ".html";
+        //         novels.push({
+        //             name: novelName,
+        //             url: novelUrl,
+        //             cover: novelCover,
+        //         });
+        //     }
+        // };
 
-        const loadPage = async (url: string) => {
-            const result = await fetchApi(url, { headers });
-            const body = await result.text();
-            const pageCheerio = parseHTML(body);
-            const redirect = pageCheerio("div.book-layout").text();
-            await addPage(pageCheerio, redirect);
-            NextPage = pageCheerio(".next").attr("href");
-            if (!NextPage) {
-                NoNextPage === true;
-            } else {
-                NoNextPage = NextPage === "#" ? true : false;
-            }
-            return { pageCheerio, NoNextPage };
-        };
+        // NOTE: don't know redirect is for what, comment out for now
 
-        let url = `${searchUrl}${Term}_${pageNo}.html`;
-        do {
-            const page = await loadPage(url);
-            DeadEnd = page.NoNextPage;
-            if (DeadEnd === false) {
-                pageNo++;
-                url = `${searchUrl}${Term}_${pageNo}.html`;
-            }
-        } while (DeadEnd === false);
+        // const redirect = pageCheerio("div.book-layout").text();
+        // await addPage(pageCheerio, redirect);
+
+        pageCheerio(".book-ol .book-layout").each((i, el) => {
+            let nUrl = pageCheerio(el).attr("href");
+
+            const novelName = pageCheerio(el)
+                .find(".book-title")
+                .text();
+            const novelCover = pageCheerio(el)
+                .find("div.book-cover > img")
+                .attr("data-src");
+            const novelUrl = this.site + nUrl;
+
+            if (!nUrl) return;
+
+            novels.push({
+                name: novelName,
+                url: novelUrl,
+                cover: novelCover,
+            });
+        });
 
         return novels;
     }
 
     async fetchImage(url: string): Promise<string | undefined> {
-        return await fetchFile(url);
+        const headers = new Headers(
+            {
+                "Referer": `${this.site}/`,
+            }
+        )
+        return await fetchFile(url, { headers });
     }
+
     filters = {
         sort: {
             label: "Sort By",
