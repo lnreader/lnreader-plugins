@@ -1,4 +1,4 @@
-import { load as parseHTML } from "cheerio";
+import { CheerioAPI, load as parseHTML } from "cheerio";
 import { fetchApi, fetchFile } from "@libs/fetch";
 import { Filters, FilterTypes } from "@libs/filterInputs";
 import { Plugin } from "@typings/plugin";
@@ -9,66 +9,8 @@ class NovelUpdates implements Plugin.PluginBase {
     version = "0.5.0";
     icon = "src/en/novelupdates/icon.png";
     site = "https://www.novelupdates.com/";
-    baseUrl = this.site;
 
-    getPopularNovelsUrl(
-        page: number,
-        { showLatestNovels, filters }: Plugin.PopularNovelsOptions<Filters>
-    ) {
-        let url = `${this.baseUrl}${filters
-            ? "series-finder"
-            : showLatestNovels
-                ? "latest-series"
-                : "series-ranking"
-            }/`;
-
-        if (!filters) {
-            url += "?rank=week";
-        } else {
-            url += "?sf=1";
-        }
-
-        if (filters) {
-            if (Array.isArray(filters.novelType) && filters.novelType?.length) {
-                url += "&nt=" + filters?.novelType.join(",");
-            }
-
-            if (Array.isArray(filters.genres) && filters.genres?.length) {
-                url += "&gi=" + filters?.genres.join(",") + "&mgi=and";
-            }
-
-            if (Array.isArray(filters.language) && filters.language?.length) {
-                url += "&org=" + filters?.language.join(",");
-            }
-
-            if (filters.storyStatus) {
-                url += "&ss=" + filters?.storyStatus;
-            }
-        }
-
-        if (!filters?.sort) {
-            url += "&sort=" + "sdate";
-        } else {
-            url += "&sort=" + filters?.sort;
-        }
-
-        if (!filters?.order) {
-            url += "&order=" + "desc";
-        } else {
-            url += "&order=" + filters?.order;
-        }
-
-        return url;
-    }
-
-    async popularNovels(pageNo: number, { showLatestNovels, filters }: Plugin.PopularNovelsOptions<Filters>): Promise<Plugin.NovelItem[]> {
-        const url = this.getPopularNovelsUrl(pageNo, { showLatestNovels, filters });
-
-        const result = await fetchApi(url);
-        const body = await result.text();
-
-        const loadedCheerio = parseHTML(body);
-
+    parseNovels(loadedCheerio: CheerioAPI){
         const novels: Plugin.NovelItem[] = [];
 
         loadedCheerio("div.search_main_box_nu").each((idx, ele) => {
@@ -91,9 +33,56 @@ class NovelUpdates implements Plugin.PluginBase {
 
         return novels;
     }
+
+    async popularNovels(page: number, { showLatestNovels, filters }: Plugin.PopularNovelsOptions<typeof this.filters>): Promise<Plugin.NovelItem[]> {
+        let link = `${this.site}`;
+        if (filters.language.value.length ||
+            filters.novelType.value.length ||
+            filters.genres.value.include?.length ||
+            filters.genres.value.exclude?.length ||
+            filters.storyStatus.value.length ){
+        link += "series-finder/?sf=1"
+        } else if (showLatestNovels){
+            link += "latest-series/?st=1" 
+            } else {
+            link += "series-ranking/?rank=week"
+            };
+        
+        if (filters.language.value.length)
+            link += '&org=' + filters.language.value.join(',');
+        
+        if (filters.novelType.value.length)
+            link += '&nt=' + filters.novelType.value.join(',');
+
+        if (filters.genres.value.include?.length)
+            link += '&gi=' + filters.genres.value.include.join(',');
+
+        if (filters.genres.value.exclude?.length)
+            link += '&ge=' + filters.genres.value.exclude.join(',');
+
+        if (filters.genres.value.include?.length || filters.genres.value.exclude?.length)
+            link += '&mgi=' + filters.genre_operator.value;
+
+        if (filters.storyStatus.value.length)
+            link += '&ss=' + filters.storyStatus.value;
+
+        link += '&sort=' + filters.sort.value;
+
+        link += '&order=' + filters.order.value;
+
+        link += '&pg=' + page;
+
+        const headers = new Headers();
+        const body = await fetchApi(link, { headers }).then((result) =>
+            result.text()
+        );
+
+        const loadedCheerio = parseHTML(body);
+        return this.parseNovels(loadedCheerio);
+    }
+
     async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
         const url = novelUrl;
-
         const result = await fetchApi(url);
         const body = await result.text();
 
@@ -134,7 +123,7 @@ class NovelUpdates implements Plugin.PluginBase {
         formData.append("mygrr", "0");
         formData.append("mypostid", novelId);
 
-        let link = "https://www.novelupdates.com/wp-admin/admin-ajax.php";
+        let link = `${this.site}wp-admin/admin-ajax.php`;
 
         const text = await fetchApi(
             link,
@@ -317,45 +306,24 @@ class NovelUpdates implements Plugin.PluginBase {
 
         return chapterText;
     }
-    async searchNovels(searchTerm: string, pageNo: number): Promise<Plugin.NovelItem[]> {
-        const url =
-            "https://www.novelupdates.com/?s=" +
-            searchTerm +
-            "&post_type=seriesplans";
-
-        const result = await fetchApi(url);
+    async searchNovels(searchTerm: string, page: number): Promise<Plugin.NovelItem[]> {
+        const url =`${this.site}page/${page}/?s=${searchTerm}&post_type=seriesplans`;
+        const headers = new Headers();
+        const result = await fetchApi(url, { headers });
         const body = await result.text();
 
         const loadedCheerio = parseHTML(body);
-
-        let novels: Plugin.NovelItem[] = [];
-
-        loadedCheerio("div.search_main_box_nu").each(function () {
-            const novelCover = loadedCheerio(this).find("img").attr("src");
-            const novelName = loadedCheerio(this).find(".search_title > a").text();
-            const novelUrl = loadedCheerio(this)
-                .find(".search_title > a")
-                .attr("href")
-                ?.split("/")[4];
-
-            if (!novelUrl) return;
-
-            novels.push({
-                name: novelName,
-                url: novelUrl,
-                cover: novelCover,
-            });
-        });
-        return novels;
+        return this.parseNovels(loadedCheerio);
     }
+
     fetchImage(url: string): Promise<string | undefined> {
         return fetchFile(url);
     }
 
-    filters: Filters = {
+    filters = {
         sort: {
             label: "Sort Results By",
-            type: FilterTypes.Picker,
+            value: "sdate",
             options: [
                 { label: "Last Updated", value: "sdate" },
                 { label: "Rating", value: "srate" },
@@ -366,31 +334,33 @@ class NovelUpdates implements Plugin.PluginBase {
                 { label: "Readers", value: "sread" },
                 { label: "Frequency", value: "sfrel" },
             ],
-            value: "sdate",
+            type: FilterTypes.Picker,
         },
         order: {
             label: "Order",
-            type: FilterTypes.Picker,
+            value: "desc",
             options: [
                 { label: "Descending", value: "desc" },
                 { label: "Ascending", value: "asc" },
             ],
-            value: "asc"
+            type: FilterTypes.Picker,
         },
         storyStatus: {
             label: "Story Status (Translation)",
-            type: FilterTypes.Picker,
+            value: "",
             options: [
                 { label: "All", value: "" },
                 { label: "Completed", value: "2" },
                 { label: "Ongoing", value: "3" },
                 { label: "Hiatus", value: "4" },
             ],
-            value: ""
+            type: FilterTypes.Picker,
         },
         language: {
             label: "Language",
+            value: [],
             options: [
+                { label: "None", value: "" },
                 { label: "Chinese", value: "495" },
                 { label: "Filipino", value: "9181" },
                 { label: "Indonesian", value: "9179" },
@@ -401,23 +371,25 @@ class NovelUpdates implements Plugin.PluginBase {
                 { label: "Thai", value: "9954" },
                 { label: "Vietnamese", value: "9177" },
             ],
-            type: FilterTypes.Picker,
-            value: ""
+            type: FilterTypes.CheckboxGroup,
         },
         novelType: {
             label: "Novel Type",
-            type: FilterTypes.CheckboxGroup,
             value: [],
             options: [
                 { label: "Light Novel", value: "2443" },
                 { label: "Published Novel", value: "26874" },
                 { label: "Web Novel", value: "2444" },
-            ]
+            ],
+            type: FilterTypes.CheckboxGroup,
         },
         genres: {
             label: "Genres",
-            type: FilterTypes.CheckboxGroup,
-            value: [],
+            type: FilterTypes.ExcludableCheckboxGroup,
+            value: {
+                include: [],
+                exclude: [],
+            },
             options: [
                 { label: "Action", value: "8" },
                 { label: "Adult", value: "280" },
@@ -454,10 +426,18 @@ class NovelUpdates implements Plugin.PluginBase {
                 { label: "Xuanhuan", value: "3954" },
                 { label: "Yaoi", value: "560" },
                 { label: "Yuri", value: "922" },
-            ]
-        }
-    }
-
+            ],
+        },
+        genre_operator: {
+            label: "Genre (AND/OR)",
+            value: "and",
+            options: [
+                { label: "AND", value: "and" },
+                { label: "OR", value: "or" },
+            ],
+            type: FilterTypes.Picker,
+        },
+    } satisfies Filters;
 }
 
 export default new NovelUpdates();

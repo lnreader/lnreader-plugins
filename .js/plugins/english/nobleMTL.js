@@ -49,7 +49,6 @@ var NobleMTL = /** @class */ (function () {
         this.filters = {
             order: {
                 label: "Sort By",
-                type: filterInputs_1.FilterTypes.Picker,
                 options: [
                     { label: "Default", value: "" },
                     { label: "A-Z", value: "title" },
@@ -58,6 +57,7 @@ var NobleMTL = /** @class */ (function () {
                     { label: "Latest Added", value: "latest" },
                     { label: "Popular", value: "popular" },
                 ],
+                type: filterInputs_1.FilterTypes.Picker,
                 value: "",
             },
             status: {
@@ -86,7 +86,6 @@ var NobleMTL = /** @class */ (function () {
             },
             genres: {
                 label: "Genres",
-                value: [],
                 options: [
                     { label: "A.I", value: "a.i" },
                     { label: "Academy", value: "academy" },
@@ -176,13 +175,32 @@ var NobleMTL = /** @class */ (function () {
                     { label: "Yuri", value: "yuri" },
                 ],
                 type: filterInputs_1.FilterTypes.CheckboxGroup,
+                value: [],
             },
         };
     }
+    NobleMTL.prototype.parseNovels = function (loadedCheerio) {
+        var novels = [];
+        loadedCheerio("article.bs").each(function () {
+            var novelName = loadedCheerio(this).find(".ntitle").text().trim();
+            var image = loadedCheerio(this).find("img");
+            var novelCover = image.attr("data-src") || image.attr("src");
+            var novelUrl = loadedCheerio(this).find("a").attr("href");
+            if (!novelUrl)
+                return;
+            var novel = {
+                name: novelName,
+                cover: novelCover,
+                url: novelUrl,
+            };
+            novels.push(novel);
+        });
+        return novels;
+    };
     NobleMTL.prototype.popularNovels = function (pageNo, _a) {
         var filters = _a.filters;
         return __awaiter(this, void 0, void 0, function () {
-            var link, headers, body, loadedCheerio, novels;
+            var link, headers, body, loadedCheerio;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
@@ -200,22 +218,7 @@ var NobleMTL = /** @class */ (function () {
                     case 1:
                         body = _b.sent();
                         loadedCheerio = (0, cheerio_1.load)(body);
-                        novels = [];
-                        loadedCheerio("article.bs").each(function () {
-                            var novelName = loadedCheerio(this).find(".ntitle").text().trim();
-                            var image = loadedCheerio(this).find("img");
-                            var novelCover = image.attr("data-src") || image.attr("src");
-                            var novelUrl = loadedCheerio(this).find("a").attr("href");
-                            if (!novelUrl)
-                                return;
-                            var novel = {
-                                name: novelName,
-                                cover: novelCover,
-                                url: novelUrl,
-                            };
-                            novels.push(novel);
-                        });
-                        return [2 /*return*/, novels];
+                        return [2 /*return*/, this.parseNovels(loadedCheerio)];
                 }
             });
         });
@@ -318,11 +321,11 @@ var NobleMTL = /** @class */ (function () {
     };
     NobleMTL.prototype.searchNovels = function (searchTerm, pageNo) {
         return __awaiter(this, void 0, void 0, function () {
-            var url, headers, result, body, loadedCheerio, novels;
+            var url, headers, result, body, loadedCheerio;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        url = "".concat(this.site, "?s=").concat(searchTerm);
+                        url = "".concat(this.site, "page/").concat(pageNo, "/?s=").concat(searchTerm);
                         headers = new Headers();
                         return [4 /*yield*/, (0, fetch_1.fetchApi)(url, { headers: headers })];
                     case 1:
@@ -331,20 +334,7 @@ var NobleMTL = /** @class */ (function () {
                     case 2:
                         body = _a.sent();
                         loadedCheerio = (0, cheerio_1.load)(body);
-                        novels = [];
-                        loadedCheerio("article.bs").each(function () {
-                            var novelName = loadedCheerio(this).find(".ntitle").text().trim();
-                            var novelCover = loadedCheerio(this).find("img").attr("src");
-                            var novelUrl = loadedCheerio(this).find("a").attr("href");
-                            if (!novelUrl)
-                                return;
-                            novels.push({
-                                name: novelName,
-                                url: novelUrl,
-                                cover: novelCover,
-                            });
-                        });
-                        return [2 /*return*/, novels];
+                        return [2 /*return*/, this.parseNovels(loadedCheerio)];
                 }
             });
         });
@@ -361,5 +351,4 @@ var NobleMTL = /** @class */ (function () {
     };
     return NobleMTL;
 }());
-var Noble = new NobleMTL();
 exports.default = new NobleMTL();

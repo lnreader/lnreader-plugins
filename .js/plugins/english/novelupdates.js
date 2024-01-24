@@ -46,11 +46,10 @@ var NovelUpdates = /** @class */ (function () {
         this.version = "0.5.0";
         this.icon = "src/en/novelupdates/icon.png";
         this.site = "https://www.novelupdates.com/";
-        this.baseUrl = this.site;
         this.filters = {
             sort: {
                 label: "Sort Results By",
-                type: filterInputs_1.FilterTypes.Picker,
+                value: "sdate",
                 options: [
                     { label: "Last Updated", value: "sdate" },
                     { label: "Rating", value: "srate" },
@@ -61,31 +60,33 @@ var NovelUpdates = /** @class */ (function () {
                     { label: "Readers", value: "sread" },
                     { label: "Frequency", value: "sfrel" },
                 ],
-                value: "sdate",
+                type: filterInputs_1.FilterTypes.Picker,
             },
             order: {
                 label: "Order",
-                type: filterInputs_1.FilterTypes.Picker,
+                value: "desc",
                 options: [
                     { label: "Descending", value: "desc" },
                     { label: "Ascending", value: "asc" },
                 ],
-                value: "asc"
+                type: filterInputs_1.FilterTypes.Picker,
             },
             storyStatus: {
                 label: "Story Status (Translation)",
-                type: filterInputs_1.FilterTypes.Picker,
+                value: "",
                 options: [
                     { label: "All", value: "" },
                     { label: "Completed", value: "2" },
                     { label: "Ongoing", value: "3" },
                     { label: "Hiatus", value: "4" },
                 ],
-                value: ""
+                type: filterInputs_1.FilterTypes.Picker,
             },
             language: {
                 label: "Language",
+                value: [],
                 options: [
+                    { label: "None", value: "" },
                     { label: "Chinese", value: "495" },
                     { label: "Filipino", value: "9181" },
                     { label: "Indonesian", value: "9179" },
@@ -96,23 +97,25 @@ var NovelUpdates = /** @class */ (function () {
                     { label: "Thai", value: "9954" },
                     { label: "Vietnamese", value: "9177" },
                 ],
-                type: filterInputs_1.FilterTypes.Picker,
-                value: ""
+                type: filterInputs_1.FilterTypes.CheckboxGroup,
             },
             novelType: {
                 label: "Novel Type",
-                type: filterInputs_1.FilterTypes.CheckboxGroup,
                 value: [],
                 options: [
                     { label: "Light Novel", value: "2443" },
                     { label: "Published Novel", value: "26874" },
                     { label: "Web Novel", value: "2444" },
-                ]
+                ],
+                type: filterInputs_1.FilterTypes.CheckboxGroup,
             },
             genres: {
                 label: "Genres",
-                type: filterInputs_1.FilterTypes.CheckboxGroup,
-                value: [],
+                type: filterInputs_1.FilterTypes.ExcludableCheckboxGroup,
+                value: {
+                    include: [],
+                    exclude: [],
+                },
                 options: [
                     { label: "Action", value: "8" },
                     { label: "Adult", value: "280" },
@@ -149,84 +152,84 @@ var NovelUpdates = /** @class */ (function () {
                     { label: "Xuanhuan", value: "3954" },
                     { label: "Yaoi", value: "560" },
                     { label: "Yuri", value: "922" },
-                ]
-            }
+                ],
+            },
+            genre_operator: {
+                label: "Genre (AND/OR)",
+                value: "and",
+                options: [
+                    { label: "AND", value: "and" },
+                    { label: "OR", value: "or" },
+                ],
+                type: filterInputs_1.FilterTypes.Picker,
+            },
         };
     }
-    NovelUpdates.prototype.getPopularNovelsUrl = function (page, _a) {
-        var _b, _c, _d;
-        var showLatestNovels = _a.showLatestNovels, filters = _a.filters;
-        var url = "".concat(this.baseUrl).concat(filters
-            ? "series-finder"
-            : showLatestNovels
-                ? "latest-series"
-                : "series-ranking", "/");
-        if (!filters) {
-            url += "?rank=week";
-        }
-        else {
-            url += "?sf=1";
-        }
-        if (filters) {
-            if (Array.isArray(filters.novelType) && ((_b = filters.novelType) === null || _b === void 0 ? void 0 : _b.length)) {
-                url += "&nt=" + (filters === null || filters === void 0 ? void 0 : filters.novelType.join(","));
-            }
-            if (Array.isArray(filters.genres) && ((_c = filters.genres) === null || _c === void 0 ? void 0 : _c.length)) {
-                url += "&gi=" + (filters === null || filters === void 0 ? void 0 : filters.genres.join(",")) + "&mgi=and";
-            }
-            if (Array.isArray(filters.language) && ((_d = filters.language) === null || _d === void 0 ? void 0 : _d.length)) {
-                url += "&org=" + (filters === null || filters === void 0 ? void 0 : filters.language.join(","));
-            }
-            if (filters.storyStatus) {
-                url += "&ss=" + (filters === null || filters === void 0 ? void 0 : filters.storyStatus);
-            }
-        }
-        if (!(filters === null || filters === void 0 ? void 0 : filters.sort)) {
-            url += "&sort=" + "sdate";
-        }
-        else {
-            url += "&sort=" + (filters === null || filters === void 0 ? void 0 : filters.sort);
-        }
-        if (!(filters === null || filters === void 0 ? void 0 : filters.order)) {
-            url += "&order=" + "desc";
-        }
-        else {
-            url += "&order=" + (filters === null || filters === void 0 ? void 0 : filters.order);
-        }
-        return url;
+    NovelUpdates.prototype.parseNovels = function (loadedCheerio) {
+        var novels = [];
+        loadedCheerio("div.search_main_box_nu").each(function (idx, ele) {
+            var novelCover = loadedCheerio(ele).find("img").attr("src");
+            var novelName = loadedCheerio(ele).find(".search_title > a").text();
+            var novelUrl = loadedCheerio(ele)
+                .find(".search_title > a")
+                .attr("href");
+            if (!novelUrl)
+                return;
+            var novel = {
+                name: novelName,
+                cover: novelCover,
+                url: novelUrl,
+            };
+            novels.push(novel);
+        });
+        return novels;
     };
-    NovelUpdates.prototype.popularNovels = function (pageNo, _a) {
+    NovelUpdates.prototype.popularNovels = function (page, _a) {
+        var _b, _c, _d, _e, _f, _g;
         var showLatestNovels = _a.showLatestNovels, filters = _a.filters;
         return __awaiter(this, void 0, void 0, function () {
-            var url, result, body, loadedCheerio, novels;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
+            var link, headers, body, loadedCheerio;
+            return __generator(this, function (_h) {
+                switch (_h.label) {
                     case 0:
-                        url = this.getPopularNovelsUrl(pageNo, { showLatestNovels: showLatestNovels, filters: filters });
-                        return [4 /*yield*/, (0, fetch_1.fetchApi)(url)];
+                        link = "".concat(this.site);
+                        if (filters.language.value.length ||
+                            filters.novelType.value.length ||
+                            ((_b = filters.genres.value.include) === null || _b === void 0 ? void 0 : _b.length) ||
+                            ((_c = filters.genres.value.exclude) === null || _c === void 0 ? void 0 : _c.length) ||
+                            filters.storyStatus.value.length) {
+                            link += "series-finder/?sf=1";
+                        }
+                        else if (showLatestNovels) {
+                            link += "latest-series/?st=1";
+                        }
+                        else {
+                            link += "series-ranking/?rank=week";
+                        }
+                        ;
+                        if (filters.language.value.length)
+                            link += '&org=' + filters.language.value.join(',');
+                        if (filters.novelType.value.length)
+                            link += '&nt=' + filters.novelType.value.join(',');
+                        if ((_d = filters.genres.value.include) === null || _d === void 0 ? void 0 : _d.length)
+                            link += '&gi=' + filters.genres.value.include.join(',');
+                        if ((_e = filters.genres.value.exclude) === null || _e === void 0 ? void 0 : _e.length)
+                            link += '&ge=' + filters.genres.value.exclude.join(',');
+                        if (((_f = filters.genres.value.include) === null || _f === void 0 ? void 0 : _f.length) || ((_g = filters.genres.value.exclude) === null || _g === void 0 ? void 0 : _g.length))
+                            link += '&mgi=' + filters.genre_operator.value;
+                        if (filters.storyStatus.value.length)
+                            link += '&ss=' + filters.storyStatus.value;
+                        link += '&sort=' + filters.sort.value;
+                        link += '&order=' + filters.order.value;
+                        link += '&pg=' + page;
+                        headers = new Headers();
+                        return [4 /*yield*/, (0, fetch_1.fetchApi)(link, { headers: headers }).then(function (result) {
+                                return result.text();
+                            })];
                     case 1:
-                        result = _b.sent();
-                        return [4 /*yield*/, result.text()];
-                    case 2:
-                        body = _b.sent();
+                        body = _h.sent();
                         loadedCheerio = (0, cheerio_1.load)(body);
-                        novels = [];
-                        loadedCheerio("div.search_main_box_nu").each(function (idx, ele) {
-                            var novelCover = loadedCheerio(ele).find("img").attr("src");
-                            var novelName = loadedCheerio(ele).find(".search_title > a").text();
-                            var novelUrl = loadedCheerio(ele)
-                                .find(".search_title > a")
-                                .attr("href");
-                            if (!novelUrl)
-                                return;
-                            var novel = {
-                                name: novelName,
-                                cover: novelCover,
-                                url: novelUrl,
-                            };
-                            novels.push(novel);
-                        });
-                        return [2 /*return*/, novels];
+                        return [2 /*return*/, this.parseNovels(loadedCheerio)];
                 }
             });
         });
@@ -269,7 +272,7 @@ var NovelUpdates = /** @class */ (function () {
                         formData.append("action", "nd_getchapters");
                         formData.append("mygrr", "0");
                         formData.append("mypostid", novelId);
-                        link = "https://www.novelupdates.com/wp-admin/admin-ajax.php";
+                        link = "".concat(this.site, "wp-admin/admin-ajax.php");
                         return [4 /*yield*/, (0, fetch_1.fetchApi)(link, {
                                 method: "POST",
                                 body: formData,
@@ -422,39 +425,22 @@ var NovelUpdates = /** @class */ (function () {
             });
         });
     };
-    NovelUpdates.prototype.searchNovels = function (searchTerm, pageNo) {
+    NovelUpdates.prototype.searchNovels = function (searchTerm, page) {
         return __awaiter(this, void 0, void 0, function () {
-            var url, result, body, loadedCheerio, novels;
+            var url, headers, result, body, loadedCheerio;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        url = "https://www.novelupdates.com/?s=" +
-                            searchTerm +
-                            "&post_type=seriesplans";
-                        return [4 /*yield*/, (0, fetch_1.fetchApi)(url)];
+                        url = "".concat(this.site, "page/").concat(page, "/?s=").concat(searchTerm, "&post_type=seriesplans");
+                        headers = new Headers();
+                        return [4 /*yield*/, (0, fetch_1.fetchApi)(url, { headers: headers })];
                     case 1:
                         result = _a.sent();
                         return [4 /*yield*/, result.text()];
                     case 2:
                         body = _a.sent();
                         loadedCheerio = (0, cheerio_1.load)(body);
-                        novels = [];
-                        loadedCheerio("div.search_main_box_nu").each(function () {
-                            var _a;
-                            var novelCover = loadedCheerio(this).find("img").attr("src");
-                            var novelName = loadedCheerio(this).find(".search_title > a").text();
-                            var novelUrl = (_a = loadedCheerio(this)
-                                .find(".search_title > a")
-                                .attr("href")) === null || _a === void 0 ? void 0 : _a.split("/")[4];
-                            if (!novelUrl)
-                                return;
-                            novels.push({
-                                name: novelName,
-                                url: novelUrl,
-                                cover: novelCover,
-                            });
-                        });
-                        return [2 /*return*/, novels];
+                        return [2 /*return*/, this.parseNovels(loadedCheerio)];
                 }
             });
         });
