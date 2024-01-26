@@ -2,25 +2,21 @@ import { CheerioAPI, load as parseHTML } from "cheerio";
 import { fetchText, fetchFile } from "@libs/fetch";
 import { FilterTypes, Filters } from "@libs/filterInputs";
 import { Plugin } from "@typings/plugin";
+import { NovelStatus } from "@libs/novelStatus";
 
 class Linovelib implements Plugin.PluginBase {
     id = "linovelib";
     name = "Linovelib";
     icon = "src/cn/linovelib/icon.png";
     site = "https://www.bilinovel.com";
-    version = "1.0.1";
+    version = "1.0.2";
 
     async popularNovels(
         pageNo: number,
         { filters }: Plugin.PopularNovelsOptions<typeof this.filters>
     ): Promise<Plugin.NovelItem[]> {
-        let link = `${this.site}/top/`;
-
-        link += filters.sort.value;
-
-        link += `/${pageNo}.html`;
-
-        const body = await fetchText(link);
+        const url = `${this.site}/top/${filters.rank.value}/${pageNo}.html`;
+        const body = await fetchText(url);
 
         const loadedCheerio = parseHTML(body);
 
@@ -73,7 +69,7 @@ class Linovelib implements Plugin.PluginBase {
         ).text();
 
         const meta = loadedCheerio("#bookDetailWrapper .book-meta").text()
-        novel.status = meta.includes("完结") ? "完结" : "连载";
+        novel.status = meta.includes("完结") ? NovelStatus.Completed : NovelStatus.Ongoing;
 
         novel.genres = loadedCheerio(".tag-small.red")
             .children("a")
@@ -528,8 +524,8 @@ class Linovelib implements Plugin.PluginBase {
     }
 
     filters = {
-        sort: {
-            label: "Sort By",
+        rank: {
+            label: "排行榜",
             value: "monthvisit",
             options: [
                 { label: "月点击榜", value: "monthvisit" },
