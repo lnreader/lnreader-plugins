@@ -6,12 +6,13 @@
     --light-text-color: rgb(232, 230, 227);
     --dark-border-color: rgb(60, 65, 68);
     --hr-color: rgb(50, 55, 57);
+    --dark-label-color: lightblue;
 }
 
 .darkmode {
     color-scheme: dark;
     background-color: var(--main-bg);
-    .headerinfo span[contenteditable="true"]{
+    .headerinfo span[contenteditable="true"] {
         border: 1px solid #fff2;
     }
     select,
@@ -41,8 +42,16 @@
         }
     }
     #search-results {
-        background-color: var(--main-bg);
         color: var(--text-color);
+        background-color: transparent;
+        button {
+            background-color: var(--hr-color);
+            color: var(--dark-label-color);
+            font-weight: bolder;
+        }
+    }
+    #darkstyletoggle {
+        color: var(--dark-label-color);
     }
     .chapter-item {
         .info-item,
