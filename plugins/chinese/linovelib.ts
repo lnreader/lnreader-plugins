@@ -9,14 +9,20 @@ class Linovelib implements Plugin.PluginBase {
     name = "Linovelib";
     icon = "src/cn/linovelib/icon.png";
     site = "https://www.bilinovel.com";
-    version = "1.0.2";
+    version = "1.1.0";
 
     async popularNovels(
         pageNo: number,
-        { filters }: Plugin.PopularNovelsOptions<typeof this.filters>
+        {
+            showLatestNovels,
+            filters,
+        }: Plugin.PopularNovelsOptions<typeof this.filters>
     ): Promise<Plugin.NovelItem[]> {
-        const url = `${this.site}/top/${filters.rank.value}/${pageNo}.html`;
+        const rank = showLatestNovels ? 'lastupdate' : filters.rank.value;
+        const url = `${this.site}/top/${rank}/${pageNo}.html`;
+
         const body = await fetchText(url);
+        if (body === '') throw Error('无法获取小说列表，请检查网络');
 
         const loadedCheerio = parseHTML(body);
 
@@ -47,7 +53,9 @@ class Linovelib implements Plugin.PluginBase {
 
     async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
         const url = novelUrl;
+
         const body = await fetchText(url);
+        if (body === '') throw Error('无法获取小说内容，请检查网络');
 
         let loadedCheerio = parseHTML(body);
 
@@ -427,10 +435,12 @@ class Linovelib implements Plugin.PluginBase {
 
     async searchNovels(
         searchTerm: string,
-        pageNo?: number | undefined
+        pageNo: number
     ): Promise<Plugin.NovelItem[]> {
         const url = `${this.site}/search/${encodeURI(searchTerm)}_${pageNo}.html`;
+
         const body = await fetchText(url);
+        if (body === '') throw Error('无法获取搜索结果，请检查网络');
 
         const pageCheerio = parseHTML(body);
 
@@ -529,27 +539,16 @@ class Linovelib implements Plugin.PluginBase {
             value: "monthvisit",
             options: [
                 { label: "月点击榜", value: "monthvisit" },
-
                 { label: "周点击榜", value: "weekvisit" },
-
                 { label: "月推荐榜", value: "monthvote" },
-
                 { label: "周推荐榜", value: "weekvote" },
-
                 { label: "月鲜花榜", value: "monthflower" },
-
                 { label: "周鲜花榜", value: "weekflower" },
-
                 { label: "月鸡蛋榜", value: "monthegg" },
-
                 { label: "周鸡蛋榜", value: "weekegg" },
-
                 { label: "最近更新", value: "lastupdate" },
-
                 { label: "最新入库", value: "postdate" },
-
                 { label: "收藏榜", value: "goodnum" },
-
                 { label: "新书榜", value: "newhot" },
             ],
             type: FilterTypes.Picker,

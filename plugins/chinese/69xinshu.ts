@@ -10,7 +10,7 @@ class XinShu69 implements Plugin.PluginBase {
     name = "69书吧";
     icon = "src/cn/69xinshu/icon.png";
     site = "https://www.69xinshu.com";
-    version = "0.1.0";
+    version = "0.1.1";
 
     async popularNovels(
         pageNo: number,
@@ -24,7 +24,7 @@ class XinShu69 implements Plugin.PluginBase {
         }
 
         const body = await fetchText(url, {}, 'gbk');
-        if (body === '') throw Error('无法获取小说内容，请检查网络');
+        if (body === '') throw Error('无法获取小说列表，请检查网络');
 
         const loadedCheerio = parseHTML(body);
 
@@ -119,36 +119,36 @@ class XinShu69 implements Plugin.PluginBase {
     }
 
     async parseChapter(chapterUrl: string): Promise<string> {
-        const url = chapterUrl;
-        const body = await fetchText(url, {}, 'gbk');
+        const body = await fetchText(chapterUrl, {}, 'gbk');
 
         const loadedCheerio = parseHTML(body);
 
-        const chapterText = loadedCheerio('div.txtnav').prop('innerText') ?? '';
-        // remove empty lines
-        let lines = chapterText.split('\n').map((line: string) => line.trim()).filter((line: string) => line.length > 0);
-        // remove the first two lines which are the chapter name and author name
-        lines = lines.slice(2);
+        const chapterText = (loadedCheerio('div.txtnav').prop('innerText') ?? '')
+            .split('\n')
+            // remove empty lines
+            .map((line: string) => line.trim())
+            .filter((line: string) => line !== '')
+            // remove the first two lines which are the chapter name and author name
+            .slice(2)
+            .map((line: string) => `<p>${line}</p>`)
+            .join('\n');
 
-        let parsedText = '';
-        for (let line of lines) {
-            parsedText += `<p>${line}</p>`;
-        }
-
-        return parsedText;
+        return chapterText;
     };
 
     async searchNovels(
         searchTerm: string,
-        pageNo?: number | undefined
+        pageNo: number
     ): Promise<Plugin.NovelItem[]> {
+        if (pageNo > 1) return [];
+
         const searchUrl = `${this.site}/modules/article/search.php`;
         const formData = new FormData();
         formData.append('searchkey', encode(searchTerm, 'gbk'));
         formData.append('searchtype', 'all');
 
         const body = await fetchText(searchUrl, { method: 'post', body: formData, }, 'gbk');
-        if (body === '') throw Error('无法获取小说内容，请检查网络');
+        if (body === '') throw Error('无法获取搜索结果，请检查网络');
 
         let loadedCheerio = parseHTML(body);
 
@@ -179,29 +179,17 @@ class XinShu69 implements Plugin.PluginBase {
             value: "0",
             options: [
                 { label: "全部分类", value: "0" },
-
                 { label: "言情小说", value: "3" },
-
                 { label: "玄幻魔法", value: "1" },
-
                 { label: "修真武侠", value: "2" },
-
                 { label: "穿越时空", value: "11" },
-
                 { label: "都市小说", value: "9" },
-
                 { label: "历史军事", value: "4" },
-
                 { label: "游戏竞技", value: "5" },
-
                 { label: "科幻空间", value: "6" },
-
                 { label: "悬疑惊悚", value: "7" },
-
                 { label: "同人小说", value: "8" },
-
                 { label: "官场职场", value: "10" },
-
                 { label: "青春校园", value: "12" },
             ],
             type: FilterTypes.Picker,

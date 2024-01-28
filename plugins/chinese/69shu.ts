@@ -9,21 +9,26 @@ class Shu69 implements Plugin.PluginBase {
     name = "69书吧";
     icon = "src/cn/69shu/icon.png";
     site = "https://www.69shu.xyz";
-    version = "0.1.0";
+    version = "0.2.0";
 
     async popularNovels(
         pageNo: number,
-        { filters }: Plugin.PopularNovelsOptions<typeof this.filters>
+        {
+            showLatestNovels,
+            filters,
+        }: Plugin.PopularNovelsOptions<typeof this.filters>
     ): Promise<Plugin.NovelItem[]> {
         let url: string;
-        if (filters.sort.value === 'none') {
+        if (showLatestNovels) {
+            url = `${this.site}/rank/lastupdate/${pageNo}.html`;
+        } else if (filters.sort.value === 'none') {
             url = `${this.site}/rank/${filters.rank.value}/${pageNo}.html`;
         } else {
             url = `${this.site}/sort/${filters.sort.value}/${pageNo}.html`;
         }
 
         const body = await fetchText(url);
-        if (body === '') throw Error('无法获取小说内容，请检查网络');
+        if (body === '') throw Error('无法获取小说列表，请检查网络');
 
         const loadedCheerio = parseHTML(body);
 
@@ -116,20 +121,28 @@ class Shu69 implements Plugin.PluginBase {
     }
 
     async parseChapter(chapterUrl: string): Promise<string> {
-        const url = chapterUrl;
-        const body = await fetchText(url);
+        const body = await fetchText(chapterUrl);
 
         const loadedCheerio = parseHTML(body);
 
-        const chapterText = loadedCheerio('#chaptercontent').html() || '';
+        const chapterText = loadedCheerio('#chaptercontent p')
+            .map((i, el) => loadedCheerio(el).text())
+            .get()
+            // remove empty lines and 69shu ads
+            .map((line: string) => line.trim())
+            .filter((line: string) => line !== '' && !line.includes('69书吧'))
+            .map((line: string) => `<p>${line}</p>`)
+            .join('\n');
 
         return chapterText;
     };
 
     async searchNovels(
         searchTerm: string,
-        pageNo?: number | undefined
+        pageNo: number
     ): Promise<Plugin.NovelItem[]> {
+        if (pageNo > 1) return [];
+
         const searchUrl = `${this.site}/search`;
         const formData = new FormData();
         formData.append('searchkey', searchTerm);
@@ -138,8 +151,7 @@ class Shu69 implements Plugin.PluginBase {
             method: 'post',
             body: formData,
         });
-        if (body === '') throw Error('无法获取小说内容，请检查网络');
-
+        if (body === '') throw Error('无法获取搜索结果，请检查网络');
 
         let loadedCheerio = parseHTML(body);
 
@@ -174,21 +186,13 @@ class Shu69 implements Plugin.PluginBase {
             value: "allvisit",
             options: [
                 { label: "总排行榜", value: "allvisit" },
-
                 { label: "月排行榜", value: "monthvisit" },
-
                 { label: "周排行榜", value: "weekvisit" },
-
                 { label: "日排行榜", value: "dayvisit" },
-
                 { label: "收藏榜", value: "goodnum" },
-
                 { label: "字数榜", value: "words" },
-
                 { label: "推荐榜", value: "allvote" },
-
                 { label: "新书榜", value: "postdate" },
-
                 { label: "更新榜", value: "lastupdate" },
             ],
             type: FilterTypes.Picker,
@@ -198,25 +202,15 @@ class Shu69 implements Plugin.PluginBase {
             value: "none",
             options: [
                 { label: "无", value: "none" },
-
                 { label: "全部", value: "all" },
-
                 { label: "玄幻", value: "xuanhuan" },
-
                 { label: "仙侠", value: "xianxia" },
-
                 { label: "都市", value: "dushi" },
-
                 { label: "历史", value: "lishi" },
-
                 { label: "游戏", value: "youxi" },
-
                 { label: "科幻", value: "kehuan" },
-
                 { label: "灵异", value: "kongbu" },
-
                 { label: "言情", value: "nvsheng" },
-
                 { label: "其它", value: "qita" },
             ],
             type: FilterTypes.Picker,
