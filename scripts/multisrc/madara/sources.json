@@ -5419,5 +5419,115 @@
         "options": {
             "lang": "Turkish"
         }
+    },
+    {
+        "id": "kiniga",
+        "sourceSite": "https://kiniga.com/",
+        "sourceName": "Kiniga",
+        "filters": {
+            "sort": {
+                "label": "Orden por",
+                    "options": [
+                    { "label": "Relevância", "value": "" },
+                    {
+                        "label": "A-Z",
+                        "value": "alphabet"
+                    },
+                    {
+                        "label": "Mais Antigo",
+                        "value": "latest"
+                    },
+                    {
+                        "label": "Mais vistos",
+                        "value": "views"
+                    },
+                    {
+                        "label": "Tendência",
+                        "value": "trending"
+                    },
+                    {
+                        "label": "Avaliação",
+                        "value": "rating"
+                    },
+                    {
+                        "label": "Novo",
+                        "value": "new-manga"
+                    }
+                ],
+                "value": "",
+                "type": "Picker"
+            },
+            "genres": {
+                "label": "Generos",
+                "options": [
+                    { "label": "Sem Filtro", "value": "" },
+                    { "label": "Ação", "value": "action" },
+                    { "label": "Artes Marciais", "value": "artes-marciais" },
+                    { "label": "Aventura", "value": "aventura" },
+                    { "label": "Comédia", "value": "comedia" },
+                    { "label": "Contemporâneo", "value": "contemporaneo" },
+                    { "label": "Contos Originais", "value": "contos-originais" },
+                    { "label": "Crime", "value": "crime" },
+                    { "label": "Cyberpunk", "value": "cyberpunk" },
+                    { "label": "Destaque", "value": "destaque" },
+                    { "label": "Distopia", "value": "distopia" },
+                    { "label": "Drama", "value": "drama" },
+                    { "label": "Ecchi", "value": "ecchi" },
+                    { "label": "Espacial", "value": "espacial" },
+                    { "label": "Esportes", "value": "esportes" },
+                    { "label": "Fanfic", "value": "fanfic" },
+                    { "label": "Fantasia", "value": "fantasia" },
+                    { "label": "Ficção Científica", "value": "ficcao-cientifica" },
+                    { "label": "Gastronomia", "value": "gastronomia" },
+                    { "label": "Harem", "value": "harem" },
+                    { "label": "Histórico", "value": "historico" },
+                    { "label": "Horror", "value": "horror" },
+                    { "label": "Infantil", "value": "infantil" },
+                    { "label": "Isekai", "value": "isekai" },
+                    { "label": "Jogos", "value": "jogos" },
+                    { "label": "LGBT+", "value": "lgbt" },
+                    { "label": "Magia", "value": "magia" },
+                    { "label": "Mecha", "value": "mecha" },
+                    { "label": "Medieval", "value": "medieval" },
+                    { "label": "Militar", "value": "militar" },
+                    { "label": "Mistério", "value": "misterio" },
+                    { "label": "Mitologia", "value": "mitologia" },
+                    { "label": "Moderno", "value": "moderno" },
+                    { "label": "Pós-Apocalíptico", "value": "pos-apocaliptico" },
+                    { "label": "Psicológico", "value": "psicologico" },
+                    { "label": "Realidade Virtual", "value": "realidade-virtual" },
+                    { "label": "Recomendado", "value": "recomendado" },
+                    { "label": "Romance", "value": "romance" },
+                    { "label": "RPG", "value": "rpg" },
+                    { "label": "Ficção Científica", "value": "sci-fi" },
+                    { "label": "Seinen", "value": "seinen" },
+                    { "label": "Shounen", "value": "shounen" },
+                    { "label": "Sistema de Jogo", "value": "sistema-de-jogo" },
+                    { "label": "Slice of Life", "value": "slice-of-life" },
+                    { "label": "SNKHome", "value": "snkhome" },
+                    { "label": "Sobrenatural", "value": "sobrenatural" },
+                    { "label": "Somente na Kiniga", "value": "somente-na-kiniga" },
+                    { "label": "Suspense", "value": "suspense" },
+                    { "label": "Terror", "value": "terror" },
+                    { "label": "Terror Psicológico", "value": "terror-psicologico" },
+                    { "label": "Traduções", "value": "traducoes" },
+                    { "label": "Tragédia", "value": "tragedia" },
+                    { "label": "Urbano", "value": "urbano" },
+                    { "label": "Vida Escolar", "value": "vida-escolar" }
+                ],
+                "value": "",
+                "type": "Picker"
+            }
+        },
+        "options": {
+            "path": {
+                "novels": "projetos",
+                "novel": "projeto",
+                "chapter": "capitulo",
+                "genres": "genero"
+            },
+            "lang": "Portuguese"
+        }
     }
 ]
+
