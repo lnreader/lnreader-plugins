@@ -9,7 +9,7 @@ class Linovelib implements Plugin.PluginBase {
     name = "Linovelib";
     icon = "src/cn/linovelib/icon.png";
     site = "https://www.bilinovel.com";
-    version = "1.1.0";
+    version = "1.1.1";
 
     async popularNovels(
         pageNo: number,
@@ -407,7 +407,13 @@ class Linovelib implements Plugin.PluginBase {
         };
 
         const loadPage = async (url: string) => {
-            const body = await fetchText(url);
+            const headers = {
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "Accept-Language": "zh-CN,zh;q=0.9,zh-TW;q=0.8,zh-HK;q=0.7,en;q=0.6,en-GB;q=0.5,en-US;q=0.4",
+                "Cache-Control": "no-cache",
+            }
+
+            const body = await fetchText(url, { headers });
             const pageCheerio = parseHTML(body);
             await addPage(pageCheerio);
             pageHasNextPage =
