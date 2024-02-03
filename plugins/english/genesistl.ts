@@ -2,6 +2,7 @@ import { CheerioAPI, load as parseHTML } from "cheerio";
 import { fetchApi, fetchFile } from "@libs/fetch";
 import { FilterTypes, Filters } from "@libs/filterInputs";
 import { Plugin } from "@typings/plugin";
+import dayjs from "dayjs";
 class Genesis implements Plugin.PluginBase {
     id = "genesistls";
     name = "GenesisTLs";
@@ -103,7 +104,9 @@ class Genesis implements Plugin.PluginBase {
             
                     chapter.push({
                         name: chapterName,
-                        releaseTime: new Date(releaseDate).toISOString(),
+
+                        releaseTime: dayjs(releaseDate).toISOString(),
+
                         url: chapterUrl,
                     });
                 });
@@ -123,6 +126,7 @@ class Genesis implements Plugin.PluginBase {
         pageNo: number
     ): Promise<Plugin.NovelItem[]> {
         const url = `${this.site}page/${pageNo}/?s=${searchTerm}`;
+
         const result = await fetchApi(url);
         const body = await result.text();
 
@@ -169,6 +173,7 @@ class Genesis implements Plugin.PluginBase {
         genres: {
             label: "Genres",
             options: [
+
                 { label: "Academy", value: "academy" },
                 { label: "Action", value: "action" },
                 { label: "Adult", value: "adult" },
