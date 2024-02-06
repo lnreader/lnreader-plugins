@@ -2,15 +2,11 @@ $current=$(git rev-parse --abbrev-ref HEAD)
 $dist='dist'
 $exists=$(git show-ref refs/heads/$dist)
 
-echo $current
-echo $exists
-
 if  ($exists){
-    git checkout $dist
-}else{
-    ## Make a new one
-    git checkout -b $dist
+    git branch -D $dist
 }
+
+git checkout --orphan $dist
 
 if(-Not $?){
     # If checkout failed
@@ -19,14 +15,14 @@ if(-Not $?){
     exit 1
 }
 
-git merge $current --strategy-option theirs
-
+git reset
+rm -r -fo .js
+npm run clearMultisrc
 npm run generate
 npm run json
-git add .
-git add -f .dist .js/plugins
-git commit -m "Update plugins host"
+git add -f icons .dist .js/plugins
+git commit -m "Host plugins"
 git push -f origin $dist
 
-git checkout $current
+git checkout -f $current
 

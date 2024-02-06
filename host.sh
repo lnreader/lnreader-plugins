@@ -3,10 +3,10 @@ dist=dist
 exists=`git show-ref refs/heads/$dist`
 
 if [ -n "$exists" ]; then
-    git checkout $dist
-else
-    git checkout -b $dist
+    git branch -D $dist
 fi
+
+git checkout --orphan $dist
 
 if [ $? -eq 1 ]; then
     # If checkout failed
@@ -15,15 +15,14 @@ if [ $? -eq 1 ]; then
     exit 1
 fi
 
-git merge $current --strategy-option theirs
-
-npm run clearMulti
+git reset
+rm -rf .js
+npm run clearMultisrc
 npm run generate
 npm run json
-git add .
-git add -f .dist .js/plugins
-git commit -m "Update plugins host"
+git add -f icons .dist .js/plugins
+git commit -m "Host plugins"
 git push -f origin $dist
 
-git checkout $current
+git checkout -f $current
 

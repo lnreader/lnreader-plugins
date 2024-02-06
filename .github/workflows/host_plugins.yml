@@ -1,4 +1,4 @@
-name: Update Plugins
+name: Host Plugins
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - master
 
 jobs:
-  updatehost:
+  host:
     if: github.repository == 'LNReader/lnreader-sources'
     runs-on: ubuntu-latest
     steps:
@@ -19,7 +19,7 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Update plugins host
+      - name: Host plugins
         run: |
           git config user.name "github-actions[bot]"
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com

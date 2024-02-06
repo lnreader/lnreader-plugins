@@ -71,8 +71,8 @@ app.post("/popularNovels/", async (req, res) => {
             filters,
         });
         res.json(novels);
-    } catch (err) {
-        res.json({ error: err });
+    } catch (err: unknown) {
+        res.json({ error: String(err) });
     }
 });
 app.post("/searchNovels/", async (req, res) => {
@@ -84,8 +84,8 @@ app.post("/searchNovels/", async (req, res) => {
             req.body["searchTerm"]
         );
         res.json(novels);
-    } catch (err) {
-        res.json({ error: err });
+    } catch (err: unknown) {
+        res.json({ error: String(err) });
     }
 });
 app.post("/parseNovelAndChapters/", async (req, res) => {
@@ -95,8 +95,8 @@ app.post("/parseNovelAndChapters/", async (req, res) => {
             req.body["novelUrl"]
         );
         res.json(sourceNovel);
-    } catch (err) {
-        res.json({ error: err });
+    } catch (err: unknown) {
+        res.json({ error: String(err) });
     }
 });
 app.post("/parseChapter/", async (req, res) => {
@@ -106,8 +106,8 @@ app.post("/parseChapter/", async (req, res) => {
             req.body["chapterUrl"]
         );
         res.send(chapterText);
-    } catch (err) {
-        res.json({ error: err });
+    } catch (err: unknown) {
+        res.json({ error: String(err) });
     }
 });
 app.post("/fetchImage/", async (req, res) => {
@@ -117,8 +117,8 @@ app.post("/fetchImage/", async (req, res) => {
             req.body["url"]
         );
         res.send(base64);
-    } catch (err) {
-        res.json({ error: err });
+    } catch (err: unknown) {
+        res.json({ error: String(err) });
     }
 });
 

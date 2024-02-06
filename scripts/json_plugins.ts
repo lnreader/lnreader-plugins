@@ -11,13 +11,18 @@ const { execSync } = require("child_process");
 const REMOTE = execSync("git remote get-url origin")
   .toString()
   .replace(/[\s\n]/g, "");
-const CURRENT_BRANCH = execSync("git rev-parse --abbrev-ref HEAD")
-  .toString()
-  .replace(/[\s\n]/g, "");
-const USERNAME = REMOTE.split("/")[3].trim();
-const REPO = REMOTE.split("/")[4]
-  .trim()
-  .replace(/\.git$/, "");
+let CURRENT_BRANCH = 'dist';
+try {
+  CURRENT_BRANCH = execSync("git rev-parse --abbrev-ref HEAD")
+    .toString()
+    .replace(/[\s\n]/g, "");
+}catch {
+  //
+}
+const matched = REMOTE.match(/github\.com[:/](.+?)\/(.+?)\.git/);
+if(!matched) throw Error("Cant parse git url");
+const USERNAME = matched[1];
+const REPO = matched[2];
 const USER_CONTENT_LINK = `https://raw.githubusercontent.com/${USERNAME}/${REPO}/${CURRENT_BRANCH}`;
 
 const ICON_LINK = `${USER_CONTENT_LINK}/icons`;
