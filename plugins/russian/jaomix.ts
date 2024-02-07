@@ -3,6 +3,7 @@ import { FilterTypes, Filters } from "@libs/filterInputs";
 import { fetchApi, fetchFile } from "@libs/fetch";
 import { NovelStatus } from "@libs/novelStatus";
 import { load as parseHTML } from "cheerio";
+import dayjs from "dayjs";
 
 class Jaomix implements Plugin.PluginBase {
   id = "jaomix.ru";
@@ -98,8 +99,13 @@ class Jaomix implements Plugin.PluginBase {
       const url = loadedCheerio(element).find("a").attr("href");
       if (!name || !url) return;
 
-      const releaseTime = loadedCheerio(element).find("time").text();
-      chapters.push({ name, url, releaseTime, chapterNumber: totalChapters - chapterIndex });
+      const releaseDate = loadedCheerio(element).find("time").text();
+      chapters.push({ 
+        name, 
+        url, 
+        releaseTime: this.parseDate(releaseDate), 
+        chapterNumber: totalChapters - chapterIndex 
+      });
     });
 
     novel.chapters = chapters.reverse();
@@ -146,6 +152,31 @@ class Jaomix implements Plugin.PluginBase {
 
     return novels;
   }
+
+  parseDate = (dateString: string | undefined = "") => {
+    const months: { [key: string]: number } = {
+      Янв: 1,
+      Фев: 2,
+      Мар: 3,
+      Апр: 4,
+      Май: 5,
+      Июн: 6,
+      Июл: 7,
+      Авг: 8,
+      Сен: 9,
+      Окт: 10,
+      Ноя: 11,
+      Дек: 12,
+    };
+
+    const [time, day, month, year] = dateString.split(" ");
+    if (time && day && months[month] && year) {
+      return dayjs(year + "-" + months[month] + "-" + day + " " + time).format("LLL");
+    }
+
+    return dateString || null;
+  };
+
   fetchImage = fetchFile;
 
   filters = {

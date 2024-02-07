@@ -4,6 +4,7 @@ import { fetchApi, fetchFile } from "@libs/fetch";
 import { NovelStatus } from "@libs/novelStatus";
 import { load as parseHTML } from "cheerio";
 import { defaultCover } from "@libs/defaultCover";
+import dayjs from "dayjs";
 
 class ficbook implements Plugin.PluginBase {
   id = "ficbook";
@@ -99,7 +100,10 @@ class ficbook implements Plugin.PluginBase {
 
         const releaseTime = loadedCheerio(element).find("div > span").attr("title");
         chapters.push({ 
-          name, url: this.site + url, releaseTime, chapterNumber: chapterIndex + 1,
+          name, 
+          url: this.site + url, 
+          releaseTime, 
+          chapterNumber: chapterIndex + 1,
         });
       });
 
@@ -160,6 +164,30 @@ class ficbook implements Plugin.PluginBase {
 
     return novels;
   }
+
+  parseDate = (dateString: string | undefined = "") => {
+    const months: { [key: string]: number } = {
+      января: 1,
+      февраля: 2,
+      марта: 3,
+      апреля: 4,
+      мая: 5,
+      июня: 6,
+      июля: 7,
+      августа: 8,
+      сентября: 9,
+      октября: 10,
+      ноября: 11,
+      декабря: 12,
+    };
+
+    const [day, month, year, , time] = dateString.split(" ");
+    if (day && month && year && months[month] && time) {
+      return dayjs(year + "-" + months[month] + "-" + day + " " + time).format("LLL");
+    }
+    return dateString || null;
+  };
+
   fetchImage = fetchFile;
 
   filters = {

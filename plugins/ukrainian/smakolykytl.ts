@@ -66,13 +66,13 @@ class Smakolykytl implements Plugin.PluginBase {
       "https://api.smakolykytl.site/api/user/projects/" + id + "/books",
     );
     const data = (await res.json()) as response;
-    data?.books?.forEach(
-      (volume) =>
-        volume?.chapters?.map((chapter) =>
+    data?.books?.forEach((volume) =>
+        volume?.chapters?.forEach((chapter) =>
           chapters.push({
             name: volume.title + " " + chapter.title,
-            releaseTime: dayjs(chapter.modifiedAt).format("LLL"),
             url: this.site + "read/" + chapter.id,
+            releaseTime: dayjs(chapter.modifiedAt).format("LLL"),
+            chapterNumber: chapters.length + 1,
           }),
         ),
     );

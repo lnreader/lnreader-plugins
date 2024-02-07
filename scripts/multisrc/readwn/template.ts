@@ -139,7 +139,7 @@ class ReadwnPlugin implements Plugin.PluginBase {
         return {
           name,
           url: this.site + url,
-          releaseTime: releaseTime,
+          releaseTime,
           chapterNumber: chapterIndex + 1,
         };
       })

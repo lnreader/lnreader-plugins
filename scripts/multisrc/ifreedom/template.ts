@@ -3,7 +3,7 @@ import { Filters, FilterTypes } from "@libs/filterInputs";
 import { Plugin } from "@typings/plugin";
 import { NovelStatus } from "@libs/novelStatus";
 import { load as parseHTML } from "cheerio";
-// import { defaultCover } from "@libs/defaultCover";
+import dayjs from "dayjs";
 
 export interface IfreedomMetadata {
   id: string;
@@ -105,8 +105,13 @@ class IfreedomPlugin implements Plugin.PluginBase {
       const name = loadedCheerio(element).find("a").text();
       const url = loadedCheerio(element).find("a").attr("href");
       if (!loadedCheerio(element).find("label.buy-ranobe").length && name && url) {
-        const releaseTime = loadedCheerio(element).find("div.li-col2-ranobe").text().trim();
-        chapters.push({ name, url, releaseTime, chapterNumber: totalChapters - chapterIndex });
+        const releaseDate = loadedCheerio(element).find("div.li-col2-ranobe").text().trim();
+        chapters.push({ 
+          name,
+          url,
+          releaseTime: this.parseDate(releaseDate),
+          chapterNumber: totalChapters - chapterIndex
+        });
       }
     });
 
@@ -155,6 +160,37 @@ class IfreedomPlugin implements Plugin.PluginBase {
 
     return novels;
   }
+
+  parseDate = (dateString: string | undefined = "") => {
+    const months: { [key: string]: number } = {
+      января: 1,
+      февраля: 2,
+      марта: 3,
+      апреля: 4,
+      мая: 5,
+      июня: 6,
+      июля: 7,
+      августа: 8,
+      сентября: 9,
+      октября: 10,
+      ноября: 11,
+      декабря: 12,
+    };
+
+    if (dateString.includes(".")) {
+      const [day, month, year] = dateString.split(".");
+      if (day && month && year) {
+        return dayjs(year + "-" + month + "-" + day).format("LL");
+      }
+    } else if (dateString.includes(" ")) {
+      const [day, month] = dateString.split(" ");
+      if (day && months[month]) {
+        const year = new Date().getFullYear();
+        return dayjs(year + "-" + months[month] + "-" + day).format("LL");
+      }
+    }
+    return dateString || null;
+  };
 
   fetchImage = fetchFile;
 }

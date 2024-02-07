@@ -156,7 +156,7 @@ class ReN implements Plugin.PluginBase {
     },
     order: {
       label: "Порядок",
-      value: "",
+      value: "-",
       options: [
         { label: "По убыванию", value: "-" },
         { label: "По возрастанию", value: "" },

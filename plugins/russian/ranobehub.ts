@@ -69,7 +69,7 @@ class RNBH implements Plugin.PluginBase {
     const json = (await result.json()) as { data: responseNovel };
 
     const novel: Plugin.SourceNovel = {
-      url: json.data.url,
+      url: novelUrl,
       name: json.data.names?.rus || json.data.names.eng,
       cover: json.data.posters.medium,
       summary: json.data.description,

@@ -68,7 +68,9 @@ class Bookriver implements Plugin.PluginBase {
         chapters.push({
           name: chapter.name,
           url: this.site + "/reader/" + book?.slug + "/" + chapter.chapterId,
-          releaseTime: dayjs(chapter?.firstPublishedAt || chapter.createdAt).format("LLL"),
+          releaseTime: dayjs(
+            chapter.firstPublishedAt || chapter.createdAt || undefined,
+          ).format("LLL"),
           chapterNumber: chapterIndex + 1,
         });
       }

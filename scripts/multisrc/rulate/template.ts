@@ -3,7 +3,7 @@ import { Filters, FilterTypes } from "@libs/filterInputs";
 import { Plugin } from "@typings/plugin";
 import { NovelStatus } from "@libs/novelStatus";
 import { load as parseHTML } from "cheerio";
-// import { defaultCover } from "@libs/defaultCover";
+import dayjs from "dayjs";
 
 export interface RulateMetadata {
   id: string;
@@ -152,7 +152,7 @@ class RulatePlugin implements Plugin.PluginBase {
         chapters.push({
           name: chapterName,
           url: this.site + chapterUrl,
-          releaseTime: releaseDate,
+          releaseTime: this.parseDate(releaseDate),
           chapterNumber: chapterIndex + 1,
         });
       }
@@ -209,6 +209,28 @@ class RulatePlugin implements Plugin.PluginBase {
 
     return novels;
   }
+
+  parseDate = (dateString: string | undefined = "") => {
+    const months: { [key: string]: number } = {
+      "янв.": 1,
+      "февр.": 2,
+      "мар.": 3,
+      "апр.": 4,
+      мая: 5,
+      "июн.": 6,
+      "июл.": 7,
+      "авг.": 8,
+      "сент.": 9,
+      "окт.": 10,
+      "нояб.": 11,
+      "дек.": 12,
+    };
+    const [day, month, year, , time] = dateString.split(" ");
+    if (day && months[month] && year && time) {
+      return dayjs(year + "-" + months[month] + "-" + day + " " + time).format("LLL");
+    }
+    return dateString || null;
+  };
 
   fetchImage = fetchFile;
 }
