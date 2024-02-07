@@ -11,10 +11,20 @@ type FetchInit = {
 };
 
 const makeInit = async (init?: FetchInit) => {
-    let defaultHeaders: Record<string, string> = {};
+    let defaultHeaders: Record<string, string> = {
+        'Connection': 'keep-alive',
+        'Accept': '*/*',
+        'Accept-Language': '*',
+        'Sec-Fetch-Mode': 'cors',
+        'Accept-Encoding': 'gzip, deflate',
+        'Cache-Control': 'max-age=0',
+    };
     try {
         const { getHeaders } = await import("../index.js");
-        defaultHeaders = getHeaders();
+        defaultHeaders = {
+            ...defaultHeaders,
+            ...getHeaders()
+        };
     } catch {
         // nothing to do
     }
