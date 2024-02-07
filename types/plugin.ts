@@ -5,13 +5,13 @@ export namespace Plugin {
         name: string;
         url: string;
         /**
+         * "YYYY-MM-DD" format or ISO string format
          * ```js
-         * Timestamp or string in ISO format 
-         * e.g: `1699792274365` or `2023-11-12T12:31:14.365Z` or `2030-11-12`
-         * or whatever you can create a Date object by new Date(releaseTime) or dayjs(releaseTime)
+         * chapter.releaseTime = '2023-12-02';
+         * chapter.releaseTime = new Date(2023, 12, 02).toISOString();
          * ```
          */
-        releaseTime?: string | number | null;
+        releaseTime?: string | null;
         chapterNumber?: number;
     }
     export interface NovelItem {
