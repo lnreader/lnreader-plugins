@@ -117,7 +117,7 @@ class Genesis implements Plugin.PluginBase {
                             "dec",
                         ];
                         const rx = new RegExp(
-                            `(${months.join("|")}).*? (\\d{2}).*?(\\d{4})`,
+                            `(${months.join("|")}).*? (\\d{1,2}).*?(\\d{4})`,
                             "i"
                         ).exec(releaseDate);
                         if (!rx) return;
