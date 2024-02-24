@@ -23,7 +23,7 @@ class FaqWikiUs implements Plugin.PluginBase {
 
     const novels: Plugin.NovelItem[] = loadedCheerio(".wp-block-table > table > tbody > tr")
         .map((index, element) => {
-            const name = loadedCheerio(element).find("strong").first().text();
+            const name = loadedCheerio(element).find('a').text().replace(/–\s+Chapter\s+List\s+–.*$/i,'');
             let cover = loadedCheerio(element).find("img").attr("data-ezsrc"); 
 
             // Remove the appended query string 
@@ -74,15 +74,27 @@ class FaqWikiUs implements Plugin.PluginBase {
     const body = await fetchApi(chapterUrl).then((res) => res.text());
     const loadedCheerio = parseHTML(body);
     loadedCheerio("span").remove();
-    // Target only <p> tags within .entry-content 
+
     const chapterParagraphs = loadedCheerio(".entry-content p");
 
-   // Extract text from individual paragraphs and join 
-    const chapterText = chapterParagraphs.map((index, element) => {
-        return loadedCheerio(element).text().trim();
-    }).get().join('\n\n'); // Add newlines between paragraphs
+    let chapterContent; // Variable to store the result
 
-    return chapterText;
+    if (chapterParagraphs.length < 5) { //some chapter in this site store their whole text in 1-4 <p>,  
+        chapterContent = chapterParagraphs.map((index, element) => {
+          const text = loadedCheerio(element).html()
+          return text; 
+      }).get().join('\n\n'); 
+    } 
+    
+    else {
+         // Multiple paragraphs case
+        chapterContent = chapterParagraphs.map((index, element) => {
+            const text = loadedCheerio(element).text().trim();
+            return `<p>${text}</p>`; 
+        }).get().join('\n\n'); 
+    }
+
+    return chapterContent;
   }
 
   async searchNovels(
@@ -93,7 +105,7 @@ class FaqWikiUs implements Plugin.PluginBase {
 
     const novels: Plugin.NovelItem[] = loadedCheerio(".wp-block-table > table > tbody > tr")
         .map((index, element) => {
-            const name = loadedCheerio(element).find("strong").first().text();
+            const name = loadedCheerio(element).find('a').text().replace(/–\s+Chapter\s+List\s+–.*$/i,'');
             let cover = loadedCheerio(element).find("img").attr("data-ezsrc"); 
 
             // Remove the appended query string 
