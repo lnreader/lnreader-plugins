@@ -1,0 +1,156 @@
+{
+  "filters": {
+    "genre[]": {
+      "type": "Checkbox",
+      "label": "النوع",
+      "value": [],
+      "options": [
+        {
+          "label": "+18",
+          "value": "18"
+        },
+        {
+          "label": "آليه",
+          "value": "آليه"
+        },
+        {
+          "label": "اكشن",
+          "value": "اكشن"
+        },
+        {
+          "label": "حريم",
+          "value": "حريم"
+        },
+        {
+          "label": "خيال",
+          "value": "خيال"
+        },
+        {
+          "label": "خيال علمي",
+          "value": "خيال-علمي"
+        },
+        {
+          "label": "دراما",
+          "value": "دراما"
+        },
+        {
+          "label": "رعب",
+          "value": "رعب"
+        },
+        {
+          "label": "رومانسي",
+          "value": "رومانسي"
+        },
+        {
+          "label": "سحر",
+          "value": "سحر"
+        },
+        {
+          "label": "شبه بشريه",
+          "value": "شبه-بشريه"
+        },
+        {
+          "label": "صيني",
+          "value": "صيني"
+        },
+        {
+          "label": "غموض",
+          "value": "غموض"
+        },
+        {
+          "label": "فان فيكشن",
+          "value": "فان-فيكشن"
+        },
+        {
+          "label": "فنون قتاليه",
+          "value": "فنون-قتاليه"
+        },
+        {
+          "label": "كوميديا",
+          "value": "كوميديا"
+        },
+        {
+          "label": "مغامره",
+          "value": "مغامره"
+        }
+      ]
+    },
+    "type[]": {
+      "type": "Checkbox",
+      "label": "النوع",
+      "value": [],
+      "options": [
+        {
+          "label": "روايات صينيه",
+          "value": "روايات-صينيه"
+        },
+        {
+          "label": "روايات كوريه",
+          "value": "روايات-كوريه"
+        },
+        {
+          "label": "روايات ويب",
+          "value": "روايات-ويب"
+        }
+      ]
+    },
+    "status": {
+      "type": "Picker",
+      "label": "الحالة",
+      "value": "",
+      "options": [
+        {
+          "label": "الكل",
+          "value": ""
+        },
+        {
+          "label": "Ongoing",
+          "value": "ongoing"
+        },
+        {
+          "label": "Hiatus",
+          "value": "hiatus"
+        },
+        {
+          "label": "Completed",
+          "value": "completed"
+        }
+      ]
+    },
+    "order": {
+      "type": "Picker",
+      "label": "ترتيب بواسطة",
+      "value": "",
+      "options": [
+        {
+          "label": "Default",
+          "value": ""
+        },
+        {
+          "label": "A-Z",
+          "value": "title"
+        },
+        {
+          "label": "Z-A",
+          "value": "titlereverse"
+        },
+        {
+          "label": "أخر التحديثات",
+          "value": "update"
+        },
+        {
+          "label": "المضاف حديثاً",
+          "value": "latest"
+        },
+        {
+          "label": "شائع",
+          "value": "popular"
+        },
+        {
+          "label": "{{advanced_search_series_order_by_rating_label}}",
+          "value": "rating"
+        }
+      ]
+    }
+  }
+}

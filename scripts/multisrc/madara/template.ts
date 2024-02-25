@@ -6,7 +6,6 @@ import { defaultCover } from "@libs/defaultCover";
 import { NovelStatus } from "@libs/novelStatus";
 import dayjs from "dayjs";
 
-const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 const includesAny = (str: string, keywords: string[]) =>
   new RegExp(keywords.join("|")).test(str);
 
@@ -38,6 +37,7 @@ export interface MadaraMetadata {
   options?: MadaraOptions;
   filters?: Filters;
 }
+
 class MadaraPlugin implements Plugin.PluginBase {
   id: string;
   name: string;
@@ -57,6 +57,7 @@ class MadaraPlugin implements Plugin.PluginBase {
     this.options = metadata.options;
     this.filters = metadata.filters;
   }
+
   async popularNovels(
     pageNo: number,
     {
@@ -69,8 +70,8 @@ class MadaraPlugin implements Plugin.PluginBase {
     let url = this.site;
     if (filters?.genres?.value) {
       url +=
-        (this.options?.path?.genres || MadaraDefaultPath.genres) +
-          "/" + filters.genres.value;
+        (this.options?.path?.genres || MadaraDefaultPath.genres) + "/" +
+        filters.genres.value;
     } else {
       url += this.options?.path?.novels || MadaraDefaultPath.novels;
     }
@@ -83,18 +84,19 @@ class MadaraPlugin implements Plugin.PluginBase {
 
     loadedCheerio(".manga-title-badges").remove();
 
-    loadedCheerio(".page-item-detail").each(function () {
-      const novelName = loadedCheerio(this).find(".post-title").text().trim();
-      const image = loadedCheerio(this).find("img");
-      const novelCover = image.attr("data-src") || image.attr("src");
+    loadedCheerio(".page-item-detail").each((index, element) => {
+      const novelName = loadedCheerio(element).find(".post-title").text().trim();
       const novelUrl =
-        loadedCheerio(this).find(".post-title").find("a").attr("href") || "";
+        loadedCheerio(element).find(".post-title").find("a").attr("href") || "";
       if (!novelName || !novelUrl) return;
+
+      const image = loadedCheerio(element).find("img");
+      const novelCover = image.attr("data-src") || image.attr("src");
 
       const novel: Plugin.NovelItem = {
         name: novelName,
         cover: novelCover,
-        url: novelUrl,
+        path: novelUrl.replace(this.site, ""),
       };
 
       novels.push(novel);
@@ -102,19 +104,18 @@ class MadaraPlugin implements Plugin.PluginBase {
 
     return novels;
   }
-  async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
-    const novel: Plugin.SourceNovel = {
-      url: novelUrl,
-    };
 
-    const body = await fetchApi(novelUrl).then((res) => res.text());
-
+  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+    const body = await fetchApi(this.site + novelPath).then((res) => res.text());
     let loadedCheerio = parseHTML(body);
 
     loadedCheerio(".manga-title-badges, #manga-title span").remove();
-    novel.name =
-      loadedCheerio(".post-title h1").text().trim() ||
-      loadedCheerio("#manga-title h1").text();
+    const novel: Plugin.SourceNovel = {
+      path: novelPath,
+      name:
+        loadedCheerio(".post-title h1").text().trim() ||
+        loadedCheerio("#manga-title h1").text(),
+    };
 
     novel.cover =
       loadedCheerio(".summary_image > a > img").attr("data-lazy-src") ||
@@ -161,7 +162,7 @@ class MadaraPlugin implements Plugin.PluginBase {
     let html = "";
 
     if (this.options?.useNewChapterEndpoint) {
-      html = await fetchApi(novelUrl + "ajax/chapters/", {
+      html = await fetchApi(this.site + novelPath + "ajax/chapters/", {
         method: "POST",
       }).then((res) => res.text());
     } else {
@@ -203,7 +204,7 @@ class MadaraPlugin implements Plugin.PluginBase {
 
       chapters.push({
         name: chapterName,
-        url: chapterUrl,
+        path: chapterUrl.replace(this.site, ""),
         releaseTime: releaseDate || null,
         chapterNumber: totalChapters - chapterIndex,
       });
@@ -212,8 +213,9 @@ class MadaraPlugin implements Plugin.PluginBase {
     novel.chapters = chapters.reverse();
     return novel;
   }
-  async parseChapter(chapterUrl: string): Promise<string> {
-    const body = await fetchApi(chapterUrl).then((res) => res.text());
+
+  async parseChapter(chapterPath: string): Promise<string> {
+    const body = await fetchApi(this.site + chapterPath).then((res) => res.text());
 
     const loadedCheerio = parseHTML(body);
     const chapterText =
@@ -225,6 +227,7 @@ class MadaraPlugin implements Plugin.PluginBase {
 
     return chapterText;
   }
+
   async searchNovels(
     searchTerm: string,
     pageNo?: number | undefined,
@@ -233,21 +236,19 @@ class MadaraPlugin implements Plugin.PluginBase {
     const url = this.site + "?s=" + searchTerm + "&post_type=wp-manga";
 
     const body = await fetchApi(url).then((res) => res.text());
-
     const loadedCheerio = parseHTML(body);
 
-    loadedCheerio(".c-tabs-item__content").each(function () {
-      const novelName = loadedCheerio(this).find(".post-title").text().trim();
-
-      let image = loadedCheerio(this).find("img");
+    loadedCheerio(".c-tabs-item__content").each((index, element) => {
+      const novelName = loadedCheerio(element).find(".post-title").text().trim();
+      const novelUrl = loadedCheerio(element).find(".post-title").find("a").attr("href") || "";
+      if (!novelName || !novelUrl) return;
+      let image = loadedCheerio(element).find("img");
       const novelCover = image.attr("data-src") || image.attr("src");
 
-      let novelUrl =
-        loadedCheerio(this).find(".post-title").find("a").attr("href") || "";
       const novel = {
         name: novelName,
         cover: novelCover,
-        url: novelUrl,
+        path: novelUrl.replace(this.site, ""),
       };
 
       novels.push(novel);

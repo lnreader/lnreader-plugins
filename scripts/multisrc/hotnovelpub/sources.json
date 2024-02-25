@@ -1,0 +1,387 @@
+[
+  {
+    "id": "hotnovelpub",
+    "sourceSite": "https://hotnovelpub.com",
+    "sourceName": "HotNovelPub",
+    "filters": {
+      "sort": {
+        "type": "Picker",
+        "label": "Order",
+        "value": "hot",
+        "options": [
+          {
+            "label": "Hot story",
+            "value": "hot"
+          },
+          {
+            "label": "New story",
+            "value": "new"
+          },
+          {
+            "label": "Full story",
+            "value": "full"
+          }
+        ]
+      },
+      "category": {
+        "type": "Picker",
+        "label": "Category",
+        "value": "",
+        "options": [
+          {
+            "label": "NONE",
+            "value": ""
+          },
+          {
+            "label": "Adult Romance",
+            "value": "adult-romance"
+          },
+          {
+            "label": "Fantasy",
+            "value": "fantasy"
+          },
+          {
+            "label": "LGBTQ+",
+            "value": "lgbtq"
+          },
+          {
+            "label": "Mystery",
+            "value": "mystery"
+          },
+          {
+            "label": "New Adult",
+            "value": "new-adult"
+          },
+          {
+            "label": "Paranormal",
+            "value": "paranormal"
+          },
+          {
+            "label": "Romance",
+            "value": "romance"
+          },
+          {
+            "label": "Steamy Stories",
+            "value": "steamy-stories"
+          },
+          {
+            "label": "Urban",
+            "value": "urban"
+          },
+          {
+            "label": "Werewolf/Vampire",
+            "value": "werewolfvampire"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "eznovels",
+    "sourceSite": "https://eznovels.com",
+    "sourceName": "EzNovels",
+    "filters": {
+      "sort": {
+        "type": "Picker",
+        "label": "Order",
+        "value": "hot",
+        "options": [
+          {
+            "label": "Горячая история",
+            "value": "hot"
+          },
+          {
+            "label": "Новая история",
+            "value": "new"
+          },
+          {
+            "label": "Полный рассказ",
+            "value": "full"
+          }
+        ]
+      },
+      "category": {
+        "type": "Picker",
+        "label": "Категория",
+        "value": "",
+        "options": [
+          {
+            "label": "NONE",
+            "value": ""
+          },
+          {
+            "label": "Ведьмы",
+            "value": "vedmy"
+          },
+          {
+            "label": "Городское фэнтези",
+            "value": "gorodskoe-fentezi"
+          },
+          {
+            "label": "Городской роман",
+            "value": "gorodskoj-roman"
+          },
+          {
+            "label": "Любовное фэнтези",
+            "value": "lyubovnoe-fentezi"
+          },
+          {
+            "label": "Оборотни",
+            "value": "oborotni"
+          },
+          {
+            "label": "Сверхъестественное",
+            "value": "sverhuestestvennoe"
+          },
+          {
+            "label": "Современный любовный роман",
+            "value": "sovremennyj-lyubovnyj-roman"
+          },
+          {
+            "label": "Триллеры",
+            "value": "trillery"
+          },
+          {
+            "label": "Фэнтези",
+            "value": "fentezi"
+          },
+          {
+            "label": "Эротика",
+            "value": "erotika"
+          }
+        ]
+      }
+    },
+    "options": {
+      "lang": "ru"
+    }
+  },
+  {
+    "id": "lightnoveldaily",
+    "sourceSite": "https://lightnoveldaily.com",
+    "sourceName": "LightNovelDaily",
+    "filters": {
+      "sort": {
+        "type": "Picker",
+        "label": "Order",
+        "value": "hot",
+        "options": [
+          {
+            "label": "Historia caliente",
+            "value": "hot"
+          },
+          {
+            "label": "Nuevas cuentos",
+            "value": "new"
+          },
+          {
+            "label": "Historia completa",
+            "value": "full"
+          }
+        ]
+      },
+      "category": {
+        "type": "Picker",
+        "label": "Categoría",
+        "value": "",
+        "options": [
+          {
+            "label": "NONE",
+            "value": ""
+          },
+          {
+            "label": "Acción/Aventura",
+            "value": "accinaventura"
+          },
+          {
+            "label": "Fantasía",
+            "value": "fantasa"
+          },
+          {
+            "label": "Ficción adolescente",
+            "value": "ficcin-adolescente"
+          },
+          {
+            "label": "Hombre lobo/Vampiro",
+            "value": "hombre-lobovampiro"
+          },
+          {
+            "label": "LGBTQ+",
+            "value": "lgbtq"
+          },
+          {
+            "label": "Mafia",
+            "value": "mafia"
+          },
+          {
+            "label": "Nuevo Adulto",
+            "value": "nuevo-adulto"
+          },
+          {
+            "label": "Pornografía",
+            "value": "pornografa"
+          },
+          {
+            "label": "Romántico",
+            "value": "romntico"
+          },
+          {
+            "label": "Urbano",
+            "value": "urbano"
+          }
+        ]
+      }
+    },
+    "options": {
+      "lang": "es"
+    }
+  },
+  {
+    "id": "lanovels",
+    "sourceSite": "https://lanovels.com",
+    "sourceName": "LaNovels",
+    "filters": {
+      "sort": {
+        "type": "Picker",
+        "label": "Order",
+        "value": "hot",
+        "options": [
+          {
+            "label": "História quente",
+            "value": "hot"
+          },
+          {
+            "label": "Nova estória",
+            "value": "new"
+          },
+          {
+            "label": "História completa",
+            "value": "full"
+          }
+        ]
+      },
+      "category": {
+        "type": "Picker",
+        "label": "Categoria",
+        "value": "",
+        "options": [
+          {
+            "label": "NONE",
+            "value": ""
+          },
+          {
+            "label": "Aventura",
+            "value": "aventura"
+          },
+          {
+            "label": "Erótico",
+            "value": "erotico"
+          },
+          {
+            "label": "Fantasia",
+            "value": "fantasia"
+          },
+          {
+            "label": "Ficção adolescente",
+            "value": "ficcao-adolescente"
+          },
+          {
+            "label": "Ficção científica",
+            "value": "ficcao-cientifica"
+          },
+          {
+            "label": "Lobisomens/Vampiros",
+            "value": "lobisomens-vampiros"
+          },
+          {
+            "label": "Mistério",
+            "value": "misterio"
+          },
+          {
+            "label": "Paranormal",
+            "value": "paranormal"
+          },
+          {
+            "label": "Romance",
+            "value": "romance"
+          },
+          {
+            "label": "Suspense/Terror",
+            "value": "suspense-terror"
+          }
+        ]
+      }
+    },
+    "options": {
+      "lang": "pt"
+    }
+  },
+  {
+    "id": "thnovels",
+    "sourceSite": "https://thnovels.com",
+    "sourceName": "ThNovels",
+    "filters": {
+      "sort": {
+        "type": "Picker",
+        "label": "Order",
+        "value": "hot",
+        "options": [
+          {
+            "label": "เรื่องร้อน",
+            "value": "hot"
+          },
+          {
+            "label": "เรื่องใหม่",
+            "value": "new"
+          },
+          {
+            "label": "เรื่องเต็ม",
+            "value": "full"
+          }
+        ]
+      },
+      "category": {
+        "type": "Picker",
+        "label": "หมวดหมู่",
+        "value": "",
+        "options": [
+          {
+            "label": "NONE",
+            "value": ""
+          },
+          {
+            "label": "ใช้ชีวิต",
+            "value": "ใช้ชีวิต"
+          },
+          {
+            "label": "นิยายY",
+            "value": "นิยายy"
+          },
+          {
+            "label": "นิยายสำหรับผู้ใหญ่",
+            "value": "นิยายสำหรับผู้ใหญ่"
+          },
+          {
+            "label": "ประวัติศาสตร์",
+            "value": "ประวัติศาสตร์"
+          },
+          {
+            "label": "แฟนตาซี",
+            "value": "แฟนตาซี"
+          },
+          {
+            "label": "มนุษย์หมาป่าแวมไพร์",
+            "value": "มนุษย์หมาป่าแวมไพร์"
+          },
+          {
+            "label": "โรแมนซ์",
+            "value": "โรแมนซ์"
+          }
+        ]
+      }
+    },
+    "options": {
+      "lang": "th"
+    }
+  }
+]

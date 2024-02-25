@@ -1,0 +1,252 @@
+{
+  "filters": {
+    "genre[]": {
+      "type": "Checkbox",
+      "label": "Genre",
+      "value": [],
+      "options": [
+        {
+          "label": "Aksiyon",
+          "value": "aksiyon"
+        },
+        {
+          "label": "Bilim Kurgu",
+          "value": "bilim-kurgu"
+        },
+        {
+          "label": "Büyü",
+          "value": "buyu"
+        },
+        {
+          "label": "Comedy",
+          "value": "comedy"
+        },
+        {
+          "label": "Doğaüstü",
+          "value": "dogaustu"
+        },
+        {
+          "label": "dövüş sanatları",
+          "value": "dovus-sanatlari"
+        },
+        {
+          "label": "Dram",
+          "value": "dram"
+        },
+        {
+          "label": "Drama",
+          "value": "drama"
+        },
+        {
+          "label": "ecchi",
+          "value": "ecchi"
+        },
+        {
+          "label": "fantastik",
+          "value": "fantastik"
+        },
+        {
+          "label": "Fantasy",
+          "value": "fantasy"
+        },
+        {
+          "label": "gizem",
+          "value": "gizem"
+        },
+        {
+          "label": "Harem",
+          "value": "harem"
+        },
+        {
+          "label": "isekai",
+          "value": "isekai"
+        },
+        {
+          "label": "Josei",
+          "value": "josei"
+        },
+        {
+          "label": "Komedi",
+          "value": "komedi"
+        },
+        {
+          "label": "korku",
+          "value": "korku"
+        },
+        {
+          "label": "macera",
+          "value": "macera"
+        },
+        {
+          "label": "Mecha",
+          "value": "mecha"
+        },
+        {
+          "label": "okul",
+          "value": "okul"
+        },
+        {
+          "label": "oyun",
+          "value": "oyun"
+        },
+        {
+          "label": "psikoloji",
+          "value": "psikoloji"
+        },
+        {
+          "label": "Psychological",
+          "value": "psychological"
+        },
+        {
+          "label": "reenkarnasyon",
+          "value": "reenkarnasyon"
+        },
+        {
+          "label": "Romance",
+          "value": "romance"
+        },
+        {
+          "label": "Romantik",
+          "value": "romantik"
+        },
+        {
+          "label": "School Life",
+          "value": "school-life"
+        },
+        {
+          "label": "Sci-fi",
+          "value": "sci-fi"
+        },
+        {
+          "label": "seinen",
+          "value": "seinen"
+        },
+        {
+          "label": "Shoujo",
+          "value": "shoujo"
+        },
+        {
+          "label": "Shounen",
+          "value": "shounen"
+        },
+        {
+          "label": "Shounen Ai",
+          "value": "shounen-ai"
+        },
+        {
+          "label": "Slice of Life",
+          "value": "slice-of-life"
+        },
+        {
+          "label": "Smut",
+          "value": "smut"
+        },
+        {
+          "label": "süper kahraman",
+          "value": "super-kahraman"
+        },
+        {
+          "label": "Supernatural",
+          "value": "supernatural"
+        },
+        {
+          "label": "tarih",
+          "value": "tarih"
+        },
+        {
+          "label": "trajedi",
+          "value": "trajedi"
+        },
+        {
+          "label": "Wuxia",
+          "value": "wuxia"
+        },
+        {
+          "label": "Xianxia",
+          "value": "xianxia"
+        },
+        {
+          "label": "Xuanhuan",
+          "value": "xuanhuan"
+        },
+        {
+          "label": "Yaoi",
+          "value": "yaoi"
+        },
+        {
+          "label": "yetişkin",
+          "value": "yetiskin"
+        },
+        {
+          "label": "Yuri",
+          "value": "yuri"
+        }
+      ]
+    },
+    "type[]": {
+      "type": "Checkbox",
+      "label": "Tür",
+      "value": [],
+      "options": [
+        {
+          "label": "Web Novel",
+          "value": "web-novel"
+        }
+      ]
+    },
+    "status": {
+      "type": "Picker",
+      "label": "Durum",
+      "value": "",
+      "options": [
+        {
+          "label": "Hepsi",
+          "value": ""
+        },
+        {
+          "label": "Devam Ediyor",
+          "value": "ongoing"
+        },
+        {
+          "label": "Askıda",
+          "value": "hiatus"
+        },
+        {
+          "label": "Tamamlanmış",
+          "value": "completed"
+        }
+      ]
+    },
+    "order": {
+      "type": "Picker",
+      "label": "Sıralama",
+      "value": "",
+      "options": [
+        {
+          "label": "Varsayılan",
+          "value": ""
+        },
+        {
+          "label": "A-Z",
+          "value": "title"
+        },
+        {
+          "label": "Z-A",
+          "value": "titlereverse"
+        },
+        {
+          "label": "Latest Update",
+          "value": "update"
+        },
+        {
+          "label": "Latest Added",
+          "value": "latest"
+        },
+        {
+          "label": "Popular",
+          "value": "popular"
+        }
+      ]
+    }
+  }
+}

@@ -5,7 +5,8 @@
 /** @typedef {import("@typings/plugin").Plugin.PluginItem} PluginItem */
 /** @typedef {import("@typings/plugin").Plugin.ChapterItem} ChapterItem */
 /** @typedef {import("@typings/plugin").Plugin.NovelItem} NovelItem */
-/** @typedef {import("@typings/plugin").Plugin.SourceNovel} SourceNovel */
+/** @typedef {import("@typings/plugin").Plugin.SourceNovel & {totalPages?: number}} SourceNovel */
+/** @typedef {import("@typings/plugin").Plugin.SourcePage} SourcePage */
 /** @typedef {import("@libs/filterInputs").FilterTypes} FilterTypes */
 /** @typedef {import("@libs/filterInputs").FilterTypes.CheckboxGroup} CheckboxGroup */
 /**
@@ -49,8 +50,9 @@ const searchNovels_fetch_btn = $("#searchNovels .fetch-btn");
 const searchNovels_searchbar = $("#searchNovels .searchbar input");
 
 /** @type {JQuery<AccordionBox>} */
-const parseNovelAndChapters = $("#parseNovelAndChapters");
-
+const parseNovel = $("#parseNovel");
+/** @type {JQuery<AccordionBox>} */
+const parsePage = $("#parsePage");
 /** @type {JQuery<AccordionBox>} */
 const parseChapter = $("#parseChapter");
 
@@ -169,7 +171,7 @@ class NovelListPagination {
         if (p1.length !== p2.length) return false;
         let i = 0;
         for (const novel of p1) {
-            if (novel.url !== p2[i].url) return false;
+            if (novel.path !== p2[i].path) return false;
             i++;
         }
         return true;
@@ -302,8 +304,23 @@ class PluginWrapper {
      */
     constructor(requirePath) {
         /** @type {string} */
+        parsePage.addClass('d-none');
         this.requirePath = requirePath;
         this.currentView = previewSwitch?.[0]?.checked ? "preview" : "raw";
+        fetchFromAPI("/hasParsePage/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                pluginRequirePath: this.requirePath,
+            }),
+        }).then(res => res.json())
+        .then(data => {
+            if(data.hasParsePage){
+                parsePage.removeClass('d-none');
+            }
+        })
     }
 
     static previewSettings = {
@@ -651,7 +668,7 @@ class PluginWrapper {
         const novel_info = $("<div>");
         novel_info.addClass("novel-info").appendTo(novel_item);
         this.createInfoItem("name", novel.name).appendTo(novel_info);
-        this.createInfoItem("url", novel.url).appendTo(novel_info);
+        this.createInfoItem("path", novel.path).appendTo(novel_info);
         this.createInfoItem("cover", novel.cover || "undefined").appendTo(
             novel_info
         );
@@ -663,9 +680,9 @@ class PluginWrapper {
                     .on("click", () => {
                         // parsable.target.toggle();
                         /** @type {JQuery<AccordionBox>} */
-                        const pnc = $("#parseNovelAndChapters");
+                        const pnc = $("#parseNovel");
                         const box = pnc[0];
-                        $("#parse-novel-url").val(novel.url);
+                        $("#parse-novel-path").val(novel.path);
                         $("#parse-novel-btn").trigger("click");
                         if (box.collapsed) {
                             box.toggle();
@@ -698,21 +715,21 @@ class PluginWrapper {
             .appendTo(chapter_item);
         $("<div>")
             .addClass("info-copy btn btn-primary ci-btn1")
-            .attr("data", chapter.url)
-            .text("Copy url")
+            .attr("data", chapter.path)
+            .text("Copy path")
             .on("click", () => {
-                navigator.clipboard.writeText(chapter.url);
+                navigator.clipboard.writeText(chapter.path);
             })
             .appendTo(chapter_item);
         $("<div>")
             .addClass("info-copy btn btn-primary ci-btn2")
-            .attr("data", chapter.url)
+            .attr("data", chapter.path)
             .text("Parse")
             .on("click", () => {
                 /** @type {JQuery<AccordionBox>} */
                 const parseChapter = $("#parseChapter");
                 const box = parseChapter[0];
-                $("#chapter-parse-url").val(chapter.url);
+                $("#chapter-parse-path").val(chapter.path);
                 $("#chapter-parse-btn").trigger("click");
                 if (box.collapsed) {
                     box.toggle();
@@ -804,25 +821,25 @@ class PluginWrapper {
         }
     }
 
-    async getNovelAndChapters() {
+    async getNovel() {
         /** @type {JQuery<HTMLInputElement>} */
-        const novelUrlInput = $("#parseNovelAndChapters input");
-        const novel_item = $("#parseNovelAndChapters .novel-item");
-        const chapter_list = $("#parseNovelAndChapters .chapter-list");
-        const novelUrl = novelUrlInput.val();
-        const spinner = $("#parseNovelAndChapters .spinner-border");
+        const novelPathInput = $("#parseNovel input");
+        const novel_item = $("#parseNovel .novel-item");
+        const chapter_list = $("#parseNovel .chapter-list");
+        const novelPath = novelPathInput.val();
+        const spinner = $("#parseNovel .spinner-border");
         spinner.show();
         try {
             /** @type {SourceNovel  | {error:string}} */
             const sourceNovel = await (
-                await fetchFromAPI(`/parseNovelAndChapters/`, {
+                await fetchFromAPI(`/parseNovel/`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                     },
                     body: JSON.stringify({
                         pluginRequirePath: this.requirePath,
-                        novelUrl: novelUrl,
+                        novelPath,
                     }),
                 })
             ).json();
@@ -831,7 +848,7 @@ class PluginWrapper {
             novel_item.empty();
             const novel_data = PluginWrapper.createNovelItem({
                 name: sourceNovel.name || "undefined",
-                url: sourceNovel.url,
+                path: sourceNovel.path,
                 cover: sourceNovel.cover,
             });
             
@@ -848,16 +865,20 @@ class PluginWrapper {
                     PluginWrapper.createInfoItem("status", sourceNovel.status),
                     PluginWrapper.createInfoItem("genres", sourceNovel.genres)
                 );
+            if(sourceNovel.totalPages){
+                novel_data
+                .children("div + div")
+                .append(
+                    PluginWrapper.createInfoItem("totalPages", sourceNovel.totalPages.toString())
+                )
+            }
             novel_item.replaceWith(novel_data);
-
-            console.log(sourceNovel.chapters);
-            console.log(sourceNovel.chapters?.map((r) => r.url));
 
             if (
                 sourceNovel?.chapters?.length !==
-                new Set(sourceNovel?.chapters?.map((r) => r.url) || []).size
+                new Set(sourceNovel?.chapters?.map((r) => r.path) || []).size
             ) {
-                alert("Chapter urls are the same!");
+                alert("Chapter paths are the same!");
             }
 
             chapter_list.html("");
@@ -872,9 +893,60 @@ class PluginWrapper {
             spinner.hide();
         }
     }
+    async getPage () {
+        /** @type {JQuery<HTMLInputElement>} */
+        const novelPathInput = $("#parsePage #parse-page-novel-path");
+        const pageInput = $("#parsePage #parse-page-index");
+        const latestChapter_item = $("#parseNovel latest-chapter-item");
+        const chapter_list = $("#parsePage .chapter-list");
+        const novelPath = novelPathInput.val();
+        const page = pageInput.val();
+        const spinner = $("#parsePage .spinner-border");
+        spinner.show();
+        try {
+            /** @type {SourcePage  | {error:string}} */
+            const sourcePage = await (
+                await fetchFromAPI(`/parsePage/`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        pluginRequirePath: this.requirePath,
+                        novelPath,
+                        page
+                    }),
+                })
+            ).json();
+            if ("error" in sourcePage)
+                throw `Error getting the novel ${sourcePage.error}`;
+            latestChapter_item.empty();
+            if(sourcePage.latestChapter){
+                latestChapter_item.append(
+                    PluginWrapper.createChapterItem(sourcePage.latestChapter)
+                );
+            }
+            if (
+                sourcePage?.chapters?.length !==
+                new Set(sourcePage?.chapters?.map((r) => r.path) || []).size
+            ) {
+                alert("Chapter paths are the same!");
+            }
 
+            chapter_list.html("");
+            if (sourcePage.chapters)
+                for (const chapter of sourcePage.chapters) {
+                    chapter_list.append(
+                        PluginWrapper.createChapterItem(chapter)
+                    );
+                }
+        } catch (/** @type {unknown} */ e) {
+        } finally {
+            spinner.hide();
+        }
+    }
     async getChapter() {
-        const chapterUrl = $("#parseChapter input").val();
+        const chapterPath = $("#parseChapter input").val();
         const chapterRawTextarea = $("#parseChapter textarea");
         const spinner = $("#parseChapter .spinner-border");
         spinner.show();
@@ -887,7 +959,7 @@ class PluginWrapper {
                     },
                     body: JSON.stringify({
                         pluginRequirePath: this.requirePath,
-                        chapterUrl: chapterUrl,
+                        chapterPath,
                     }),
                 })
             ).text();
@@ -1485,8 +1557,11 @@ $(".searchNovels-btn").on("click", () =>
     state.current_plugin?.getSearchedNovels()
 );
 
-$(".parseNovelAndChapters-btn").on("click", () =>
-    state.current_plugin?.getNovelAndChapters()
+$(".parseNovel-btn").on("click", () =>
+    state.current_plugin?.getNovel()
+);
+$(".parsePage-btn").on("click", () =>
+    state.current_plugin?.getPage()
 );
 
 $(".parseChapter-btn").on("click", () => state.current_plugin?.getChapter());

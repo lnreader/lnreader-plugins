@@ -1,0 +1,424 @@
+{
+  "filters": {
+    "genre[]": {
+      "type": "Checkbox",
+      "label": "Genre",
+      "value": [],
+      "options": [
+        {
+          "label": "Action",
+          "value": "action"
+        },
+        {
+          "label": "Adult",
+          "value": "adult"
+        },
+        {
+          "label": "Adventure",
+          "value": "adventure"
+        },
+        {
+          "label": "Ancient times",
+          "value": "ancient-times"
+        },
+        {
+          "label": "BL",
+          "value": "bl"
+        },
+        {
+          "label": "Campus",
+          "value": "campus"
+        },
+        {
+          "label": "carefree protagonist",
+          "value": "carefree-protagonist"
+        },
+        {
+          "label": "celebrity",
+          "value": "celebrity"
+        },
+        {
+          "label": "Chinese novel",
+          "value": "chinese-novel"
+        },
+        {
+          "label": "Comedy",
+          "value": "comedy"
+        },
+        {
+          "label": "Cooking",
+          "value": "cooking"
+        },
+        {
+          "label": "Drama",
+          "value": "drama"
+        },
+        {
+          "label": "Entertaiment circle",
+          "value": "entertaiment-circle"
+        },
+        {
+          "label": "Entertainment circle",
+          "value": "entertainment-circle"
+        },
+        {
+          "label": "Fantasy",
+          "value": "fantasy"
+        },
+        {
+          "label": "Fiction",
+          "value": "fiction"
+        },
+        {
+          "label": "futuristic setting",
+          "value": "futuristic-setting"
+        },
+        {
+          "label": "Gaming",
+          "value": "gaming"
+        },
+        {
+          "label": "Gender Bender",
+          "value": "gender-bender"
+        },
+        {
+          "label": "General",
+          "value": "general"
+        },
+        {
+          "label": "GL",
+          "value": "gl"
+        },
+        {
+          "label": "Harem",
+          "value": "harem"
+        },
+        {
+          "label": "historic love",
+          "value": "historic-love"
+        },
+        {
+          "label": "Historical",
+          "value": "historical"
+        },
+        {
+          "label": "Horror",
+          "value": "horror"
+        },
+        {
+          "label": "humor",
+          "value": "humor"
+        },
+        {
+          "label": "Idol",
+          "value": "idol"
+        },
+        {
+          "label": "infrastructure",
+          "value": "infrastructure"
+        },
+        {
+          "label": "interstellar",
+          "value": "interstellar"
+        },
+        {
+          "label": "Josei",
+          "value": "josei"
+        },
+        {
+          "label": "love at first sight",
+          "value": "love-at-first-sight"
+        },
+        {
+          "label": "love romance",
+          "value": "love-romance"
+        },
+        {
+          "label": "Male protagonist",
+          "value": "male-protagonist"
+        },
+        {
+          "label": "Marriage",
+          "value": "marriage"
+        },
+        {
+          "label": "Martial Arts",
+          "value": "martial-arts"
+        },
+        {
+          "label": "Mature",
+          "value": "mature"
+        },
+        {
+          "label": "Mecha",
+          "value": "mecha"
+        },
+        {
+          "label": "Modern",
+          "value": "modern"
+        },
+        {
+          "label": "Mpreg",
+          "value": "mpreg"
+        },
+        {
+          "label": "Mystery",
+          "value": "mystery"
+        },
+        {
+          "label": "Omegaverse",
+          "value": "omegaverse"
+        },
+        {
+          "label": "Otherworld fantasy",
+          "value": "otherworld-fantasy"
+        },
+        {
+          "label": "Psychological",
+          "value": "psychological"
+        },
+        {
+          "label": "Quick transmigration",
+          "value": "quick-transmigration"
+        },
+        {
+          "label": "REBIRTH",
+          "value": "rebirth"
+        },
+        {
+          "label": "Regression",
+          "value": "regression"
+        },
+        {
+          "label": "Reverse Harem",
+          "value": "reverse-harem"
+        },
+        {
+          "label": "Romance",
+          "value": "romance"
+        },
+        {
+          "label": "School Life",
+          "value": "school-life"
+        },
+        {
+          "label": "Sci-fi",
+          "value": "sci-fi"
+        },
+        {
+          "label": "Seinen",
+          "value": "seinen"
+        },
+        {
+          "label": "shonen ai",
+          "value": "shonen-ai"
+        },
+        {
+          "label": "Shoujo",
+          "value": "shoujo"
+        },
+        {
+          "label": "Shoujo ai",
+          "value": "shoujo-ai"
+        },
+        {
+          "label": "Shounen",
+          "value": "shounen"
+        },
+        {
+          "label": "Shounen ai",
+          "value": "shounen-ai"
+        },
+        {
+          "label": "Showbi",
+          "value": "showbi"
+        },
+        {
+          "label": "showbiz",
+          "value": "showbiz"
+        },
+        {
+          "label": "Slice of Life",
+          "value": "slice-of-life"
+        },
+        {
+          "label": "Smut",
+          "value": "smut"
+        },
+        {
+          "label": "Sports",
+          "value": "sports"
+        },
+        {
+          "label": "Supernatural",
+          "value": "supernatural"
+        },
+        {
+          "label": "suspense",
+          "value": "suspense"
+        },
+        {
+          "label": "Tragedy",
+          "value": "tragedy"
+        },
+        {
+          "label": "Transmigration",
+          "value": "transmigration"
+        },
+        {
+          "label": "Unlimited flow",
+          "value": "unlimited-flow"
+        },
+        {
+          "label": "Urban Life",
+          "value": "urban-life"
+        },
+        {
+          "label": "Western",
+          "value": "western"
+        },
+        {
+          "label": "Wu xia",
+          "value": "wu-xia"
+        },
+        {
+          "label": "Wuxia",
+          "value": "wuxia"
+        },
+        {
+          "label": "Xianxia",
+          "value": "xianxia"
+        },
+        {
+          "label": "Xuanhuan",
+          "value": "xuanhuan"
+        },
+        {
+          "label": "Yaoi",
+          "value": "yaoi"
+        },
+        {
+          "label": "Yuri",
+          "value": "yuri"
+        }
+      ]
+    },
+    "type[]": {
+      "type": "Checkbox",
+      "label": "Type",
+      "value": [],
+      "options": [
+        {
+          "label": "chinese",
+          "value": "chinese"
+        },
+        {
+          "label": "Chinese Novel",
+          "value": "chinese-novel"
+        },
+        {
+          "label": "historic love",
+          "value": "historic-love"
+        },
+        {
+          "label": "Japanese Novel",
+          "value": "japanese-novel"
+        },
+        {
+          "label": "Kō Randō (藍銅 紅)",
+          "value": "ko-rando-藍銅-紅"
+        },
+        {
+          "label": "Korean Novel",
+          "value": "korean-novel"
+        },
+        {
+          "label": "Light Novel (CN)",
+          "value": "light-novel-cn"
+        },
+        {
+          "label": "Original Novel",
+          "value": "original-novel"
+        },
+        {
+          "label": "Published Novel",
+          "value": "published-novel"
+        },
+        {
+          "label": "Published Novel (KR)",
+          "value": "published-novel-kr"
+        },
+        {
+          "label": "Quick Transmigration",
+          "value": "quick-transmigration"
+        },
+        {
+          "label": "romance",
+          "value": "romance"
+        },
+        {
+          "label": "Short Story",
+          "value": "short-story"
+        },
+        {
+          "label": "Web Novel",
+          "value": "web-novel"
+        }
+      ]
+    },
+    "status": {
+      "type": "Picker",
+      "label": "Status",
+      "value": "",
+      "options": [
+        {
+          "label": "All",
+          "value": ""
+        },
+        {
+          "label": "Ongoing",
+          "value": "ongoing"
+        },
+        {
+          "label": "Hiatus",
+          "value": "hiatus"
+        },
+        {
+          "label": "Completed",
+          "value": "completed"
+        }
+      ]
+    },
+    "order": {
+      "type": "Picker",
+      "label": "Order by",
+      "value": "",
+      "options": [
+        {
+          "label": "Default",
+          "value": ""
+        },
+        {
+          "label": "A-Z",
+          "value": "title"
+        },
+        {
+          "label": "Z-A",
+          "value": "titlereverse"
+        },
+        {
+          "label": "Latest Update",
+          "value": "update"
+        },
+        {
+          "label": "Latest Added",
+          "value": "latest"
+        },
+        {
+          "label": "Popular",
+          "value": "popular"
+        }
+      ]
+    }
+  }
+}

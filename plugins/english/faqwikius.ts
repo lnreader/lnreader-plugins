@@ -14,37 +14,39 @@ class FaqWikiUs implements Plugin.PluginBase {
     page: number,
     { showLatestNovels }: Plugin.PopularNovelsOptions,
   ): Promise<Plugin.NovelItem[]> {
-    const sort = showLatestNovels
-      ? ""
-      : "";
-
-    const body = await fetchApi(this.site + sort).then((res) => res.text());
+    
+    const body = await fetchApi(this.site).then((res) => res.text());
     const loadedCheerio = parseHTML(body);
 
     const novels: Plugin.NovelItem[] = loadedCheerio(".wp-block-table > table > tbody > tr")
-        .map((index, element) => {
-            const name = loadedCheerio(element).find('a').text().replace(/–\s+Chapter\s+List\s+–.*$/i,'');
-            let cover = loadedCheerio(element).find("img").attr("data-ezsrc"); 
+      .map((index, element) => {
+        const name = loadedCheerio(element).find('a').text().replace(/–\s+Chapter\s+List\s+–.*$/i,'');
+        let cover = loadedCheerio(element).find("img").attr("data-ezsrc"); 
 
-            // Remove the appended query string 
-            if (cover) {
-                 cover = cover.replace(/\?ezimgfmt=.*$/, ''); // Regular expression magic!
-            }
+        // Remove the appended query string 
+        if (cover) {
+             cover = cover.replace(/\?ezimgfmt=.*$/, ''); // Regular expression magic!
+        }
 
-            const url = "" + loadedCheerio(element).find("a").attr("href");
+        const path = "" + loadedCheerio(element).find("a").attr("href")?.toString().replace(this.site, "").trim();
 
-            return { name, cover, url }; 
-        })
-        .get();
+
+        return { name, cover, path }; 
+    })
+    .get()
+      .filter((novel) => novel.name && novel.path);
 
     return novels;
   }
 
-  async parseNovelAndChapters(url: string): Promise<Plugin.SourceNovel> {
-    const body = await fetchApi(url).then((res) => res.text());
+  async parseNovel(path: string): Promise<Plugin.SourceNovel> {
+    const body = await fetchApi(this.site + path).then((res) => res.text());
     const loadedCheerio = parseHTML(body);
 
-    const novel: Plugin.SourceNovel = { url };
+    const novel: Plugin.SourceNovel = {
+      path,
+      name: ""
+    };
     novel.name = loadedCheerio(".entry-title").text().replace("Novel – All Chapters", "").trim();
 
     let cover = loadedCheerio(".wp-block-image").find("img").attr("data-ezsrc");  
@@ -60,7 +62,7 @@ class FaqWikiUs implements Plugin.PluginBase {
     const chapters: Plugin.ChapterItem[] = loadedCheerio(".lcp_catlist > li > a")
       .map((chapterIndex, element) => ({
         name: loadedCheerio(element).text().replace(novel.name + "", "").replace("Novel" + "", "").trim(),
-        url: ""+loadedCheerio(element).attr("href"),
+        path: ""+loadedCheerio(element).attr("href")?.toString().replace(this.site, "").trim(),
         releaseTime: null,
         chapterNumber: chapterIndex + 1,
       }))
@@ -70,8 +72,8 @@ class FaqWikiUs implements Plugin.PluginBase {
     return novel;
   }
 
-  async parseChapter(chapterUrl: string): Promise<string> {
-    const body = await fetchApi(chapterUrl).then((res) => res.text());
+  async parseChapter(chapterPath: string): Promise<string> {
+    const body = await fetchApi(this.site + chapterPath).then((res) => res.text());
     const loadedCheerio = parseHTML(body);
     loadedCheerio("span").remove();
 
@@ -85,8 +87,8 @@ class FaqWikiUs implements Plugin.PluginBase {
           return text; 
       }).get().join('\n\n'); 
     } 
-    
-    else {
+	
+	else {
          // Multiple paragraphs case
         chapterContent = chapterParagraphs.map((index, element) => {
             const text = loadedCheerio(element).text().trim();
@@ -95,33 +97,30 @@ class FaqWikiUs implements Plugin.PluginBase {
     }
 
     return chapterContent;
-  }
+}
 
-  async searchNovels(
-    searchTerm: string,
-  ): Promise<Plugin.NovelItem[]> {
+
+  async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
     const body = await fetchApi(this.site).then((res) => res.text());
     const loadedCheerio = parseHTML(body);
 
     const novels: Plugin.NovelItem[] = loadedCheerio(".wp-block-table > table > tbody > tr")
-        .map((index, element) => {
-            const name = loadedCheerio(element).find('a').text().replace(/–\s+Chapter\s+List\s+–.*$/i,'');
-            let cover = loadedCheerio(element).find("img").attr("data-ezsrc"); 
+      .map((index, element) => {
+        const name = loadedCheerio(element).find('a').text().replace(/–\s+Chapter\s+List\s+–.*$/i,'');
+        let cover = loadedCheerio(element).find("img").attr("data-ezsrc"); 
 
-            // Remove the appended query string 
-            if (cover) {
-                 cover = cover.replace(/\?ezimgfmt=.*$/, ''); // Regular expression magic!
-            }
+        // Remove the appended query string 
+        if (cover) {
+             cover = cover.replace(/\?ezimgfmt=.*$/, ''); // Regular expression magic!
+        }
 
-            const url = "" + loadedCheerio(element).find("a").attr("href");
+        const path = "" + loadedCheerio(element).find("a").attr("href")?.toString().replace(this.site, "").trim();
 
-            return { name, cover, url }; 
-        })
-        .get();
-
-      const normalizedQuery = searchTerm.toLowerCase(); 
-      return novels.filter(novel => novel.name.toLowerCase().includes(normalizedQuery)
-    );
+        return { name, cover, path }; 
+    })
+    .get().filter((novel) => novel.name && novel.path);
+    const normalizedQuery = searchTerm.toLowerCase(); 
+    return novels.filter(novel => novel.name.toLowerCase().includes(normalizedQuery));
 
     return novels;
   }

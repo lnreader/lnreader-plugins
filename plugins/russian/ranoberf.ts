@@ -37,15 +37,15 @@ class RNRF implements Plugin.PluginBase {
         cover: novel?.verticalImage?.url
           ? this.site + novel.verticalImage.url
           : defaultCover,
-        url: this.site + "/" + novel.slug,
+        path: "/" + novel.slug,
       }),
     );
 
     return novels;
   }
 
-  async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
-    const result = await fetchApi(novelUrl);
+  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+    const result = await fetchApi(this.site + novelPath);
     const body = await result.text();
 
     const loadedCheerio = parseHTML(body);
@@ -53,8 +53,8 @@ class RNRF implements Plugin.PluginBase {
     const book = (JSON.parse(jsonRaw || "{}") as response).props.pageProps.book;
 
     const novel: Plugin.SourceNovel = {
-      url: novelUrl,
-      name: book?.title,
+      path: novelPath,
+      name: book?.title || "",
       cover: book?.verticalImage?.url
         ? this.site + book.verticalImage.url
         : defaultCover,
@@ -72,7 +72,7 @@ class RNRF implements Plugin.PluginBase {
       if (!chapter.isDonate || chapter.isUserPaid) {
         chapters.push({
           name: chapter.title,
-          url: this.site + chapter.url,
+          path: chapter.url,
           releaseTime: dayjs(chapter.publishedAt).format("LLL"),
           chapterNumber: book.chapters.length - chapterIndex,
         });
@@ -83,8 +83,10 @@ class RNRF implements Plugin.PluginBase {
     return novel;
   }
 
-  async parseChapter(chapterUrl: string): Promise<string> {
-    const result = await fetchApi(chapterUrl).then((res) => res.text());
+  async parseChapter(chapterPath: string): Promise<string> {
+    const result = await fetchApi(this.site + chapterPath).then((res) =>
+      res.text(),
+    );
 
     let loadedCheerio = parseHTML(result);
     const jsonRaw = loadedCheerio("#__NEXT_DATA__").html();
@@ -105,10 +107,7 @@ class RNRF implements Plugin.PluginBase {
     return chapterText;
   }
 
-  async searchNovels(
-    searchTerm: string,
-    //pageNo: number | undefined = 1,
-  ): Promise<Plugin.NovelItem[]> {
+  async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
     const url = `${this.site}/v3/books?filter[or][0][title][like]=${searchTerm}&filter[or][1][titleEn][like]=${searchTerm}&filter[or][2][fullTitle][like]=${searchTerm}&filter[status][]=active&filter[status][]=abandoned&filter[status][]=completed&expand=verticalImage`;
     const result = await fetchApi(url);
     const body = (await result.json()) as { items: Item[] };
@@ -120,12 +119,13 @@ class RNRF implements Plugin.PluginBase {
         cover: novel?.verticalImage?.url
           ? this.site + novel.verticalImage.url
           : defaultCover,
-        url: this.site + "/" + novel.slug,
+        path: "/" + novel.slug,
       }),
     );
 
     return novels;
   }
+
   fetchImage = fetchFile;
 
   filters = {

@@ -10,8 +10,6 @@ class Smakolykytl implements Plugin.PluginBase {
   version = "1.0.0";
   icon = "src/uk/smakolykytl/icon.png";
 
-
-
   async popularNovels(
     pageNo: number,
     { showLatestNovels, filters }: Plugin.PopularNovelsOptions,
@@ -28,23 +26,23 @@ class Smakolykytl implements Plugin.PluginBase {
       novels.push({
         name: novel.title,
         cover: novel.image.url,
-        url: this.site + "titles/" + novel.id,
+        path: "titles/" + novel.id,
       }),
     );
 
     return novels;
   }
 
-  async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
-    const id = novelUrl.split("/").pop();
+  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+    const id = novelPath.split("/").pop();
     const result = await fetchApi(
       "https://api.smakolykytl.site/api/user/projects/" + id,
     );
     const book = (await result.json()) as response;
 
     const novel: Plugin.SourceNovel = {
-      url: novelUrl,
-      name: book?.project?.title,
+      path: novelPath,
+      name: book?.project?.title || "",
       cover: book?.project?.image?.url,
       summary: book?.project?.description,
       author: book?.project?.author,
@@ -67,22 +65,22 @@ class Smakolykytl implements Plugin.PluginBase {
     );
     const data = (await res.json()) as response;
     data?.books?.forEach((volume) =>
-        volume?.chapters?.forEach((chapter) =>
-          chapters.push({
-            name: volume.title + " " + chapter.title,
-            url: this.site + "read/" + chapter.id,
-            releaseTime: dayjs(chapter.modifiedAt).format("LLL"),
-            chapterNumber: chapters.length + 1,
-          }),
-        ),
+      volume?.chapters?.forEach((chapter) =>
+        chapters.push({
+          name: volume.title + " " + chapter.title,
+          path: "read/" + chapter.id,
+          releaseTime: dayjs(chapter.modifiedAt).format("LLL"),
+          chapterNumber: chapters.length + 1,
+        }),
+      ),
     );
 
     novel.chapters = chapters;
     return novel;
   }
 
-  async parseChapter(chapterUrl: string): Promise<string> {
-    const id = chapterUrl.split("/").pop();
+  async parseChapter(chapterPath: string): Promise<string> {
+    const id = chapterPath.split("/").pop();
     const result = await fetchApi(
       "https://api.smakolykytl.site/api/user/chapters/" + id,
     );
@@ -93,26 +91,22 @@ class Smakolykytl implements Plugin.PluginBase {
     return chapterText;
   }
 
-  async searchNovels(
-    searchTerm: string,
-    //pageNo: number | undefined = 1,
-  ): Promise<Plugin.NovelItem[]> {
-    const result = await fetchApi(
-      "https://api.smakolykytl.site/api/user/projects",
-    );
+  async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
+    const result = await fetchApi("https://api.smakolykytl.site/api/user/projects");
     const json = (await result.json()) as response;
+    const searchTitle = searchTerm.toLowerCase();
     const novels: Plugin.NovelItem[] = [];
-
+    
     json?.projects
       ?.filter(
-        (novel) =>
-          novel.title.includes(searchTerm) || String(novel.id) === searchTerm,
+        ({ title, id }) =>
+          title.toLowerCase().includes(searchTitle) || String(id) == searchTerm,
       )
       ?.forEach((novel) =>
         novels.push({
           name: novel.title,
           cover: novel.image.url,
-          url: this.site + "titles/" + novel.id,
+          path: "titles/" + novel.id,
         }),
       );
     return novels;

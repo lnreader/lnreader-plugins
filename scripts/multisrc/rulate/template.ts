@@ -62,23 +62,20 @@ class RulatePlugin implements Plugin.PluginBase {
       loadedCheerio(element).find("p > a").text();
       const name = loadedCheerio(element).find("p > a").text();
       const cover = loadedCheerio(element).find("img").attr("src");
-      const url = loadedCheerio(element).find("p > a").attr("href");
-      if (!name || !url) return;
+      const path = loadedCheerio(element).find("p > a").attr("href");
+      if (!name || !path) return;
 
-      novels.push({ name, cover: this.site + cover, url: this.site + url });
+      novels.push({ name, cover: this.site + cover, path });
     });
 
     return novels;
   }
 
-  async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
-    const novel: Plugin.SourceNovel = {
-      url: novelUrl,
-    };
-    let result = await fetchApi(novelUrl);
+  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+    let result = await fetchApi(this.site + novelPath);
     if (result.url.includes("mature?path=")) {
       const formData = new FormData();
-      formData.append("path", novelUrl);
+      formData.append("path", novelPath);
       formData.append("ok", "Да");
 
       await fetchApi(result.url, {
@@ -86,23 +83,27 @@ class RulatePlugin implements Plugin.PluginBase {
         body: formData,
       });
 
-      result = await fetchApi(novelUrl);
+      result = await fetchApi(this.site + novelPath);
     }
     const body = await result.text();
     const loadedCheerio = parseHTML(body);
 
-    novel.name = loadedCheerio(
-      'div[class="container"] > div > div > h1, div.span8:nth-child(1) > h1:nth-child(2)',
-    )
-      .text()
-      .trim();
+    const novel: Plugin.SourceNovel = {
+      path: novelPath,
+      name: loadedCheerio(
+        'div[class="container"] > div > div > h1, div.span8:nth-child(1) > h1:nth-child(2)',
+      )
+        .text()
+        .trim(),
+    };
     if (novel.name?.includes?.("[")) {
       novel.name = novel.name.split("[")[0].trim();
     }
     novel.cover =
       this.site + loadedCheerio('div[class="images"] > div img').attr("src");
-    novel.summary = 
-      loadedCheerio("#Info > div:nth-child(3), .book-description").text().trim();
+    novel.summary = loadedCheerio("#Info > div:nth-child(3), .book-description")
+      .text()
+      .trim();
     novel.author = loadedCheerio(
       ".book-stats-icons_author > span:nth-child(2) > a:nth-child(1)",
     ).text();
@@ -143,27 +144,41 @@ class RulatePlugin implements Plugin.PluginBase {
     }
 
     const chapters: Plugin.ChapterItem[] = [];
-    loadedCheerio("table > tbody > tr.chapter_row").each((chapterIndex, element) => {
-      const chapterName = loadedCheerio(element).find('td[class="t"] > a').text().trim();
-      const releaseDate = loadedCheerio(element).find("td > span").attr("title")?.trim();
-      const chapterUrl = loadedCheerio(element).find('td[class="t"] > a').attr("href");
+    loadedCheerio("table > tbody > tr.chapter_row").each(
+      (chapterIndex, element) => {
+        const chapterName = loadedCheerio(element)
+          .find('td[class="t"] > a')
+          .text()
+          .trim();
+        const releaseDate = loadedCheerio(element)
+          .find("td > span")
+          .attr("title")
+          ?.trim();
+        const chapterUrl = loadedCheerio(element)
+          .find('td[class="t"] > a')
+          .attr("href");
 
-      if (!loadedCheerio(element).find('td > span[class="disabled"]').length && releaseDate) {
-        chapters.push({
-          name: chapterName,
-          url: this.site + chapterUrl,
-          releaseTime: this.parseDate(releaseDate),
-          chapterNumber: chapterIndex + 1,
-        });
-      }
-    });
+        if (
+          !loadedCheerio(element).find('td > span[class="disabled"]').length &&
+          releaseDate &&
+          chapterUrl
+        ) {
+          chapters.push({
+            name: chapterName,
+            path: chapterUrl,
+            releaseTime: this.parseDate(releaseDate),
+            chapterNumber: chapterIndex + 1,
+          });
+        }
+      },
+    );
 
     novel.chapters = chapters;
     return novel;
   }
 
-  async parseChapter(chapterUrl: string): Promise<string> {
-    let result = await fetchApi(chapterUrl);
+  async parseChapter(chapterPath: string): Promise<string> {
+    let result = await fetchApi(this.site + chapterPath);
     if (result.url.includes("mature?path=")) {
       const formData = new FormData();
       formData.append("ok", "Да");
@@ -173,7 +188,7 @@ class RulatePlugin implements Plugin.PluginBase {
         body: formData,
       });
 
-      result = await fetchApi(chapterUrl);
+      result = await fetchApi(this.site + chapterPath);
     }
     const body = await result.text();
     const loadedCheerio = parseHTML(body);
@@ -203,7 +218,7 @@ class RulatePlugin implements Plugin.PluginBase {
       novels.push({
         name,
         cover: this.site + novel.img,
-        url: this.site + novel.url,
+        path: novel.url,
       });
     });
 

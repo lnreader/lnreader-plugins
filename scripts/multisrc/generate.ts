@@ -50,14 +50,13 @@ const run = async () => {
     const sources = fs
         .readdirSync(__dirname)
         .filter((name) =>
-            fs.lstatSync(path.join(__dirname, name)).isDirectory()
+            fs.lstatSync(path.join(__dirname, name)).isDirectory() && !name.endsWith('.broken')
         );
 
     for (let name of sources) {
         const success = await generate(name);
         if (success) console.log(`[${name}] OK`);
     }
-    console.log('Generating: .js files');
 };
 
 run();

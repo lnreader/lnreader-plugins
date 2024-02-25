@@ -23,22 +23,27 @@ class FreeWebNovel implements Plugin.PluginBase {
 
     const novels: Plugin.NovelItem[] = loadedCheerio(".li-row")
       .map((index, element) => ({
-        name: loadedCheerio(element).find(".tit").text(),
+        name: loadedCheerio(element).find(".tit").text() || "",
         cover: loadedCheerio(element).find("img").attr("src"),
-        url: this.site + loadedCheerio(element).find("h3 > a").attr("href"),
+        path: loadedCheerio(element).find("h3 > a").attr("href") || "",
       }))
-      .get();
+      .get()
+      .filter((novel) => novel.name && novel.path);
 
     return novels;
   }
 
-  async parseNovelAndChapters(url: string): Promise<Plugin.SourceNovel> {
-    const body = await fetchApi(url).then((res) => res.text());
+  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+    const body = await fetchApi(this.site + novelPath).then((res) => res.text());
     const loadedCheerio = parseHTML(body);
 
-    const novel: Plugin.SourceNovel = { url };
-    novel.name = loadedCheerio("h1.tit").text();
-    novel.cover = loadedCheerio(".pic > img").attr("src");
+    const novel: Plugin.SourceNovel = {
+      path: novelPath,
+      name: loadedCheerio("h1.tit").text(),
+      cover: loadedCheerio(".pic > img").attr("src"),
+      summary: loadedCheerio(".inner").text().trim(),
+    };
+
     novel.genres = loadedCheerio("[title=Genre]")
       .next()
       .text()
@@ -54,12 +59,14 @@ class FreeWebNovel implements Plugin.PluginBase {
       .text()
       .replace(/[\t\n]/g, "");
 
-    novel.summary = loadedCheerio(".inner").text().trim();
-
     const chapters: Plugin.ChapterItem[] = loadedCheerio("#idData > li > a")
       .map((chapterIndex, element) => ({
-        name: loadedCheerio(element).attr("title") || "Chapter " + (chapterIndex + 1),
-        url: this.site + loadedCheerio(element).attr("href"),
+        name:
+          loadedCheerio(element).attr("title") ||
+          "Chapter " + (chapterIndex + 1),
+        path:
+          loadedCheerio(element).attr("href") ||
+          novelPath.replace(".html", "/chapter-" + (chapterIndex + 1) + ".html"),
         releaseTime: null,
         chapterNumber: chapterIndex + 1,
       }))
@@ -69,17 +76,15 @@ class FreeWebNovel implements Plugin.PluginBase {
     return novel;
   }
 
-  async parseChapter(chapterUrl: string): Promise<string> {
-    const body = await fetchApi(chapterUrl).then((res) => res.text());
+  async parseChapter(chapterPath: string): Promise<string> {
+    const body = await fetchApi(this.site + chapterPath).then((res) => res.text());
     const loadedCheerio = parseHTML(body);
 
     const chapterText = loadedCheerio("div.txt").html() || "";
     return chapterText;
   }
 
-  async searchNovels(
-    searchTerm: string,
-  ): Promise<Plugin.NovelItem[]> {
+  async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
     const body = await fetchApi(this.site + "/search/", {
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -87,17 +92,18 @@ class FreeWebNovel implements Plugin.PluginBase {
         Origin: this.site,
       },
       method: "POST",
-      body: "searchkey=" + encodeURIComponent(searchTerm)
+      body: "searchkey=" + encodeURIComponent(searchTerm),
     }).then((res) => res.text());
 
     const loadedCheerio = parseHTML(body);
     const novels: Plugin.NovelItem[] = loadedCheerio(".li-row > .li > .con")
       .map((index, element) => ({
-        name: loadedCheerio(element).find(".tit").text(),
+        name: loadedCheerio(element).find(".tit").text() || "",
         cover: loadedCheerio(element).find(".pic > a > img").attr("src"),
-        url: this.site + loadedCheerio(element).find("h3 > a").attr("href"),
+        path: loadedCheerio(element).find("h3 > a").attr("href") || "",
       }))
-      .get();
+      .get()
+      .filter((novel) => novel.name && novel.path);
 
     return novels;
   }

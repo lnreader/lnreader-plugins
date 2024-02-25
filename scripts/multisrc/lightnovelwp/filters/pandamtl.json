@@ -1,0 +1,156 @@
+{
+  "filters": {
+    "genre[]": {
+      "type": "Checkbox",
+      "label": "Genre",
+      "value": [],
+      "options": [
+        {
+          "label": "Action",
+          "value": "action"
+        },
+        {
+          "label": "Adult",
+          "value": "adult"
+        },
+        {
+          "label": "Adventure",
+          "value": "adventure"
+        },
+        {
+          "label": "Comedy",
+          "value": "comedy"
+        },
+        {
+          "label": "Ecchi",
+          "value": "ecchi"
+        },
+        {
+          "label": "Fantasy",
+          "value": "fantasy"
+        },
+        {
+          "label": "Harem",
+          "value": "harem"
+        },
+        {
+          "label": "Josei",
+          "value": "josei"
+        },
+        {
+          "label": "Martial Arts",
+          "value": "martial-arts"
+        },
+        {
+          "label": "Mature",
+          "value": "mature"
+        },
+        {
+          "label": "Romance",
+          "value": "romance"
+        },
+        {
+          "label": "School Life",
+          "value": "school-life"
+        },
+        {
+          "label": "Sci-fi",
+          "value": "sci-fi"
+        },
+        {
+          "label": "Seinen",
+          "value": "seinen"
+        },
+        {
+          "label": "Slice of Life",
+          "value": "slice-of-life"
+        },
+        {
+          "label": "Smut",
+          "value": "smut"
+        },
+        {
+          "label": "Sports",
+          "value": "sports"
+        },
+        {
+          "label": "Supernatural",
+          "value": "supernatural"
+        },
+        {
+          "label": "Tragedy",
+          "value": "tragedy"
+        }
+      ]
+    },
+    "type[]": {
+      "type": "Checkbox",
+      "label": "Type",
+      "value": [],
+      "options": [
+        {
+          "label": "Light Novel (KR)",
+          "value": "light-novel-kr"
+        },
+        {
+          "label": "Web Novel",
+          "value": "web-novel"
+        }
+      ]
+    },
+    "status": {
+      "type": "Picker",
+      "label": "Status",
+      "value": "",
+      "options": [
+        {
+          "label": "All",
+          "value": ""
+        },
+        {
+          "label": "Ongoing",
+          "value": "ongoing"
+        },
+        {
+          "label": "Hiatus",
+          "value": "hiatus"
+        },
+        {
+          "label": "Completed",
+          "value": "completed"
+        }
+      ]
+    },
+    "order": {
+      "type": "Picker",
+      "label": "Order by",
+      "value": "",
+      "options": [
+        {
+          "label": "Default",
+          "value": ""
+        },
+        {
+          "label": "A-Z",
+          "value": "title"
+        },
+        {
+          "label": "Z-A",
+          "value": "titlereverse"
+        },
+        {
+          "label": "Latest Update",
+          "value": "update"
+        },
+        {
+          "label": "Latest Added",
+          "value": "latest"
+        },
+        {
+          "label": "Popular",
+          "value": "popular"
+        }
+      ]
+    }
+  }
+}

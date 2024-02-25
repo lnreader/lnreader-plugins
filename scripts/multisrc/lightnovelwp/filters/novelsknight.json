@@ -1,0 +1,344 @@
+{
+  "filters": {
+    "genre[]": {
+      "type": "Checkbox",
+      "label": "Genre",
+      "value": [],
+      "options": [
+        {
+          "label": "Fan fiction",
+          "value": "fan-fiction"
+        },
+        {
+          "label": "fanqienovel",
+          "value": "fanqienovel"
+        },
+        {
+          "label": "fanstay",
+          "value": "fanstay"
+        },
+        {
+          "label": "fantasy",
+          "value": "fantasy"
+        },
+        {
+          "label": "football",
+          "value": "football"
+        },
+        {
+          "label": "horror",
+          "value": "horror"
+        },
+        {
+          "label": "Huyen Huyen",
+          "value": "huyen-huyen"
+        },
+        {
+          "label": "light novel",
+          "value": "light-novel"
+        },
+        {
+          "label": "living",
+          "value": "living"
+        },
+        {
+          "label": "martial arts",
+          "value": "martial-arts"
+        },
+        {
+          "label": "Mature",
+          "value": "mature"
+        },
+        {
+          "label": "military",
+          "value": "military"
+        },
+        {
+          "label": "military history",
+          "value": "military-history"
+        },
+        {
+          "label": "Mystical Demons",
+          "value": "mystical-demons"
+        },
+        {
+          "label": "nba",
+          "value": "nba"
+        },
+        {
+          "label": "roamnce",
+          "value": "roamnce"
+        },
+        {
+          "label": "romance",
+          "value": "romance"
+        },
+        {
+          "label": "sc-fi online game",
+          "value": "sc-fi-online-game"
+        },
+        {
+          "label": "Sci-fi online games",
+          "value": "sci-fi-online-games"
+        },
+        {
+          "label": "Science fiction",
+          "value": "science-fiction"
+        },
+        {
+          "label": "Science fiction online game",
+          "value": "science-fiction-online-game"
+        },
+        {
+          "label": "speech",
+          "value": "speech"
+        },
+        {
+          "label": "Sports",
+          "value": "sports"
+        },
+        {
+          "label": "tanmi doujin",
+          "value": "tanmi-doujin"
+        },
+        {
+          "label": "Terrifying supernatural",
+          "value": "terrifying-supernatural"
+        },
+        {
+          "label": "urabn",
+          "value": "urabn"
+        },
+        {
+          "label": "urban",
+          "value": "urban"
+        },
+        {
+          "label": "Urban Fiction",
+          "value": "urban-fiction"
+        },
+        {
+          "label": "urban;romance",
+          "value": "urbanromance"
+        },
+        {
+          "label": "wuxia",
+          "value": "wuxia"
+        },
+        {
+          "label": "wuxia fairy",
+          "value": "wuxia-fairy"
+        },
+        {
+          "label": "Xuan Feng weak initiation",
+          "value": "xuan-feng-weak-initiation"
+        },
+        {
+          "label": "Xuanhuan",
+          "value": "xuanhuan"
+        },
+        {
+          "label": "Youth Campus",
+          "value": "youth-campus"
+        }
+      ]
+    },
+    "type[]": {
+      "type": "Checkbox",
+      "label": "Type",
+      "value": [],
+      "options": [
+        {
+          "label": "Black Basket: Platinum Star",
+          "value": "black-basket-platinum-star"
+        },
+        {
+          "label": "ciweimao",
+          "value": "ciweimao"
+        },
+        {
+          "label": "Doomsday",
+          "value": "doomsday"
+        },
+        {
+          "label": "dragon ball",
+          "value": "dragon-ball"
+        },
+        {
+          "label": "Entertainment",
+          "value": "entertainment"
+        },
+        {
+          "label": "falo",
+          "value": "falo"
+        },
+        {
+          "label": "faloo",
+          "value": "faloo"
+        },
+        {
+          "label": "fan fiction",
+          "value": "fan-fiction"
+        },
+        {
+          "label": "fanqienovel",
+          "value": "fanqienovel"
+        },
+        {
+          "label": "Fantasy",
+          "value": "fantasy"
+        },
+        {
+          "label": "Football",
+          "value": "football"
+        },
+        {
+          "label": "Harry Potter",
+          "value": "harry-potter"
+        },
+        {
+          "label": "horror",
+          "value": "horror"
+        },
+        {
+          "label": "Hunter X Hunter",
+          "value": "hunter-x-hunter"
+        },
+        {
+          "label": "Infinite Evolution",
+          "value": "infinite-evolution"
+        },
+        {
+          "label": "Lords: Opens with a Bloody Nest",
+          "value": "lords-opens-with-a-bloody-nest"
+        },
+        {
+          "label": "martial arts",
+          "value": "martial-arts"
+        },
+        {
+          "label": "marvel",
+          "value": "marvel"
+        },
+        {
+          "label": "naruto",
+          "value": "naruto"
+        },
+        {
+          "label": "nba",
+          "value": "nba"
+        },
+        {
+          "label": "nove",
+          "value": "nove"
+        },
+        {
+          "label": "novel",
+          "value": "novel"
+        },
+        {
+          "label": "one piece",
+          "value": "one-piece"
+        },
+        {
+          "label": "online game",
+          "value": "online-game"
+        },
+        {
+          "label": "Please",
+          "value": "please"
+        },
+        {
+          "label": "qidian",
+          "value": "qidian"
+        },
+        {
+          "label": "qimao",
+          "value": "qimao"
+        },
+        {
+          "label": "romance",
+          "value": "romance"
+        },
+        {
+          "label": "Sci-Fi",
+          "value": "sci-fi"
+        },
+        {
+          "label": "Science-fiction",
+          "value": "science-fiction"
+        },
+        {
+          "label": "this is a world of horror",
+          "value": "this-is-a-world-of-horror"
+        },
+        {
+          "label": "Urban",
+          "value": "urban"
+        },
+        {
+          "label": "Web Novel",
+          "value": "web-novel"
+        }
+      ]
+    },
+    "status": {
+      "type": "Picker",
+      "label": "Status",
+      "value": "",
+      "options": [
+        {
+          "label": "All",
+          "value": ""
+        },
+        {
+          "label": "Ongoing",
+          "value": "ongoing"
+        },
+        {
+          "label": "Hiatus",
+          "value": "hiatus"
+        },
+        {
+          "label": "Completed",
+          "value": "completed"
+        }
+      ]
+    },
+    "order": {
+      "type": "Picker",
+      "label": "Order by",
+      "value": "",
+      "options": [
+        {
+          "label": "Default",
+          "value": ""
+        },
+        {
+          "label": "A-Z",
+          "value": "title"
+        },
+        {
+          "label": "Z-A",
+          "value": "titlereverse"
+        },
+        {
+          "label": "Latest Update",
+          "value": "update"
+        },
+        {
+          "label": "Latest Added",
+          "value": "latest"
+        },
+        {
+          "label": "Popular",
+          "value": "popular"
+        },
+        {
+          "label": "Rating",
+          "value": "rating"
+        }
+      ]
+    }
+  }
+}

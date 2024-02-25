@@ -31,7 +31,10 @@ class IfreedomPlugin implements Plugin.PluginBase {
 
   async popularNovels(
     page: number,
-    { filters, showLatestNovels }: Plugin.PopularNovelsOptions<typeof this.filters>,
+    {
+      filters,
+      showLatestNovels,
+    }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
     let url = this.site + "/vse-knigi/?sort=" +
       (showLatestNovels ? "По дате обновления" : filters?.sort?.value || "По рейтингу");
@@ -53,20 +56,21 @@ class IfreedomPlugin implements Plugin.PluginBase {
       .map((index, element) => ({
         name: loadedCheerio(element).attr("title") || "",
         cover: loadedCheerio(element).find("img").attr("src"),
-        url: loadedCheerio(element).attr("href") || "",
+        path:
+          loadedCheerio(element).attr("href")?.replace?.(this.site, "") || "",
       }))
       .get()
-      .filter((novel) => novel.name && novel.url);
+      .filter((novel) => novel.name && novel.path);
 
     return novels;
   }
 
-  async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
-    const body = await fetchApi(novelUrl).then((res) => res.text());
+  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+    const body = await fetchApi(this.site + novelPath).then((res) => res.text());
     const loadedCheerio = parseHTML(body);
 
     const novel: Plugin.SourceNovel = {
-      url: novelUrl,
+      path: novelPath,
       name: loadedCheerio(".entry-title").text(),
       cover: loadedCheerio(".img-ranobe > img").attr("src"),
       summary: loadedCheerio('meta[name="description"]').attr("content"),
@@ -105,12 +109,16 @@ class IfreedomPlugin implements Plugin.PluginBase {
       const name = loadedCheerio(element).find("a").text();
       const url = loadedCheerio(element).find("a").attr("href");
       if (!loadedCheerio(element).find("label.buy-ranobe").length && name && url) {
-        const releaseDate = loadedCheerio(element).find("div.li-col2-ranobe").text().trim();
-        chapters.push({ 
+        const releaseDate = loadedCheerio(element)
+          .find("div.li-col2-ranobe")
+          .text()
+          .trim();
+
+        chapters.push({
           name,
-          url,
+          path: url.replace(this.site, ""),
           releaseTime: this.parseDate(releaseDate),
-          chapterNumber: totalChapters - chapterIndex
+          chapterNumber: totalChapters - chapterIndex,
         });
       }
     });
@@ -119,8 +127,8 @@ class IfreedomPlugin implements Plugin.PluginBase {
     return novel;
   }
 
-  async parseChapter(chapterUrl: string): Promise<string> {
-    const body = await fetchApi(chapterUrl).then((res) => res.text());
+  async parseChapter(chapterPath: string): Promise<string> {
+    const body = await fetchApi(this.site + chapterPath).then((res) => res.text());
     const loadedCheerio = parseHTML(body);
 
     loadedCheerio(".entry-content img").each((index, element) => {
@@ -153,10 +161,10 @@ class IfreedomPlugin implements Plugin.PluginBase {
       .map((index, element) => ({
         name: loadedCheerio(element).attr("title") || "",
         cover: loadedCheerio(element).find("img").attr("src"),
-        url: loadedCheerio(element).attr("href") || "",
+        path: loadedCheerio(element).attr("href")?.replace?.(this.site, "") || "",
       }))
       .get()
-      .filter((novel) => novel.name && novel.url);
+      .filter((novel) => novel.name && novel.path);
 
     return novels;
   }

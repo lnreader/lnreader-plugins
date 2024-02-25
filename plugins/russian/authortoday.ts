@@ -53,14 +53,15 @@ class AuthorToday implements Plugin.PluginBase {
         cover: novel.coverUrl
           ? "https://cm.author.today/content/" + novel.coverUrl
           : defaultCover,
-        url: this.site + "/work/" + novel.id,
+        path: "/work/" + novel.id,
       }),
     );
 
     return novels;
   }
-  async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
-    const workID = novelUrl.split("/")[4];
+
+  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+    const workID = novelPath.split("/")[2];
     const result = await fetchApi(`${apiUrl}v1/work/${workID}/details`, {
       headers: {
         Authorization: token,
@@ -69,7 +70,7 @@ class AuthorToday implements Plugin.PluginBase {
 
     const book = (await result.json()) as responseBook;
     const novel: Plugin.SourceNovel = {
-      url: novelUrl,
+      path: novelPath,
       name: book.title,
       cover: book.coverUrl ? book.coverUrl.split("?")[0] : defaultCover,
       genres: book.tags?.join(", "),
@@ -84,10 +85,13 @@ class AuthorToday implements Plugin.PluginBase {
       status: book.isFinished ? NovelStatus.Completed : NovelStatus.Ongoing,
     };
 
-    if (book.annotation) novel.summary += book.annotation + "\n";
-    if (book.authorNotes) novel.summary += "Примечания автора:\n" + book.authorNotes;
+    if (book.annotation) {
+      novel.summary += book.annotation + "\n";
+    }
+    if (book.authorNotes) {
+      novel.summary += "Примечания автора:\n" + book.authorNotes;
+    }
 
-    // all chapters
     const chaptersRaw = await fetchApi(`${apiUrl}v1/work/${workID}/content`, {
       headers: {
         Authorization: token,
@@ -96,12 +100,15 @@ class AuthorToday implements Plugin.PluginBase {
 
     const chaptersJSON = (await chaptersRaw.json()) as ChaptersEntity[];
     const chapters: Plugin.ChapterItem[] = [];
+
     chaptersJSON.forEach((chapter, chapterIndex) => {
       if (chapter.isAvailable && !chapter.isDraft) {
         chapters.push({
-          name: chapter.title || 'Глава ' + (chapterIndex + 1),
-          url: `${apiUrl}v1/work/${workID}/chapter/${chapter.id}/text`,
-          releaseTime: dayjs(chapter.publishTime || chapter.lastModificationTime).format("LLL"),
+          name: chapter.title || "Глава " + (chapterIndex + 1),
+          path: `v1/work/${workID}/chapter/${chapter.id}/text`,
+          releaseTime: dayjs(
+            chapter.publishTime || chapter.lastModificationTime,
+          ).format("LLL"),
           chapterNumber: (chapter.sortOrder || chapterIndex) + 1,
         });
       }
@@ -111,8 +118,8 @@ class AuthorToday implements Plugin.PluginBase {
     return novel;
   }
 
-  async parseChapter(chapterUrl: string): Promise<string> {
-    const result = await fetchApi(chapterUrl, {
+  async parseChapter(chapterPath: string): Promise<string> {
+    const result = await fetchApi(apiUrl + chapterPath, {
       headers: {
         Authorization: token,
       },
@@ -159,15 +166,14 @@ class AuthorToday implements Plugin.PluginBase {
         .text()
         .trim();
       let cover = loadedCheerio(element).find("img").attr("src");
-      const url = loadedCheerio(element)
+      const path = loadedCheerio(element)
         .find('div[class="book-title"] a')
-        .attr("href")
-        ?.split("/")?.[2];
+        .attr("href");
 
       cover = cover ? cover.split("?")[0] : defaultCover;
 
-      if (!url) return;
-      novels.push({ name, cover, url: this.site + "/work/" + url });
+      if (!path) return;
+      novels.push({ name, cover, path });
     });
 
     return novels;
@@ -193,7 +199,7 @@ class AuthorToday implements Plugin.PluginBase {
       label: "Жанры",
       value: "",
       options: [
-        { label: "Все", value:"" },
+        { label: "Все", value: "" },
         { label: "Альтернативная история", value: "sf-history" },
         { label: "Антиутопия", value: "dystopia" },
         { label: "Бизнес-литература", value: "biznes-literatura" },

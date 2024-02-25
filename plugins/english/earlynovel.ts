@@ -2,9 +2,8 @@ import { CheerioAPI, load as parseHTML } from "cheerio";
 import { fetchApi, fetchFile } from "@libs/fetch";
 import { FilterTypes, Filters } from "@libs/filterInputs";
 import { Plugin } from "@typings/plugin";
-import { defaultCover } from "@libs/defaultCover";
 
-class EarlyNovelPlugin implements Plugin.PluginBase {
+class EarlyNovelPlugin implements Plugin.PagePlugin {
     id = "earlynovel";
     name = "Early Novel";
     version = "1.0.0";
@@ -16,26 +15,42 @@ class EarlyNovelPlugin implements Plugin.PluginBase {
 
         loadedCheerio(".col-truyen-main > .list-truyen > .row").each(
             (i, el) => {
-                const nUrl = loadedCheerio(el).find("h3.truyen-title > a").attr("href");
-
-                const novelUrl = this.site + nUrl    
+                const novelUrl = loadedCheerio(el).find("h3.truyen-title > a").attr("href");  
                 const novelName = loadedCheerio(el)
                     .find("h3.truyen-title > a")
                     .text();
-                const novelCover = loadedCheerio(el).find("img.cover").attr("src");
-                console.log(novelCover);
+                const novelCover = loadedCheerio(el).find('.lazyimg').attr("data-image");
     
-                if (!nUrl) return;
+                if (!novelUrl) return;
                 novels.push({
-                    url: novelUrl,
+                    path: novelUrl,
                     name: novelName,
                     cover: novelCover,
                 });
             }
         );
-    
         return novels;
     };
+
+    parseChapters(loadedCheerio:CheerioAPI){
+        const chapter: Plugin.ChapterItem[] = [];
+        loadedCheerio("ul.list-chapter > li").each((i,el) => {
+            const chapterName = loadedCheerio(el)
+                .find(".chapter-text")
+                .text()
+                .trim();
+            const chapterUrl = loadedCheerio(el)
+                .find("a")
+                .attr("href")
+                ?.slice(1);
+            if (!chapterUrl) return;
+
+            chapter.push({
+                name: chapterName,
+                path: chapterUrl
+            })});
+        return chapter;
+    }
 
     async popularNovels(
         pageNo: number,
@@ -50,32 +65,31 @@ class EarlyNovelPlugin implements Plugin.PluginBase {
 
         link += `?page=${pageNo}`;
 
-        const headers = new Headers();
-        const body = await fetchApi(link, { headers }).then((result) =>
-            result.text()
-        );
+        const body = await fetchApi(link).then((res) => res.text());
+
         const loadedCheerio = parseHTML(body);
+        console.log(body);
         return this.parseNovels(loadedCheerio);
     }
 
-    async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
-        const url = novelUrl;
-        const headers = new Headers();
-        const result = await fetchApi(url, { headers });
+    async parseNovel(novelPath: string): Promise<Plugin.SourceNovel & {totalPages: number}> {
+        const result = await fetchApi(this.site + novelPath);
         const body = await result.text();
 
         let loadedCheerio = parseHTML(body);
+        loadedCheerio('.glyphicon-menu-right').closest('li').remove();
+        const pagenav = loadedCheerio('.page-nav').prev().find('a');
+        const lastPageStr = pagenav.attr('title')?.match(/(\d+)/);
+        const lastPage = Number(lastPageStr?.[1] || "0");
 
-        const novel: Plugin.SourceNovel = {
-            url,
+        const novel: Plugin.SourceNovel & {totalPages: number}= {
+            path: novelPath,
+            name: loadedCheerio(".book > img").attr("alt") || "Untitled",
+            cover: loadedCheerio(".book > img").attr("src"),
+            summary: loadedCheerio(".desc-text").text().trim(),
             chapters: [],
+            totalPages: lastPage
         };
-
-        novel.name = loadedCheerio(".book > img").attr("alt");
-
-        novel.cover = loadedCheerio(".book > img").attr("src");
-
-        novel.summary = loadedCheerio(".desc-text").text().trim();
 
         loadedCheerio(".info > div > h3").each(function () {
             let detailName = loadedCheerio(this).text();
@@ -98,58 +112,20 @@ class EarlyNovelPlugin implements Plugin.PluginBase {
             }
         });
 
-        //! Doesn't work since there are multiple pages and can't find source API
-        //# Since cannot find sourceAPI i try similar function to lightnovelpub
-        const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
-
-        const lastPageStr = loadedCheerio('a:contains("Last ")')
-            .attr("title")
-            ?.match(/(\d+)/g);
-        const lastPage = Number(lastPageStr?.[1] || "0");
-
-        const getChapters = async () => {
-            const chapter: Plugin.ChapterItem[] = [];
-            for (let i = 1; i <= lastPage; i++) {
-                const chaptersUrl = `${novelUrl}?page=${i}`;
-                const data = await fetchApi(chaptersUrl, { headers });
-                const chapters = await data.text();
-    
-                loadedCheerio = parseHTML(chapters);
-
-                loadedCheerio("ul.list-chapter > li").each((i,el) => {
-                    const chapterName = loadedCheerio(el)
-                        .find(".chapter-text")
-                        .text()
-                        .trim();
-                    const releaseDate = null;
-                    const cUrl = loadedCheerio(el)
-                        .find("a")
-                        .attr("href")
-                        ?.slice(1);
-                    if (!cUrl) return;
-                    const chapterUrl = this.site + cUrl;
-
-                    chapter.push({
-                        name: chapterName,
-                        releaseTime: releaseDate,
-                        url: chapterUrl,
-                    });
-                });
-
-                await delay(1000);
-            }
-
-            return chapter;
-        }
-
-        novel.chapters = await getChapters();
-
+        novel.chapters = this.parseChapters(loadedCheerio);
         return novel;
-    };
+    }
 
-    async parseChapter(chapterUrl: string): Promise<string> {
-        const headers = new Headers();
-        const result = await fetchApi(chapterUrl, { headers });
+    async parsePage(novelPath: string, page: string): Promise<Plugin.SourcePage> {
+        const url = this.site + novelPath + '?page=' + page;
+        const body = await fetchApi(url).then((res) => res.text());
+        const loadedCheerio = parseHTML(body);
+        const chapters = this.parseChapters(loadedCheerio);
+        return {chapters}
+    }
+
+    async parseChapter(chapterPath: string): Promise<string> {
+        const result = await fetchApi(this.site + chapterPath);
         const body = await result.text();
 
         const loadedCheerio = parseHTML(body);
@@ -164,8 +140,7 @@ class EarlyNovelPlugin implements Plugin.PluginBase {
         pageNo: number
     ): Promise<Plugin.NovelItem[]> {
         const url = `${this.site}search?keyword=${searchTerm}`;
-        const headers = new Headers();
-        const result = await fetchApi(url, { headers });
+        const result = await fetchApi(url);
         const body = await result.text();
 
         const loadedCheerio = parseHTML(body);

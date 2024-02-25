@@ -11,7 +11,7 @@ class TemplatePlugin implements Plugin.PluginBase {
     id = "";
     name = "";
     icon = "";
-    site = "";
+    site = "https://example.com";
     version = "1.0.0";
     filters: Filters | undefined = undefined;
 
@@ -27,14 +27,15 @@ class TemplatePlugin implements Plugin.PluginBase {
         /** Add your fetching code here */
         novels.push({
             name: "Novel1",
-            url: "example.com/novel1",
+            path: "/novels/1",
             cover: defaultCover,
         });
         return novels;
     }
-    async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
+    async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
         const novel: Plugin.SourceNovel = {
-            url: novelUrl,
+            path: novelPath,
+            name: 'Untitled'
         };
 
         // TODO: get here data from the site and
@@ -55,7 +56,7 @@ class TemplatePlugin implements Plugin.PluginBase {
         // TODO: add each chapter to the list using
         const chapter: Plugin.ChapterItem = {
             name: "",
-            url: "",
+            path: "",
             releaseTime: "",
             chapterNumber: 0,
         };
@@ -64,7 +65,7 @@ class TemplatePlugin implements Plugin.PluginBase {
         novel.chapters = chapters;
         return novel;
     }
-    async parseChapter(chapterUrl: string): Promise<string> {
+    async parseChapter(chapterPath: string): Promise<string> {
         // parse chapter text here
         const chapterText = "";
         return chapterText;

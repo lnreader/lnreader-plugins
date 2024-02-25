@@ -1,0 +1,146 @@
+[
+  {
+    "id": "lightnovelfr",
+    "sourceSite": "https://lightnovelfr.com/",
+    "sourceName": "Ligh Novel FR",
+    "options": {
+      "lang": "French",
+      "reverseChapters": true
+    }
+  },
+  {
+    "id": "kolnovel",
+    "sourceSite": "https://kolnovel.me/",
+    "sourceName": "ملوك الروايات",
+    "options": {
+      "lang": "Arabic",
+      "reverseChapters": true
+    }
+  },
+  {
+    "id": "knoxt",
+    "sourceSite": "https://knoxt.space/",
+    "sourceName": "KnoxT",
+    "options": {
+      "lang": "English",
+      "reverseChapters": true
+    }
+  },
+  {
+    "id": "bacalightnovel",
+    "sourceSite": "https://bacalightnovel.co/",
+    "sourceName": "Baca Light Novel",
+    "options": {
+      "lang": "Indonesian",
+      "reverseChapters": true
+    }
+  },
+  {
+    "id": "allnovelread",
+    "sourceSite": "https://allnovelread.com/",
+    "sourceName": "AllNovelRead",
+    "options": {
+      "lang": "Spanish",
+      "reverseChapters": true
+    }
+  },
+  {
+    "id": "daotranslate",
+    "sourceSite": "https://daotranslate.com/",
+    "sourceName": "DaoTranslate",
+    "options": {
+      "lang": "English",
+      "reverseChapters": true
+    }
+  },
+  {
+    "id": "novelsparadise",
+    "sourceSite": "https://novelsparadise.net/",
+    "sourceName": "جنة الروايات",
+    "options": {
+      "lang": "Arabic",
+      "reverseChapters": true
+    }
+  },
+  {
+    "id": "universalnovel",
+    "sourceSite": "https://universalnovel.com/",
+    "sourceName": "Universal Novel",
+    "options": {
+      "lang": "English",
+      "reverseChapters": false
+    }
+  },
+  {
+    "id": "noveltr",
+    "sourceSite": "https://noveltr.com/",
+    "sourceName": "NovelTR",
+    "options": {
+      "lang": "Turkish",
+      "reverseChapters": true
+    }
+  },
+  {
+    "id": "noblemtl",
+    "sourceSite": "https://noblemtl.com/",
+    "sourceName": "NobleMTL",
+    "options": {
+      "lang": "English",
+      "reverseChapters": true
+    }
+  },
+  {
+    "id": "genesistls",
+    "sourceSite": "https://genesistls.com/",
+    "sourceName": "GenesisTls",
+    "options": {
+      "lang": "English",
+      "reverseChapters": false
+    }
+  },
+  {
+    "id": "pandamtl",
+    "sourceSite": "https://pandamtl.com/",
+    "sourceName": "Panda Machine Translations",
+    "options": {
+      "lang": "English",
+      "reverseChapters": true
+    }
+  },
+  {
+    "id": "novelsknight",
+    "sourceSite": "https://novelsknight.com/",
+    "sourceName": "NovelsKnight",
+    "options": {
+      "lang": "English",
+      "reverseChapters": true
+    }
+  },
+  {
+    "id": "centralnovel",
+    "sourceSite": "https://centralnovel.com/",
+    "sourceName": "Central Novel",
+    "options": {
+      "lang": "Portuguese",
+      "reverseChapters": true
+    }
+  },
+  {
+    "id": "whitemoonlightnovels",
+    "sourceSite": "https://whitemoonlightnovels.com/",
+    "sourceName": "White Moonlight Novels",
+    "options": {
+      "lang": "English",
+      "reverseChapters": false
+    }
+  },
+  {
+    "id": "systemtranslation",
+    "sourceSite": "https://systemtranslation.com/",
+    "sourceName": "System Translation",
+    "options": {
+      "lang": "English",
+      "reverseChapters": true
+    }
+  }
+]

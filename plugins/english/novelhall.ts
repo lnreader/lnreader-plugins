@@ -1,34 +1,35 @@
-import { load as parseHTML } from "cheerio";
+import { load, load as parseHTML } from "cheerio";
 import { fetchApi, fetchFile } from "@libs/fetch";
 import { Plugin } from "@typings/plugin";
 import { Filters } from "@libs/filterInputs";
+import { defaultCover } from "@libs/defaultCover";
 
 class NovelHall implements Plugin.PluginBase {
     id = "novelhall";
     name = "Novel Hall";
     version = "1.0.0";
     icon = "src/en/novelhall/icon.png";
-    filters?: Filters | undefined;
+    filters?: Filters | undefined; //TODO: Filters Requires hideOnSelect
     site = "https://novelhall.com/";
-    baseUrl = this.site;
 
-    async popularNovels(pageNo: number, options: Plugin.PopularNovelsOptions<Filters>): Promise<Plugin.NovelItem[]> {
-        const url = `${this.baseUrl}all2022-${pageNo}.html`;
+    async popularNovels(page: number, options: Plugin.PopularNovelsOptions<Filters>): Promise<Plugin.NovelItem[]> {
+        const url = `${this.site}all2022-${page}.html`;
 
         const body = await fetchApi(url).then((r) => r.text());
         
         const loadedCheerio = parseHTML(body);
 
-        let novels: Plugin.NovelItem[] = [];
+        const novels: Plugin.NovelItem[] = [];
 
         loadedCheerio("li.btm").each((idx, ele) => {
             const novelName = loadedCheerio(ele).text().trim()
-            const novelUrl =
-                this.baseUrl + loadedCheerio(ele).find("a").attr("href");
+            const novelUrl = loadedCheerio(ele).find("a").attr("href");
+            if(!novelUrl) return;
 
             const novel = {
                 name: novelName,
-                url: novelUrl,
+                cover: defaultCover,
+                path: novelUrl,
             };
 
             novels.push(novel);
@@ -36,77 +37,66 @@ class NovelHall implements Plugin.PluginBase {
 
         return novels;
     }
-    async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
-        const url = novelUrl;
+    async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+        const body = await fetchApi(this.site + novelPath).then((r) => r.text());
 
-        const body = await fetchApi(url).then((r) => r.text());
-
-        let loadedCheerio = parseHTML(body);
+        const loadedCheerio = parseHTML(body);
 
         const novel: Plugin.SourceNovel = {
-            url,
+            path: novelPath,
+            name: loadedCheerio(".book-info > h1").text() || 'Untitled',
+            cover: loadedCheerio('meta[property="og:image"]').attr('content'),
+            summary: loadedCheerio(".intro").text().trim(),
             chapters: [],
         };
 
-        novel.name = loadedCheerio(".booknav2 > h1").text();
-
-        novel.cover = loadedCheerio('meta[property="og:image"]').attr(
-            "content"
-        );
-
-        novel.summary = loadedCheerio(".navtxt").text().trim();
-
-        novel.author = loadedCheerio('p:contains("Author")')
+        loadedCheerio('.total').find('p').remove();
+        novel.author = loadedCheerio('.total span:contains("Author")')
             .text()
             .replace("Author：", "")
             .trim();
 
-        novel.status = loadedCheerio('p:contains("Status")')
+        novel.status = loadedCheerio('.total span:contains("Status")')
             .text()
             .replace("Status：", "")
             .replace("Active", "Ongoing")
             .trim();
 
-        novel.genres = loadedCheerio('p:contains("Genre")')
-            .text()
-            ?.replace("Genre：", "")
-            .trim();
+        novel.genres = loadedCheerio('.total a')
+            .map((a,ex) => loadedCheerio(ex).text())
+            .toArray()
+            .join(',');
 
-        let chapter: Plugin.ChapterItem[] = [];
+        const chapter: Plugin.ChapterItem[] = [];
 
         loadedCheerio("#morelist ul > li").each((idx, ele) => {
             const chapterName = loadedCheerio(ele).find("a").text().trim();
-            const releaseDate = null;
-            const chapterUrl =
-                this.baseUrl + loadedCheerio(ele).find("a").attr("href");
+            const chapterUrl = loadedCheerio(ele).find("a").attr("href");
+            if (!chapterUrl) return;
 
             chapter.push({
                 name: chapterName,
-                releaseTime: releaseDate,
-                url: chapterUrl,
+                path: chapterUrl,
             });
         });
 
         novel.chapters = chapter;
         return novel;
     }
-    async parseChapter(chapterUrl: string): Promise<string> {
-        const body = await fetchApi(chapterUrl).then((r) => r.text());
 
-        let loadedCheerio = parseHTML(body);
-
+    async parseChapter(chapterPath: string): Promise<string> {
+        const body = await fetchApi(this.site + chapterPath).then((r) => r.text());
+        const loadedCheerio = parseHTML(body);
         const chapterText = loadedCheerio(".content").html() || '';
-
         return chapterText;
     }
+
     async searchNovels(searchTerm: string, pageNo: number): Promise<Plugin.NovelItem[]> {
-        const url = `${this.baseUrl}index.php?s=so&module=book&keyword=${searchTerm}`;
-
+        const url = `${this.site}index.php?s=so&module=book&keyword=${searchTerm}`;
         const body = await fetchApi(url).then((r) => r.text());
+        const loadedCheerio = parseHTML(body);
 
-        let loadedCheerio = parseHTML(body);
-
-        let novels: Plugin.NovelItem[] = [];
+        const novels: Plugin.NovelItem[] = [];
 
         loadedCheerio("#article_list_content > li").each((idx, ele) => {
             const novelName = loadedCheerio(ele)
@@ -115,13 +105,13 @@ class NovelHall implements Plugin.PluginBase {
                 .replace(/\t+/g, "")
                 .replace(/\n/g, " ");
             const novelCover = loadedCheerio(ele).find("img").attr("data-src");
-            const novelUrl =
-                this.baseUrl + loadedCheerio(ele).find("a").attr("href")?.slice(1);
+            const novelUrl = loadedCheerio(ele).find("a").attr("href")?.slice(1);
+            if (!novelUrl) return;
 
             const novel = {
                 name: novelName,
                 cover: novelCover,
-                url: novelUrl,
+                path: novelUrl,
             };
 
             novels.push(novel);

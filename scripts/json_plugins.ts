@@ -3,7 +3,8 @@ require("module-alias/register");
 import * as fs from "fs";
 import { languages } from "@libs/languages";
 import * as path from "path";
-import { Plugin, isPlugin } from "@typings/plugin";
+import { Plugin } from "@typings/plugin";
+import { minify } from "./terser";
 
 const root = path.dirname(__dirname);
 const outRoot = path.join(root, "..");
@@ -11,16 +12,16 @@ const { execSync } = require("child_process");
 const REMOTE = execSync("git remote get-url origin")
   .toString()
   .replace(/[\s\n]/g, "");
-let CURRENT_BRANCH = 'dist';
+let CURRENT_BRANCH = "dist";
 try {
   CURRENT_BRANCH = execSync("git rev-parse --abbrev-ref HEAD")
     .toString()
     .replace(/[\s\n]/g, "");
-}catch {
+} catch {
   //
 }
 const matched = REMOTE.match(/([^:/]+?)\/([^/.]+)(\.git)?$/);
-if(!matched) throw Error("Cant parse git url");
+if (!matched) throw Error("Cant parse git url");
 const USERNAME = matched[1];
 const REPO = matched[2];
 const USER_CONTENT_LINK = `https://raw.githubusercontent.com/${USERNAME}/${REPO}/${CURRENT_BRANCH}`;
@@ -54,15 +55,10 @@ for (let language in languages) {
   json[language] = [];
   plugins.forEach((plugin) => {
     if (plugin.startsWith(".")) return;
-    const instance: Plugin.PluginBase | unknown =
-      require(`../plugins/${language.toLowerCase()}/${
-        plugin.split(".")[0]
-      }`).default;
-
-    if (!isPlugin(instance)) {
-      console.log(plugin);
-      return;
-    }
+    minify(path.join(langPath, plugin));
+    const instance: Plugin.PluginBase = require(
+      `../plugins/${language.toLowerCase()}/${plugin.split(".")[0]}`,
+    ).default;
 
     const { id, name, site, version, icon } = instance;
     const normalisedName = name.replace(/\[.*\]/, "");
@@ -83,7 +79,6 @@ for (let language in languages) {
     } else {
       pluginSet.add(id);
     }
-
     json[language].push(info);
     console.log(name, "✅");
   });

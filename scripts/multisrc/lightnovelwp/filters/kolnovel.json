@@ -1,0 +1,268 @@
+{
+  "filters": {
+    "genre[]": {
+      "type": "Checkbox",
+      "label": "تصنيف",
+      "value": [],
+      "options": [
+        {
+          "label": "Wuxia",
+          "value": "wuxia"
+        },
+        {
+          "label": "Xianxia",
+          "value": "xianxia"
+        },
+        {
+          "label": "XUANHUAN",
+          "value": "xuanhuan"
+        },
+        {
+          "label": "أكشن",
+          "value": "action"
+        },
+        {
+          "label": "إثارة",
+          "value": "excitement"
+        },
+        {
+          "label": "إنتقال الى عالم أخر",
+          "value": "isekai"
+        },
+        {
+          "label": "إيتشي",
+          "value": "etchi"
+        },
+        {
+          "label": "الخيال العلمي",
+          "value": "sci-fi"
+        },
+        {
+          "label": "بوليسي",
+          "value": "policy"
+        },
+        {
+          "label": "تاريخي",
+          "value": "historical"
+        },
+        {
+          "label": "تحقيقات",
+          "value": "تحقيق"
+        },
+        {
+          "label": "تقمص شخصيات",
+          "value": "rpg"
+        },
+        {
+          "label": "جريمة",
+          "value": "crime"
+        },
+        {
+          "label": "جوسى",
+          "value": "josei"
+        },
+        {
+          "label": "جوسي",
+          "value": "جوسي"
+        },
+        {
+          "label": "حريم",
+          "value": "harem"
+        },
+        {
+          "label": "حياة مدرسية",
+          "value": "school-life"
+        },
+        {
+          "label": "خيالي(فانتازيا)",
+          "value": "fantasy"
+        },
+        {
+          "label": "دراما",
+          "value": "drama"
+        },
+        {
+          "label": "رعب",
+          "value": "horror"
+        },
+        {
+          "label": "رومانسي",
+          "value": "romantic"
+        },
+        {
+          "label": "سحر",
+          "value": "magic"
+        },
+        {
+          "label": "سينن",
+          "value": "senen"
+        },
+        {
+          "label": "شريحة من الحياة",
+          "value": "slice-of-life"
+        },
+        {
+          "label": "شوجو",
+          "value": "shojo"
+        },
+        {
+          "label": "شونين",
+          "value": "shonen"
+        },
+        {
+          "label": "طبي",
+          "value": "medical"
+        },
+        {
+          "label": "ظواهر خارقة للطبيعة",
+          "value": "supernatural"
+        },
+        {
+          "label": "غموض",
+          "value": "mysteries"
+        },
+        {
+          "label": "فانتازيا",
+          "value": "فانتازيا"
+        },
+        {
+          "label": "فنون القتال",
+          "value": "martial-arts"
+        },
+        {
+          "label": "قصة قصيرة",
+          "value": "قصة-قصيرة"
+        },
+        {
+          "label": "قوى خارقة",
+          "value": "superpower"
+        },
+        {
+          "label": "كوميدي",
+          "value": "comedy"
+        },
+        {
+          "label": "مأساوي",
+          "value": "tragedy"
+        },
+        {
+          "label": "ما بعد الكارثة",
+          "value": "after-the-disaster"
+        },
+        {
+          "label": "مغامرة",
+          "value": "adventure"
+        },
+        {
+          "label": "ميكا",
+          "value": "mechanical"
+        },
+        {
+          "label": "ناضج",
+          "value": "mature"
+        },
+        {
+          "label": "نفسي",
+          "value": "psychological"
+        },
+        {
+          "label": "ون شوت",
+          "value": "ون-شوت"
+        }
+      ]
+    },
+    "type[]": {
+      "type": "Checkbox",
+      "label": "النوع",
+      "value": [],
+      "options": [
+        {
+          "label": "إنجليزية",
+          "value": "english"
+        },
+        {
+          "label": "رواية لايت",
+          "value": "light-novel"
+        },
+        {
+          "label": "رواية ويب",
+          "value": "web-novel"
+        },
+        {
+          "label": "صينية",
+          "value": "chinese"
+        },
+        {
+          "label": "عربية",
+          "value": "arabic"
+        },
+        {
+          "label": "كورية",
+          "value": "korean"
+        },
+        {
+          "label": "ون شوت",
+          "value": "ون-شوت"
+        },
+        {
+          "label": "يابانية",
+          "value": "japanese"
+        }
+      ]
+    },
+    "status": {
+      "type": "Picker",
+      "label": "الحالة",
+      "value": "",
+      "options": [
+        {
+          "label": "الكل",
+          "value": ""
+        },
+        {
+          "label": "Ongoing",
+          "value": "ongoing"
+        },
+        {
+          "label": "Hiatus",
+          "value": "hiatus"
+        },
+        {
+          "label": "Completed",
+          "value": "completed"
+        }
+      ]
+    },
+    "order": {
+      "type": "Picker",
+      "label": "ترتيب حسب",
+      "value": "",
+      "options": [
+        {
+          "label": "الإعداد الأولي",
+          "value": ""
+        },
+        {
+          "label": "A-Z",
+          "value": "title"
+        },
+        {
+          "label": "Z-A",
+          "value": "titlereverse"
+        },
+        {
+          "label": "أخر التحديثات",
+          "value": "update"
+        },
+        {
+          "label": "أخر ما تم إضافته",
+          "value": "latest"
+        },
+        {
+          "label": "الرائجة",
+          "value": "popular"
+        }
+      ]
+    }
+  }
+}

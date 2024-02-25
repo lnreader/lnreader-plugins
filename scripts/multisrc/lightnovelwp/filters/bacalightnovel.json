@@ -1,0 +1,78 @@
+{
+  "filters": {
+    "genre[]": {
+      "type": "Checkbox",
+      "label": "Genre",
+      "value": [],
+      "options": [
+        { "label": "Action", "value": "action" },
+        { "label": "Adventure", "value": "adventure" },
+        { "label": "Comedy", "value": "comedy" },
+        { "label": "Drama", "value": "drama" },
+        { "label": "Ecchi", "value": "ecchi" },
+        { "label": "Fantasy", "value": "fantasy" },
+        { "label": "Gender Bender", "value": "gender-bender" },
+        { "label": "Harem", "value": "harem" },
+        { "label": "Historical", "value": "historical" },
+        { "label": "Horror", "value": "horror" },
+        { "label": "Isekai", "value": "isekai" },
+        { "label": "Josei", "value": "josei" },
+        { "label": "Martial Arts", "value": "martial-arts" },
+        { "label": "Mature", "value": "mature" },
+        { "label": "Mecha", "value": "mecha" },
+        { "label": "Mystery", "value": "mystery" },
+        { "label": "Psychological", "value": "psychological" },
+        { "label": "Romance", "value": "romance" },
+        { "label": "School Life", "value": "school-life" },
+        { "label": "Sci-fi", "value": "sci-fi" },
+        { "label": "Seinen", "value": "seinen" },
+        { "label": "Shoujo", "value": "shoujo" },
+        { "label": "Shoujo Ai", "value": "shoujo-ai" },
+        { "label": "Shounen", "value": "shounen" },
+        { "label": "Shounen Ai", "value": "shounen-ai" },
+        { "label": "Slice of Life", "value": "slice-of-life" },
+        { "label": "Sports", "value": "sports" },
+        { "label": "Supernatural", "value": "supernatural" },
+        { "label": "Tragedy", "value": "tragedy" },
+        { "label": "Wuxia", "value": "wuxia" },
+        { "label": "Xianxia", "value": "xianxia" },
+        { "label": "Xuanhuan", "value": "xuanhuan" },
+        { "label": "Yaoi", "value": "yaoi" },
+        { "label": "Yuri", "value": "yuri" }
+      ]
+    },
+    "type[]": {
+      "type": "Checkbox",
+      "label": "Tipe",
+      "value": [],
+      "options": [
+        { "label": "", "value": "" },
+        { "label": "Novel", "value": "novel" }
+      ]
+    },
+    "status": {
+      "type": "Picker",
+      "label": "Status",
+      "value": "",
+      "options": [
+        { "label": "All", "value": "" },
+        { "label": "Ongoing", "value": "ongoing" },
+        { "label": "Hiatus", "value": "hiatus" },
+        { "label": "Completed", "value": "completed" }
+      ]
+    },
+    "order": {
+      "type": "Urutkan",
+      "label": "Order",
+      "value": "",
+      "options": [
+        { "label": "Default", "value": "" },
+        { "label": "A-Z", "value": "title" },
+        { "label": "Z-A", "value": "titlereverse" },
+        { "label": "Baru diperbarui", "value": "update" },
+        { "label": "Baru ditambahkan", "value": "latest" },
+        { "label": "Terpopuler", "value": "popular" }
+      ]
+    }
+  }
+}

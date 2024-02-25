@@ -15,23 +15,20 @@ class AllNovelFullPlugin implements Plugin.PluginBase {
         const novels: Plugin.NovelItem[] = [];
 
         loadedCheerio(".col-truyen-main .list-truyen .row").each((i,el) => {
+            const novelUrl = loadedCheerio(el).find("h3.truyen-title > a").attr("href");
+            if (!novelUrl) return;
+
             const novelName = loadedCheerio(el)
                 .find("h3.truyen-title > a")
                 .text();
+
             let novelCover = loadedCheerio(el).find("img.cover").attr("src");
-            let novelUrl = loadedCheerio(el).find("h3.truyen-title > a").attr("href");
-
-            if (!novelUrl) return;
-
-            if (novelUrl && !isUrlAbsolute(novelUrl)) {
-                novelUrl = this.site + novelUrl;
-            }
             if (novelCover && !isUrlAbsolute(novelCover)){
                 novelCover = this.site + novelCover;
             }
 
             const novel = {
-                url: novelUrl,
+                path: novelUrl,
                 name: novelName,
                 cover: novelCover,
             };
@@ -53,33 +50,27 @@ class AllNovelFullPlugin implements Plugin.PluginBase {
 
         link += `?page=${pageNo}`;
 
-        const headers = new Headers();
-        const body = await fetchApi(link, { headers }).then((result) =>
-            result.text()
-        );
+        const result = await fetchApi(link);
+        const body = await result.text();
 
         const loadedCheerio = parseHTML(body);
         return this.parseNovels(loadedCheerio);
     }
 
-    async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
-        const url = novelUrl;
-        const headers = new Headers();
-        const result = await fetchApi(url, { headers });
+    async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+        const url = this.site + novelPath;
+        const result = await fetchApi(url);
         const body = await result.text();
 
         let loadedCheerio = parseHTML(body);
 
         const novel: Plugin.SourceNovel = {
-            url,
+            path: novelPath,
+            name: loadedCheerio(".book > img").attr("alt") || 'Untitled',
+            cover: this.site + loadedCheerio(".book > img").attr("src"),
+            summary: loadedCheerio(".desc-text").text().trim(),
             chapters: [],
         };
-
-        novel.name = loadedCheerio(".book > img").attr("alt");
-
-        novel.cover = this.site + loadedCheerio(".book > img").attr("src");
-
-        novel.summary = loadedCheerio(".desc-text").text().trim();
 
         loadedCheerio(".info > div").each((i,el) => {
         	const detailName = loadedCheerio(el).find("h3").text();
@@ -87,7 +78,7 @@ class AllNovelFullPlugin implements Plugin.PluginBase {
 							.find('a')
 							.map((a,ex) => loadedCheerio(ex).text())
                             .toArray()
-          					.join(', ');
+          					.join(',');
 
             switch (detailName) {
               case 'Author:':
@@ -106,7 +97,7 @@ class AllNovelFullPlugin implements Plugin.PluginBase {
         const getChapters = async (id: string) => {
             const chaptersUrl = this.site + "/ajax/chapter-option?novelId=" + id;
 
-            const data = await fetchApi(chaptersUrl, { headers });
+            const data = await fetchApi(chaptersUrl);
             const chapters = await data.text();
 
             loadedCheerio = parseHTML(chapters);
@@ -115,16 +106,13 @@ class AllNovelFullPlugin implements Plugin.PluginBase {
 
             loadedCheerio("select > option").each((i,el) => {
                 const chapterName = loadedCheerio(el).text();
-                const releaseDate = null;
-                const cUrl = loadedCheerio(el).attr("value");
-                const chapterUrl = this.site + cUrl
+                const chapterUrl = loadedCheerio(el).attr("value");
 
-                if (!cUrl) return;
+                if (!chapterUrl ) return;
 
                 chapter.push({
                     name: chapterName,
-                    releaseTime: releaseDate,
-                    url: chapterUrl,
+                    path: chapterUrl,
                 });
             });
 
@@ -138,9 +126,8 @@ class AllNovelFullPlugin implements Plugin.PluginBase {
         return novel;
     };
 
-    async parseChapter(chapterUrl: string): Promise<string> {
-        const headers = new Headers();
-        const result = await fetchApi(chapterUrl, { headers });
+    async parseChapter(chapterPath: string): Promise<string> {
+        const result = await fetchApi(this.site + chapterPath);
         const body = await result.text();
 
         const loadedCheerio = parseHTML(body);
@@ -152,11 +139,10 @@ class AllNovelFullPlugin implements Plugin.PluginBase {
 
     async searchNovels(
         searchTerm: string,
-        pageNo: number
+        page: number
     ): Promise<Plugin.NovelItem[]> {
-        const url = `${this.site}/search?keyword=${searchTerm}&page=${pageNo}`;
-        const headers = new Headers();
-        const result = await fetchApi(url, { headers });
+        const url = `${this.site}/search?keyword=${searchTerm}&page=${page}`;
+        const result = await fetchApi(url);
         const body = await result.text();
 
         const loadedCheerio = parseHTML(body);

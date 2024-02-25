@@ -1,0 +1,492 @@
+{
+  "filters": {
+    "genre[]": {
+      "type": "Checkbox",
+      "label": "Genre",
+      "value": [],
+      "options": [
+        {
+          "label": "A.I",
+          "value": "a-i"
+        },
+        {
+          "label": "Academy",
+          "value": "academy"
+        },
+        {
+          "label": "Action",
+          "value": "action"
+        },
+        {
+          "label": "Adult",
+          "value": "adult"
+        },
+        {
+          "label": "Adventure",
+          "value": "adventure"
+        },
+        {
+          "label": "Alternative History",
+          "value": "alternative-history"
+        },
+        {
+          "label": "Another World",
+          "value": "another-world"
+        },
+        {
+          "label": "Apocalypse",
+          "value": "apocalypse"
+        },
+        {
+          "label": "Bromance",
+          "value": "bromance"
+        },
+        {
+          "label": "Comedy",
+          "value": "comedy"
+        },
+        {
+          "label": "Cthulhu",
+          "value": "cthulhu"
+        },
+        {
+          "label": "Dark fantasy",
+          "value": "dark-fantasy"
+        },
+        {
+          "label": "Demons",
+          "value": "demons"
+        },
+        {
+          "label": "Drama",
+          "value": "drama"
+        },
+        {
+          "label": "Dystopia",
+          "value": "dystopia"
+        },
+        {
+          "label": "Ecchi",
+          "value": "ecchi"
+        },
+        {
+          "label": "Entertainment",
+          "value": "entertainment"
+        },
+        {
+          "label": "Exhaustion",
+          "value": "exhaustion"
+        },
+        {
+          "label": "Fanfiction",
+          "value": "fanfiction"
+        },
+        {
+          "label": "fantasy",
+          "value": "fantasy"
+        },
+        {
+          "label": "finance",
+          "value": "finance"
+        },
+        {
+          "label": "For men",
+          "value": "for-men"
+        },
+        {
+          "label": "Full color",
+          "value": "full-color"
+        },
+        {
+          "label": "fusion",
+          "value": "fusion"
+        },
+        {
+          "label": "gacha",
+          "value": "gacha"
+        },
+        {
+          "label": "Gallery",
+          "value": "gallery"
+        },
+        {
+          "label": "Game",
+          "value": "game"
+        },
+        {
+          "label": "Gender Bender",
+          "value": "gender-bender"
+        },
+        {
+          "label": "Genius",
+          "value": "genius"
+        },
+        {
+          "label": "Harem",
+          "value": "harem"
+        },
+        {
+          "label": "Healing",
+          "value": "healing"
+        },
+        {
+          "label": "Hero",
+          "value": "hero"
+        },
+        {
+          "label": "Historical",
+          "value": "historical"
+        },
+        {
+          "label": "Hunter",
+          "value": "hunter"
+        },
+        {
+          "label": "korean novel",
+          "value": "korean-novel"
+        },
+        {
+          "label": "Light Novel",
+          "value": "light-novel"
+        },
+        {
+          "label": "List Adventure Manga Genres",
+          "value": "list-adventure-manga-genres"
+        },
+        {
+          "label": "Long Strip",
+          "value": "long-strip"
+        },
+        {
+          "label": "Love comedy",
+          "value": "love-comedy"
+        },
+        {
+          "label": "magic",
+          "value": "magic"
+        },
+        {
+          "label": "Manhua",
+          "value": "manhua"
+        },
+        {
+          "label": "Martial Arts",
+          "value": "martial-arts"
+        },
+        {
+          "label": "Mature",
+          "value": "mature"
+        },
+        {
+          "label": "Medieval",
+          "value": "medieval"
+        },
+        {
+          "label": "Middle Ages",
+          "value": "middle-ages"
+        },
+        {
+          "label": "Misunderstanding",
+          "value": "misunderstanding"
+        },
+        {
+          "label": "Modern",
+          "value": "modern"
+        },
+        {
+          "label": "modern fantasy",
+          "value": "modern-fantasy"
+        },
+        {
+          "label": "Munchkin",
+          "value": "munchkin"
+        },
+        {
+          "label": "music",
+          "value": "music"
+        },
+        {
+          "label": "Mystery",
+          "value": "mystery"
+        },
+        {
+          "label": "Necromancy",
+          "value": "necromancy"
+        },
+        {
+          "label": "No Romance",
+          "value": "no-romance"
+        },
+        {
+          "label": "NTL",
+          "value": "ntl"
+        },
+        {
+          "label": "o",
+          "value": "o"
+        },
+        {
+          "label": "Obsession",
+          "value": "obsession"
+        },
+        {
+          "label": "Politics",
+          "value": "politics"
+        },
+        {
+          "label": "Possession",
+          "value": "possession"
+        },
+        {
+          "label": "Programming",
+          "value": "programming"
+        },
+        {
+          "label": "Psychological",
+          "value": "psychological"
+        },
+        {
+          "label": "Pure Love",
+          "value": "pure-love"
+        },
+        {
+          "label": "reasoning",
+          "value": "reasoning"
+        },
+        {
+          "label": "Redemption",
+          "value": "redemption"
+        },
+        {
+          "label": "Regression",
+          "value": "regression"
+        },
+        {
+          "label": "Regret",
+          "value": "regret"
+        },
+        {
+          "label": "Reincarnation",
+          "value": "reincarnation"
+        },
+        {
+          "label": "Return",
+          "value": "return"
+        },
+        {
+          "label": "Revenge",
+          "value": "revenge"
+        },
+        {
+          "label": "Reversal",
+          "value": "reversal"
+        },
+        {
+          "label": "Romance",
+          "value": "romance"
+        },
+        {
+          "label": "Romance Fanrasy",
+          "value": "romance-fanrasy"
+        },
+        {
+          "label": "Salvation",
+          "value": "salvation"
+        },
+        {
+          "label": "School Life",
+          "value": "school-life"
+        },
+        {
+          "label": "Sci-fi",
+          "value": "sci-fi"
+        },
+        {
+          "label": "Science fiction",
+          "value": "science-fiction"
+        },
+        {
+          "label": "Seinen",
+          "value": "seinen"
+        },
+        {
+          "label": "Shounen",
+          "value": "shounen"
+        },
+        {
+          "label": "Slice of Life",
+          "value": "slice-of-life"
+        },
+        {
+          "label": "Soft yandere",
+          "value": "soft-yandere"
+        },
+        {
+          "label": "Space opera",
+          "value": "space-opera"
+        },
+        {
+          "label": "Sports",
+          "value": "sports"
+        },
+        {
+          "label": "Supernatural",
+          "value": "supernatural"
+        },
+        {
+          "label": "Survival",
+          "value": "survival"
+        },
+        {
+          "label": "system",
+          "value": "system"
+        },
+        {
+          "label": "Time limit",
+          "value": "time-limit"
+        },
+        {
+          "label": "Tragedy",
+          "value": "tragedy"
+        },
+        {
+          "label": "Transmigration",
+          "value": "transmigration"
+        },
+        {
+          "label": "TRPG",
+          "value": "trpg"
+        },
+        {
+          "label": "TS",
+          "value": "ts"
+        },
+        {
+          "label": "Tsundere",
+          "value": "tsundere"
+        },
+        {
+          "label": "Unique",
+          "value": "unique"
+        },
+        {
+          "label": "Urban",
+          "value": "urban"
+        },
+        {
+          "label": "Villain",
+          "value": "villain"
+        },
+        {
+          "label": "Wholesome",
+          "value": "wholesome"
+        },
+        {
+          "label": "Wisdom",
+          "value": "wisdom"
+        },
+        {
+          "label": "Wuxia",
+          "value": "wuxia"
+        },
+        {
+          "label": "Xuanhuan",
+          "value": "xuanhuan"
+        },
+        {
+          "label": "Yandere",
+          "value": "yandere"
+        },
+        {
+          "label": "Yuri",
+          "value": "yuri"
+        }
+      ]
+    },
+    "type[]": {
+      "type": "Checkbox",
+      "label": "Type",
+      "value": [],
+      "options": [
+        {
+          "label": "Chinese novel",
+          "value": "chinese-novel"
+        },
+        {
+          "label": "habyeol",
+          "value": "habyeol"
+        },
+        {
+          "label": "korean novel",
+          "value": "korean-novel"
+        },
+        {
+          "label": "Web Novel",
+          "value": "web-novel"
+        },
+        {
+          "label": "삼심",
+          "value": "삼심"
+        },
+        {
+          "label": "호곡",
+          "value": "호곡"
+        }
+      ]
+    },
+    "status": {
+      "type": "Picker",
+      "label": "Status",
+      "value": "",
+      "options": [
+        {
+          "label": "All",
+          "value": ""
+        },
+        {
+          "label": "Ongoing",
+          "value": "ongoing"
+        },
+        {
+          "label": "Hiatus",
+          "value": "hiatus"
+        },
+        {
+          "label": "Completed",
+          "value": "completed"
+        }
+      ]
+    },
+    "order": {
+      "type": "Picker",
+      "label": "Order by",
+      "value": "",
+      "options": [
+        {
+          "label": "Default",
+          "value": ""
+        },
+        {
+          "label": "A-Z",
+          "value": "title"
+        },
+        {
+          "label": "Z-A",
+          "value": "titlereverse"
+        },
+        {
+          "label": "Latest Update",
+          "value": "update"
+        },
+        {
+          "label": "Latest Added",
+          "value": "latest"
+        },
+        {
+          "label": "Popular",
+          "value": "popular"
+        }
+      ]
+    }
+  }
+}

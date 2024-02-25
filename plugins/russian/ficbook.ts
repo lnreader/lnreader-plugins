@@ -41,25 +41,24 @@ class ficbook implements Plugin.PluginBase {
         : defaultCover;
       if (!name || !url) return;
 
-      novels.push({ name, cover, url: this.site + url.replace(/\?.*/g, "") });
+      novels.push({ name, cover, path: url.replace(/\?.*/g, "") });
     });
 
     return novels;
   }
 
-  async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
-    const result = await fetchApi(novelUrl).then((res) => res.text());
+  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+    const result = await fetchApi(this.site + novelPath).then((res) => res.text());
     const loadedCheerio = parseHTML(result);
 
     const novel: Plugin.SourceNovel = {
-      url: novelUrl,
+      path: novelPath,
+      name: (
+        loadedCheerio('h1[itemprop="headline"]').text() ||
+        loadedCheerio('h1[itemprop="name"]').text() ||
+        ""
+      ).trim(),
     };
-
-    novel.name = (
-      loadedCheerio('h1[itemprop="headline"]').text() ||
-      loadedCheerio('h1[itemprop="name"]').text()
-    ).trim();
-
     novel.cover = loadedCheerio('meta[property="og:image"]').attr("content");
     novel.summary = loadedCheerio('div[itemprop="description"]').text().trim();
     novel.author = loadedCheerio('a[itemprop="author"]').text();
@@ -91,7 +90,7 @@ class ficbook implements Plugin.PluginBase {
       const name = loadedCheerio(".title-area > h2").text();
       const releaseTime = loadedCheerio(".part-date > span").attr("title");
 
-      if (name) chapters.push({ name, url: novelUrl, releaseTime });
+      if (name) chapters.push({ name, path: novelPath, releaseTime });
     } else {
       loadedCheerio("li.part").each((chapterIndex, element) => {
         const name = loadedCheerio(element).find("h3").text();
@@ -99,22 +98,21 @@ class ficbook implements Plugin.PluginBase {
         if (!name || !url) return;
 
         const releaseTime = loadedCheerio(element).find("div > span").attr("title");
-        chapters.push({ 
-          name, 
-          url: this.site + url, 
-          releaseTime, 
+        chapters.push({
+          name,
+          path: url.replace(this.site, ""),
+          releaseTime,
           chapterNumber: chapterIndex + 1,
         });
       });
-
     }
 
     novel.chapters = chapters;
     return novel;
   }
 
-  async parseChapter(chapterUrl: string): Promise<string> {
-    const result = await fetchApi(chapterUrl).then((res) => res.text());
+  async parseChapter(chapterPath: string): Promise<string> {
+    const result = await fetchApi(this.site + chapterPath).then((res) => res.text());
     const loadedCheerio = parseHTML(result);
     let chapterText = "";
 
@@ -154,12 +152,12 @@ class ficbook implements Plugin.PluginBase {
 
     json.data?.data?.forEach((novel) => {
       const name = novel.title.trim();
-      const url = this.site + "/readfic/" + novel.slug;
+      const path = "/readfic/" + novel.slug;
       const cover = novel.cover
         ? "https://images.ficbook.net/fanfic-covers/" + novel.cover
         : defaultCover;
 
-      novels.push({ name, cover, url });
+      novels.push({ name, cover, path });
     });
 
     return novels;

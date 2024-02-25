@@ -4,7 +4,7 @@ import { Plugin } from "@typings/plugin";
 import { Filters } from "@libs/filterInputs";
 import { NovelStatus } from "@libs/novelStatus";
 
-class TruyenFull implements Plugin.PluginBase {
+class TruyenFull implements Plugin.PagePlugin {
     id = "truyenfull";
     name = "Truyện Full";
     icon = "src/vi/truyenfull/icon.png";
@@ -27,13 +27,22 @@ class TruyenFull implements Plugin.PluginBase {
                 novels.push({
                     name: novelName,
                     cover: novelCover,
-                    url: novelUrl
+                    path: novelUrl.replace(this.site, '')
                 });
             }
         });
         return novels;
     }
-
+    parseChapters(loadedCheerio: CheerioAPI): Plugin.ChapterItem[]{
+        return loadedCheerio('ul.list-chapter > li > a').toArray().map((ele) => {
+            const path = ele.attribs['href'].replace(this.site, '');
+            return {
+                name: loadedCheerio(ele).text().trim(),
+                path,
+                chapterNumber: Number(path.match(/\/chuong-(\d+)\//)?.[1])
+            }
+        })
+    }
     async popularNovels(pageNo: number, options: Plugin.PopularNovelsOptions<Filters>): Promise<Plugin.NovelItem[]> {
         const url = `${this.site}/danh-sach/truyen-hot/trang-${pageNo}/`;
 
@@ -44,20 +53,25 @@ class TruyenFull implements Plugin.PluginBase {
 
         return this.parseNovels(loadedCheerio);
     }
-    async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
-        const url = novelUrl;
+    async parseNovel(novelPath: string): Promise<Plugin.SourceNovel & {totalPages: number}> {
+        const url = this.site + novelPath;
         
         const result = await fetch(url);
         const body = await result.text();
 
         let loadedCheerio = parseHTML(body);
+        let lastPage = 1;
+        loadedCheerio('ul.pagination.pagination-sm > li > a').each(function() {
+            const page = Number(this.attribs['href'].match(/\/trang-(\d+)\//)?.[1]);
+            if(page && page > lastPage) lastPage = page;      
+        });
 
-        const novel: Plugin.SourceNovel = {
-            url,
+        const novel: Plugin.SourceNovel & {totalPages: number} = {
+            path: novelPath,
+            name: loadedCheerio("div.book > img").attr("alt") || 'Không có tiêu đề',
             chapters: [],
+            totalPages: lastPage,
         };
-
-        novel.name = loadedCheerio("div.book > img").attr("alt");
 
         novel.cover = loadedCheerio("div.book > img").attr("src");
 
@@ -83,30 +97,22 @@ class TruyenFull implements Plugin.PluginBase {
         }else{
             novel.status = NovelStatus.Unknown;
         }
-
-        let lastPage = 1;
-        loadedCheerio('ul.pagination.pagination-sm > li').each(function() {
-            const page = Number(loadedCheerio(this).text());
-            if(page && page > lastPage) lastPage = page;      
-        });
-
-        const lastPageUrl = novelUrl + 'trang-' + lastPage + '/';
-        const res = await fetch(lastPageUrl).then(res => res.text());
-        loadedCheerio = parseHTML(res);
-        const lastChapterUrl = loadedCheerio('ul.list-chapter > li:last-child > a').attr('href');
-        const lastChapter = Number(lastChapterUrl?.match(/\/chuong-(\d+)\//)?.[1]) || 1;
-        const chapters: Plugin.ChapterItem[] = [];
-        for(let i = 1; i <= lastChapter; i++){
-            chapters.push({
-                name: 'Chương ' + i,
-                url: novelUrl + 'chuong-'+ i + '/',
-            })
-        }
-        novel.chapters = chapters;
+        novel.chapters = this.parseChapters(loadedCheerio);
         return novel;
     }
-    async parseChapter(chapterUrl: string): Promise<string> {
-        const result = await fetch(chapterUrl);
+    async parsePage(novelPath: string, page: string): Promise<Plugin.SourcePage> {
+        const url = `${this.site}${novelPath}trang-${page}/#list-chapter`;
+        const result = await fetch(url);
+        const body = await result.text();
+
+        const loadedCheerio = parseHTML(body);
+        const chapters = this.parseChapters(loadedCheerio);
+        return {
+            chapters
+        }
+    }
+    async parseChapter(chapterPath: string): Promise<string> {
+        const result = await fetch(this.site + chapterPath);
         const body = await result.text();
 
         const loadedCheerio = parseHTML(body);

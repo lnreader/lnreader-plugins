@@ -4,32 +4,34 @@ import { fetchApi, fetchFile } from "@libs/fetch";
 import { NovelStatus } from "@libs/novelStatus";
 import dayjs from "dayjs";
 
+const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+
 class ReN implements Plugin.PluginBase {
   id = "ReN";
   name = "Renovels";
+  icon = "src/ru/renovels/icon.png";
   site = "https://renovels.org";
   version = "1.0.0";
-  icon = "src/ru/renovels/icon.png";
 
   async popularNovels(
     pageNo: number,
-    { showLatestNovels, filters }: Plugin.PopularNovelsOptions<typeof this.filters>,
+    {
+      showLatestNovels,
+      filters,
+    }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
-    let url = this.site + "/api/search/catalog/?count=30&ordering=";
-    url += filters?.order?.value ? "-" : "";
+    let url = this.site + "/api/search/catalog/?count=30&ordering=-";
     url += showLatestNovels ? "chapter_date" : filters?.sort?.value || "rating";
 
     Object.entries(filters || {}).forEach(([type, { value }]: any) => {
       if (value instanceof Array && value.length) {
-        url += "&" + type + "=" +
-          value.join("&" + type + "=");
+        url += "&" + type + "=" + value.join("&" + type + "=");
       }
       if (value?.include instanceof Array && value.include.length) {
-        url += "&" + type + "=" + 
-          value.include.join("&" + type + "=");
+        url += "&" + type + "=" + value.include.join("&" + type + "=");
       }
       if (value?.exclude instanceof Array && value.exclude.length) {
-        url += "&exclude_" + type + "=" + 
+        url += "&exclude_" + type + "=" +
           value.exclude.join("&exclude_" + type + "=");
       }
     });
@@ -42,26 +44,27 @@ class ReN implements Plugin.PluginBase {
     const novels: Plugin.NovelItem[] = body.content.map((novel) => ({
       name: novel.main_name || novel.secondary_name,
       cover: this.site + (novel.img.high || novel.img.mid || novel.img.low),
-      url: this.site + "/novel/" + novel.dir,
+      path: "/novel/" + novel.dir,
     }));
 
     return novels;
   }
 
-  async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
-    const novelID = novelUrl.split("/")[4];
+  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+    const novelID = novelPath.split("/")[2];
     const result = await fetchApi(this.site + "/api/titles/" + novelID);
     const body = (await result.json()) as { content: responseNovel };
 
     const novel: Plugin.SourceNovel = {
-      url: novelUrl,
-      name: body.content.main_name || body.content.secondary_name || body.content.another_name,
+      path: novelPath,
+      name:
+        body.content.main_name ||
+        body.content.secondary_name ||
+        body.content.another_name,
       summary: body.content.description,
       cover:
         this.site +
-        (body.content.img.high ||
-          body.content.img.mid ||
-          body.content.img.low),
+        (body.content.img.high || body.content.img.mid || body.content.img.low),
       status:
         body.content.status.name === "Продолжается"
           ? NovelStatus.Ongoing
@@ -77,15 +80,18 @@ class ReN implements Plugin.PluginBase {
       novel.genres = tags.join(",");
     }
 
-    const all = body.content.count_chapters / 100 + 1;
+    const totalPages =
+      (body.content.branches?.[0]?.count_chapters ||
+        body.content.count_chapters) / 100;
     const branch_id = body.content.branches?.[0]?.id || body.content.id;
     const chapters: Plugin.ChapterItem[] = [];
 
-    for (let i = 0; i < all; i++) {
+    for (let page = 0; page < totalPages; page++) {
+      await delay(1000);
       const chapterResult = await fetchApi(
         this.site +
           "/api/titles/chapters/?branch_id=" + branch_id +
-          "&count=100&page=" + (i + 1),
+          "&count=100&page=" + (page + 1),
       );
       const volumes = (await chapterResult.json()) as {
         content: responseСhapters[];
@@ -95,10 +101,10 @@ class ReN implements Plugin.PluginBase {
         if (!chapter.is_paid || chapter.is_bought) {
           chapters.push({
             name:
-              "Том " + chapter.tome + 
-              " Глава " + chapter.chapter + 
+              "Том " + chapter.tome +
+              " Глава " + chapter.chapter +
                 (chapter.name ? " " + chapter.name.trim() : ""),
-            url: `${this.site}/novel/${novelID}/${chapter.id}/`,
+            path: "/novel/" + novelID + "/" + chapter.id,
             releaseTime: dayjs(chapter.upload_date).format("LLL"),
             chapterNumber: chapter.index,
           });
@@ -110,8 +116,8 @@ class ReN implements Plugin.PluginBase {
     return novel;
   }
 
-  async parseChapter(chapterUrl: string): Promise<string> {
-    const url = this.site + "/api/titles/chapters/" + chapterUrl.split("/")[5];
+  async parseChapter(chapterPath: string): Promise<string> {
+    const url = this.site + "/api/titles/chapters/" + chapterPath.split("/")[3];
     const result = await fetchApi(url);
     const body = (await result.json()) as { content: responseСhapter };
 
@@ -131,7 +137,7 @@ class ReN implements Plugin.PluginBase {
       novels.push({
         name: novel.main_name || novel.secondary_name,
         cover: this.site + (novel.img.high || novel.img.mid || novel.img.low),
-        url: this.site + "/novel/" + novel.dir,
+        path: "/novel/" + novel.dir,
       }),
     );
 
@@ -151,15 +157,6 @@ class ReN implements Plugin.PluginBase {
         { label: "Дате добавления", value: "id" },
         { label: "Дате обновления", value: "chapter_date" },
         { label: "Количество глав", value: "count_chapters" },
-      ],
-      type: FilterTypes.Picker,
-    },
-    order: {
-      label: "Порядок",
-      value: "-",
-      options: [
-        { label: "По убыванию", value: "-" },
-        { label: "По возрастанию", value: "" },
       ],
       type: FilterTypes.Picker,
     },

@@ -5,12 +5,12 @@ import { NovelStatus } from "@libs/novelStatus";
 import { load as parseHTML } from "cheerio";
 import dayjs from "dayjs";
 
-const statusKey = [
-  NovelStatus.Ongoing,
-  NovelStatus.Completed,
-  NovelStatus.OnHiatus,
-  NovelStatus.Cancelled,
-];
+const statusKey: { [key: number]: string } = {
+  1: NovelStatus.Ongoing,
+  2: NovelStatus.Completed,
+  3: NovelStatus.OnHiatus,
+  4: NovelStatus.Cancelled,
+};
 
 class RLIB implements Plugin.PluginBase {
   id = "RLIB";
@@ -22,22 +22,26 @@ class RLIB implements Plugin.PluginBase {
 
   async popularNovels(
     pageNo: number,
-    { showLatestNovels, filters }: Plugin.PopularNovelsOptions<typeof this.filters>,
+    {
+      showLatestNovels,
+      filters,
+    }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
     let url = this.site + "/manga-list?sort=";
     url += showLatestNovels ? "last_chapter_at" : filters?.sort?.value || "rate";
     url += "&dir=" + (filters?.order?.value || "desc");
+    url += "&chapters[min]=" + (filters?.require_chapters?.value ? "1" : "0");
 
     Object.entries(filters || {}).forEach(([type, { value }]: any) => {
       if (value instanceof Array && value.length) {
         url += "&" + type + "[]=" + value.join("&" + type + "[]=");
       }
       if (value?.include instanceof Array && value.include.length) {
-        url += "&" + type + "[include][]=" + 
+        url += "&" + type + "[include][]=" +
           value.include.join("&" + type + "[include][]=");
-      } 
+      }
       if (value?.exclude instanceof Array && value.exclude.length) {
-        url += "&" + type + "[exclude][]=" + 
+        url += "&" + type + "[exclude][]=" +
           value.exclude.join("&" + type + "[exclude][]=");
       }
     });
@@ -51,27 +55,25 @@ class RLIB implements Plugin.PluginBase {
       ?.replace?.(/[^0-9]/g, "");
 
     const novels: Plugin.NovelItem[] = [];
-    loadedCheerio(".media-card-wrap").each(function () {
-      const name = loadedCheerio(this).find(".media-card__title").text();
-      const cover = loadedCheerio(this).find("a.media-card").attr("data-src");
-      const url = loadedCheerio(this).find("a.media-card").attr("href");
+    loadedCheerio(".media-card-wrap").each((index, element) => {
+      const name = loadedCheerio(element).find(".media-card__title").text();
+      const cover = loadedCheerio(element).find("a.media-card").attr("data-src");
+      const url = loadedCheerio(element).find("a.media-card").attr("href");
       if (!url) return;
-      novels.push({ name, cover, url });
+      novels.push({ name, cover, path: url.replace(this.site, "") });
     });
 
     return novels;
   }
 
-  async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
-    const body = await fetchApi(novelUrl).then((res) => res.text());
+  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+    const body = await fetchApi(this.site + novelPath).then((res) => res.text());
     const loadedCheerio = parseHTML(body);
 
     const novel: Plugin.SourceNovel = {
-      url: novelUrl,
+      path: novelPath,
+      name: loadedCheerio(".media-name__main").text()?.trim?.() || "",
     };
-
-    novel.name = loadedCheerio(".media-name__main").text().trim();
-
     novel.cover = loadedCheerio(".container_responsive img").attr("src");
 
     novel.summary = loadedCheerio(".media-description__text").text().trim();
@@ -102,45 +104,75 @@ class RLIB implements Plugin.PluginBase {
       }
     });
 
-    const chapters: Plugin.ChapterItem[] = [];
+    const chaptersRaw = body.match(/window\.__DATA__ = ({.*?});/);
+    if (chaptersRaw instanceof Array && chaptersRaw.length >= 2) {
+      const chaptersJson: responseBook = JSON.parse(chaptersRaw[1]);
 
-    let chaptersRaw: any = body.match(
-      /window.__DATA__ = [\s\S]*?window._SITE_COLOR_/gm,
-    );
+      if (!novel.name) {
+        novel.name =
+          chaptersJson.manga.rusName ||
+          chaptersJson.manga.engName ||
+          chaptersJson.manga.name;
+      }
+      novel.status = statusKey[chaptersJson.manga.status] || NovelStatus.Unknown;
+      this.ui = chaptersJson?.user?.id;
 
-    chaptersRaw = chaptersRaw?.[0]
-      ?.replace("window.__DATA__ = ", "")
-      ?.replace("window._SITE_COLOR_", "")
-      ?.trim()
-      ?.slice(0, -1);
+      if (!chaptersJson.chapters.list?.length) return novel;
+      const totalChapters = chaptersJson.chapters.list.length;
 
-    const chaptersJson: responseBook = JSON.parse(chaptersRaw);
-    const totalChapters = chaptersJson.chapters.list?.length || 0;
-    novel.status = statusKey[chaptersJson.manga.status - 1] || NovelStatus.Unknown;
-    this.ui = chaptersJson?.user?.id;
+      const customPage: { [key: number]: string } = {};
+      const customOrder: { [key: number]: number } = {};
+      if (chaptersJson.chapters.branches?.length && chaptersJson.chapters.branches.length > 1) {
+        //if the novel is being translated by more than one team
+        chaptersJson.chapters.branches.forEach(({ teams, id }) => {
+          if (teams?.length) {
+            customPage[id || 0] =
+              teams.find((team) => team.is_active)?.name || teams[0].name;
+          }
+        });
+        //fixes the chapter's position.
+        chaptersJson.chapters.list.forEach((chapter) => {
+          chapter.index = customOrder[chapter.branch_id || 0] || 1;
+          customOrder[chapter.branch_id || 0] =
+            (customOrder[chapter.branch_id || 0] || 1) + 1;
+        });
+      };
 
-    chaptersJson.chapters?.list?.forEach((chapter, chapterIndex) =>
-      chapters.push({
-        name:
-          "Том " + chapter.chapter_volume +
-          " Глава " + chapter.chapter_number +
-            (chapter.chapter_name ? " " + chapter.chapter_name.trim() : ""),
-        url:
-          this.site + "/" + chaptersJson.manga.slug +
-          "/v" + chapter.chapter_volume + "/c" + chapter.chapter_number +
-          "?bid=" + (chapter.branch_id || ""),
-        releaseTime: dayjs(chapter.chapter_created_at).format("LLL"),
-        chapterNumber: totalChapters - chapterIndex,
-      }),
-    );
-
-    novel.chapters = chapters.reverse();
+      const chapters: Plugin.ChapterItem[] = [];
+      chaptersJson.chapters.list.forEach((chapter, chapterIndex) =>
+        chapters.push({
+          name:
+            "Том " + chapter.chapter_volume +
+            " Глава " + chapter.chapter_number +
+              (chapter.chapter_name ? " " + chapter.chapter_name.trim() : ""),
+          path:
+            "/" + chaptersJson.manga.slug +
+            "/v" + chapter.chapter_volume +
+            "/c" + chapter.chapter_number +
+            "?bid=" + (chapter.branch_id || ""),
+          releaseTime: dayjs(chapter.chapter_created_at).format("LLL"),
+          chapterNumber:
+            customOrder[chapter.branch_id || 0] - (chapter.index || 0) ||
+            totalChapters - chapterIndex,
+          page: customPage[chapter.branch_id || 0] || "Основной перевод",
+        }),
+      );
+      novel.chapters =
+        chaptersJson.chapters.branches?.length &&
+        chaptersJson.chapters.branches.length > 1
+          ? chapters.sort((a, b) => {
+              if ((a.page || 0) > (b.page || 0)) return 1;
+              if ((a.page || 0) < (b.page || 0)) return -1;
+              return (a.chapterNumber || 0) - (b.chapterNumber || 0);
+          })
+          : chapters.reverse();
+    }
     return novel;
   }
 
-  async parseChapter(chapterUrl: string): Promise<string> {
+  async parseChapter(chapterPath: string): Promise<string> {
     const result = await fetchApi(
-      chapterUrl + (this.ui ? "&ui=" + this.ui : ""),
+      this.site + chapterPath + (this.ui ? "&ui=" + this.ui : ""),
     ).then((res) => res.text());
 
     const loadedCheerio = parseHTML(result);
@@ -160,21 +192,18 @@ class RLIB implements Plugin.PluginBase {
     return chapterText || "";
   }
 
-  async searchNovels(
-    searchTerm: string,
-    //pageNo: number | undefined = 1,
-  ): Promise<Plugin.NovelItem[]> {
+  async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
     const result = await fetchApi(
-      `${this.site}/search?q=${searchTerm}&type=manga`,
+      this.site + "/search?q=" + searchTerm + "&type=manga",
     );
     const body = (await result.json()) as Manga[];
     const novels: Plugin.NovelItem[] = [];
 
     body.forEach((novel) =>
       novels.push({
-        name: novel?.rus_name || novel.name,
-        cover: novel?.coverImage,
-        url: novel?.href || this.site + "/" + novel.slug,
+        name: novel.rus_name || novel.name,
+        cover: novel.coverImage,
+        path: "/" + novel.slug,
       }),
     );
 
@@ -396,6 +425,11 @@ class RLIB implements Plugin.PluginBase {
       ],
       type: FilterTypes.ExcludableCheckboxGroup,
     },
+    require_chapters: {
+      label: "Только проекты с главами",
+      value: true,
+      type: FilterTypes.Switch,
+    },
   } satisfies Filters;
 }
 
@@ -424,12 +458,13 @@ interface Manga {
   href?: string;
 }
 interface Chapters {
-  list?: ListEntity[] | null;
-  teams?: TeamsEntity[] | null;
-  branches?: BranchesEntity[] | null;
-  is_paid?: null[] | null;
+  list?: ListEntity[];
+  teams?: TeamsEntity[];
+  branches?: BranchesEntity[];
+  is_paid?: string[] | null;
 }
 interface ListEntity {
+  index?: number; //crutch
   chapter_id: number;
   chapter_slug: string;
   chapter_name: string;

@@ -1,17 +1,20 @@
-import { load as parseHTML } from "cheerio";
+import { CheerioAPI, load as parseHTML } from "cheerio";
 import { fetchApi, fetchFile } from "@libs/fetch";
 import { FilterTypes, Filters } from "@libs/filterInputs";
 import { Plugin } from "@typings/plugin";
 import { defaultCover } from "@libs/defaultCover";
 import { NovelStatus } from "@libs/novelStatus";
 
-class TuNovelaLigera implements Plugin.PluginBase {
+class TuNovelaLigera implements Plugin.PagePlugin {
   id = "tunovelaligera";
   name = "TuNovelaLigera";
   icon = "src/es/tunovelaligera/icon.png";
   site = "https://tunovelaligera.com";
   version = "1.0.0";
 
+  async sleep (ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms))
+  }
   async popularNovels(
     pageNo: number,
     {
@@ -36,26 +39,50 @@ class TuNovelaLigera implements Plugin.PluginBase {
       const url = loadedCheerio(el).find(".h5 > a").attr("href");
       if (!url) return;
 
-      novels.push({ name, cover, url });
+      novels.push({ name, cover, path: url.replace(this.site, '') });
     });
 
     return novels;
   }
 
-  async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
+  parseChapters(loadedCheerio: CheerioAPI): Plugin.ChapterItem[] {
+    const chapters: Plugin.ChapterItem[] = [];
+    loadedCheerio("#lcp_instance_0 li").each((i, el) => {
+      const chapterName = loadedCheerio(el)
+        .find("a")
+        .text()
+        .replace(/[\t\n]/g, "")
+        .trim();
+
+      const chapterUrl = loadedCheerio(el).find("a").attr("href");
+      if(!chapterUrl) return;
+      chapters.push({
+        name: chapterName,
+        path: chapterUrl.replace(this.site, ''),
+      });
+    });
+    return chapters;
+  }
+  
+  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel & { totalPages: number; }> {
+    const novelUrl = this.site + novelPath;
     const result = await fetchApi(novelUrl);
     const body = await result.text();
 
     let loadedCheerio = parseHTML(body);
-
-    const novel: Plugin.SourceNovel = {
-      url: novelUrl,
+    let lastPage = 1;
+    loadedCheerio('ul.lcp_paginator > li > a').each(function() {
+        const page = Number(this.attribs['title']);
+        if(page && page > lastPage) lastPage = page;      
+    });
+    const novel: Plugin.SourceNovel & { totalPages: number; } = {
+      path: novelPath,
       chapters: [],
+      totalPages: lastPage,
+      name: loadedCheerio(".post-title > h1").text().trim()
     };
 
     loadedCheerio(".manga-title-badges").remove();
-
-    novel.name = loadedCheerio(".post-title > h1").text().trim();
 
     let novelCover = loadedCheerio(".summary_image > a > img");
 
@@ -90,95 +117,43 @@ class TuNovelaLigera implements Plugin.PluginBase {
 
     novel.summary = loadedCheerio("div.summary__content > p").text().trim();
 
-    let chapter: Plugin.ChapterItem[] = [];
-
-    const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
-    let lastPage = 1;
-    lastPage = +loadedCheerio(".lcp_paginator li:last").prev().text();
-
-    const getChapters = async () => {
-      const n = novelUrl.split("/");
-      const novelName = n[4];
-      const formData = new FormData();
-      formData.append("action", "madara_load_more");
-      formData.append("page", "0");
-      formData.append("template", "html/loop/content");
-      formData.append("vars[category_name]", novelName);
-      formData.append("vars[posts_per_page]", "10000");
-
-      const result = await fetchApi(this.site + '/wp-admin/admin-ajax.php', {
-        method: "POST",
-        body: formData,
-      });
-      const text = await result.text();
-
-      loadedCheerio = parseHTML(text);
-
-      loadedCheerio(".heading").each((i, el) => {
-        const chapterName = loadedCheerio(el)
-          .text()
-          .replace(/[\t\n]/g, "")
-          .trim();
-        const releaseDate = null;
-        const chapterUrl = loadedCheerio(el).find("a").attr("href") || "";
-
-        chapter.push({
-          name: chapterName,
-          url: chapterUrl,
-          releaseTime: releaseDate,
-        });
-      });
-      return chapter.reverse();
-    };
-
-    const getPageChapters = async () => {
-      for (let i = 1; i <= lastPage; i++) {
-        const chaptersUrl = `${novelUrl}?lcp_page0=${i}`;
-        const result = await fetchApi(chaptersUrl);
-        const chaptersHTML = await result.text();
-
-        let chapterCheerio = parseHTML(chaptersHTML);
-
-        chapterCheerio("#lcp_instance_0 li").each((i, el) => {
-          const chapterName = chapterCheerio(el)
-            .find("a")
-            .text()
-            .replace(/[\t\n]/g, "")
-            .trim();
-
-          const releaseDate = chapterCheerio(el).find("span").text().trim();
-
-          const chapterUrl = chapterCheerio(el).find("a").attr("href") || "";
-
-          chapter.push({
-            name: chapterName,
-            releaseTime: releaseDate,
-            url: chapterUrl,
-          });
-        });
-        await delay(1000);
-      }
-      return chapter.reverse();
-    };
-
-    novel.chapters = await getChapters();
-
-    if (!novel.chapters.length) {
-      await delay(1000);
-      novel.chapters = await getPageChapters();
-    }
+    novel.chapters = this.parseChapters(loadedCheerio);
 
     return novel;
   }
 
-  async parseChapter(chapterUrl: string): Promise<string> {
-    const result = await fetchApi(chapterUrl);
+  async parsePage(novelPath: string, page: string): Promise<Plugin.SourcePage> {
+    const novelUrl = this.site + novelPath;
+    const pageUrl = this.site + novelPath + '?lcp_page0=' + page;
+    const result = await fetchApi(novelUrl);
+    const body = await result.text();
+
+    let loadedCheerio = parseHTML(body);
+    const latestChapterEle = loadedCheerio('#lcp_instance_0 li').first();
+    const latestChapterUrl = loadedCheerio(latestChapterEle).find("a").attr("href");
+    const latestChapterName = loadedCheerio(latestChapterEle).find("a")
+                              .text()
+                              .replace(/[\t\n]/g, "")
+                              .trim();
+    const latestChapter: Plugin.ChapterItem | undefined = latestChapterUrl ? {
+      path: latestChapterUrl.replace(this.site, ''),
+      name: latestChapterName
+    } : undefined
+    await this.sleep(1000);
+    const pageText = await fetchApi(pageUrl).then(res => res.text());
+    const chapters = this.parseChapters(parseHTML(pageText));
+    return {
+      chapters,
+      latestChapter
+    }
+  }
+  async parseChapter(chapterPath: string): Promise<string> {
+    const result = await fetchApi(this.site + chapterPath);
     const body = await result.text();
 
     const loadedCheerio = parseHTML(body);
 
-    loadedCheerio("#hola_siguiente").next().find("div").remove();
-    const chapterText = loadedCheerio("#hola_siguiente").next().html() || "";
+    const chapterText = loadedCheerio(".c-blog-post.post").html() || "";
 
     return chapterText;
   }
@@ -201,7 +176,7 @@ class TuNovelaLigera implements Plugin.PluginBase {
       const url = loadedCheerio(el).find(".h4 > a").attr("href");
       if (!url) return;
 
-      novels.push({ name, cover, url });
+      novels.push({ name, cover, path: url.replace(this.site, '') });
     });
 
     return novels;

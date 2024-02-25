@@ -10,23 +10,24 @@ class DDLPlugin implements Plugin.PluginBase {
     site = "https://www.divinedaolibrary.com/";
     version = "1.0.0";
     icon = "src/en/divinedaolibrary/icon.png";
+    filters?: undefined;
 
     parseNovels(loadedCheerio: CheerioAPI, searchTerm?: string){
         let novels: Plugin.NovelItem[] = [];
 
         loadedCheerio("#main")
             .find("li")
-            .each(function () {
-                const novelName = loadedCheerio(this).find("a").text();
+            .each((i,el) => {
+                const novelName = loadedCheerio(el).find("a").text();
                 const novelCover = defaultCover;
-                const novelUrl = loadedCheerio(this).find(" a").attr("href");
+                const novelUrl = loadedCheerio(el).find(" a").attr("href");
     
                 if (!novelUrl) return;
     
                 const novel = {
                     name: novelName,
                     cover: novelCover,
-                    url: novelUrl,
+                    path: novelUrl.replace(this.site, ''),
                 };
     
                 novels.push(novel);
@@ -42,37 +43,30 @@ class DDLPlugin implements Plugin.PluginBase {
 
     async popularNovels(
         pageNo: number,
-        { filters }: Plugin.PopularNovelsOptions
+        options: Plugin.PopularNovelsOptions
     ): Promise<Plugin.NovelItem[]> {
         let link = this.site + "novels";
 
-        const headers = new Headers();
-        const body = await fetchApi(link, { headers }).then((result) =>
-            result.text()
-        );
+        const body = await fetchApi(link).then((res) => res.text());
 
         const loadedCheerio = parseHTML(body);
         return this.parseNovels(loadedCheerio);
     }
 
-    async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
-        const url = novelUrl;
-        const headers = new Headers();
-        const result = await fetchApi(url, { headers });
+    async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+        const result = await fetchApi(this.site + novelPath);
         const body = await result.text();
 
         let loadedCheerio = parseHTML(body);
 
         const novel: Plugin.SourceNovel = {
-            url,
+            path: novelPath,
+            name: loadedCheerio("h1.entry-title").text().trim() || "Untitled",
+            cover: 
+            loadedCheerio(".entry-content").find("img").attr("data-ezsrc") ||
+            defaultCover,
             chapters: [],
         };
-
-        novel.name = loadedCheerio("h1.entry-title").text().trim();
-
-        novel.cover =
-            loadedCheerio(".entry-content").find("img").attr("data-ezsrc") ||
-            defaultCover;
 
         novel.summary = loadedCheerio("#main > article > div > p:nth-child(6)")
             .text()
@@ -87,17 +81,15 @@ class DDLPlugin implements Plugin.PluginBase {
 
         loadedCheerio("#main")
             .find("li > span > a")
-            .each(function () {
-                const chapterName = loadedCheerio(this).text().trim();
-                const releaseDate = null;
-                const chapterUrl = loadedCheerio(this).attr("href");
+            .each((i, el) => {
+                const chapterName = loadedCheerio(el).text().trim();
+                const chapterUrl = loadedCheerio(el).attr("href");
 
                 if (!chapterUrl) return;
 
                 chapter.push({
                     name: chapterName,
-                    releaseTime: releaseDate,
-                    url: chapterUrl,
+                    path: chapterUrl.replace(this.site, ''),
                 });
             });
 
@@ -106,9 +98,8 @@ class DDLPlugin implements Plugin.PluginBase {
         return novel;
     };
 
-    async parseChapter(chapterUrl: string): Promise<string> {
-        const headers = new Headers();
-        const result = await fetchApi(chapterUrl, { headers });
+    async parseChapter(chapterPath: string): Promise<string> {
+        const result = await fetchApi(this.site + chapterPath);
         const body = await result.text();
 
         const loadedCheerio = parseHTML(body);
@@ -131,9 +122,8 @@ class DDLPlugin implements Plugin.PluginBase {
         pageNo: number
     ): Promise<Plugin.NovelItem[]> {
         let url = this.site + "novels";
-        
-        const headers = new Headers();
-        const result = await fetchApi(url, { headers });
+
+        const result = await fetchApi(url);
         const body = await result.text();
 
         const loadedCheerio = parseHTML(body);

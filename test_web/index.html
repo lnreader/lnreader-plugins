@@ -155,15 +155,15 @@
                     </div>
                 </accordion-content>
             </accordion-box>
-            <accordion-box id="parseNovelAndChapters" collapsed>
+            <accordion-box id="parseNovel" collapsed>
                 <accordion-header>
-                    parseNovelAndChapters
+                    parseNovel (and first page)
                 </accordion-header>
                 <accordion-content>
                     <div class="input-group">
-                        <input type="text" class="form-control" placeholder="novel url" id="parse-novel-url">
+                        <input type="text" class="form-control" placeholder="novel path" id="parse-novel-path">
                         <div class="input-group-append">
-                            <button class="btn btn-primary parseNovelAndChapters-btn" type="button"
+                            <button class="btn btn-primary parseNovel-btn" type="button"
                                 id="parse-novel-btn">fetch</button>
                         </div>
                     </div>
@@ -180,13 +180,39 @@
                     </div>
                 </accordion-content>
             </accordion-box>
+            <accordion-box id="parsePage" class="d-none" collapsed>
+                <accordion-header>
+                    parsePage
+                </accordion-header>
+                <accordion-content>
+                    <div class="input-group">
+                        <input type="text" class="form-control w-75" placeholder="novel path" id="parse-page-novel-path">
+                        <input type="text" class="form-control w-25" placeholder="page" id="parse-page-index">
+                        <div class="input-group-append">
+                            <button class="btn btn-primary parsePage-btn" type="button"
+                                id="parse-page-btn">fetch</button>
+                        </div>
+                    </div>
+                    <div class="spinner-border" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    <div class="parsed-page-info">
+                        <div class="latest-chapter-item">
+                        </div>
+                        <div class="chapter-list-container">
+                            <div class="chapter-list">
+                            </div>
+                        </div>
+                    </div>
+                </accordion-content>
+            </accordion-box>
             <accordion-box id="parseChapter" collapsed>
                 <accordion-header>
                     parseChapter
                 </accordion-header>
                 <accordion-content>
                     <div class="input-group">
-                        <input type="text" class="form-control" placeholder="chapter url" id="chapter-parse-url">
+                        <input type="text" class="form-control" placeholder="chapter path" id="chapter-parse-path">
                         <div class="input-group-append">
                             <button class="btn btn-primary parseChapter-btn" type="button"
                                 id="chapter-parse-btn">fetch</button>

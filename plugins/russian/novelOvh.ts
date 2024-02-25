@@ -9,7 +9,7 @@ class novelOvh implements Plugin.PluginBase {
   name = "НовелОВХ";
   site = "https://novel.ovh";
   version = "1.0.0";
-  icon = "src/ru/novelOvh/icon.png";
+  icon = "src/ru/novelovh/icon.png";
 
   async popularNovels(
     pageNo: number,
@@ -27,21 +27,21 @@ class novelOvh implements Plugin.PluginBase {
       novels.push({
         name: novel.name.ru,
         cover: novel.poster,
-        url: this.site + "/novel/" + novel.slug,
+        path: "/novel/" + novel.slug,
       }),
     );
 
     return novels;
   }
 
-  async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
+  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
     const result = await fetchApi(
-      novelUrl + "?_data=routes/reader/book/$slug/index",
+      this.site + novelPath + "?_data=routes/reader/book/$slug/index",
     );
     const json = (await result.json()) as responseNovel;
 
     const novel: Plugin.SourceNovel = {
-      url: novelUrl,
+      path: novelPath,
       name: json.book.name.ru,
       cover: json.book.poster,
       genres: json.book.labels?.map?.((label) => label.name).join(","),
@@ -67,10 +67,10 @@ class novelOvh implements Plugin.PluginBase {
       chapters.push({
         name:
           chapter.title ||
-          "Том " + (chapter.volume || 0) + " " + 
-            (chapter.name || "Глава " +
-              (chapter.number || json.chapters.length - chapterIndex)),
-        url: novelUrl + "/" + chapter.id + "/0",
+          "Том " + (chapter.volume || 0) + " " +
+          (chapter.name || "Глава " +
+          (chapter.number || json.chapters.length - chapterIndex)),
+        path: novelPath + "/" + chapter.id + "/0",
         releaseTime: dayjs(chapter.createdAt).format("LLL"),
         chapterNumber: json.chapters.length - chapterIndex,
       }),
@@ -80,9 +80,9 @@ class novelOvh implements Plugin.PluginBase {
     return novel;
   }
 
-  async parseChapter(chapterUrl: string): Promise<string> {
+  async parseChapter(chapterPath: string): Promise<string> {
     const result = await fetchApi(
-      "https://api.novel.ovh/v2/chapters/" + chapterUrl.split("/")[5],
+      "https://api.novel.ovh/v2/chapters/" + chapterPath.split("/")[3],
     );
     const book = (await result.json()) as responseChapter;
     const image = Object.fromEntries(
@@ -106,7 +106,7 @@ class novelOvh implements Plugin.PluginBase {
       novels.push({
         name: novel.name.ru,
         cover: novel.poster,
-        url: this.site + "/novel/" + novel.slug,
+        path: "/novel/" + novel.slug,
       }),
     );
 

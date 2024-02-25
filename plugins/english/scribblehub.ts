@@ -13,17 +13,17 @@ class ScribbleHubPlugin implements Plugin.PluginBase {
     parseNovels(loadedCheerio: CheerioAPI){
         const novels: Plugin.NovelItem[] = [];
 
-        loadedCheerio('.search_main_box').each(function () {
-            const novelName = loadedCheerio(this).find('.search_title > a').text();
-            const novelCover = loadedCheerio(this).find('.search_img > img').attr('src');
-            const novelUrl  = loadedCheerio(this).find('.search_title > a').attr('href');
+        loadedCheerio('.search_main_box').each((i,el) => {
+            const novelName = loadedCheerio(el).find('.search_title > a').text();
+            const novelCover = loadedCheerio(el).find('.search_img > img').attr('src');
+            const novelUrl  = loadedCheerio(el).find('.search_title > a').attr('href');
       
             if (!novelUrl) return;
 
             const novel = {
                 name: novelName,
                 cover: novelCover,
-                url: novelUrl,
+                path: novelUrl.replace(this.site, ''),
             }
             novels.push(novel);
         });
@@ -74,23 +74,20 @@ class ScribbleHubPlugin implements Plugin.PluginBase {
         return this.parseNovels(loadedCheerio);
     }
 
-    async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
-        const url = novelUrl;
-        const result = await fetchApi(url);
+    async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+        const result = await fetchApi(this.site + novelPath);
         const body = await result.text();
 
         let loadedCheerio = parseHTML(body);
 
         const novel: Plugin.SourceNovel = {
-            url,
+            path: novelPath,
+            name: loadedCheerio('.fic_title').text() || 'Untitled',
+            cover: loadedCheerio('.fic_image > img').attr('src'),
+            summary: loadedCheerio('.wi_fic_desc').text(),
+            author: loadedCheerio('.auth_name_fic').text(),
             chapters: [],
         };
-
-        novel.name = loadedCheerio('.fic_title').text();
-
-        novel.cover = loadedCheerio('.fic_image > img').attr('src');
-    
-        novel.summary = loadedCheerio('.wi_fic_desc').text();
     
         novel.genres = loadedCheerio('.fic_genre')
             .map((i, el) => loadedCheerio(el).text())
@@ -103,13 +100,11 @@ class ScribbleHubPlugin implements Plugin.PluginBase {
             .includes('Ongoing')
                 ? 'Ongoing'
                 : 'Completed';
-    
-        novel.author = loadedCheerio('.auth_name_fic').text();
 
-        let formData = new FormData();
+        const formData = new FormData();
         formData.append('action', 'wi_getreleases_pagination');
         formData.append('pagenum', '-1');
-        formData.append('mypostid', novelUrl.split('/')[4]);
+        formData.append('mypostid', novelPath.split('/')[1]);
 
         const data = await fetchApi(
             `${this.site}wp-admin/admin-ajax.php`,
@@ -130,7 +125,7 @@ class ScribbleHubPlugin implements Plugin.PluginBase {
                 const timeAgo = date.match(/\d+/)?.[0] || "";
                 const timeAgoInt = parseInt(timeAgo, 10);
         
-                if (!timeAgo) return date; // there is no number!
+                if (!timeAgo) return null; // there is no number!
         
                 if (date.includes("hours ago") || date.includes("hour ago")) {
                     dayJSDate.subtract(timeAgoInt, "hours"); // go back N hours
@@ -149,16 +144,16 @@ class ScribbleHubPlugin implements Plugin.PluginBase {
             return null;
         };
 
-        loadedCheerio('.toc_w').each(function () {
-            const chapterName = loadedCheerio(this).find('.toc_a').text();
-            const releaseDate = loadedCheerio(this).find('.fic_date_pub').text();
-            const chapterUrl = loadedCheerio(this).find('a').attr('href');
+        loadedCheerio('.toc_w').each((i,el) => {
+            const chapterName = loadedCheerio(el).find('.toc_a').text();
+            const releaseDate = loadedCheerio(el).find('.fic_date_pub').text();
+            const chapterUrl = loadedCheerio(el).find('a').attr('href');
 
             if (!chapterUrl) return;
             chapter.push({
                 name: chapterName,
                 releaseTime: parseISODate(releaseDate),
-                url: chapterUrl,
+                path: chapterUrl.replace(this.site, ''),
             });
         });
 
@@ -167,13 +162,13 @@ class ScribbleHubPlugin implements Plugin.PluginBase {
         return novel;
     }
 
-    async parseChapter(chapterUrl: string): Promise<string> {
-        const result = await fetchApi(chapterUrl);
+    async parseChapter(chapterPath: string): Promise<string> {
+        const result = await fetchApi(this.site + chapterPath);
         const body = await result.text();
 
         const loadedCheerio = parseHTML(body);
 
-        let chapterText = loadedCheerio('div.chp_raw').html() || '';
+        const chapterText = loadedCheerio('div.chp_raw').html() || '';
         return chapterText;
     }
 
