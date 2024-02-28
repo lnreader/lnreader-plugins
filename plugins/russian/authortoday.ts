@@ -53,15 +53,14 @@ class AuthorToday implements Plugin.PluginBase {
         cover: novel.coverUrl
           ? "https://cm.author.today/content/" + novel.coverUrl
           : defaultCover,
-        path: "/work/" + novel.id,
+        path: novel.id.toString(),
       }),
     );
 
     return novels;
   }
 
-  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const workID = novelPath.split("/")[2];
+  async parseNovel(workID: string): Promise<Plugin.SourceNovel> {
     const result = await fetchApi(`${apiUrl}v1/work/${workID}/details`, {
       headers: {
         Authorization: token,
@@ -70,7 +69,7 @@ class AuthorToday implements Plugin.PluginBase {
 
     const book = (await result.json()) as responseBook;
     const novel: Plugin.SourceNovel = {
-      path: novelPath,
+      path: workID,
       name: book.title,
       cover: book.coverUrl ? book.coverUrl.split("?")[0] : defaultCover,
       genres: book.tags?.join(", "),
@@ -105,7 +104,7 @@ class AuthorToday implements Plugin.PluginBase {
       if (chapter.isAvailable && !chapter.isDraft) {
         chapters.push({
           name: chapter.title || "Глава " + (chapterIndex + 1),
-          path: `v1/work/${workID}/chapter/${chapter.id}/text`,
+          path: workID + "/" + chapter.id,
           releaseTime: dayjs(
             chapter.publishTime || chapter.lastModificationTime,
           ).format("LLL"),
@@ -119,11 +118,15 @@ class AuthorToday implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const result = await fetchApi(apiUrl + chapterPath, {
-      headers: {
-        Authorization: token,
+    const [workID, chapterID] = chapterPath.split("/");
+    const result = await fetchApi(
+      apiUrl + `v1/work/${workID}/chapter/${chapterID}/text`,
+      {
+        headers: {
+          Authorization: token,
+        },
       },
-    });
+    );
     const json = (await result.json()) as encryptedСhapter;
 
     if (json.code) {
@@ -160,26 +163,26 @@ class AuthorToday implements Plugin.PluginBase {
     const loadedCheerio = parseHTML(result);
     const novels: Plugin.NovelItem[] = [];
 
-    loadedCheerio("div.book-row").each((index, element) => {
+    loadedCheerio("a.work-row").each((index, element) => {
       const name = loadedCheerio(element)
-        .find('div[class="book-title"] a')
+        .find('h4[class="work-title"]')
         .text()
         .trim();
-      let cover = loadedCheerio(element).find("img").attr("src");
-      const path = loadedCheerio(element)
-        .find('div[class="book-title"] a')
-        .attr("href");
+      let cover = loadedCheerio(element).find("img").attr("data-src");
+      const path = loadedCheerio(element).attr("href");
 
       cover = cover ? cover.split("?")[0] : defaultCover;
 
       if (!path) return;
-      novels.push({ name, cover, path });
+      novels.push({ name, cover, path: path.replace("/work/", "") });
     });
 
     return novels;
   }
 
   fetchImage = fetchFile;
+  resolveUrl = (path: string, isNovel?: boolean) =>
+    isNovel ? this.site + "/work/" + path : this.site + "/reader/" + path;
 
   filters = {
     sort: {

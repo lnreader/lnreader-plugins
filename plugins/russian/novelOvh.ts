@@ -27,7 +27,7 @@ class novelOvh implements Plugin.PluginBase {
       novels.push({
         name: novel.name.ru,
         cover: novel.poster,
-        path: "/novel/" + novel.slug,
+        path: novel.slug,
       }),
     );
 
@@ -36,7 +36,7 @@ class novelOvh implements Plugin.PluginBase {
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
     const result = await fetchApi(
-      this.site + novelPath + "?_data=routes/reader/book/$slug/index",
+      this.resolveUrl(novelPath, true) + "?_data=routes/reader/book/$slug/index",
     );
     const json = (await result.json()) as responseNovel;
 
@@ -82,7 +82,7 @@ class novelOvh implements Plugin.PluginBase {
 
   async parseChapter(chapterPath: string): Promise<string> {
     const result = await fetchApi(
-      "https://api.novel.ovh/v2/chapters/" + chapterPath.split("/")[3],
+      "https://api.novel.ovh/v2/chapters/" + chapterPath.split("/")[1],
     );
     const book = (await result.json()) as responseChapter;
     const image = Object.fromEntries(
@@ -106,7 +106,7 @@ class novelOvh implements Plugin.PluginBase {
       novels.push({
         name: novel.name.ru,
         cover: novel.poster,
-        path: "/novel/" + novel.slug,
+        path: novel.slug,
       }),
     );
 
@@ -154,6 +154,7 @@ class novelOvh implements Plugin.PluginBase {
   };
 
   fetchImage = fetchFile;
+  resolveUrl = (path: string, isNovel?: boolean) => this.site + "/novel/" + path;
 
   filters = {
     sort: {

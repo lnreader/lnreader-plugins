@@ -39,7 +39,6 @@ class AccordionHeader extends HTMLElement {
         return this.parentElement;
     }
     connectedCallback() {
-        console.log("I AM ON THE SCREEN, DO YOUR FUCKING JOB");
         const childNodes = Array.from(this.childNodes);
         this.innerHTML = "";
         this.btn.append(...childNodes);

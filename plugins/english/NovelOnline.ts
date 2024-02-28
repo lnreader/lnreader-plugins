@@ -2,6 +2,7 @@ import { load as parseHTML } from "cheerio";
 import { fetchApi, fetchFile } from "@libs/fetch";
 import { Plugin } from "@typings/plugin";
 import { Filters, FilterTypes } from "@libs/filterInputs";
+import qs from "qs";
 
 class NovelsOnline implements Plugin.PluginBase {
     id = "NO.net";
@@ -115,7 +116,7 @@ class NovelsOnline implements Plugin.PluginBase {
                         "application/x-www-form-urlencoded; charset=UTF-8",
                 },
                 method: "POST",
-                body: "q=" + encodeURIComponent(searchTerm),
+                body: qs.stringify({ q: searchTerm }),
             },
         ).then((res) => res.text());
         

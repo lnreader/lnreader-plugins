@@ -67,7 +67,8 @@ class RLIB implements Plugin.PluginBase {
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const body = await fetchApi(this.site + novelPath).then((res) => res.text());
+    const body = await fetchApi(this.resolveUrl(novelPath, true))
+      .then((res) => res.text());
     const loadedCheerio = parseHTML(body);
 
     const novel: Plugin.SourceNovel = {
@@ -104,6 +105,10 @@ class RLIB implements Plugin.PluginBase {
       }
     });
 
+    this.ui = loadedCheerio("a.header-right-menu__item")
+      .attr("href")
+      ?.replace?.(/[^0-9]/g, "");
+
     const chaptersRaw = body.match(/window\.__DATA__ = ({.*?});/);
     if (chaptersRaw instanceof Array && chaptersRaw.length >= 2) {
       const chaptersJson: responseBook = JSON.parse(chaptersRaw[1]);
@@ -136,7 +141,7 @@ class RLIB implements Plugin.PluginBase {
           customOrder[chapter.branch_id || 0] =
             (customOrder[chapter.branch_id || 0] || 1) + 1;
         });
-      };
+      }
 
       const chapters: Plugin.ChapterItem[] = [];
       chaptersJson.chapters.list.forEach((chapter, chapterIndex) =>
@@ -146,7 +151,7 @@ class RLIB implements Plugin.PluginBase {
             " Глава " + chapter.chapter_number +
               (chapter.chapter_name ? " " + chapter.chapter_name.trim() : ""),
           path:
-            "/" + chaptersJson.manga.slug +
+            novelPath +
             "/v" + chapter.chapter_volume +
             "/c" + chapter.chapter_number +
             "?bid=" + (chapter.branch_id || ""),
@@ -164,16 +169,15 @@ class RLIB implements Plugin.PluginBase {
               if ((a.page || 0) > (b.page || 0)) return 1;
               if ((a.page || 0) < (b.page || 0)) return -1;
               return (a.chapterNumber || 0) - (b.chapterNumber || 0);
-          })
+            })
           : chapters.reverse();
     }
     return novel;
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const result = await fetchApi(
-      this.site + chapterPath + (this.ui ? "&ui=" + this.ui : ""),
-    ).then((res) => res.text());
+    const result = await fetchApi(this.resolveUrl(chapterPath))
+      .then((res) => res.text());
 
     const loadedCheerio = parseHTML(result);
     loadedCheerio(".reader-container img").each((index, element) => {
@@ -211,6 +215,8 @@ class RLIB implements Plugin.PluginBase {
   }
 
   fetchImage = fetchFile;
+  resolveUrl = (path: string, isNovel?: boolean) =>
+    this.site + path + (this.ui ? (isNovel ? "?" : "&") + "ui=" + this.ui : "");
 
   filters = {
     sort: {

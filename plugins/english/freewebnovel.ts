@@ -2,6 +2,7 @@ import { Plugin } from "@typings/plugin";
 import { fetchApi, fetchFile } from "@libs/fetch";
 import { NovelStatus } from "@libs/novelStatus";
 import { load as parseHTML } from "cheerio";
+import qs from "qs";
 
 class FreeWebNovel implements Plugin.PluginBase {
   id = "FWN.com";
@@ -92,7 +93,7 @@ class FreeWebNovel implements Plugin.PluginBase {
         Origin: this.site,
       },
       method: "POST",
-      body: "searchkey=" + encodeURIComponent(searchTerm),
+      body: qs.stringify({ searchkey: searchTerm }),
     }).then((res) => res.text());
 
     const loadedCheerio = parseHTML(body);

@@ -44,19 +44,18 @@ class ReN implements Plugin.PluginBase {
     const novels: Plugin.NovelItem[] = body.content.map((novel) => ({
       name: novel.main_name || novel.secondary_name,
       cover: this.site + (novel.img.high || novel.img.mid || novel.img.low),
-      path: "/novel/" + novel.dir,
+      path: novel.dir,
     }));
 
     return novels;
   }
 
-  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const novelID = novelPath.split("/")[2];
+  async parseNovel(novelID: string): Promise<Plugin.SourceNovel> {
     const result = await fetchApi(this.site + "/api/titles/" + novelID);
     const body = (await result.json()) as { content: responseNovel };
 
     const novel: Plugin.SourceNovel = {
-      path: novelPath,
+      path: novelID,
       name:
         body.content.main_name ||
         body.content.secondary_name ||
@@ -104,7 +103,7 @@ class ReN implements Plugin.PluginBase {
               "Том " + chapter.tome +
               " Глава " + chapter.chapter +
                 (chapter.name ? " " + chapter.name.trim() : ""),
-            path: "/novel/" + novelID + "/" + chapter.id,
+            path: novelID + "/" + chapter.id,
             releaseTime: dayjs(chapter.upload_date).format("LLL"),
             chapterNumber: chapter.index,
           });
@@ -117,7 +116,7 @@ class ReN implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const url = this.site + "/api/titles/chapters/" + chapterPath.split("/")[3];
+    const url = this.site + "/api/titles/chapters/" + chapterPath.split("/")[1];
     const result = await fetchApi(url);
     const body = (await result.json()) as { content: responseСhapter };
 
@@ -137,7 +136,7 @@ class ReN implements Plugin.PluginBase {
       novels.push({
         name: novel.main_name || novel.secondary_name,
         cover: this.site + (novel.img.high || novel.img.mid || novel.img.low),
-        path: "/novel/" + novel.dir,
+        path: novel.dir,
       }),
     );
 
@@ -145,6 +144,7 @@ class ReN implements Plugin.PluginBase {
   }
 
   fetchImage = fetchFile;
+  resolveUrl = (path: string, isNovel?: boolean) => this.site + "/novel/" + path;
 
   filters = {
     sort: {

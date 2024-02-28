@@ -4,6 +4,7 @@ import { Plugin } from "@typings/plugin";
 import { NovelStatus } from "@libs/novelStatus";
 import { load as parseHTML } from "cheerio";
 import dayjs from "dayjs";
+import qs from "qs";
 
 export interface ReadwnMetadata {
   id: string;
@@ -191,9 +192,12 @@ class ReadwnPlugin implements Plugin.PluginBase {
         Origin: this.site,
       },
       method: "POST",
-      body:
-        "show=title&tempid=1&tbname=news&keyboard=" +
-        encodeURIComponent(searchTerm),
+      body: qs.stringify({
+        show: "title",
+        tempid: 1,
+        tbname: "news",
+        keyboard: searchTerm,
+      }),
     }).then((res) => res.text());
     const loadedCheerio = parseHTML(result);
 
@@ -205,7 +209,6 @@ class ReadwnPlugin implements Plugin.PluginBase {
       }))
       .get()
       .filter((novel) => novel.name && novel.path);
-
     return novels;
   }
 

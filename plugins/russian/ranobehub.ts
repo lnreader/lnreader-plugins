@@ -67,7 +67,7 @@ class RNBH implements Plugin.PluginBase {
       novels.push({
         name: novel.names.rus || novel.names.eng || novel.names.original,
         cover: novel.poster.medium,
-        path: "/ranobe/" + novel.id,
+        path: novel.id.toString(),
       }),
     );
 
@@ -75,7 +75,7 @@ class RNBH implements Plugin.PluginBase {
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const result = await fetchApi(this.site + "/api" + novelPath);
+    const result = await fetchApi(this.site + "/api/ranobe/" + novelPath);
     const json = (await result.json()) as { data: responseNovel };
 
     const novel: Plugin.SourceNovel = {
@@ -98,7 +98,7 @@ class RNBH implements Plugin.PluginBase {
 
     const chapters: Plugin.ChapterItem[] = [];
     const chaptersRaw = await fetchApi(
-      this.site + "/api" + novelPath + "/contents",
+      this.site + "/api/ranobe/" + novelPath + "/contents",
     );
     const chaptersJSON = (await chaptersRaw.json()) as {
       volumes: VolumesEntity[];
@@ -123,7 +123,7 @@ class RNBH implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const result = await fetchApi(this.site + chapterPath);
+    const result = await fetchApi(this.resolveUrl(chapterPath));
     const body = await result.text();
 
     const loadedCheerio = parseHTML(body);
@@ -161,7 +161,7 @@ class RNBH implements Plugin.PluginBase {
             novel.name ||
             novel?.names?.original ||
             "",
-          path: "/ranobe/" + novel.id,
+          path: novel.id.toString(),
           cover: novel?.image?.replace("/small", "/medium"),
         }),
       );
@@ -170,6 +170,7 @@ class RNBH implements Plugin.PluginBase {
   }
 
   fetchImage = fetchFile;
+  resolveUrl = (path: string, isNovel?: boolean) => this.site + "/ranobe/" + path;
 
   filters = {
     sort: {

@@ -357,6 +357,27 @@
                     <img src="" style="min-height: 300px; max-width: 450px;" alt="">
                 </accordion-content>
             </accordion-box>
+            <accordion-box id="resolveUrl" collapsed>
+                <accordion-header>
+                    resolveUrl
+                </accordion-header>
+                <accordion-content>
+                    <div class="input-group">
+                        <select class="form-control">
+                            <option>novel</option>
+                            <option>chapter</option>
+                        </select>
+                        <input type="path" class="form-control" placeholder="path">
+                        <div class="input-group-append">
+                            <button class="btn btn-primary resolveUrl-btn" type="button">fetch</button>
+                        </div>
+                    </div>
+                    <div class="spinner-border" role="status">
+                        <span class="sr-only">Loading...</span>
+                    </div>
+                    <input readonly>
+                </accordion-content>
+            </accordion-box>
         </main-accordion>
 </body>
 

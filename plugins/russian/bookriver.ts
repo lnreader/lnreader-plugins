@@ -39,7 +39,7 @@ class Bookriver implements Plugin.PluginBase {
         novels.push({
           name: novel.name,
           cover: novel.coverImages[0].url,
-          path: "/book/" + novel.slug,
+          path: novel.slug,
         }),
       );
     }
@@ -47,7 +47,8 @@ class Bookriver implements Plugin.PluginBase {
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const result = await fetchApi(this.site + novelPath).then((res) => res.text());
+    const result = await fetchApi(this.resolveUrl(novelPath, true))
+      .then((res) => res.text());
     const loadedCheerio = parseHTML(result);
 
     const jsonRaw = loadedCheerio("#__NEXT_DATA__").html();
@@ -72,7 +73,7 @@ class Bookriver implements Plugin.PluginBase {
       if (chapter.available) {
         chapters.push({
           name: chapter.name,
-          path: "/reader/" + book?.slug + "/" + chapter.chapterId,
+          path: book?.slug + "/" + chapter.chapterId,
           releaseTime: dayjs(
             chapter.firstPublishedAt || chapter.createdAt || undefined,
           ).format("LLL"),
@@ -112,7 +113,7 @@ class Bookriver implements Plugin.PluginBase {
       novels.push({
         name: novel.name,
         cover: novel.coverImages[0].url,
-        path: "/book/" + novel.slug,
+        path: novel.slug,
       }),
     );
 
@@ -120,6 +121,8 @@ class Bookriver implements Plugin.PluginBase {
   }
 
   fetchImage = fetchFile;
+  resolveUrl = (path: string, isNovel?: boolean) =>
+    this.site + (isNovel ? "/book/" : "/reader/") + path;
 
   filters = {
     sort: {
