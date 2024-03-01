@@ -6,6 +6,7 @@ export const languages = {
     Indonesian: "Bahasa Indonesia",
     Japanese: "日本語",
     Korean: "조선말, 한국어",
+    Polish: "Polski",
     Portuguese: "Português",
     Russian: "Русский",
     Spanish: "Español",
