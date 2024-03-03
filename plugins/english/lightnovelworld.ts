@@ -8,7 +8,7 @@ class LightNovelWorld implements Plugin.PagePlugin {
     id = "lightnovelworld";
     name = "LightNovelWorld";
     site = "https://www.webnovelworld.org/";
-    version = "1.0.0";
+    version = "1.0.1";
     icon = "src/en/lightnovelworld/icon.png";
     headers = {
         Accept: "application/json",
@@ -16,7 +16,7 @@ class LightNovelWorld implements Plugin.PagePlugin {
     };
 
     async popularNovels(
-        page: number, 
+        page: number,
         { filters }: Plugin.PopularNovelsOptions<typeof this.filters>
     ): Promise<Plugin.NovelItem[]> {
         let link = `${this.site}browse/`;
@@ -26,13 +26,13 @@ class LightNovelWorld implements Plugin.PagePlugin {
         link += page;
 
         const body = await fetchApi(link).then((r) => r.text());
-    
+
         const loadedCheerio = parseHTML(body);
-    
+
         const novels: Plugin.NovelItem[] = [];
-    
+
         loadedCheerio(".novel-item.ads").remove();
-    
+
         loadedCheerio(".novel-item").each((idx, ele) => {
             const novelName = loadedCheerio(ele)
                 .find(".novel-title")
@@ -44,39 +44,39 @@ class LightNovelWorld implements Plugin.PagePlugin {
                     .find(".novel-title > a")
                     .attr("href")
                     ?.substring(1);
-    
+
             if (!novelUrl) return;
             const novel = {
                 name: novelName,
                 cover: novelCover,
                 path: novelUrl,
             };
-    
+
             novels.push(novel);
         });
-    
+
         return novels;
     }
 
-    async parseNovel(novelPath: string): Promise<Plugin.SourceNovel & {totalPages: number}> {
+    async parseNovel(novelPath: string): Promise<Plugin.SourceNovel & { totalPages: number }> {
         const body = await fetchApi(this.site + novelPath).then((r) => r.text());
 
         const loadedCheerio = parseHTML(body);
         const totalChapters = parseInt(loadedCheerio(".header-stats span:first strong").text(), 10);
 
-        const novel: Plugin.SourceNovel & {totalPages: number}= {
+        const novel: Plugin.SourceNovel & { totalPages: number } = {
             path: novelPath,
             name: loadedCheerio("h1.novel-title").text().trim() || "Untitled",
             cover: loadedCheerio("figure.cover > img").attr("data-src"),
             author: loadedCheerio(".author > a > span").text(),
             summary: loadedCheerio(".summary > .content").text().trim(),
             status: loadedCheerio(".header-stats span:last strong").text(),
-            totalPages: Math.ceil(totalChapters/100),
+            totalPages: Math.ceil(totalChapters / 100),
             chapters: [],
         };
 
         novel.genres = loadedCheerio('.categories ul li')
-            .map((a,ex) => loadedCheerio(ex).text().trim())
+            .map((a, ex) => loadedCheerio(ex).text().trim())
             .toArray()
             .join(',');
 
@@ -90,15 +90,15 @@ class LightNovelWorld implements Plugin.PagePlugin {
         const chapter: Plugin.ChapterItem[] = [];
         loadedCheerio('.chapter-list li').each(function () {
             const chapterName =
-              'Chapter ' +
-              loadedCheerio(this).find('.chapter-no').text().trim() +
-              ' - ';
-            loadedCheerio(this).find('.chapter-title').text().trim();
-    
+                'Chapter ' +
+                loadedCheerio(this).find('.chapter-no').text().trim() +
+                ' - ' +
+                loadedCheerio(this).find('.chapter-title').text().trim();
+
             const releaseDate = loadedCheerio(this)
-              .find('.chapter-update')
-              .attr('datetime');
-    
+                .find('.chapter-update')
+                .attr('datetime');
+
             const chapterUrl = loadedCheerio(this).find('a').attr('href')?.substring(1);
             if (!chapterUrl) return;
 
@@ -106,9 +106,10 @@ class LightNovelWorld implements Plugin.PagePlugin {
                 name: chapterName,
                 path: chapterUrl,
                 releaseTime: dayjs(releaseDate).toISOString(),
-            })});
+            })
+        });
         const chapters = chapter;
-        return {chapters};
+        return { chapters };
     }
 
     async parseChapter(chapterPath: string): Promise<string> {
@@ -127,10 +128,10 @@ class LightNovelWorld implements Plugin.PagePlugin {
         const response = await fetchApi(link).then((r) => r.text());
         const token = parseHTML(response);
         let verifytoken = token("#novelSearchForm > input").attr("value");
-    
+
         let formData = new FormData();
         formData.append("inputContent", searchTerm);
-    
+
         const body = await fetchApi(
             url,
             {
@@ -139,15 +140,15 @@ class LightNovelWorld implements Plugin.PagePlugin {
                 body: formData,
             },
         ).then((r) => r.text());
-    
+
         let loadedCheerio = parseHTML(body);
-    
+
         let novels: Plugin.NovelItem[] = [];
-    
+
         let results = JSON.parse(loadedCheerio("body").text());
-    
+
         loadedCheerio = parseHTML(results.resultview);
-    
+
         loadedCheerio(".novel-item").each((idx, ele) => {
             const novelName = loadedCheerio(ele)
                 .find("h4.novel-title")
@@ -162,12 +163,12 @@ class LightNovelWorld implements Plugin.PagePlugin {
                 cover: novelCover,
             });
         });
-    
+
         return novels;
     }
 
     async fetchImage(url: string): Promise<string | undefined> {
-        return fetchFile(url, {headers: this.headers});
+        return fetchFile(url, { headers: this.headers });
     }
 
     filters = {
