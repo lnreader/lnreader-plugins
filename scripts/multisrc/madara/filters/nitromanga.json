@@ -1,0 +1,336 @@
+{
+  "filters": {
+    "genre[]": {
+      "type": "Checkbox",
+      "label": "Genre",
+      "value": [],
+      "options": [
+        {
+          "label": "Action",
+          "value": "action"
+        },
+        {
+          "label": "Adventure",
+          "value": "adventure"
+        },
+        {
+          "label": "Apocalyptic",
+          "value": "apocalyptic"
+        },
+        {
+          "label": "Beasts",
+          "value": "beasts"
+        },
+        {
+          "label": "Cheat Systems",
+          "value": "cheat-systems"
+        },
+        {
+          "label": "Comedy",
+          "value": "comedy"
+        },
+        {
+          "label": "Completed",
+          "value": "completed"
+        },
+        {
+          "label": "Crime",
+          "value": "crime"
+        },
+        {
+          "label": "Cultivation",
+          "value": "cultivation"
+        },
+        {
+          "label": "Demons",
+          "value": "demons"
+        },
+        {
+          "label": "Drama",
+          "value": "drama"
+        },
+        {
+          "label": "Dungeons",
+          "value": "dungeons"
+        },
+        {
+          "label": "Ecchi",
+          "value": "ecchi"
+        },
+        {
+          "label": "Fantasy",
+          "value": "fantasy"
+        },
+        {
+          "label": "Game",
+          "value": "game"
+        },
+        {
+          "label": "Genius MC",
+          "value": "genius-mc"
+        },
+        {
+          "label": "Ghosts",
+          "value": "ghosts"
+        },
+        {
+          "label": "Harem",
+          "value": "harem"
+        },
+        {
+          "label": "Historical",
+          "value": "historical"
+        },
+        {
+          "label": "Horror",
+          "value": "horror"
+        },
+        {
+          "label": "Hunter",
+          "value": "hunter"
+        },
+        {
+          "label": "Isekai",
+          "value": "isekai"
+        },
+        {
+          "label": "Magic",
+          "value": "magic"
+        },
+        {
+          "label": "Manga",
+          "value": "manga"
+        },
+        {
+          "label": "Manhua",
+          "value": "manhua"
+        },
+        {
+          "label": "Manhwa",
+          "value": "manhwa"
+        },
+        {
+          "label": "Martial Arts",
+          "value": "martial-arts"
+        },
+        {
+          "label": "Mature",
+          "value": "mature"
+        },
+        {
+          "label": "Mecha",
+          "value": "mecha"
+        },
+        {
+          "label": "Medical",
+          "value": "medical"
+        },
+        {
+          "label": "Monsters",
+          "value": "monsters"
+        },
+        {
+          "label": "Murim",
+          "value": "murim"
+        },
+        {
+          "label": "Mystery",
+          "value": "mystery"
+        },
+        {
+          "label": "Novel",
+          "value": "novel"
+        },
+        {
+          "label": "Overpowered",
+          "value": "overpowered"
+        },
+        {
+          "label": "Psychological",
+          "value": "psychological"
+        },
+        {
+          "label": "Rebirth",
+          "value": "rebirth"
+        },
+        {
+          "label": "Regression",
+          "value": "regression"
+        },
+        {
+          "label": "Reincarnation",
+          "value": "reincarnation"
+        },
+        {
+          "label": "Revenge",
+          "value": "revenge"
+        },
+        {
+          "label": "Romance",
+          "value": "romance"
+        },
+        {
+          "label": "School Life",
+          "value": "school-life"
+        },
+        {
+          "label": "Sci-fi",
+          "value": "sci-fi"
+        },
+        {
+          "label": "Seinen",
+          "value": "seinen"
+        },
+        {
+          "label": "Shounen",
+          "value": "shounen"
+        },
+        {
+          "label": "Slice of Life",
+          "value": "slice-of-life"
+        },
+        {
+          "label": "Sports",
+          "value": "sports"
+        },
+        {
+          "label": "Super Power",
+          "value": "super-power"
+        },
+        {
+          "label": "Supernatural",
+          "value": "supernatural"
+        },
+        {
+          "label": "System",
+          "value": "system"
+        },
+        {
+          "label": "Time Travel",
+          "value": "time-travel"
+        },
+        {
+          "label": "Tragedy",
+          "value": "tragedy"
+        },
+        {
+          "label": "Video Games",
+          "value": "video-games"
+        },
+        {
+          "label": "Webtoon",
+          "value": "webtoon"
+        },
+        {
+          "label": "Wuxia",
+          "value": "wuxia"
+        },
+        {
+          "label": "Zombie",
+          "value": "zombie"
+        }
+      ]
+    },
+    "op": {
+      "type": "Switch",
+      "label": "having all selected genres",
+      "value": false
+    },
+    "author": {
+      "type": "Text",
+      "label": "Author",
+      "value": ""
+    },
+    "artist": {
+      "type": "Text",
+      "label": "Artist",
+      "value": ""
+    },
+    "release": {
+      "type": "Text",
+      "label": "Year of Released",
+      "value": ""
+    },
+    "adult": {
+      "type": "Picker",
+      "label": "Adult content",
+      "value": "",
+      "options": [
+        {
+          "label": "All",
+          "value": ""
+        },
+        {
+          "label": "None adult content",
+          "value": "0"
+        },
+        {
+          "label": "Only adult content",
+          "value": "1"
+        }
+      ]
+    },
+    "status[]": {
+      "type": "Checkbox",
+      "label": "Status",
+      "value": [],
+      "options": [
+        {
+          "label": "OnGoing",
+          "value": "on-going"
+        },
+        {
+          "label": "Completed",
+          "value": "end"
+        },
+        {
+          "label": "Canceled",
+          "value": "canceled"
+        },
+        {
+          "label": "On Hold",
+          "value": "on-hold"
+        },
+        {
+          "label": "Upcoming",
+          "value": "upcoming"
+        }
+      ]
+    },
+    "m_orderby": {
+      "type": "Picker",
+      "label": "Order by",
+      "value": "",
+      "options": [
+        {
+          "label": "Relevance",
+          "value": ""
+        },
+        {
+          "label": "Latest",
+          "value": "latest"
+        },
+        {
+          "label": "A-Z",
+          "value": "alphabet"
+        },
+        {
+          "label": "Rating",
+          "value": "rating"
+        },
+        {
+          "label": "Trending",
+          "value": "trending"
+        },
+        {
+          "label": "Most Views",
+          "value": "views"
+        },
+        {
+          "label": "New",
+          "value": "new-manga"
+        }
+      ]
+    }
+  }
+}

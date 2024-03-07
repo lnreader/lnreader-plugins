@@ -1,0 +1,180 @@
+{
+  "filters": {
+    "genre[]": {
+      "type": "Checkbox",
+      "label": "Genre",
+      "value": [],
+      "options": [
+        {
+          "label": "action",
+          "value": "action"
+        },
+        {
+          "label": "adventure",
+          "value": "adventure"
+        },
+        {
+          "label": "boys",
+          "value": "boys"
+        },
+        {
+          "label": "chinese",
+          "value": "chinese"
+        },
+        {
+          "label": "drama",
+          "value": "drama"
+        },
+        {
+          "label": "ecchi",
+          "value": "ecchi"
+        },
+        {
+          "label": "fighting",
+          "value": "fighting"
+        },
+        {
+          "label": "fun",
+          "value": "fun"
+        },
+        {
+          "label": "girl",
+          "value": "girl"
+        },
+        {
+          "label": "horrow",
+          "value": "horrow"
+        },
+        {
+          "label": "isekai",
+          "value": "isekai"
+        },
+        {
+          "label": "manhwa",
+          "value": "manhwa"
+        },
+        {
+          "label": "r19",
+          "value": "r19"
+        },
+        {
+          "label": "regression",
+          "value": "regression"
+        },
+        {
+          "label": "reincarnation",
+          "value": "reincarnation"
+        },
+        {
+          "label": "romance fantasy",
+          "value": "romance-fantasy"
+        },
+        {
+          "label": "time travel",
+          "value": "time-travel"
+        }
+      ]
+    },
+    "op": {
+      "type": "Switch",
+      "label": "having all selected genres",
+      "value": false
+    },
+    "author": {
+      "type": "Text",
+      "label": "Author",
+      "value": ""
+    },
+    "artist": {
+      "type": "Text",
+      "label": "Artist",
+      "value": ""
+    },
+    "release": {
+      "type": "Text",
+      "label": "Year of Released",
+      "value": ""
+    },
+    "adult": {
+      "type": "Picker",
+      "label": "Adult content",
+      "value": "",
+      "options": [
+        {
+          "label": "All",
+          "value": ""
+        },
+        {
+          "label": "None adult content",
+          "value": "0"
+        },
+        {
+          "label": "Only adult content",
+          "value": "1"
+        }
+      ]
+    },
+    "status[]": {
+      "type": "Checkbox",
+      "label": "Status",
+      "value": [],
+      "options": [
+        {
+          "label": "OnGoing",
+          "value": "on-going"
+        },
+        {
+          "label": "Completed",
+          "value": "end"
+        },
+        {
+          "label": "Canceled",
+          "value": "canceled"
+        },
+        {
+          "label": "On Hold",
+          "value": "on-hold"
+        },
+        {
+          "label": "Upcoming",
+          "value": "upcoming"
+        }
+      ]
+    },
+    "m_orderby": {
+      "type": "Picker",
+      "label": "Order by",
+      "value": "",
+      "options": [
+        {
+          "label": "Relevance",
+          "value": ""
+        },
+        {
+          "label": "Latest",
+          "value": "latest"
+        },
+        {
+          "label": "A-Z",
+          "value": "alphabet"
+        },
+        {
+          "label": "Rating",
+          "value": "rating"
+        },
+        {
+          "label": "Trending",
+          "value": "trending"
+        },
+        {
+          "label": "Most Views",
+          "value": "views"
+        },
+        {
+          "label": "New",
+          "value": "new-manga"
+        }
+      ]
+    }
+  }
+}

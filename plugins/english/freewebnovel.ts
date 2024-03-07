@@ -6,7 +6,7 @@ import qs from "qs";
 
 class FreeWebNovel implements Plugin.PluginBase {
   id = "FWN.com";
-  name = "Web NOVEL";
+  name = "Free Web Novel";
   site = "https://freewebnovel.com";
   version = "1.0.0";
   icon = "src/en/freewebnovel/icon.png";

@@ -1,0 +1,336 @@
+{
+  "filters": {
+    "genre[]": {
+      "type": "Checkbox",
+      "label": "Genre",
+      "value": [],
+      "options": [
+        {
+          "label": "Acción",
+          "value": "accion"
+        },
+        {
+          "label": "Action",
+          "value": "action"
+        },
+        {
+          "label": "Adult",
+          "value": "adult"
+        },
+        {
+          "label": "Adventure",
+          "value": "adventure"
+        },
+        {
+          "label": "Anime",
+          "value": "anime"
+        },
+        {
+          "label": "Aventura",
+          "value": "aventura"
+        },
+        {
+          "label": "Cartoon",
+          "value": "cartoon"
+        },
+        {
+          "label": "Comedia",
+          "value": "comedia"
+        },
+        {
+          "label": "Comedy",
+          "value": "comedy"
+        },
+        {
+          "label": "Comic",
+          "value": "comic"
+        },
+        {
+          "label": "Cooking",
+          "value": "cooking"
+        },
+        {
+          "label": "Detective",
+          "value": "detective"
+        },
+        {
+          "label": "Doujinshi",
+          "value": "doujinshi"
+        },
+        {
+          "label": "Drama",
+          "value": "drama"
+        },
+        {
+          "label": "Ecchi",
+          "value": "ecchi"
+        },
+        {
+          "label": "Escolar",
+          "value": "escolar"
+        },
+        {
+          "label": "Fantasía",
+          "value": "fantasia"
+        },
+        {
+          "label": "Fantasy",
+          "value": "fantasy"
+        },
+        {
+          "label": "Gender Bender",
+          "value": "gender-bender"
+        },
+        {
+          "label": "Harem",
+          "value": "harem"
+        },
+        {
+          "label": "Historical",
+          "value": "historical"
+        },
+        {
+          "label": "Horror",
+          "value": "horror"
+        },
+        {
+          "label": "Josei",
+          "value": "josei"
+        },
+        {
+          "label": "Live action",
+          "value": "live-action"
+        },
+        {
+          "label": "Magia",
+          "value": "magia"
+        },
+        {
+          "label": "Malentendidos",
+          "value": "malentendidos"
+        },
+        {
+          "label": "Manga",
+          "value": "manga"
+        },
+        {
+          "label": "Manhua",
+          "value": "manhua"
+        },
+        {
+          "label": "Manhwa",
+          "value": "manhwa"
+        },
+        {
+          "label": "Martial Arts",
+          "value": "martial-arts"
+        },
+        {
+          "label": "Mature",
+          "value": "mature"
+        },
+        {
+          "label": "Mecha",
+          "value": "mecha"
+        },
+        {
+          "label": "Mystery",
+          "value": "mystery"
+        },
+        {
+          "label": "One shot",
+          "value": "one-shot"
+        },
+        {
+          "label": "Posesión",
+          "value": "posesion"
+        },
+        {
+          "label": "Psychological",
+          "value": "psychological"
+        },
+        {
+          "label": "Reencarnación",
+          "value": "reencarnacion"
+        },
+        {
+          "label": "Regresión",
+          "value": "regresion"
+        },
+        {
+          "label": "Romance",
+          "value": "romance"
+        },
+        {
+          "label": "School Life",
+          "value": "school-life"
+        },
+        {
+          "label": "Sci-fi",
+          "value": "sci-fi"
+        },
+        {
+          "label": "Seinen",
+          "value": "seinen"
+        },
+        {
+          "label": "Shoujo",
+          "value": "shoujo"
+        },
+        {
+          "label": "Shoujo Ai",
+          "value": "shoujo-ai"
+        },
+        {
+          "label": "Shounen",
+          "value": "shounen"
+        },
+        {
+          "label": "Shounen Ai",
+          "value": "shounen-ai"
+        },
+        {
+          "label": "Silce of Life",
+          "value": "silce-of-life"
+        },
+        {
+          "label": "Slice of Life",
+          "value": "slice-of-life"
+        },
+        {
+          "label": "Smut",
+          "value": "smut"
+        },
+        {
+          "label": "Soft Yaoi",
+          "value": "soft-yaoi"
+        },
+        {
+          "label": "Soft Yuri",
+          "value": "soft-yuri"
+        },
+        {
+          "label": "Sports",
+          "value": "sports"
+        },
+        {
+          "label": "Supernatural",
+          "value": "supernatural"
+        },
+        {
+          "label": "Tragedy",
+          "value": "tragedy"
+        },
+        {
+          "label": "Webtoon",
+          "value": "webtoon"
+        },
+        {
+          "label": "Yaoi",
+          "value": "yaoi"
+        },
+        {
+          "label": "Yuri",
+          "value": "yuri"
+        }
+      ]
+    },
+    "op": {
+      "type": "Switch",
+      "label": "teniendo todos los géneros seleccionados",
+      "value": false
+    },
+    "author": {
+      "type": "Text",
+      "label": "Autor",
+      "value": ""
+    },
+    "artist": {
+      "type": "Text",
+      "label": "Artista",
+      "value": ""
+    },
+    "release": {
+      "type": "Text",
+      "label": "Año de Lanzamiento",
+      "value": ""
+    },
+    "adult": {
+      "type": "Picker",
+      "label": "Contenido para Adultos",
+      "value": "",
+      "options": [
+        {
+          "label": "Todo",
+          "value": ""
+        },
+        {
+          "label": "Ningún contenido para adultos",
+          "value": "0"
+        },
+        {
+          "label": "Solo contenido para adultos",
+          "value": "1"
+        }
+      ]
+    },
+    "status[]": {
+      "type": "Checkbox",
+      "label": "Estado",
+      "value": [],
+      "options": [
+        {
+          "label": "Terminada",
+          "value": "complete"
+        },
+        {
+          "label": "En curso",
+          "value": "on-going"
+        },
+        {
+          "label": "Cancelada",
+          "value": "canceled"
+        },
+        {
+          "label": "Abandonada por el Traductor",
+          "value": "on-hold"
+        }
+      ]
+    },
+    "m_orderby": {
+      "type": "Picker",
+      "label": "Ordenar por",
+      "value": "",
+      "options": [
+        {
+          "label": "Importancia",
+          "value": ""
+        },
+        {
+          "label": "Más Reciente",
+          "value": "latest"
+        },
+        {
+          "label": "A-Z",
+          "value": "alphabet"
+        },
+        {
+          "label": "Clasificación",
+          "value": "rating"
+        },
+        {
+          "label": "Tendencias",
+          "value": "trending"
+        },
+        {
+          "label": "Más vistas",
+          "value": "views"
+        },
+        {
+          "label": "Nuevo",
+          "value": "new-manga"
+        }
+      ]
+    }
+  }
+}

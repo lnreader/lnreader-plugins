@@ -1,0 +1,292 @@
+{
+  "filters": {
+    "genre[]": {
+      "type": "Checkbox",
+      "label": "Genre",
+      "value": [],
+      "options": [
+        {
+          "label": "أكشن",
+          "value": "أكشن"
+        },
+        {
+          "label": "أيتشي",
+          "value": "أيتشي"
+        },
+        {
+          "label": "استراتجي",
+          "value": "استراتجي"
+        },
+        {
+          "label": "العصر الحديث",
+          "value": "العصر-الحديث"
+        },
+        {
+          "label": "انتقام",
+          "value": "انتقام"
+        },
+        {
+          "label": "بالغ",
+          "value": "بالغ"
+        },
+        {
+          "label": "بناء مملكة",
+          "value": "بناء-مملكة"
+        },
+        {
+          "label": "بوليسي",
+          "value": "بوليسي"
+        },
+        {
+          "label": "تاريخي",
+          "value": "تاريخي"
+        },
+        {
+          "label": "جوسي",
+          "value": "جوسي"
+        },
+        {
+          "label": "حريم",
+          "value": "حريم"
+        },
+        {
+          "label": "حياة يومية",
+          "value": "حياة-يومية"
+        },
+        {
+          "label": "خيال",
+          "value": "خيال"
+        },
+        {
+          "label": "خيال علمي",
+          "value": "خيال-علمي"
+        },
+        {
+          "label": "دراما",
+          "value": "دراما"
+        },
+        {
+          "label": "رعب",
+          "value": "رعب"
+        },
+        {
+          "label": "رومانسية",
+          "value": "رومانسية"
+        },
+        {
+          "label": "رياضي",
+          "value": "رياضي"
+        },
+        {
+          "label": "زيانشيا",
+          "value": "xianxia"
+        },
+        {
+          "label": "سنين",
+          "value": "سنين"
+        },
+        {
+          "label": "شريحة حياة",
+          "value": "شريحة-حياة"
+        },
+        {
+          "label": "شوانهوان",
+          "value": "xuanhuan"
+        },
+        {
+          "label": "شوجو",
+          "value": "شوجو"
+        },
+        {
+          "label": "شونين",
+          "value": "شونين"
+        },
+        {
+          "label": "شيانشيا",
+          "value": "شيانشيا"
+        },
+        {
+          "label": "عسكري",
+          "value": "عسكري"
+        },
+        {
+          "label": "غموض",
+          "value": "غموض"
+        },
+        {
+          "label": "فانتازيا",
+          "value": "فانتازيا"
+        },
+        {
+          "label": "فنون قتالية",
+          "value": "فنون-قتالية"
+        },
+        {
+          "label": "قوى خارقة",
+          "value": "قوى-خارقة"
+        },
+        {
+          "label": "كوميديا",
+          "value": "كوميديا"
+        },
+        {
+          "label": "كوميك",
+          "value": "كوميك"
+        },
+        {
+          "label": "للكبار",
+          "value": "للكبار"
+        },
+        {
+          "label": "مأساة",
+          "value": "مأساة"
+        },
+        {
+          "label": "مانجا",
+          "value": "مانجا"
+        },
+        {
+          "label": "مانها",
+          "value": "مانها"
+        },
+        {
+          "label": "مانهوا",
+          "value": "مانهوا"
+        },
+        {
+          "label": "مدرسي",
+          "value": "مدرسي"
+        },
+        {
+          "label": "مصاصي دماء",
+          "value": "مصاصي-دماء"
+        },
+        {
+          "label": "مغامرة",
+          "value": "مغامرة"
+        },
+        {
+          "label": "مكتملة",
+          "value": "مكتملة"
+        },
+        {
+          "label": "نفسي",
+          "value": "نفسي"
+        },
+        {
+          "label": "نهاية العالم",
+          "value": "نهاية-العالم"
+        },
+        {
+          "label": "واب تون",
+          "value": "واب-تون"
+        },
+        {
+          "label": "وان شوت",
+          "value": "وان-شوت"
+        }
+      ]
+    },
+    "op": {
+      "type": "Switch",
+      "label": "having all selected genres",
+      "value": false
+    },
+    "author": {
+      "type": "Text",
+      "label": "Author",
+      "value": ""
+    },
+    "artist": {
+      "type": "Text",
+      "label": "Artist",
+      "value": ""
+    },
+    "release": {
+      "type": "Text",
+      "label": "Year of Released",
+      "value": ""
+    },
+    "adult": {
+      "type": "Picker",
+      "label": "Adult content",
+      "value": "",
+      "options": [
+        {
+          "label": "All",
+          "value": ""
+        },
+        {
+          "label": "None adult content",
+          "value": "0"
+        },
+        {
+          "label": "Only adult content",
+          "value": "1"
+        }
+      ]
+    },
+    "status[]": {
+      "type": "Checkbox",
+      "label": "Status",
+      "value": [],
+      "options": [
+        {
+          "label": "مستمرة",
+          "value": "on-going"
+        },
+        {
+          "label": "Completed",
+          "value": "end"
+        },
+        {
+          "label": "Canceled",
+          "value": "canceled"
+        },
+        {
+          "label": "On Hold",
+          "value": "on-hold"
+        },
+        {
+          "label": "Upcoming",
+          "value": "upcoming"
+        }
+      ]
+    },
+    "m_orderby": {
+      "type": "Picker",
+      "label": "Order by",
+      "value": "",
+      "options": [
+        {
+          "label": "Relevance",
+          "value": ""
+        },
+        {
+          "label": "Latest",
+          "value": "latest"
+        },
+        {
+          "label": "A-Z",
+          "value": "alphabet"
+        },
+        {
+          "label": "Rating",
+          "value": "rating"
+        },
+        {
+          "label": "Trending",
+          "value": "trending"
+        },
+        {
+          "label": "Most Views",
+          "value": "views"
+        },
+        {
+          "label": "New",
+          "value": "new-manga"
+        }
+      ]
+    }
+  }
+}

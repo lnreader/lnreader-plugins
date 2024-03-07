@@ -1,0 +1,212 @@
+{
+  "filters": {
+    "genre[]": {
+      "type": "Checkbox",
+      "label": "Genre",
+      "value": [],
+      "options": [
+        {
+          "label": "أكشن",
+          "value": "action"
+        },
+        {
+          "label": "الخارق للطبيعة",
+          "value": "supernatural"
+        },
+        {
+          "label": "تاريخي",
+          "value": "historical"
+        },
+        {
+          "label": "تحقيق",
+          "value": "detective"
+        },
+        {
+          "label": "تراجيديا",
+          "value": "tragedy"
+        },
+        {
+          "label": "حريم",
+          "value": "harem"
+        },
+        {
+          "label": "حياة مدرسية",
+          "value": "school-life"
+        },
+        {
+          "label": "خيال علمي",
+          "value": "sci-fi"
+        },
+        {
+          "label": "دراما",
+          "value": "drama"
+        },
+        {
+          "label": "رعب",
+          "value": "horror"
+        },
+        {
+          "label": "رومانسي",
+          "value": "romance"
+        },
+        {
+          "label": "رياضة",
+          "value": "sports"
+        },
+        {
+          "label": "سحر",
+          "value": "magic"
+        },
+        {
+          "label": "شريحة من الحياة",
+          "value": "slice-of-life"
+        },
+        {
+          "label": "شوانهوا",
+          "value": "xuanhuan"
+        },
+        {
+          "label": "شوجو",
+          "value": "shoujo"
+        },
+        {
+          "label": "شونين",
+          "value": "shounen"
+        },
+        {
+          "label": "غموض",
+          "value": "mystery"
+        },
+        {
+          "label": "فانتازيا",
+          "value": "fantasy"
+        },
+        {
+          "label": "فنون قتال",
+          "value": "martial-arts"
+        },
+        {
+          "label": "كوميديا",
+          "value": "comedy"
+        },
+        {
+          "label": "مغامرة",
+          "value": "adventure"
+        },
+        {
+          "label": "ميكا",
+          "value": "mecha"
+        },
+        {
+          "label": "نفسي",
+          "value": "psychological"
+        },
+        {
+          "label": "ون شوت",
+          "value": "one-shot"
+        },
+        {
+          "label": "ووشيا",
+          "value": "wuxia"
+        }
+      ]
+    },
+    "op": {
+      "type": "Switch",
+      "label": "having all selected genres",
+      "value": false
+    },
+    "author": {
+      "type": "Text",
+      "label": "Author",
+      "value": ""
+    },
+    "artist": {
+      "type": "Text",
+      "label": "Artist",
+      "value": ""
+    },
+    "release": {
+      "type": "Text",
+      "label": "Year of Released",
+      "value": ""
+    },
+    "adult": {
+      "type": "Picker",
+      "label": "Adult content",
+      "value": "",
+      "options": [
+        {
+          "label": "All",
+          "value": ""
+        },
+        {
+          "label": "None adult content",
+          "value": "0"
+        },
+        {
+          "label": "Only adult content",
+          "value": "1"
+        }
+      ]
+    },
+    "status[]": {
+      "type": "Checkbox",
+      "label": "Status",
+      "value": [],
+      "options": [
+        {
+          "label": "Completed",
+          "value": "complete"
+        },
+        {
+          "label": "Ongoing",
+          "value": "on-going"
+        },
+        {
+          "label": "Canceled",
+          "value": "canceled"
+        },
+        {
+          "label": "On Hold",
+          "value": "on-hold"
+        }
+      ]
+    },
+    "m_orderby": {
+      "type": "Picker",
+      "label": "ترتيب حسب:",
+      "value": "",
+      "options": [
+        {
+          "label": "Relevance",
+          "value": ""
+        },
+        {
+          "label": "الأحدث",
+          "value": "latest"
+        },
+        {
+          "label": "أ-ي",
+          "value": "alphabet"
+        },
+        {
+          "label": "التقييم",
+          "value": "rating"
+        },
+        {
+          "label": "الشائع",
+          "value": "trending"
+        },
+        {
+          "label": "الأكثر مشاهدة",
+          "value": "views"
+        },
+        {
+          "label": "الجديد",
+          "value": "new-manga"
+        }
+      ]
+    }
+  }
+}

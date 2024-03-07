@@ -1,7 +1,7 @@
 import { fetchApi, fetchFile } from "@libs/fetch";
 import { Filters, FilterTypes } from "@libs/filterInputs";
 import { Plugin } from "@typings/plugin";
-import { load as parseHTML } from "cheerio";
+import { CheerioAPI, load as parseHTML } from "cheerio";
 import { defaultCover } from "@libs/defaultCover";
 import { NovelStatus } from "@libs/novelStatus";
 import dayjs from "dayjs";
@@ -9,25 +9,11 @@ import dayjs from "dayjs";
 const includesAny = (str: string, keywords: string[]) =>
   new RegExp(keywords.join("|")).test(str);
 
-interface MadaraOptionPath {
-  genres?: string;
-  novels?: string;
-  novel?: string;
-  chapter?: string;
-}
-
-const MadaraDefaultPath = {
-  genres: "novel-genre",
-  novels: "novel",
-  novel: "novel",
-  chapter: "novel",
-};
-
 interface MadaraOptions {
   useNewChapterEndpoint?: boolean;
-  path?: MadaraOptionPath;
   lang?: string;
   orderBy?: string;
+  versionIncrements?: number;
 }
 
 export interface MadaraMetadata {
@@ -35,7 +21,7 @@ export interface MadaraMetadata {
   sourceSite: string;
   sourceName: string;
   options?: MadaraOptions;
-  filters?: Filters;
+  filters?: any;
 }
 
 class MadaraPlugin implements Plugin.PluginBase {
@@ -50,59 +36,64 @@ class MadaraPlugin implements Plugin.PluginBase {
   constructor(metadata: MadaraMetadata) {
     this.id = metadata.id;
     this.name = metadata.sourceName;
-    const iconFileName = metadata.sourceName.replace(/\s+/g, "").toLowerCase();
-    this.icon = `multisrc/madara/icons/${iconFileName}.png`;
+    this.icon = `multisrc/madara/${metadata.id.toLowerCase()}.png`;
     this.site = metadata.sourceSite;
-    this.version = "1.0.0";
+    const versionIncrements = metadata.options?.versionIncrements || 0;
+    this.version = `1.0.${1 + versionIncrements}`;
     this.options = metadata.options;
     this.filters = metadata.filters;
   }
 
-  async popularNovels(
-    pageNo: number,
-    {
-      filters,
-      showLatestNovels,
-    }: Plugin.PopularNovelsOptions<typeof this.filters>,
-  ): Promise<Plugin.NovelItem[]> {
+  getHostname(url: string): string {
+    return url.split("/")[2];
+  }
+
+  async getCheerio(url: string): Promise<CheerioAPI> {
+    const r = await fetchApi(url);
+    if (!r.ok) throw new Error("Could not reach site (" + r.status + ") try to open in webview.");
+    const $ = parseHTML(await r.text());
+    const title = $("title").text().trim();
+    if (this.getHostname(url) != this.getHostname(r.url) ||
+      title == "Bot Verification" || title == "You are being redirected..." || title == "Un instant..." || title == "Just a moment..." || title == "Redirecting...")
+      throw new Error("Captcha error, please open in webview");
+    return ($);
+  }
+
+  parseNovels(loadedCheerio: CheerioAPI): Plugin.NovelItem[] {
     const novels: Plugin.NovelItem[] = [];
 
-    let url = this.site;
-    if (filters?.genres?.value) {
-      url +=
-        (this.options?.path?.genres || MadaraDefaultPath.genres) + "/" +
-        filters.genres.value;
-    } else {
-      url += this.options?.path?.novels || MadaraDefaultPath.novels;
-    }
-
-    url += "/page/" + pageNo + "/?m_orderby=" +
-      (showLatestNovels ? "latest" : filters?.sort?.value || "rating");
-
-    const body = await fetchApi(url).then((res) => res.text());
-    const loadedCheerio = parseHTML(body);
-
     loadedCheerio(".manga-title-badges").remove();
-
-    loadedCheerio(".page-item-detail").each((index, element) => {
+    
+    loadedCheerio(".page-item-detail, .c-tabs-item__content").each((index, element) => {
       const novelName = loadedCheerio(element).find(".post-title").text().trim();
-      const novelUrl =
-        loadedCheerio(element).find(".post-title").find("a").attr("href") || "";
+      const novelUrl = loadedCheerio(element).find(".post-title").find("a").attr("href") || "";
       if (!novelName || !novelUrl) return;
-
       const image = loadedCheerio(element).find("img");
       const novelCover = image.attr("data-src") || image.attr("src");
-
       const novel: Plugin.NovelItem = {
         name: novelName,
         cover: novelCover,
         path: novelUrl.replace(this.site, ""),
       };
-
       novels.push(novel);
     });
 
     return novels;
+  }
+
+  async popularNovels(pageNo: number,{ filters, showLatestNovels }: Plugin.PopularNovelsOptions<typeof this.filters>): Promise<Plugin.NovelItem[]> {
+    let url = this.site + "/page/" + pageNo + "/?s=&post_type=wp-manga";
+    if (!filters) filters = {};
+    if (showLatestNovels) url += "&m_orderby=latest";
+    for (const key in filters) {
+      if (typeof filters[key].value === "object")
+        for (const value of filters[key].value as string[])
+          url += `&${key}=${value}`;
+      else if (filters[key].value)
+        url += `&${key}=${filters[key].value}`;
+    }
+    const loadedCheerio = await this.getCheerio(url);
+    return this.parseNovels(loadedCheerio);
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
@@ -228,32 +219,10 @@ class MadaraPlugin implements Plugin.PluginBase {
     return chapterText;
   }
 
-  async searchNovels(
-    searchTerm: string,
-    pageNo?: number | undefined,
-  ): Promise<Plugin.NovelItem[]> {
-    const novels: Plugin.NovelItem[] = [];
-    const url = this.site + "?s=" + searchTerm + "&post_type=wp-manga";
-
-    const body = await fetchApi(url).then((res) => res.text());
-    const loadedCheerio = parseHTML(body);
-
-    loadedCheerio(".c-tabs-item__content").each((index, element) => {
-      const novelName = loadedCheerio(element).find(".post-title").text().trim();
-      const novelUrl = loadedCheerio(element).find(".post-title").find("a").attr("href") || "";
-      if (!novelName || !novelUrl) return;
-      let image = loadedCheerio(element).find("img");
-      const novelCover = image.attr("data-src") || image.attr("src");
-
-      const novel = {
-        name: novelName,
-        cover: novelCover,
-        path: novelUrl.replace(this.site, ""),
-      };
-
-      novels.push(novel);
-    });
-    return novels;
+  async searchNovels(searchTerm: string, pageNo?: number | undefined): Promise<Plugin.NovelItem[]> {
+    const url = this.site + "page/" + pageNo + "/?s=" + searchTerm + "&post_type=wp-manga";
+    const loadedCheerio = await this.getCheerio(url);
+    return this.parseNovels(loadedCheerio);
   }
 
   fetchImage = fetchFile;

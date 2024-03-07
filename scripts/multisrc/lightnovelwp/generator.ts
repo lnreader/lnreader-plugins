@@ -11,7 +11,7 @@ export const generateAll: ScrpitGeneratorFunction = function (name) {
       filters = require(`./filters/${source.id}`);
       source.filters = filters.filters;
     } catch (e) {}
-    console.log(`[${name}] Generating:`, source.id, source.filters? "\t🔎with filters🔍" : "\t🚫no filters🚫");
+    console.log(`[${name}] Generating: ${source.id}${" ".repeat(20 - source.id.length)} ${source.filters ? "🔎with filters🔍" : "🚫no filters🚫"}`);
     return generator(source);
   });
 };
@@ -22,7 +22,7 @@ const generator = function generator(source: LightNovelWPMetadata) {
   });
 
   const pluginScript = `
-  ${LightNovelWPTemplate}
+${LightNovelWPTemplate}
 const plugin = new LightNovelWPPlugin(${JSON.stringify(source)});
 export default plugin;
     `.trim();

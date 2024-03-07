@@ -1,0 +1,220 @@
+{
+  "filters": {
+    "genre[]": {
+      "type": "Checkbox",
+      "label": "Genre",
+      "value": [],
+      "options": [
+        {
+          "label": "أكشن",
+          "value": "أكشن"
+        },
+        {
+          "label": "إتشي",
+          "value": "إتشـي"
+        },
+        {
+          "label": "بالغ",
+          "value": "بالغ"
+        },
+        {
+          "label": "تاريخي",
+          "value": "تاريخي"
+        },
+        {
+          "label": "تراجدي",
+          "value": "تراجدي"
+        },
+        {
+          "label": "جوسي",
+          "value": "جوسي"
+        },
+        {
+          "label": "حريم",
+          "value": "حريم"
+        },
+        {
+          "label": "حياة مدرسية",
+          "value": "حياة-مدرسية"
+        },
+        {
+          "label": "خارق لطبيعية",
+          "value": "خارق-لطبيعية"
+        },
+        {
+          "label": "خيال",
+          "value": "خيال"
+        },
+        {
+          "label": "خيال علمي",
+          "value": "خيال-علمي"
+        },
+        {
+          "label": "دراما",
+          "value": "دراما"
+        },
+        {
+          "label": "راشد",
+          "value": "راشد"
+        },
+        {
+          "label": "رعب",
+          "value": "رعب"
+        },
+        {
+          "label": "رومنسي",
+          "value": "رومنسي"
+        },
+        {
+          "label": "رياضي",
+          "value": "رياضي"
+        },
+        {
+          "label": "سينين",
+          "value": "سينين"
+        },
+        {
+          "label": "شريحة من الحياة",
+          "value": "شريحة-من-الحياة"
+        },
+        {
+          "label": "شوجو",
+          "value": "شوجو"
+        },
+        {
+          "label": "شونين",
+          "value": "شونين"
+        },
+        {
+          "label": "غموض",
+          "value": "غموض"
+        },
+        {
+          "label": "فنون قتال",
+          "value": "فنون-قتال"
+        },
+        {
+          "label": "كوميديا",
+          "value": "كوميديا"
+        },
+        {
+          "label": "مغامرات",
+          "value": "مغامرات"
+        },
+        {
+          "label": "منتهية",
+          "value": "منتهية"
+        },
+        {
+          "label": "ميكا",
+          "value": "ميكا"
+        },
+        {
+          "label": "نفسي",
+          "value": "نفسي"
+        }
+      ]
+    },
+    "op": {
+      "type": "Switch",
+      "label": "و وجود جميع التصنيفات المختارة",
+      "value": false
+    },
+    "author": {
+      "type": "Text",
+      "label": "المؤلف",
+      "value": ""
+    },
+    "artist": {
+      "type": "Text",
+      "label": "المترجم",
+      "value": ""
+    },
+    "release": {
+      "type": "Text",
+      "label": "سنة الإصدار",
+      "value": ""
+    },
+    "adult": {
+      "type": "Picker",
+      "label": "محتوى للبالغين",
+      "value": "",
+      "options": [
+        {
+          "label": "كل",
+          "value": ""
+        },
+        {
+          "label": "لا يوجد محتوى للبالغين",
+          "value": "0"
+        },
+        {
+          "label": "محتوى للبالغين فقط",
+          "value": "1"
+        }
+      ]
+    },
+    "status[]": {
+      "type": "Checkbox",
+      "label": "الحالة",
+      "value": [],
+      "options": [
+        {
+          "label": "مستمرة",
+          "value": "on-going"
+        },
+        {
+          "label": "منتهية",
+          "value": "end"
+        },
+        {
+          "label": "تم إلغاءها",
+          "value": "canceled"
+        },
+        {
+          "label": "متوقفة",
+          "value": "on-hold"
+        },
+        {
+          "label": "قريباً",
+          "value": "upcoming"
+        }
+      ]
+    },
+    "m_orderby": {
+      "type": "Picker",
+      "label": "الترتيب حسب",
+      "value": "",
+      "options": [
+        {
+          "label": "ملائمة",
+          "value": ""
+        },
+        {
+          "label": "الآخير",
+          "value": "latest"
+        },
+        {
+          "label": "A-Z",
+          "value": "alphabet"
+        },
+        {
+          "label": "التقييم",
+          "value": "rating"
+        },
+        {
+          "label": "شائع",
+          "value": "trending"
+        },
+        {
+          "label": "الأكثر مشاهدة",
+          "value": "views"
+        },
+        {
+          "label": "جديد",
+          "value": "new-manga"
+        }
+      ]
+    }
+  }
+}

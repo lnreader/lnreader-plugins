@@ -1,0 +1,48 @@
+{
+  "filters": {
+    "genre[]": {
+      "type": "Checkbox",
+      "label": "Genre",
+      "value": [],
+      "options": []
+    },
+    "op": {
+      "type": "Switch",
+      "label": "",
+      "value": false
+    },
+    "author": {
+      "type": "Text",
+      "label": "",
+      "value": ""
+    },
+    "artist": {
+      "type": "Text",
+      "label": "",
+      "value": ""
+    },
+    "release": {
+      "type": "Text",
+      "label": "",
+      "value": ""
+    },
+    "adult": {
+      "type": "Picker",
+      "label": "",
+      "value": "",
+      "options": []
+    },
+    "status[]": {
+      "type": "Checkbox",
+      "label": "",
+      "value": [],
+      "options": []
+    },
+    "m_orderby": {
+      "type": "Picker",
+      "label": "",
+      "value": "",
+      "options": []
+    }
+  }
+}

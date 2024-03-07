@@ -1,0 +1,244 @@
+{
+  "filters": {
+    "genre[]": {
+      "type": "Checkbox",
+      "label": "Genre",
+      "value": [],
+      "options": [
+        {
+          "label": "آلات",
+          "value": "mechanisms"
+        },
+        {
+          "label": "أكشن",
+          "value": "action"
+        },
+        {
+          "label": "إثارة",
+          "value": "excitement"
+        },
+        {
+          "label": "إيسكاي",
+          "value": "إيسكاي"
+        },
+        {
+          "label": "الحياة اليومية",
+          "value": "slice-of-life"
+        },
+        {
+          "label": "الحياة مدرسية",
+          "value": "school-life"
+        },
+        {
+          "label": "تاريخي",
+          "value": "historical"
+        },
+        {
+          "label": "تراجيدي",
+          "value": "tragic"
+        },
+        {
+          "label": "جريمة",
+          "value": "جريمة"
+        },
+        {
+          "label": "جندر بندر",
+          "value": "جندر-بندر"
+        },
+        {
+          "label": "جوسي",
+          "value": "josei"
+        },
+        {
+          "label": "حريم",
+          "value": "harem"
+        },
+        {
+          "label": "خارق للطبيعة",
+          "value": "supernatural"
+        },
+        {
+          "label": "خيال",
+          "value": "fantasy"
+        },
+        {
+          "label": "خيال علمي",
+          "value": "sci-fi"
+        },
+        {
+          "label": "دراما",
+          "value": "drama"
+        },
+        {
+          "label": "دموي",
+          "value": "دموي"
+        },
+        {
+          "label": "راشد",
+          "value": "mature"
+        },
+        {
+          "label": "رعب",
+          "value": "horror"
+        },
+        {
+          "label": "رومانسي",
+          "value": "romance"
+        },
+        {
+          "label": "رياضة",
+          "value": "sports"
+        },
+        {
+          "label": "زمنكاني",
+          "value": "my-time"
+        },
+        {
+          "label": "زومبي",
+          "value": "زومبي"
+        },
+        {
+          "label": "سينين",
+          "value": "seinen"
+        },
+        {
+          "label": "شريحة من الحياة",
+          "value": "شريحة-من-الحياة"
+        },
+        {
+          "label": "شوجو",
+          "value": "shoujo"
+        },
+        {
+          "label": "شونين",
+          "value": "shounen"
+        },
+        {
+          "label": "طبي",
+          "value": "طبي"
+        },
+        {
+          "label": "غموض",
+          "value": "ambiguity"
+        },
+        {
+          "label": "فنون قتالية",
+          "value": "martial-arts"
+        },
+        {
+          "label": "قوة خارقة",
+          "value": "superpower"
+        },
+        {
+          "label": "كوميدي",
+          "value": "comedy"
+        },
+        {
+          "label": "مغامرات",
+          "value": "adventure"
+        },
+        {
+          "label": "نفسي",
+          "value": "psychological"
+        }
+      ]
+    },
+    "op": {
+      "type": "Switch",
+      "label": "مع كل التصنيفات المحددة",
+      "value": false
+    },
+    "author": {
+      "type": "Text",
+      "label": "المؤلف",
+      "value": ""
+    },
+    "artist": {
+      "type": "Text",
+      "label": "المترجم",
+      "value": ""
+    },
+    "release": {
+      "type": "Text",
+      "label": "سنة الإصدار",
+      "value": ""
+    },
+    "adult": {
+      "type": "Picker",
+      "label": "محتوى للبالغين",
+      "value": "",
+      "options": [
+        {
+          "label": "الكل",
+          "value": ""
+        },
+        {
+          "label": "لا يوجد محتوى للبالغين",
+          "value": "0"
+        },
+        {
+          "label": "محتوى للبالغين فقط",
+          "value": "1"
+        }
+      ]
+    },
+    "status[]": {
+      "type": "Checkbox",
+      "label": "الحالة",
+      "value": [],
+      "options": [
+        {
+          "label": "مكتملة",
+          "value": "complete"
+        },
+        {
+          "label": "مستمرة",
+          "value": "on-going"
+        },
+        {
+          "label": "ألغيت",
+          "value": "canceled"
+        },
+        {
+          "label": "قيد الانتظار",
+          "value": "on-hold"
+        }
+      ]
+    },
+    "m_orderby": {
+      "type": "Picker",
+      "label": "ترتيب حسب",
+      "value": "",
+      "options": [
+        {
+          "label": "ملاءمة",
+          "value": ""
+        },
+        {
+          "label": "الأحدث",
+          "value": "latest"
+        },
+        {
+          "label": "A-Z",
+          "value": "alphabet"
+        },
+        {
+          "label": "التقييم",
+          "value": "rating"
+        },
+        {
+          "label": "الرائج",
+          "value": "trending"
+        },
+        {
+          "label": "الأكثر مشاهدة",
+          "value": "views"
+        },
+        {
+          "label": "New",
+          "value": "new-manga"
+        }
+      ]
+    }
+  }
+}

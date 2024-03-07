@@ -10,6 +10,7 @@ export const languages = {
     Portuguese: "Português",
     Russian: "Русский",
     Spanish: "Español",
+    Thai: "ไทย",
     Turkish: "Türkçe",
     Ukrainian: "Українська",
     Vietnamese: "Tiếng Việt",

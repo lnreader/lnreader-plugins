@@ -1,0 +1,320 @@
+{
+  "filters": {
+    "genre[]": {
+      "type": "Checkbox",
+      "label": "Genre",
+      "value": [],
+      "options": [
+        {
+          "label": "Ação",
+          "value": "action"
+        },
+        {
+          "label": "Artes Marciais",
+          "value": "artes-marciais"
+        },
+        {
+          "label": "Aventura",
+          "value": "aventura"
+        },
+        {
+          "label": "Comédia",
+          "value": "comedia"
+        },
+        {
+          "label": "Contemporâneo",
+          "value": "contemporaneo"
+        },
+        {
+          "label": "Contos",
+          "value": "contos-originais"
+        },
+        {
+          "label": "Crime",
+          "value": "crime"
+        },
+        {
+          "label": "Cyberpunk",
+          "value": "cyberpunk"
+        },
+        {
+          "label": "Destaque",
+          "value": "destaque"
+        },
+        {
+          "label": "Distopia",
+          "value": "distopia"
+        },
+        {
+          "label": "Drama",
+          "value": "drama"
+        },
+        {
+          "label": "Ecchi",
+          "value": "ecchi"
+        },
+        {
+          "label": "Espacial",
+          "value": "espacial"
+        },
+        {
+          "label": "Esportes",
+          "value": "esportes"
+        },
+        {
+          "label": "Fanfic",
+          "value": "fanfic"
+        },
+        {
+          "label": "Fantasia",
+          "value": "fantasia"
+        },
+        {
+          "label": "Ficção Científica",
+          "value": "ficcao-cientifica"
+        },
+        {
+          "label": "Gastronomia",
+          "value": "gastronomia"
+        },
+        {
+          "label": "Harém",
+          "value": "harem"
+        },
+        {
+          "label": "Histórico",
+          "value": "historico"
+        },
+        {
+          "label": "Horror",
+          "value": "horror"
+        },
+        {
+          "label": "Infantil",
+          "value": "infantil"
+        },
+        {
+          "label": "Isekai",
+          "value": "isekai"
+        },
+        {
+          "label": "Jogos",
+          "value": "jogos"
+        },
+        {
+          "label": "LGBT+",
+          "value": "lgbt"
+        },
+        {
+          "label": "Magia",
+          "value": "magia"
+        },
+        {
+          "label": "Mecha",
+          "value": "mecha"
+        },
+        {
+          "label": "Medieval",
+          "value": "medieval"
+        },
+        {
+          "label": "Militar",
+          "value": "militar"
+        },
+        {
+          "label": "Mistério",
+          "value": "misterio"
+        },
+        {
+          "label": "Mitologia",
+          "value": "mitologia"
+        },
+        {
+          "label": "Moderno",
+          "value": "moderno"
+        },
+        {
+          "label": "Pós-apocalíptico",
+          "value": "pos-apocaliptico"
+        },
+        {
+          "label": "Psicológico",
+          "value": "psicologico"
+        },
+        {
+          "label": "Realidade Virtual",
+          "value": "realidade-virtual"
+        },
+        {
+          "label": "Recomendado",
+          "value": "recomendado"
+        },
+        {
+          "label": "Romance",
+          "value": "romance"
+        },
+        {
+          "label": "RPG",
+          "value": "rpg"
+        },
+        {
+          "label": "Sci-fi",
+          "value": "sci-fi"
+        },
+        {
+          "label": "Seinen",
+          "value": "seinen"
+        },
+        {
+          "label": "Shounen",
+          "value": "shounen"
+        },
+        {
+          "label": "Sistema de Jogo",
+          "value": "sistema-de-jogo"
+        },
+        {
+          "label": "Slice of Life",
+          "value": "slice-of-life"
+        },
+        {
+          "label": "snkhome",
+          "value": "snkhome"
+        },
+        {
+          "label": "Sobrenatural",
+          "value": "sobrenatural"
+        },
+        {
+          "label": "Somente na Kiniga",
+          "value": "somente-na-kiniga"
+        },
+        {
+          "label": "Suspense",
+          "value": "suspense"
+        },
+        {
+          "label": "Terror",
+          "value": "terror"
+        },
+        {
+          "label": "Terror Psicológico",
+          "value": "terror-psicologico"
+        },
+        {
+          "label": "Traduções",
+          "value": "traducoes"
+        },
+        {
+          "label": "Tragédia",
+          "value": "tragedia"
+        },
+        {
+          "label": "Urbano",
+          "value": "urbano"
+        },
+        {
+          "label": "Vida Escolar",
+          "value": "vida-escolar"
+        }
+      ]
+    },
+    "op": {
+      "type": "Switch",
+      "label": "Ter todos gêneros selecionados",
+      "value": false
+    },
+    "author": {
+      "type": "Text",
+      "label": "Autor",
+      "value": ""
+    },
+    "artist": {
+      "type": "Text",
+      "label": "Artista",
+      "value": ""
+    },
+    "release": {
+      "type": "Text",
+      "label": "Ano",
+      "value": ""
+    },
+    "adult": {
+      "type": "Picker",
+      "label": "Conteúdo",
+      "value": "",
+      "options": [
+        {
+          "label": "Ambas opções",
+          "value": ""
+        },
+        {
+          "label": "Para todas idades",
+          "value": "0"
+        },
+        {
+          "label": "Para maiores de idade",
+          "value": "1"
+        }
+      ]
+    },
+    "status[]": {
+      "type": "Checkbox",
+      "label": "Status",
+      "value": [],
+      "options": [
+        {
+          "label": "Completo",
+          "value": "complete"
+        },
+        {
+          "label": "Ativo",
+          "value": "on-going"
+        },
+        {
+          "label": "Cancelado",
+          "value": "canceled"
+        },
+        {
+          "label": "Pausado",
+          "value": "on-hold"
+        }
+      ]
+    },
+    "m_orderby": {
+      "type": "Picker",
+      "label": "Ordem por",
+      "value": "",
+      "options": [
+        {
+          "label": "Relevância",
+          "value": ""
+        },
+        {
+          "label": "Mais antigo",
+          "value": "latest"
+        },
+        {
+          "label": "A-Z",
+          "value": "alphabet"
+        },
+        {
+          "label": "Avaliação",
+          "value": "rating"
+        },
+        {
+          "label": "Tendência",
+          "value": "trending"
+        },
+        {
+          "label": "Mais Visualizado",
+          "value": "views"
+        },
+        {
+          "label": "Novo",
+          "value": "new-manga"
+        }
+      ]
+    }
+  }
+}
