@@ -85,7 +85,7 @@ class NovelBuddy implements Plugin.PluginBase {
             const chapterListUrl = `${this.site}api/manga/${id}/chapters?source=detail`;
             const data = await fetchApi(chapterListUrl);
             const chapterlist = await data.text();
-            console.log(chapterlist);
+
             loadedCheerio = parseHTML(chapterlist);
 
             loadedCheerio("li").each((i,el) => {

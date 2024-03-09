@@ -68,7 +68,6 @@ class EarlyNovelPlugin implements Plugin.PagePlugin {
         const body = await fetchApi(link).then((res) => res.text());
 
         const loadedCheerio = parseHTML(body);
-        console.log(body);
         return this.parseNovels(loadedCheerio);
     }
 
