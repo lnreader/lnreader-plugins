@@ -6,17 +6,18 @@ import { Filters, FilterTypes } from "@libs/filterInputs";
 class PawRead implements Plugin.PluginBase {
     id = "pawread";
     name = "PawRead";
-    version = "1.0.0";
+    version = "1.1.0";
     icon = "src/en/pawread/icon.png";
-    site = "https://www.pawread.com/";
+    site = "https://m.pawread.com/";
 
     parseNovels(loadedCheerio:CheerioAPI){
         const novels: Plugin.NovelItem[] = [];
 
-        loadedCheerio(".list-comic").each((idx, ele) => {
-            const novelName = loadedCheerio(ele).find('h3').text();
+        loadedCheerio(".list-comic, .itemBox").each((idx, ele) => {
+            loadedCheerio(ele).find('.serialise').remove();
+            const novelName = loadedCheerio(ele).find('a').text();
             const novelCover = loadedCheerio(ele).find('img').attr('src');
-            const novelUrl = loadedCheerio(ele).find('h3 a').attr('href')?.slice(1);
+            const novelUrl = loadedCheerio(ele).find('a').attr('href')?.slice(1);
 
             if (!novelUrl) return;
 
@@ -68,33 +69,32 @@ class PawRead implements Plugin.PluginBase {
 
         const novel: Plugin.SourceNovel = {
             path: novelPath,
-            name: loadedCheerio(".col-md-9 h1").text() || "Untitled",
-            summary: loadedCheerio("#simple-des").text().trim(),
-            status: loadedCheerio('h4 span').text(),
+            name: loadedCheerio("#Cover img").attr('title') || "Untitled",
+            cover: loadedCheerio("#Cover img").attr('src'),
+            author: loadedCheerio('.icon01 <').text().trim(),      
+            status: loadedCheerio('.txtItme:first').text().trim(),
             chapters: [],
         };
 
-        novel.cover = loadedCheerio('#tab1_board .col-md-3 div')
-            .attr('style')
-            ?.match(/url\((.*?)\)/i)![1];
-
-        novel.author = loadedCheerio('.glyphicon-user:first')
-            .next()
+        novel.summary = loadedCheerio("#full-des")
+            .find('br')
+            .replaceWith('\n')
+            .end()
             .text()
-            .replace("Author: ", "");
+            .trim();
 
         novel.genres = loadedCheerio('a.btn-default')
-            .map((i, el) => loadedCheerio(el).text())
+            .map((i, el) => loadedCheerio(el).text().trim())
             .toArray()
             .join(",");
 
         const chapter: Plugin.ChapterItem[] = [];
 
-        loadedCheerio(".col-md-10").each((idx, ele) => {
-        	const releaseDate = loadedCheerio(ele).find('small').text().trim();
+        loadedCheerio(".item-box").each((idx, ele) => {
+        	const releaseDate = loadedCheerio(ele).find('span:last').text().trim();
         	if (releaseDate === "Advanced Chapter") return;
-            const chapterName = loadedCheerio(ele).find("span").text().trim();
-            const chapterUrl = loadedCheerio(ele).parent().attr("onclick")?.match(/\d+/);
+            const chapterName = loadedCheerio(ele).find("span:first").text().trim();
+            const chapterUrl = loadedCheerio(ele).attr("onclick")?.match(/\d+/);
             if (!chapterUrl) return;
 
             chapter.push({
@@ -115,7 +115,9 @@ class PawRead implements Plugin.PluginBase {
 
         const loadedCheerio = parseHTML(body);
 
-        const chapterText = loadedCheerio("#chapter_item").html() || '';
+        const steal = ['bit.ly', 'tinyurl', 'pawread'];
+        steal.map(tag => loadedCheerio(`p:icontains(${tag})`).remove());
+        const chapterText = loadedCheerio('.main').html() || "";
 
         return chapterText;
     }
