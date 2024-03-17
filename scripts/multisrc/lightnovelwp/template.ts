@@ -32,7 +32,7 @@ class LightNovelWPPlugin implements Plugin.PluginBase {
     this.name = metadata.sourceName;
     this.icon = `multisrc/lightnovelwp/${metadata.id}.png`;
     this.site = metadata.sourceSite;
-    this.version = "1.0.3";
+    this.version = "1.0.4";
     this.options = metadata.options;
     this.filters = metadata.filters satisfies Filters;
   }
