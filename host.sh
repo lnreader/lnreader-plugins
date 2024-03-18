@@ -20,7 +20,7 @@ rm -rf .js
 npm run clearMultisrc
 npm run generate
 npm run json
-git add -f icons .dist .js/plugins
+git add -f icons .dist .js/plugins total.svg
 git commit -m "Host plugins"
 git push -f origin $dist
 

@@ -46,6 +46,7 @@ if (!fs.existsSync(path.join(outRoot, ".dist"))) {
 const jsonPath = path.join(outRoot, ".dist", "plugins.json");
 const jsonMinPath = path.join(outRoot, ".dist", "plugins.min.json");
 const pluginSet = new Set();
+let totalPlugins = 0;
 
 for (let language in languages) {
   // language with English name
@@ -80,6 +81,7 @@ for (let language in languages) {
       pluginSet.add(id);
     }
     json[language].push(info);
+    totalPlugins += 1;
     console.log(name, "✅");
   });
 }
@@ -88,6 +90,13 @@ for (let lang in json) json[lang].sort((a, b) => a.id.localeCompare(b.id));
 
 fs.writeFileSync(jsonMinPath, JSON.stringify(json));
 fs.writeFileSync(jsonPath, JSON.stringify(json, null, "\t"));
+if(CURRENT_BRANCH === 'dist'){
+  fetch(`https://img.shields.io/badge/Plugins-${totalPlugins}-blue`)
+    .then(res => res.text())
+    .then(data => {
+      fs.writeFileSync('total.svg', data, {encoding: 'utf-8'});
+    })
+}
 
 // check for broken plugins
 for (let language in languages) {

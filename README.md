@@ -1,7 +1,8 @@
 # LNReader Plugins
 
 <p>
-<img  alt="GitHub issues by-label"  src="https://img.shields.io/github/issues/lnreader/lnreader-sources/Source%20Request?color=success&label=source%20requests">
+<img alt="LNReader plugins counting" src="https://raw.githubusercontent.com/LNReader/lnreader-sources/dist/total.svg">
+<img alt="GitHub issues by-label"  src="https://img.shields.io/github/issues/lnreader/lnreader-sources/Source%20Request?color=success&label=source%20requests">
 <img  alt="GitHub issues by-label"  src="https://img.shields.io/github/issues/lnreader/lnreader-sources/Bug?color=red&label=bugs">
 </p>
 
