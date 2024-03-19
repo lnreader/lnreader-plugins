@@ -3,12 +3,12 @@ import { fetchApi, fetchFile } from "@libs/fetch";
 import { Plugin } from "@typings/plugin";
 import { Filters, FilterTypes } from "@libs/filterInputs";
 
-class IndoWebNovel implements Plugin.PluginBase {
-    id = "IDWN.id";
-    name = "IndoWebNovel";
-    icon = "src/id/indowebnovel/icon.png";
-    site = "https://indowebnovel.id/id/";
-    version = "1.1.0";
+class SakuraNovel implements Plugin.PluginBase {
+    id = "sakura.id";
+    name = "SakuraNovel";
+    icon = "src/id/sakuranovel/icon.png";
+    site = "https://sakuranovel.id/";
+    version = "1.0.0";
 
     parseNovels(loadedCheerio:CheerioAPI){
         const novels: Plugin.NovelItem[] = [];
@@ -39,7 +39,7 @@ class IndoWebNovel implements Plugin.PluginBase {
         page: number,
         { filters }: Plugin.PopularNovelsOptions<typeof this.filters>
     ): Promise<Plugin.NovelItem[]> {
-        let link = `${this.site}advanced-search/page/${page}/?title=&author=&yearx=`;
+        let link = `${this.site}advanced-search/page/${page}/?title&author&yearx`;
         link += `&status=${filters.status.value}`
         link += `&type=${filters.type.value}`;
         link += `&order=${filters.sort.value}`;
@@ -53,7 +53,7 @@ class IndoWebNovel implements Plugin.PluginBase {
         const body = await result.text();
 
         const loadedCheerio = parseHTML(body);
-        return this.parseNovels(loadedCheerio)
+        return this.parseNovels(loadedCheerio);
     }
 
     async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
@@ -65,34 +65,49 @@ class IndoWebNovel implements Plugin.PluginBase {
 
         const novel: Plugin.SourceNovel = {
             path: novelPath,
-            name: loadedCheerio(".series-title").text().trim() || "Untitled",
+            name: loadedCheerio(".series-title h2").text().trim() || "Untitled",
             cover: loadedCheerio(".series-thumb img").attr("src"),
-            author: loadedCheerio("ul.series-infolist b:contains('Author') +").text().trim(),
+            author: loadedCheerio(".series-infolist > li b:contains('Author') +").text().trim(),
             status: loadedCheerio(".status").text().trim(),
             summary: loadedCheerio(".series-synops").text().trim(),
-            chapters: [],
+            chapters: []
         };
 
-        novel.genres = loadedCheerio(".series-genres a")
-            .map((i,el) => loadedCheerio(el).text().trim())
+        novel.genres = loadedCheerio(".series-genres")
+            .children("a")
+            .map((i, el) => loadedCheerio(el).text())
             .toArray()
-            .join(',');
+            .join(",");
 
-        const chapters: Plugin.ChapterItem[] = [];
+        const chapter: Plugin.ChapterItem[] = [];
 
         loadedCheerio(".series-chapterlist li").each((i,el) => {
-            const chapterName = loadedCheerio(el).find("a").text().trim();
+            const chapterName = loadedCheerio(el)
+                .find("a span")
+                .first()
+                .text()
+                .replace(/.*?(Chapter.|[0-9])/g, "$1")
+                .replace(/Bahasa Indonesia/g, "")
+                .replace(/\s+/g, " ")
+                .trim();
+
+            const releaseDate = loadedCheerio(el)
+                .find("a span")
+                .first()
+                .next()
+                .text();
             const chapterUrl = loadedCheerio(el).find("a").attr("href");
 
             if (!chapterUrl) return;
 
-            chapters.push({
+            chapter.push({
                 name: chapterName,
+                releaseTime: releaseDate,
                 path: chapterUrl.replace(this.site, ''),
             });
         });
 
-        novel.chapters = chapters.reverse();
+        novel.chapters = chapter.reverse();
 
         return novel;
     }
@@ -103,19 +118,22 @@ class IndoWebNovel implements Plugin.PluginBase {
 
         const loadedCheerio = parseHTML(body);
 
-        const chapterText = loadedCheerio(".readerss").html() || '';
+        const divi = loadedCheerio("div:contains('Daftar Isi') +")
+            .find("div:first")
+            .attr("class");
+        loadedCheerio(`.${divi}`).remove()
+        const chapterText = loadedCheerio("div:contains('Daftar Isi') +").html() || '';
 
         return chapterText;
     }
 
-    async searchNovels(searchTerm: string, pageNo: number): Promise<Plugin.NovelItem[]> {
-        const url = `${this.site}daftar-novel/`;
-
+    async searchNovels(searchTerm: string, page: number): Promise<Plugin.NovelItem[]> {
+        const url = `${this.site}page/${page}/?s=${searchTerm}`;
         const result = await fetchApi(url);
         const body = await result.text();
 
         const loadedCheerio = parseHTML(body);
-        return this.parseNovels(loadedCheerio)
+        return this.parseNovels(loadedCheerio);
     }
 
     async fetchImage(url: string): Promise<string | undefined> {
@@ -207,4 +225,4 @@ class IndoWebNovel implements Plugin.PluginBase {
     } satisfies Filters;
 }
 
-export default new IndoWebNovel();
+export default new SakuraNovel();
