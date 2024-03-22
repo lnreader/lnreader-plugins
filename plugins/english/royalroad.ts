@@ -1,4 +1,4 @@
-import { CheerioAPI, load, load as parseHTML } from "cheerio";
+import { CheerioAPI, load as parseHTML } from "cheerio";
 import { fetchApi, fetchFile } from "@libs/fetch";
 import { Plugin } from "@typings/plugin";
 import { Filters, FilterTypes } from "@libs/filterInputs";
@@ -6,7 +6,7 @@ import { Filters, FilterTypes } from "@libs/filterInputs";
 class RoyalRoad implements Plugin.PluginBase {
     id = "royalroad";
     name = "Royal Road";
-    version = "1.0.0";
+    version = "1.0.1";
     icon = "src/en/royalroad/icon.png";
     site = "https://www.royalroad.com/";
 
@@ -71,25 +71,27 @@ class RoyalRoad implements Plugin.PluginBase {
             .toArray()
             .join(",");
 
-        const chapterlisting = JSON.parse(
-            loadedCheerio('script:contains("window.chapters")')
-                .html()
-                ?.match(/window.chapters = \[(.*?)\]/)![0]
-                ?.replace("window.chapters = ", "") || ""
+        const chapterJson = JSON.parse(loadedCheerio('script:contains("window.chapters")')
+            .html()
+            ?.match(/window.chapters = (.+])(?=;)/)![1] || "");
+
+        const volumeJson = JSON.parse(loadedCheerio('script:contains("window.chapters")')
+            .html()
+            ?.match(/window.volumes = (.+])(?=;)/)![1] || "");
+
+        const chapter : Plugin.ChapterItem[] = chapterJson.map(
+            (chapter: ChapterEntry) => {
+                const matchingVolume = volumeJson.find(
+                    (volume: VolumeEntry) => volume.id === chapter.volumeId);
+                return {
+                    name: chapter.title,
+                    path: chapter.url.slice(1),
+                    releaseTime: chapter.date,
+                    chapterNumber: chapter?.order,
+                    page: matchingVolume ? matchingVolume.title : null,  
+                };
+            }
         );
-
-        interface ChapterEntry {
-            title: string;
-            date: string;
-            url: string;
-        }
-
-        const chapter : Plugin.ChapterItem[] = chapterlisting.map(
-            (chapter: ChapterEntry) => ({
-                name: chapter.title,
-                path: chapter.url.slice(1),
-                releaseTime: chapter.date,
-        }))
 
         novel.chapters = chapter;
         return novel;
@@ -165,3 +167,19 @@ class RoyalRoad implements Plugin.PluginBase {
 }
 
 export default new RoyalRoad();
+
+interface ChapterEntry {
+    id: number;
+    volumeId: number;
+    title: string;
+    date: string; 
+    order: number;
+    url: string;
+}
+  
+interface VolumeEntry {
+    id: number;
+    title: string;
+    cover: string;
+    order: number; 
+}

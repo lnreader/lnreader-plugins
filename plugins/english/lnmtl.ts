@@ -8,7 +8,7 @@ class LnMTLPlugin implements Plugin.PagePlugin {
     name = "LnMTL";
     icon = "src/en/lnmtl/icon.png";
     site = "https://lnmtl.com/";
-    version = "1.0.0";
+    version = "1.0.1";
 
     async sleep (ms: number) {
         return new Promise(resolve => setTimeout(resolve, ms))
@@ -112,12 +112,6 @@ class LnMTLPlugin implements Plugin.PagePlugin {
         )[+page-1];
 
         const chapter: Plugin.ChapterItem[] = [];
-        interface ChapterEntry {
-            number: number;
-            title: string;
-            slug: string;
-            created_at: string;
-        }
 
         await this.sleep(1000);
         const volumeData = await fetchApi(
@@ -244,3 +238,10 @@ class LnMTLPlugin implements Plugin.PagePlugin {
 }
 
 export default new LnMTLPlugin();
+
+interface ChapterEntry {
+    number: number;
+    title: string;
+    slug: string;
+    created_at: string;
+}

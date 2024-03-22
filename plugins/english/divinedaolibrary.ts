@@ -1,6 +1,5 @@
 import { CheerioAPI, load as parseHTML } from "cheerio";
 import { fetchApi, fetchFile } from "@libs/fetch";
-import { FilterTypes, Filters } from "@libs/filterInputs";
 import { Plugin } from "@typings/plugin";
 import { defaultCover } from "@libs/defaultCover";
 
@@ -8,7 +7,7 @@ class DDLPlugin implements Plugin.PluginBase {
     id = "DDL.com";
     name = "Divine Dao Library";
     site = "https://www.divinedaolibrary.com/";
-    version = "1.0.0";
+    version = "1.0.1";
     icon = "src/en/divinedaolibrary/icon.png";
     filters?: undefined;
 
@@ -20,7 +19,7 @@ class DDLPlugin implements Plugin.PluginBase {
             .each((i,el) => {
                 const novelName = loadedCheerio(el).find("a").text();
                 const novelCover = defaultCover;
-                const novelUrl = loadedCheerio(el).find(" a").attr("href");
+                const novelUrl = loadedCheerio(el).find("a").attr("href");
     
                 if (!novelUrl) return;
     
@@ -135,4 +134,5 @@ class DDLPlugin implements Plugin.PluginBase {
         return await fetchFile(url);
     }
 }
+
 export default new DDLPlugin();
