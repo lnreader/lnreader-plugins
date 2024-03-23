@@ -1,5 +1,5 @@
-const { minify_sync } = require("terser");
-import * as fs from "fs";
+const { minify_sync } = require('terser');
+import * as fs from 'fs';
 
 export const minify = function (path: string) {
   const code = fs.readFileSync(path).toString();

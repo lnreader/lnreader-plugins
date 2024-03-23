@@ -1,93 +1,96 @@
-import { fetchApi, fetchFile } from "@libs/fetch";
-import { Filters } from "@libs/filterInputs";
-import { Plugin } from "@typings/plugin";
+import { fetchApi, fetchFile } from '@libs/fetch';
+import { Filters } from '@libs/filterInputs';
+import { Plugin } from '@typings/plugin';
 
 class SkyNovels implements Plugin.PluginBase {
-  id = "skynovels.net";
-  name = "SkyNovels";
-  site = "https://www.skynovels.net/";
-  version = "1.0.0";
-  icon = "src/es/skynovels/icon.png";
+  id = 'skynovels.net';
+  name = 'SkyNovels';
+  site = 'https://www.skynovels.net/';
+  version = '1.0.0';
+  icon = 'src/es/skynovels/icon.png';
   baseUrl = this.site;
 
-  async popularNovels(pageNo: number, options: Plugin.PopularNovelsOptions<Filters>): Promise<Plugin.NovelItem[]> {
-    const url = "https://api.skynovels.net/api/novels?&q";
+  async popularNovels(
+    pageNo: number,
+    options: Plugin.PopularNovelsOptions<Filters>,
+  ): Promise<Plugin.NovelItem[]> {
+    const url = 'https://api.skynovels.net/api/novels?&q';
 
     const result = await fetchApi(url);
-    const body = await result.json() as response;
+    const body = (await result.json()) as response;
 
     const novels: Plugin.NovelItem[] = [];
 
-    body.novels?.forEach((res) => {
-        const novelName = res.nvl_title;
-        const novelCover =
-            "https://api.skynovels.net/api/get-image/" +
-            res.image +
-            "/novels/false";
-        const novelUrl =
-            this.baseUrl + "novelas/" + res.id + "/" + res.nvl_name + "/";
+    body.novels?.forEach(res => {
+      const novelName = res.nvl_title;
+      const novelCover =
+        'https://api.skynovels.net/api/get-image/' +
+        res.image +
+        '/novels/false';
+      const novelUrl =
+        this.baseUrl + 'novelas/' + res.id + '/' + res.nvl_name + '/';
 
-        const novel = { name: novelName, url: novelUrl, cover: novelCover };
+      const novel = { name: novelName, url: novelUrl, cover: novelCover };
 
-        novels.push(novel);
+      novels.push(novel);
     });
 
     return novels;
   }
   async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
-    const novelId = novelUrl.split("/")[4];
-        const url =
-            "https://api.skynovels.net/api/novel/" + novelId + "/reading?&q";
+    const novelId = novelUrl.split('/')[4];
+    const url =
+      'https://api.skynovels.net/api/novel/' + novelId + '/reading?&q';
 
-        const result = await fetchApi(url);
-        const body = await result.json() as responseBook;
+    const result = await fetchApi(url);
+    const body = (await result.json()) as responseBook;
 
-        const item = body?.novel?.[0];
+    const item = body?.novel?.[0];
 
-        let novel: Plugin.SourceNovel = { url: novelUrl };
+    let novel: Plugin.SourceNovel = { url: novelUrl };
 
-        novel.name = item?.nvl_title;
+    novel.name = item?.nvl_title;
 
-        novel.cover =
-            "https://api.skynovels.net/api/get-image/" +
-            item?.image +
-            "/novels/false";
+    novel.cover =
+      'https://api.skynovels.net/api/get-image/' +
+      item?.image +
+      '/novels/false';
 
-        let genres: string[] = [];
-        item?.genres?.forEach((genre) => genres.push(genre.genre_name));
-        novel.genres = genres.join(",");
-        novel.author = item?.nvl_writer;
-        novel.summary = item?.nvl_content;
-        novel.status = item?.nvl_status;
+    let genres: string[] = [];
+    item?.genres?.forEach(genre => genres.push(genre.genre_name));
+    novel.genres = genres.join(',');
+    novel.author = item?.nvl_writer;
+    novel.summary = item?.nvl_content;
+    novel.status = item?.nvl_status;
 
-        let novelChapters: Plugin.ChapterItem[] = [];
+    let novelChapters: Plugin.ChapterItem[] = [];
 
-        item?.volumes?.forEach((volume) => {
-            volume?.chapters?.forEach((chapter) => {
-                const chapterName = chapter.chp_index_title;
-                const releaseDate = new Date(chapter.createdAt).toDateString();
-                const chapterUrl = novelUrl + chapter.id + "/" + chapter.chp_name;
+    item?.volumes?.forEach(volume => {
+      volume?.chapters?.forEach(chapter => {
+        const chapterName = chapter.chp_index_title;
+        const releaseDate = new Date(chapter.createdAt).toDateString();
+        const chapterUrl = novelUrl + chapter.id + '/' + chapter.chp_name;
 
-                const chap = {
-                    name: chapterName,
-                    releaseTime: releaseDate,
-                    url: chapterUrl,
-                };
+        const chap = {
+          name: chapterName,
+          releaseTime: releaseDate,
+          url: chapterUrl,
+        };
 
-                novelChapters.push(chap);
-            });
-        });
+        novelChapters.push(chap);
+      });
+    });
 
-        novel.chapters = novelChapters;
+    novel.chapters = novelChapters;
 
-        return novel;
+    return novel;
   }
   async parseChapter(chapterUrl: string): Promise<string> {
-    let chapterId: string = chapterUrl.split("/")[6];
+    let chapterId: string = chapterUrl.split('/')[6];
     const url = `https://api.skynovels.net/api/novel-chapter/${chapterId}`;
 
     const result = await fetchApi(url);
-    const body = await result.json() as responseChapter;
+    const body = (await result.json()) as responseChapter;
 
     const item = body?.chapter?.[0];
 
@@ -95,31 +98,34 @@ class SkyNovels implements Plugin.PluginBase {
 
     return chapterText;
   }
-  async searchNovels(searchTerm: string, pageNo: number): Promise<Plugin.NovelItem[]> {
+  async searchNovels(
+    searchTerm: string,
+    pageNo: number,
+  ): Promise<Plugin.NovelItem[]> {
     searchTerm = searchTerm.toLowerCase();
-    const url = "https://api.skynovels.net/api/novels?&q";
+    const url = 'https://api.skynovels.net/api/novels?&q';
 
     const result = await fetchApi(url);
-    const body = await result.json() as response;;
+    const body = (await result.json()) as response;
 
-    let results = body?.novels?.filter((novel) =>
-        novel.nvl_title.toLowerCase().includes(searchTerm)
+    let results = body?.novels?.filter(novel =>
+      novel.nvl_title.toLowerCase().includes(searchTerm),
     );
 
     const novels: Plugin.NovelItem[] = [];
 
-    results?.forEach((res) => {
-        const novelName = res.nvl_title;
-        const novelCover =
-            "https://api.skynovels.net/api/get-image/" +
-            res.image +
-            "/novels/false";
-        const novelUrl =
-            this.baseUrl + "novelas/" + res.id + "/" + res.nvl_name + "/";
+    results?.forEach(res => {
+      const novelName = res.nvl_title;
+      const novelCover =
+        'https://api.skynovels.net/api/get-image/' +
+        res.image +
+        '/novels/false';
+      const novelUrl =
+        this.baseUrl + 'novelas/' + res.id + '/' + res.nvl_name + '/';
 
-        const novel = { name: novelName, url: novelUrl, cover: novelCover };
+      const novel = { name: novelName, url: novelUrl, cover: novelCover };
 
-        novels.push(novel);
+      novels.push(novel);
     });
 
     return novels;
@@ -132,7 +138,7 @@ class SkyNovels implements Plugin.PluginBase {
 export default new SkyNovels();
 
 interface response {
-  novels?: (NovelsEntity)[] | null;
+  novels?: NovelsEntity[] | null;
 }
 interface NovelsEntity {
   id: number;
@@ -154,16 +160,15 @@ interface NovelsEntity {
   nvl_last_update: string;
   nvl_rating?: number | null;
   nvl_ratings_count: number;
-  genres?: (GenresEntity)[] | null;
+  genres?: GenresEntity[] | null;
 }
 interface GenresEntity {
   id: number;
   genre_name: string;
 }
 
-
 interface responseBook {
-  novel?: (NovelEntity)[] | null;
+  novel?: NovelEntity[] | null;
 }
 interface NovelEntity {
   id: number;
@@ -184,11 +189,11 @@ interface NovelEntity {
   nvl_chapters: number;
   nvl_last_update: string;
   nvl_rating: number;
-  bookmarks?: (BookmarksEntity)[] | null;
-  volumes?: (VolumesEntity)[] | null;
-  novel_ratings?: (NovelRatingsEntity)[] | null;
-  collaborators?: (CollaboratorsEntity)[] | null;
-  genres?: (GenresEntity)[] | null;
+  bookmarks?: BookmarksEntity[] | null;
+  volumes?: VolumesEntity[] | null;
+  novel_ratings?: NovelRatingsEntity[] | null;
+  collaborators?: CollaboratorsEntity[] | null;
+  genres?: GenresEntity[] | null;
 }
 interface BookmarksEntity {
   id: number;
@@ -201,7 +206,7 @@ interface VolumesEntity {
   id: number;
   nvl_id: number;
   user_id?: number | null;
-  chapters?: (ChaptersEntity)[] | null;
+  chapters?: ChaptersEntity[] | null;
 }
 interface ChaptersEntity {
   id: number;
@@ -233,9 +238,8 @@ interface CollaboratorsEntity {
   user_login: string;
 }
 
-
 interface responseChapter {
-  chapter?: (ChapterEntity)[] | null;
+  chapter?: ChapterEntity[] | null;
 }
 interface ChapterEntity {
   id: number;
@@ -256,9 +260,9 @@ interface ChapterEntity {
   nvl_name: string;
   user_login: string;
   reactions_count: number;
-  comments?: (null)[] | null;
-  reactions?: (null)[] | null;
-  total_reactions?: (TotalReactionsEntity)[] | null;
+  comments?: null[] | null;
+  reactions?: null[] | null;
+  total_reactions?: TotalReactionsEntity[] | null;
 }
 interface TotalReactionsEntity {
   reaction_id: number;

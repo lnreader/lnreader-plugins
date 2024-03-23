@@ -1,43 +1,43 @@
-import * as fs from "fs";
-import * as cheerio from "cheerio";
-import * as path from "path";
-import list from "./sources.json";
-import { HotNovelPubMetadata } from "./template";
+import * as fs from 'fs';
+import * as cheerio from 'cheerio';
+import * as path from 'path';
+import list from './sources.json';
+import { HotNovelPubMetadata } from './template';
 
 async function getFilters(sources: HotNovelPubMetadata) {
   const filters: any = {
     sort: {
-      type: "Picker",
-      label: "Order",
-      value: "hot",
+      type: 'Picker',
+      label: 'Order',
+      value: 'hot',
       options: [],
     },
     category: {
-      type: "Picker",
-      label: "category",
-      value: "",
-      options: [{ label: "NONE", value: "" }],
+      type: 'Picker',
+      label: 'category',
+      value: '',
+      options: [{ label: 'NONE', value: '' }],
     },
   };
-  const body = await fetch(sources.sourceSite).then((res) => res.text());
+  const body = await fetch(sources.sourceSite).then(res => res.text());
   const $: cheerio.CheerioAPI = cheerio.load(body);
-  $(".new-update").remove();
+  $('.new-update').remove();
 
-  $("section > div").each((i, el) => {
-    const id = $(el).find('a[class="see-all"]').attr("href");
+  $('section > div').each((i, el) => {
+    const id = $(el).find('a[class="see-all"]').attr('href');
     if (id) {
       filters.sort.options.push({
         label: $(el).find('[class="section-title"]').text().trim(),
-        value: id.split("/").pop(),
+        value: id.split('/').pop(),
       });
     }
   });
 
-  filters.category.label = $(".category-title").text().trim();
-  const apiSite = sources.sourceSite.replace("://", "://api.");
-  const jsonRaw = await fetch(apiSite + "/categories", {
+  filters.category.label = $('.category-title').text().trim();
+  const apiSite = sources.sourceSite.replace('://', '://api.');
+  const jsonRaw = await fetch(apiSite + '/categories', {
     headers: {
-      lang: sources.options?.lang || "en",
+      lang: sources.options?.lang || 'en',
     },
   });
   const json = (await jsonRaw.json()) as response;
@@ -45,7 +45,7 @@ async function getFilters(sources: HotNovelPubMetadata) {
   if (json.data?.length) {
     json.data
       .sort((a, b) => a.name.localeCompare(b.name))
-      .forEach((category) =>
+      .forEach(category =>
         filters.category.options.push({
           label: category.name,
           value: category.slug,
@@ -69,13 +69,13 @@ interface DataEntity {
 async function start() {
   const result = [];
   for (const sources of list) {
-    console.log("updating the filters in", sources.sourceName);
+    console.log('updating the filters in', sources.sourceName);
     const NewFilters = await getFilters(sources as any);
     sources.filters = NewFilters;
     result.push(sources);
   }
   fs.writeFileSync(
-    path.join(__dirname, "sources.json"),
+    path.join(__dirname, 'sources.json'),
     JSON.stringify(result, null, 2),
   );
 }

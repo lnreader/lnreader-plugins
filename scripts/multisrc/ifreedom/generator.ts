@@ -1,10 +1,10 @@
-import { Filters } from "../../../libs/filterInputs";
-import { ScrpitGeneratorFunction } from "../generate";
-import list from "./sources.json";
-import defaultSettings from "./settings.json";
-import { IfreedomMetadata } from "./template";
-import { readFileSync } from "fs";
-import path from "path";
+import { Filters } from '../../../libs/filterInputs';
+import { ScrpitGeneratorFunction } from '../generate';
+import list from './sources.json';
+import defaultSettings from './settings.json';
+import { IfreedomMetadata } from './template';
+import { readFileSync } from 'fs';
+import path from 'path';
 
 export const generateAll: ScrpitGeneratorFunction = function (name) {
   return list.map((metadata: IfreedomMetadata) => {
@@ -15,8 +15,8 @@ export const generateAll: ScrpitGeneratorFunction = function (name) {
 };
 
 const generator = function generator(metadata: IfreedomMetadata) {
-  const IfreedomTemplate = readFileSync(path.join(__dirname, "template.ts"), {
-    encoding: "utf-8",
+  const IfreedomTemplate = readFileSync(path.join(__dirname, 'template.ts'), {
+    encoding: 'utf-8',
   });
 
   const pluginScript = `
@@ -29,7 +29,7 @@ export default plugin;
     `.trim();
 
   return {
-    lang: "russian",
+    lang: 'russian',
     filename: metadata.sourceName,
     pluginScript,
   };

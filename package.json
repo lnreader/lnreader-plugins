@@ -11,7 +11,9 @@
         "clearMultisrc": "find . -type f -wholename \"*plugins*\\[*\\]*.[t,j]s\" -delete",
         "less": "npx less ./test_web/static/css/index.less ./test_web/static/css/index.css",
         "host-linux": "chmod +x ./host.sh && ./host.sh",
-        "host-windows": "powershell ./host.ps1"
+        "host-windows": "powershell ./host.ps1",
+        "prettier": "prettier --write \"./**/*.{js,ts}\"",
+        "prepare": "husky install"
     },
     "author": "LNReader",
     "license": "MIT",
@@ -44,7 +46,12 @@
         "@types/express": "^4.17.21",
         "@types/jquery": "^3.5.29",
         "@types/node": "^20.11.19",
-        "pre-commit": "^1.2.2",
+        "husky": "^9.0.11",
+        "lint-staged": "^15.2.2",
+        "prettier": "3.2.5",
         "tsc-watch": "^6.0.4"
+    },
+    "lint-staged": {
+        "**/*.{js,ts}": "prettier --write"
     }
 }

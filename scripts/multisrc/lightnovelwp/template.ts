@@ -1,9 +1,9 @@
-import { CheerioAPI, load } from "cheerio";
-import { fetchApi, fetchFile } from "@libs/fetch";
-import { Plugin } from "@typings/plugin";
-import { NovelStatus } from "@libs/novelStatus";
-import { defaultCover } from "@libs/defaultCover";
-import { Filters } from "@libs/filterInputs";
+import { CheerioAPI, load } from 'cheerio';
+import { fetchApi, fetchFile } from '@libs/fetch';
+import { Plugin } from '@typings/plugin';
+import { NovelStatus } from '@libs/novelStatus';
+import { defaultCover } from '@libs/defaultCover';
+import { Filters } from '@libs/filterInputs';
 
 interface LightNovelWPOptions {
   reverseChapters?: boolean;
@@ -40,50 +40,64 @@ class LightNovelWPPlugin implements Plugin.PluginBase {
   }
 
   getHostname(url: string): string {
-    return url.split("/")[2];
+    return url.split('/')[2];
   }
 
   async getCheerio(url: string, search: boolean): Promise<CheerioAPI> {
     const r = await fetchApi(url);
-    if (!r.ok && search != true) throw new Error("Could not reach site (" + r.status + ") try to open in webview.");
+    if (!r.ok && search != true)
+      throw new Error(
+        'Could not reach site (' + r.status + ') try to open in webview.',
+      );
     const $ = load(await r.text());
-    const title = $("title").text().trim();
-    if (this.getHostname(url) != this.getHostname(r.url) ||
-      title == "Bot Verification" || title == "You are being redirected..." || title == "Un instant..." || title == "Just a moment..." || title == "Redirecting...")
-      throw new Error("Captcha error, please open in webview");
+    const title = $('title').text().trim();
+    if (
+      this.getHostname(url) != this.getHostname(r.url) ||
+      title == 'Bot Verification' ||
+      title == 'You are being redirected...' ||
+      title == 'Un instant...' ||
+      title == 'Just a moment...' ||
+      title == 'Redirecting...'
+    )
+      throw new Error('Captcha error, please open in webview');
 
-    return ($);
+    return $;
   }
 
   parseNovels($: CheerioAPI): Plugin.NovelItem[] {
     const novels: Plugin.NovelItem[] = [];
 
-    $("div.listupd > article").each((i, elem) => {
-      const novelName = $(elem).find("h2").text();
-      const image = $(elem).find("img");
-      const novelUrl = $(elem).find("a").attr("href");
+    $('div.listupd > article').each((i, elem) => {
+      const novelName = $(elem).find('h2').text();
+      const image = $(elem).find('img');
+      const novelUrl = $(elem).find('a').attr('href');
 
       if (novelUrl) {
         novels.push({
           name: novelName,
-          cover: image.attr("data-src") || image.attr("src") || defaultCover,
-          path: novelUrl.replace(this.site, ""),
+          cover: image.attr('data-src') || image.attr('src') || defaultCover,
+          path: novelUrl.replace(this.site, ''),
         });
       }
     });
     return novels;
   }
 
-  async popularNovels(pageNo: number, { filters, showLatestNovels }: Plugin.PopularNovelsOptions <typeof this.filters>): Promise<Plugin.NovelItem[]> {
-    let url = this.site + "/series/?page=" + pageNo;
+  async popularNovels(
+    pageNo: number,
+    {
+      filters,
+      showLatestNovels,
+    }: Plugin.PopularNovelsOptions<typeof this.filters>,
+  ): Promise<Plugin.NovelItem[]> {
+    let url = this.site + '/series/?page=' + pageNo;
     if (!filters) filters = {};
-    if (showLatestNovels) url += "&order=latest";
+    if (showLatestNovels) url += '&order=latest';
     for (const key in filters) {
-      if (typeof filters[key].value === "object")
+      if (typeof filters[key].value === 'object')
         for (const value of filters[key].value as string[])
           url += `&${key}=${value}`;
-      else if (filters[key].value)
-        url += `&${key}=${filters[key].value}`;
+      else if (filters[key].value) url += `&${key}=${filters[key].value}`;
     }
     const $ = await this.getCheerio(url, false);
     return this.parseNovels($);
@@ -92,19 +106,22 @@ class LightNovelWPPlugin implements Plugin.PluginBase {
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
     const $ = await this.getCheerio(this.site + novelPath, false);
 
-    const novel: Plugin.SourceNovel = { path: novelPath.replace(this.site, ""), name: "Untitled" };
+    const novel: Plugin.SourceNovel = {
+      path: novelPath.replace(this.site, ''),
+      name: 'Untitled',
+    };
 
-    novel.name = $("h1.entry-title").text().trim();
-    const image = $("img.wp-post-image");
-    novel.cover = image.attr("data-src") || image.attr("src") || defaultCover;
-    switch ($("div.sertostat > span").attr("class")?.toLowerCase() || "") {
-      case "completed":
+    novel.name = $('h1.entry-title').text().trim();
+    const image = $('img.wp-post-image');
+    novel.cover = image.attr('data-src') || image.attr('src') || defaultCover;
+    switch ($('div.sertostat > span').attr('class')?.toLowerCase() || '') {
+      case 'completed':
         novel.status = NovelStatus.Completed;
         break;
-      case "ongoing":
+      case 'ongoing':
         novel.status = NovelStatus.Ongoing;
         break;
-      case "hiatus":
+      case 'hiatus':
         novel.status = NovelStatus.OnHiatus;
         break;
       default:
@@ -112,49 +129,55 @@ class LightNovelWPPlugin implements Plugin.PluginBase {
         break;
     }
 
-    let details = $("div.serl");
-    if (!details.length) details = $("div.spe > span");
+    let details = $('div.serl');
+    if (!details.length) details = $('div.spe > span');
     details.each(function () {
-      const detailName = $(this).contents().first().text().replace(":", "").trim().toLowerCase();
+      const detailName = $(this)
+        .contents()
+        .first()
+        .text()
+        .replace(':', '')
+        .trim()
+        .toLowerCase();
       const detail = $(this).contents().last().text().trim().toLowerCase();
 
       switch (detailName) {
-        case "الكاتب":
-        case "author":
-        case "auteur":
-        case "autor":
-        case "yazar":
+        case 'الكاتب':
+        case 'author':
+        case 'auteur':
+        case 'autor':
+        case 'yazar':
           novel.author = detail;
           break;
-        case "الحالة":
-        case "status":
-        case "statut":
-        case "estado":
-        case "durum":
+        case 'الحالة':
+        case 'status':
+        case 'statut':
+        case 'estado':
+        case 'durum':
           switch (detail) {
-            case "مكتملة":
-            case "completed":
-            case "complété":
-            case "completo":
-            case "completado":
-            case "tamamlandı":
+            case 'مكتملة':
+            case 'completed':
+            case 'complété':
+            case 'completo':
+            case 'completado':
+            case 'tamamlandı':
               novel.status = NovelStatus.Completed;
               break;
-            case "مستمرة":
-            case "ongoing":
-            case "en cours":
-            case "em andamento":
-            case "en progreso":
-            case "devam ediyor":
+            case 'مستمرة':
+            case 'ongoing':
+            case 'en cours':
+            case 'em andamento':
+            case 'en progreso':
+            case 'devam ediyor':
               novel.status = NovelStatus.Ongoing;
               break;
-            case "متوقفة":
-            case "hiatus":
-            case "en pause":
-            case "hiato":
-            case "pausa":
-            case "pausado":
-            case "duraklatıldı":
+            case 'متوقفة':
+            case 'hiatus':
+            case 'en pause':
+            case 'hiato':
+            case 'pausa':
+            case 'pausado':
+            case 'duraklatıldı':
               novel.status = NovelStatus.OnHiatus;
               break;
             default:
@@ -162,40 +185,48 @@ class LightNovelWPPlugin implements Plugin.PluginBase {
               break;
           }
           break;
-        case "الفنان":
-        case "artist":
-        case "artiste":
-        case "artista":
-        case "çizer":
+        case 'الفنان':
+        case 'artist':
+        case 'artiste':
+        case 'artista':
+        case 'çizer':
           novel.artist = detail;
           break;
       }
     });
 
-    let genres = $(".sertogenre")
-    if (!genres.length) genres = $(".genxed")
+    let genres = $('.sertogenre');
+    if (!genres.length) genres = $('.genxed');
     novel.genres = genres
-      .children("a")
+      .children('a')
       .map((i, el) => $(el).text())
       .toArray()
-      .join(",");
+      .join(',');
 
-    let summary = $(".sersys > p").map((i, el) => $(el).text().trim()).toArray();
-    if (!summary.length) summary = $(".entry-content > p").map((i, el) => $(el).text().trim()).toArray();
-    novel.summary = summary.join("\n");
+    let summary = $('.sersys > p')
+      .map((i, el) => $(el).text().trim())
+      .toArray();
+    if (!summary.length)
+      summary = $('.entry-content > p')
+        .map((i, el) => $(el).text().trim())
+        .toArray();
+    novel.summary = summary.join('\n');
 
     const chapters: Plugin.ChapterItem[] = [];
-    $(".eplister li").each((i, elem) => {
-      const chapterName = $(elem).find(".epl-num").text() + " " + $(elem).find(".epl-title").text();
-      const chapterUrl = $(elem).find("a").attr("href") || "";
-      const releaseTime = $(elem).find(".epl-date").text().trim();
+    $('.eplister li').each((i, elem) => {
+      const chapterName =
+        $(elem).find('.epl-num').text() +
+        ' ' +
+        $(elem).find('.epl-title').text();
+      const chapterUrl = $(elem).find('a').attr('href') || '';
+      const releaseTime = $(elem).find('.epl-date').text().trim();
       let isFreeChapter: boolean;
-      switch ($(elem).find(".epl-price").text().trim().toLowerCase()) {
-        case "free":
-        case "gratuit":
-        case "مجاني":
-        case "livre":
-        case "":
+      switch ($(elem).find('.epl-price').text().trim().toLowerCase()) {
+        case 'free':
+        case 'gratuit':
+        case 'مجاني':
+        case 'livre':
+        case '':
           isFreeChapter = true;
           break;
         default:
@@ -205,7 +236,7 @@ class LightNovelWPPlugin implements Plugin.PluginBase {
       if (isFreeChapter)
         chapters.push({
           name: chapterName,
-          path: chapterUrl.replace(this.site, ""),
+          path: chapterUrl.replace(this.site, ''),
           releaseTime: releaseTime,
         });
     });
@@ -218,16 +249,24 @@ class LightNovelWPPlugin implements Plugin.PluginBase {
 
   async parseChapter(chapterPath: string): Promise<string> {
     const $ = await this.getCheerio(this.site + chapterPath, false);
-    if (this.id == "kolnovel") {
-      let ignore = $("article > style").text().trim().split(",");  
-      ignore.push(...(ignore.pop()?.match(/^\.\w+/) || []));  
-      ignore.map((tag) => $(`p${tag}`).remove());
+    if (this.id == 'kolnovel') {
+      let ignore = $('article > style').text().trim().split(',');
+      ignore.push(...(ignore.pop()?.match(/^\.\w+/) || []));
+      ignore.map(tag => $(`p${tag}`).remove());
     }
-    return $(".epcontent p").map((i, el) => $(el)).toArray().join("\n") || "";
+    return (
+      $('.epcontent p')
+        .map((i, el) => $(el))
+        .toArray()
+        .join('\n') || ''
+    );
   }
 
-  async searchNovels(searchTerm: string, page: number): Promise<Plugin.NovelItem[]> {
-    const url = this.site + "page/" + page + "/?s=" + searchTerm;
+  async searchNovels(
+    searchTerm: string,
+    page: number,
+  ): Promise<Plugin.NovelItem[]> {
+    const url = this.site + 'page/' + page + '/?s=' + searchTerm;
     const $ = await this.getCheerio(url, true);
     return this.parseNovels($);
   }
