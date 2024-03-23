@@ -8,7 +8,7 @@ class SakuraNovel implements Plugin.PluginBase {
     name = "SakuraNovel";
     icon = "src/id/sakuranovel/icon.png";
     site = "https://sakuranovel.id/";
-    version = "1.0.0";
+    version = "1.0.1";
 
     parseNovels(loadedCheerio:CheerioAPI){
         const novels: Plugin.NovelItem[] = [];
@@ -79,30 +79,35 @@ class SakuraNovel implements Plugin.PluginBase {
             .toArray()
             .join(",");
 
+        const imageTitle = novel.cover?.split('/').pop()?.split('-').join(' ').split('.')[0];
+        const chapterTitle = novel.name.replace(/\(LN\)|\(WN\)/, "").split(',')[0].trim();
         const chapter: Plugin.ChapterItem[] = [];
 
-        loadedCheerio(".series-chapterlist li").each((i,el) => {
+        loadedCheerio(".series-flexright li").each((i,el) => {
             const chapterName = loadedCheerio(el)
                 .find("a span")
                 .first()
                 .text()
-                .replace(/.*?(Chapter.|[0-9])/g, "$1")
-                .replace(/Bahasa Indonesia/g, "")
+                .replace(chapterTitle, '')
+                .replace(imageTitle!, '')
+            	.replace(/Bahasa Indonesia/, '')
                 .replace(/\s+/g, " ")
                 .trim();
 
             const releaseDate = loadedCheerio(el)
-                .find("a span")
-                .first()
-                .next()
-                .text();
+                .find(".date")
+            	.text()
+				.trim()
+                .split('/')
+                .map(x => Number(x));
+
             const chapterUrl = loadedCheerio(el).find("a").attr("href");
 
             if (!chapterUrl) return;
 
             chapter.push({
                 name: chapterName,
-                releaseTime: releaseDate,
+                releaseTime: new Date(releaseDate[2], releaseDate[1], releaseDate[0]).toISOString(),
                 path: chapterUrl.replace(this.site, ''),
             });
         });

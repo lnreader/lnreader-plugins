@@ -7,8 +7,8 @@ class IndoWebNovel implements Plugin.PluginBase {
     id = "IDWN.id";
     name = "IndoWebNovel";
     icon = "src/id/indowebnovel/icon.png";
-    site = "https://indowebnovel.id/id/";
-    version = "1.1.0";
+    site = "https://indowebnovel.id/";
+    version = "1.2.0";
 
     parseNovels(loadedCheerio:CheerioAPI){
         const novels: Plugin.NovelItem[] = [];
@@ -28,7 +28,7 @@ class IndoWebNovel implements Plugin.PluginBase {
             novels.push({ 
                 name: novelName,
                 cover: novelCover,
-                path: novelUrl.replace(this.site, ''),
+                path: novelUrl.slice(this.site.length),
             });
         });
 
@@ -88,7 +88,7 @@ class IndoWebNovel implements Plugin.PluginBase {
 
             chapters.push({
                 name: chapterName,
-                path: chapterUrl.replace(this.site, ''),
+                path: chapterUrl.slice(this.site.length),
             });
         });
 
@@ -108,10 +108,14 @@ class IndoWebNovel implements Plugin.PluginBase {
         return chapterText;
     }
 
-    async searchNovels(searchTerm: string, pageNo: number): Promise<Plugin.NovelItem[]> {
-        const url = `${this.site}daftar-novel/`;
+    async searchNovels(searchTerm: string, page: number): Promise<Plugin.NovelItem[]> {
+        let link = `${this.site}advanced-search/page/${page}/?title=${searchTerm}&author=&yearx=`;
+        link += `&status=${this.filters.status.value}`
+        link += `&type=${this.filters.type.value}`;
+        link += `&order=${this.filters.sort.value}`;
+        link += this.filters.lang.value.map((i) => `&country[]=${i}`).join("");
 
-        const result = await fetchApi(url);
+        const result = await fetchApi(link);
         const body = await result.text();
 
         const loadedCheerio = parseHTML(body);

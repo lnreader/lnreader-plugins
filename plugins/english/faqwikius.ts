@@ -1,12 +1,13 @@
 import { Plugin } from "@typings/plugin";
 import { fetchApi, fetchFile } from "@libs/fetch";
 import { CheerioAPI, load as parseHTML } from "cheerio";
+import { NovelStatus } from "@libs/novelStatus";
 
 class FaqWikiUs implements Plugin.PluginBase {
     id = "FWK.US";
     name = "Faq Wiki";
     site = "https://faqwiki.us/";
-    version = "1.1.0";
+    version = "1.1.1";
     icon = "src/en/faqwikius/icon.png";
 
     parseNovels(loadedCheerio:CheerioAPI, searchTerm?: string) {
@@ -18,10 +19,12 @@ class FaqWikiUs implements Plugin.PluginBase {
 
             // Remove the appended query string 
             if (cover) {
-              cover = cover.replace(/\?ezimgfmt=.*$/, ''); // Regular expression magic!
+                cover = cover.replace(/\?ezimgfmt=.*$/, ''); // Regular expression magic!
+            } else {
+                cover = loadedCheerio(element).find("img").attr("src");
             }
 
-            const path = loadedCheerio(element).find("a").attr("href")?.slice(this.site.length);
+            const path = loadedCheerio(element).find("a").attr("href")?.replace('tp:', 'tps:')?.slice(this.site.length);
             if (!path) return;
 
             novels.push({ name, cover, path }); 
@@ -58,9 +61,33 @@ class FaqWikiUs implements Plugin.PluginBase {
 
         novel.name = loadedCheerio(".entry-title").text().replace("Novel – All Chapters", "").trim();
 
-        novel.cover = loadedCheerio(".wp-block-image").find("img").attr("src");  
+        novel.cover = loadedCheerio(".wp-block-image")
+            .find("img")
+            .attr("data-ezsrc")
+            ?.replace(/\?ezimgfmt=.*$/, ''); // Regular expression magic!
+        
+        const status = loadedCheerio("#lcp_instance_0 +:icontains('complete')").text();
+        novel.status = (status ? NovelStatus.Completed : NovelStatus.Ongoing)
 
-        novel.summary = loadedCheerio(".book-review-block__meta-item-value").text().trim();
+        const div = loadedCheerio(".book-review-block__meta-item-value");
+
+        div.html(div.html()?.replace(/(?<=>)([^<]+)(?=<br\s*\/?>)/g, '<p>$1</p>')!);
+        
+        loadedCheerio(".book-review-block__meta-item-value strong").each((i,el) => {
+            const key = loadedCheerio(el).text().replace(':', '').trim().toLowerCase();
+            const value = loadedCheerio(el).next().text().replace(':', '').trim();
+
+            switch(key){
+                case "description":
+                    novel.summary = value;
+                    break;
+                case "author(s)":
+                    novel.author = value;
+                    break;
+                case "genre":
+                    novel.genres = value.split(' ').join(',');
+            }
+        })
 
         const chapters: Plugin.ChapterItem[] = loadedCheerio(".lcp_catlist > li > a")
             .map((chapterIndex, element) => ({
