@@ -12,14 +12,9 @@ const { execSync } = require('child_process');
 const REMOTE = execSync('git remote get-url origin')
   .toString()
   .replace(/[\s\n]/g, '');
-let CURRENT_BRANCH = 'dist';
-try {
-  CURRENT_BRANCH = execSync('git rev-parse --abbrev-ref HEAD')
-    .toString()
-    .replace(/[\s\n]/g, '');
-} catch {
-  //
-}
+const CURRENT_BRANCH = execSync('git branch --show-current')
+  .toString()
+  .replace(/[\s\n]/g, '');
 const matched = REMOTE.match(/([^:/]+?)\/([^/.]+)(\.git)?$/);
 if (!matched) throw Error('Cant parse git url');
 const USERNAME = matched[1];
@@ -90,13 +85,14 @@ for (let lang in json) json[lang].sort((a, b) => a.id.localeCompare(b.id));
 
 fs.writeFileSync(jsonMinPath, JSON.stringify(json));
 fs.writeFileSync(jsonPath, JSON.stringify(json, null, '\t'));
-if (CURRENT_BRANCH === 'dist') {
-  fetch(`https://img.shields.io/badge/Plugins-${totalPlugins}-blue`)
-    .then(res => res.text())
-    .then(data => {
-      fs.writeFileSync('total.svg', data, { encoding: 'utf-8' });
-    });
-}
+fetch(`https://img.shields.io/badge/Plugins-${totalPlugins}-blue`)
+  .then(res => res.text())
+  .then(data => {
+    fs.writeFileSync('total.svg', data, { encoding: 'utf-8' });
+  })
+  .catch(error => {
+    fs.writeFileSync('total.svg', '', { encoding: 'utf-8' });
+  });
 
 // check for broken plugins
 for (let language in languages) {

@@ -1,5 +1,6 @@
 current=`git rev-parse --abbrev-ref HEAD`
-dist=dist
+version=`node -e "console.log(require('./package.json').version);"`
+dist="plugins/v$version"
 exists=`git show-ref refs/heads/$dist`
 
 if [ -n "$exists" ]; then
