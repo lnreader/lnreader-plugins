@@ -16,7 +16,7 @@ class RanobesPlugin implements Plugin.PagePlugin {
   icon = 'src/en/ranobes/icon.png';
   site = 'https://ranobes.top';
   filters?: Filters | undefined;
-  version = '1.0.0';
+  version = '1.1.0';
 
   async sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -119,6 +119,17 @@ class RanobesPlugin implements Plugin.PagePlugin {
     novel.totalPages = Number(data.pages_count);
     novel.chapters = this.parseChapters(data);
 
+    const latestChapterUrl = data.chapters[0].link;
+    const latestChapterName = data.chapters[0].title;
+    const latestChapterDate = data.chapters[0].date;
+
+    novel.latestChapter = latestChapterUrl
+      ? {
+          path: latestChapterUrl.replace(this.site, ''),
+          name: latestChapterName,
+          releaseTime: new Date(latestChapterDate).toISOString(),
+        }
+      : undefined;
     return novel;
   }
 
@@ -126,35 +137,13 @@ class RanobesPlugin implements Plugin.PagePlugin {
     const pagePath = novelPath.split('-')[0];
     const firstUrl = this.site + '/chapters' + pagePath.replace('novels/', '');
     const pageUrl = firstUrl + '/page/' + page;
-
-    const body = await fetchApi(firstUrl).then(r => r.text());
-
-    let loadedCheerio = parseHTML(body);
-    let json = loadedCheerio('#dle-content main').next().html()!;
-    let data = JSON.parse(json.replace('window.__DATA__ =', ''));
-
-    const latestChapterUrl = data.chapters[0].link;
-    const latestChapterName = data.chapters[0].title;
-    const latestChapterDate = data.chapters[0].date;
-
-    const latestChapter: Plugin.ChapterItem | undefined = latestChapterUrl
-      ? {
-          path: latestChapterUrl.replace(this.site, ''),
-          name: latestChapterName,
-          releaseTime: new Date(latestChapterDate).toISOString(),
-        }
-      : undefined;
-
-    await this.sleep(1000);
-
     const pageBody = await fetchApi(pageUrl).then(r => r.text());
-    loadedCheerio = parseHTML(pageBody);
-    json = loadedCheerio('#dle-content main').next().html()!;
-    data = JSON.parse(json.replace('window.__DATA__ =', ''));
+    const loadedCheerio = parseHTML(pageBody);
+    const json = loadedCheerio('#dle-content main').next().html()!;
+    const data = JSON.parse(json.replace('window.__DATA__ =', ''));
     const chapters = this.parseChapters(data);
     return {
       chapters,
-      latestChapter,
     };
   }
 

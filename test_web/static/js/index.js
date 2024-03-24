@@ -849,6 +849,11 @@ class PluginWrapper {
             ),
           );
       }
+      if (sourceNovel.latestChapter) {
+        novel_data
+          .children('div + div')
+          .append(PluginWrapper.createChapterItem(sourceNovel.latestChapter));
+      }
       novel_item.replaceWith(novel_data);
 
       if (
@@ -872,7 +877,6 @@ class PluginWrapper {
     /** @type {JQuery<HTMLInputElement>} */
     const novelPathInput = $('#parsePage #parse-page-novel-path');
     const pageInput = $('#parsePage #parse-page-index');
-    const latestChapter_item = $('#parseNovel latest-chapter-item');
     const chapter_list = $('#parsePage .chapter-list');
     const novelPath = novelPathInput.val();
     const page = pageInput.val();
@@ -895,12 +899,6 @@ class PluginWrapper {
       ).json();
       if ('error' in sourcePage)
         throw `Error getting the novel ${sourcePage.error}`;
-      latestChapter_item.empty();
-      if (sourcePage.latestChapter) {
-        latestChapter_item.append(
-          PluginWrapper.createChapterItem(sourcePage.latestChapter),
-        );
-      }
       if (
         sourcePage?.chapters?.length !==
         new Set(sourcePage?.chapters?.map(r => r.path) || []).size

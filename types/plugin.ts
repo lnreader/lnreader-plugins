@@ -32,11 +32,11 @@ export namespace Plugin {
     artist?: string;
     status?: string;
     chapters?: ChapterItem[];
+    latestChapter?: ChapterItem;
   }
 
   export interface SourcePage {
     chapters: ChapterItem[];
-    latestChapter?: ChapterItem;
   }
 
   export interface PopularNovelsOptions<

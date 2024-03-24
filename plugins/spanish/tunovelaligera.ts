@@ -10,7 +10,7 @@ class TuNovelaLigera implements Plugin.PagePlugin {
   name = 'TuNovelaLigera';
   icon = 'src/es/tunovelaligera/icon.png';
   site = 'https://tunovelaligera.com';
-  version = '1.0.0';
+  version = '1.1.0';
 
   async sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -122,17 +122,6 @@ class TuNovelaLigera implements Plugin.PagePlugin {
     novel.summary = loadedCheerio('div.summary__content > p').text().trim();
 
     novel.chapters = this.parseChapters(loadedCheerio);
-
-    return novel;
-  }
-
-  async parsePage(novelPath: string, page: string): Promise<Plugin.SourcePage> {
-    const novelUrl = this.site + novelPath;
-    const pageUrl = this.site + novelPath + '?lcp_page0=' + page;
-    const result = await fetchApi(novelUrl);
-    const body = await result.text();
-
-    let loadedCheerio = parseHTML(body);
     const latestChapterEle = loadedCheerio('#lcp_instance_0 li').first();
     const latestChapterUrl = loadedCheerio(latestChapterEle)
       .find('a')
@@ -142,18 +131,22 @@ class TuNovelaLigera implements Plugin.PagePlugin {
       .text()
       .replace(/[\t\n]/g, '')
       .trim();
-    const latestChapter: Plugin.ChapterItem | undefined = latestChapterUrl
+    novel.latestChapter = latestChapterUrl
       ? {
           path: latestChapterUrl.replace(this.site, ''),
           name: latestChapterName,
         }
       : undefined;
-    await this.sleep(1000);
+
+    return novel;
+  }
+
+  async parsePage(novelPath: string, page: string): Promise<Plugin.SourcePage> {
+    const pageUrl = this.site + novelPath + '?lcp_page0=' + page;
     const pageText = await fetchApi(pageUrl).then(res => res.text());
     const chapters = this.parseChapters(parseHTML(pageText));
     return {
       chapters,
-      latestChapter,
     };
   }
   async parseChapter(chapterPath: string): Promise<string> {
