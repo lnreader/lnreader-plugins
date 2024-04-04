@@ -108,3 +108,23 @@ export namespace Plugin {
     parsePage(novelPath: string, page: string): Promise<SourcePage>;
   }
 }
+
+export namespace HTMLParser2Util {
+  interface HandlerBase {
+    onopentag?(name: string, attribs: { [s: string]: string }): void;
+    ontext?(data: string): void;
+    onclosetag?(name: string, isImplied: boolean): void;
+  }
+
+  export interface Handler extends HandlerBase {
+    isStarted?: boolean;
+    isDone?: boolean;
+  }
+
+  // route htmlparser2 event to handlers
+  export interface HandlerRouter<ActionType extends string>
+    extends HandlerBase {
+    handlers: Record<ActionType, Handler | undefined>;
+    action: ActionType;
+  }
+}

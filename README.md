@@ -1,9 +1,9 @@
 # LNReader Plugins
 
 <p>
-<img alt="LNReader plugins counting" src="https://raw.githubusercontent.com/LNReader/lnreader-sources/plugins/v2.1.0/total.svg">
-<img alt="GitHub issues by-label"  src="https://img.shields.io/github/issues/lnreader/lnreader-sources/Source%20Request?color=success&label=source%20requests">
-<img  alt="GitHub issues by-label"  src="https://img.shields.io/github/issues/lnreader/lnreader-sources/Bug?color=red&label=bugs">
+<img alt="LNReader plugins counting" src="https://raw.githubusercontent.com/LNReader/lnreader-plugins/plugins/v2.1.0/total.svg">
+<img alt="GitHub issues by-label"  src="https://img.shields.io/github/issues/lnreader/lnreader-plugins/Source%20Request?color=success&label=source%20requests">
+<img  alt="GitHub issues by-label"  src="https://img.shields.io/github/issues/lnreader/lnreader-plugins/Bug?color=red&label=bugs">
 </p>
 
 Repository to host plugins and related issues, and requests for
@@ -35,7 +35,7 @@ Repository to host plugins and related issues, and requests for
 
 ```ts
 const githubUsername = "LNReader";
-const githubRepository = "lnreader-sources";
+const githubRepository = "lnreader-plugins";
 ```
 
 ---

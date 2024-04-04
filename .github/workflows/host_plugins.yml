@@ -7,7 +7,7 @@ on:
 
 jobs:
   host:
-    if: github.repository == 'LNReader/lnreader-sources'
+    if: github.repository == 'LNReader/lnreader-plugins'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
