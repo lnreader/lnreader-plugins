@@ -11,13 +11,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Moderate issues
-        uses: tachiyomiorg/issue-moderator-action@v1
+        uses: tachiyomiorg/issue-moderator-action@v2
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+          duplicate-label: Duplicate
+
           duplicate-check-enabled: true
-          duplicate-check-label: Source Request
-          existing-check-enabled: true
-          existing-check-label: Source Request
+          duplicate-check-labels: |
+            ["Source request", "Domain changed"]
+
+          existing-check-enabled: false
+            
           auto-close-rules: |
             [
               {
