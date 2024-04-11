@@ -7,8 +7,8 @@ class IndoWebNovel implements Plugin.PluginBase {
   id = 'IDWN.id';
   name = 'IndoWebNovel';
   icon = 'src/id/indowebnovel/icon.png';
-  site = 'https://indowebnovel.id/';
-  version = '1.2.0';
+  site = 'https://indowebnovel.id/id';
+  version = '1.2.1';
 
   parseNovels(loadedCheerio: CheerioAPI) {
     const novels: Plugin.NovelItem[] = [];
@@ -105,7 +105,7 @@ class IndoWebNovel implements Plugin.PluginBase {
 
     const loadedCheerio = parseHTML(body);
 
-    const chapterText = loadedCheerio('.readerss').html() || '';
+    const chapterText = loadedCheerio('.readersss').html() || '';
 
     return chapterText;
   }
