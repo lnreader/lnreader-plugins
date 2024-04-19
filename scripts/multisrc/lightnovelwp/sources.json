@@ -56,11 +56,12 @@
   },
   {
     "id": "novelsparadise",
-    "sourceSite": "https://novelsparadise.net/",
+    "sourceSite": "https://novelsparadise.site/",
     "sourceName": "جنة الروايات",
     "options": {
       "lang": "Arabic",
-      "reverseChapters": true
+      "reverseChapters": true,
+      "versionIncrements": 1
     }
   },
   {
