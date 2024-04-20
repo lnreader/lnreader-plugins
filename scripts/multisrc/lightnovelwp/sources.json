@@ -137,6 +137,24 @@
     }
   },
   {
+    "id": "bacalightnovel",
+    "sourceSite": "https://bacalightnovel.co/",
+    "sourceName": "Baca Light Novel",
+    "options": {
+      "lang": "Indonesian",
+      "reverseChapters": true
+    }
+  },
+  {
+    "id": "sektenovel",
+    "sourceSite": "https://sektenovel.web.id/",
+    "sourceName": "Sekte Novel",
+    "options": {
+      "lang": "Indonesian",
+      "reverseChapters": true
+    }
+  },
+  {
     "id": "systemtranslation",
     "sourceSite": "https://systemtranslation.com/",
     "sourceName": "System Translation",

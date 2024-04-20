@@ -7,8 +7,8 @@ class IndoWebNovel implements Plugin.PluginBase {
   id = 'IDWN.id';
   name = 'IndoWebNovel';
   icon = 'src/id/indowebnovel/icon.png';
-  site = 'https://indowebnovel.id/id';
-  version = '1.2.1';
+  site = 'https://indowebnovel.id/id/';
+  version = '1.2.2';
 
   parseNovels(loadedCheerio: CheerioAPI) {
     const novels: Plugin.NovelItem[] = [];
@@ -36,9 +36,10 @@ class IndoWebNovel implements Plugin.PluginBase {
   }
 
   async popularNovels(
-    page: number,
+    page: number = 1,
     { filters }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
+    /*
     let link = `${this.site}advanced-search/page/${page}/?title=&author=&yearx=`;
     link += `&status=${filters.status.value}`;
     link += `&type=${filters.type.value}`;
@@ -48,7 +49,8 @@ class IndoWebNovel implements Plugin.PluginBase {
       link += filters.lang.value.map(i => `&country[]=${i}`).join('');
     if (filters.genre.value.length)
       link += filters.genre.value.map(i => `&genre[]=${i}`).join('');
-
+    */
+    let link = this.site + `page/${page}/?s`
     const result = await fetchApi(link);
     const body = await result.text();
 
@@ -65,12 +67,12 @@ class IndoWebNovel implements Plugin.PluginBase {
 
     const novel: Plugin.SourceNovel = {
       path: novelPath,
-      name: loadedCheerio('.series-title').text().trim() || 'Untitled',
+      name: loadedCheerio('.series-title h2').text().trim() || 'Untitled',
       cover: loadedCheerio('.series-thumb img').attr('src'),
-      author: loadedCheerio("ul.series-infolist b:contains('Author') +")
+      author: loadedCheerio(".series-infolist li:contains('Author') span")
         .text()
         .trim(),
-      status: loadedCheerio('.status').text().trim(),
+      // status: loadedCheerio('.status').text().trim(),
       summary: loadedCheerio('.series-synops').text().trim(),
       chapters: [],
     };
@@ -105,21 +107,23 @@ class IndoWebNovel implements Plugin.PluginBase {
 
     const loadedCheerio = parseHTML(body);
 
-    const chapterText = loadedCheerio('.readersss').html() || '';
+    const chapterText = loadedCheerio('.readersss .text-left ').html() || '';
 
     return chapterText;
   }
 
   async searchNovels(
     searchTerm: string,
-    page: number,
+    page: number = 1,
   ): Promise<Plugin.NovelItem[]> {
+    /*
     let link = `${this.site}advanced-search/page/${page}/?title=${searchTerm}&author=&yearx=`;
     link += `&status=${this.filters.status.value}`;
     link += `&type=${this.filters.type.value}`;
     link += `&order=${this.filters.sort.value}`;
     link += this.filters.lang.value.map(i => `&country[]=${i}`).join('');
-
+    */
+    let link = this.site + `page/${page}/?s=${searchTerm}`
     const result = await fetchApi(link);
     const body = await result.text();
 
