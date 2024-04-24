@@ -1,4 +1,4 @@
-import { load as parseHTML } from 'cheerio';
+import { Parser } from 'htmlparser2';
 import { fetchApi, fetchFile } from '@libs/fetch';
 import { FilterTypes, Filters } from '@libs/filterInputs';
 import { Plugin } from '@typings/plugin';
@@ -8,7 +8,7 @@ class LnMTLPlugin implements Plugin.PagePlugin {
   name = 'LnMTL';
   icon = 'src/en/lnmtl/icon.png';
   site = 'https://lnmtl.com/';
-  version = '1.0.1';
+  version = '2.0.0';
 
   async sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -24,98 +24,191 @@ class LnMTLPlugin implements Plugin.PagePlugin {
     link += `&filter=${filters.storyStatus.value}`;
     link += `&page=${page}`;
 
-    const body = await fetchApi(link).then(result => result.text());
-
-    const loadedCheerio = parseHTML(body);
+    const body = await fetchApi(link);
+    const html = await body.text();
+    const baseUrl = this.site;
+    let isParsingNovel = false;
+    let tempNovel = {} as Plugin.NovelItem; 
     const novels: Plugin.NovelItem[] = [];
-
-    loadedCheerio('.media').each((i, el) => {
-      const novelName = loadedCheerio(el).find('h4').text();
-      const novelCover = loadedCheerio(el).find('img').attr('src');
-      const novelUrl = loadedCheerio(el).find('h4 > a').attr('href');
-
-      if (!novelUrl) return;
-
-      const novel = {
-        name: novelName,
-        cover: novelCover,
-        path: novelUrl.replace(this.site, ''),
-      };
-
-      novels.push(novel);
+    const parser = new Parser ({
+      onopentag(name, attribs) {
+        if (attribs['class']?.includes('media-left')) {
+          isParsingNovel = true;
+        }
+        if (isParsingNovel) {
+          switch (name){
+            case 'a':
+              tempNovel.path = attribs['href'].slice(baseUrl.length);
+              break;
+            case 'img':
+              tempNovel.name = attribs['alt'];
+              tempNovel.cover = attribs['src'];
+              break;
+          }
+          if (tempNovel.path && tempNovel.name){
+            novels.push(tempNovel);
+            tempNovel = {} as Plugin.NovelItem;
+          }
+        }
+      },
+      onclosetag(name){
+        if (name === 'div'){
+          isParsingNovel = false;
+        }
+      },
     });
-
+    parser.write(html);
+    parser.end();
     return novels;
   }
 
   async parseNovel(
     novelPath: string,
   ): Promise<Plugin.SourceNovel & { totalPages: number }> {
-    const result = await fetchApi(this.site + novelPath);
-    const body = await result.text();
-
-    const loadedCheerio = parseHTML(body);
-
-    const volumes = JSON.parse(
-      loadedCheerio('main')
-        .next()
-        .html()
-        ?.match(/lnmtl.volumes = \[(.*?)\]/)![0]
-        ?.replace('lnmtl.volumes = ', '') || '',
-    );
+    const body = await fetchApi(this.site + novelPath);
+    const html = await body.text().then(r => r.replace(/>\s+</g, '><'));
 
     const novel: Plugin.SourceNovel & { totalPages: number } = {
       path: novelPath,
-      name: loadedCheerio('.novel-name').text() || 'Untitled',
-      cover: loadedCheerio('div.novel').find('img').attr('src'),
-      summary: loadedCheerio('div.description').text().trim(),
-      totalPages: volumes.length,
+      name: '',
+      totalPages: 1,
+      summary: '',
+      author: '',
+      status: '',
       chapters: [],
     };
 
-    loadedCheerio('.panel-body > dl').each(function () {
-      const detailName = loadedCheerio(this).find('dt').text().trim();
-      const detail = loadedCheerio(this).find('dd').text().trim();
-
-      switch (detailName) {
-        case 'Authors':
-          novel.author = detail;
-          break;
-        case 'Current status':
-          novel.status = detail;
-          break;
-      }
-    });
-
-    novel.genres = loadedCheerio('.panel-heading:contains(" Genres ")')
-      .next()
-      .find('a')
-      .map((i, el) => loadedCheerio(el).text())
-      .toArray()
-      .join(',');
-
+    let isScript = false;
+    let isDescription = false;
+    let isSource = false;
+    let isPanelKey = false;
+    let isPanelValue = 0;
+    let isAuthorKey = false
+    let isStatusKey = false
+    let isList = 0;
+    let isGenres = false;
+    let genreArray: string[] = []
+    const parser = new Parser({
+      onopentag(name,attribs) {
+        if (name === 'img' && attribs['class']?.includes('img-rounded')){
+          novel.name = attribs['title'];
+          novel.cover = attribs['src'];
+        }
+        if (name === 'ul' && attribs['class']?.includes('list-inline')){
+          isList++;
+        }
+      },
+      onopentagname(name){
+        if (name === 'dt'){
+          isPanelKey = true;
+        }
+        if (name === 'dd'){
+          isPanelValue++;
+        }
+        if (isList === 1 && name === 'li'){
+          isGenres = true;
+        }
+      },
+      onattribute(name, value){
+        if (name === 'class' && value === 'description'){
+          isDescription = true;
+        }
+        if (name === 'class' && value === 'source'){
+          isDescription = false;
+          isSource = true;
+        }
+        if (name === 'class' && value === 'progress'){
+          isSource = false;
+        }
+      },
+      ontext(data){
+        if(isScript){
+          const volume = JSON.parse(
+            data.match(/lnmtl.volumes = (.+])(?=;)/)![1] || ''
+          );
+          novel.totalPages = volume.length;
+        }
+        if(isDescription){
+          novel.summary += data.trim() + '\n\n';
+        }
+        if(isSource){
+          novel.summary += data;
+        }
+        if(isPanelKey){
+          switch(data){
+            case 'Authors':
+              isAuthorKey = true;
+              break;
+            case 'Current status':
+              isStatusKey = true;
+              break;
+          }
+        }
+        if(isAuthorKey && isPanelValue === 1){
+          novel.author += data.trim();
+          isAuthorKey = false;
+        }
+        if(isStatusKey && isPanelValue === 2){
+          novel.status += data.trim();
+          isStatusKey = false;
+        }
+        if(isGenres){
+          genreArray.push(data.trim());
+          novel.genres = genreArray.join(', ');
+        }
+      },
+      onclosetag(name){
+        if (name === 'ul'){
+          isGenres = false;
+        }
+        if(name === 'main'){
+          isPanelKey = false;
+          isScript = true;
+        }
+        if (name === 'script'){
+          isScript = false;
+        }
+      },
+    })
+    parser.write(html);
+    parser.end();
     return novel;
   }
 
   async parsePage(novelPath: string, page: string): Promise<Plugin.SourcePage> {
     const result = await fetchApi(this.site + novelPath);
-    const body = await result.text();
-
-    const loadedCheerio = parseHTML(body);
-
-    const volumes = JSON.parse(
-      loadedCheerio('main')
-        .next()
-        .html()
-        ?.match(/lnmtl.volumes = \[(.*?)\]/)![0]
-        ?.replace('lnmtl.volumes = ', '') || '',
-    )[+page - 1];
+    const html = await result.text().then(r => r.replace(/>\s+</g, '><'));
+    let isScript = false;
+    let volume: VolumeEntry = {
+      id: '',
+      title: '',
+    }
+    const parser = new Parser({
+      ontext(data){
+        if(isScript){
+          const volumes = JSON.parse(
+            data.match(/lnmtl.volumes = (.+])(?=;)/)![1] || ''
+          );
+          volume = volumes[+page-1]
+        }
+      },
+      onclosetag(name){
+        if(name === 'main'){
+          isScript = true;
+        }
+        if (name === 'script'){
+          isScript = false;
+        }
+      },
+    })
+    parser.write(html);
+    parser.end();
 
     const chapter: Plugin.ChapterItem[] = [];
 
     await this.sleep(1000);
     const volumeData = await fetchApi(
-      `${this.site}chapter?volumeId=${volumes.id}`,
+      `${this.site}chapter?volumeId=${volume.id}`,
     );
     const volumePage = await volumeData.json();
     const firstPage = volumePage.data.map((chapter: ChapterEntry) => ({
@@ -128,7 +221,7 @@ class LnMTLPlugin implements Plugin.PagePlugin {
     for (let i = 2; i <= volumePage.last_page; i++) {
       await this.sleep(1000);
       const chapterData = await fetchApi(
-        `${this.site}chapter?page=${i}&volumeId=${volumes.id}`,
+        `${this.site}chapter?page=${i}&volumeId=${volume.id}`,
       );
       const chapterInfo = await chapterData.json();
 
@@ -146,34 +239,75 @@ class LnMTLPlugin implements Plugin.PagePlugin {
 
   async parseChapter(chapterPath: string): Promise<string> {
     const result = await fetchApi(this.site + chapterPath);
-    const body = await result.text();
+    const html = await result.text();
+    let isText = false;
+    let chapterText = '';
+    const parser = new Parser({
+      onopentag(name,attribs){
+        if(name === 'sentence' && attribs['class']?.includes('translated')){
+          isText = true;
+          chapterText += '<p>'
+        }
+      },
+      onopentagname(name){
+        if(name === 'nav'){
+          isText = false;
+        }
+      },
+      ontext(data){
+        if(isText){
+          chapterText += data;
+        }
+      },
+      onclosetag(name){
+        if (name === 'sentence'){
+          chapterText += '</p>'
+          isText = false;
+        }
+      }
+    })
+    parser.write(html);
+    parser.end();
 
-    const loadedCheerio = parseHTML(body);
-
-    loadedCheerio('.original, script').remove();
-    loadedCheerio('sentence.translated').wrap('<p></p>');
-
-    let chapterText = loadedCheerio('.chapter-body').html()?.replace(/„/g, '“');
-
-    if (!chapterText) {
-      chapterText = loadedCheerio('.alert.alert-warning').text();
-    }
-
-    return chapterText;
+    return chapterText.replace(/„/g, '“');
   }
 
   async searchNovels(
     searchTerm: string,
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
-    const body = await fetchApi(this.site).then(r => r.text());
-    const loadedCheerio = parseHTML(body);
-
-    const list = loadedCheerio('footer')
-      .next()
-      .next()
-      .html()
-      ?.match(/prefetch: '\/(.*json)/)![1];
+    const html = await fetchApi(this.site)
+      .then(b => b.text())
+      .then(r => r.replace(/>\s+</g, '><'));
+    let isScript = false;
+    let isFooter = false;
+    let list = ''
+    const parser = new Parser({
+      onopentag(name, attribs) {
+        if(isFooter && name === 'script' && 
+        attribs['type']?.includes('application/javascript')){
+          isScript = true;
+        }
+      },
+      ontext(data){
+        if (isScript){
+          list = data.match(/prefetch: '\/(.*json)/)![1];
+        }
+      },
+      onclosetag(name){
+        if (name === 'footer'){
+          isFooter = true;
+        }
+        if (name === 'script'){
+          isScript = false;
+        }
+        if (name === 'body'){
+          isFooter = false;
+        }
+      }
+    })
+    parser.write(html);
+    parser.end();
 
     const search = await fetch(`${this.site}${list}`);
     const data = await search.json();
@@ -242,4 +376,9 @@ interface ChapterEntry {
   title: string;
   slug: string;
   created_at: string;
+}
+
+interface VolumeEntry {
+  id: string;
+  title: string;
 }

@@ -1,14 +1,7 @@
-import { CheerioAPI, load as parseHTML } from 'cheerio';
+import { Parser } from 'htmlparser2';
 import { fetchApi, fetchFile } from '@libs/fetch';
 import { FilterTypes, Filters } from '@libs/filterInputs';
 import { Plugin } from '@typings/plugin';
-
-interface ChapterEntry {
-  id: number;
-  title: string;
-  date: string;
-  link: string;
-}
 
 class RanobesPlugin implements Plugin.PagePlugin {
   id = 'ranobes';
@@ -16,32 +9,61 @@ class RanobesPlugin implements Plugin.PagePlugin {
   icon = 'src/en/ranobes/icon.png';
   site = 'https://ranobes.top';
   filters?: Filters | undefined;
-  version = '1.1.0';
+  version = '2.0.0';
 
   async sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  parseNovels(loadedCheerio: CheerioAPI) {
+  parseNovels(html: string) {
     const novels: Plugin.NovelItem[] = [];
-
-    loadedCheerio('.short-cont').each((i, el) => {
-      const novelName = loadedCheerio(el).find('h2.title').text();
-      const novelUrl = loadedCheerio(el).find('h2.title a').attr('href');
-      const novelCover = loadedCheerio(el)
-        .find('figure')
-        .attr('style')
-        ?.replace(/.*url\((.*?)\)./g, '$1');
-
-      if (!novelUrl) return;
-
-      const novel = {
-        name: novelName,
-        cover: novelCover,
-        path: novelUrl?.replace(this.site, ''),
-      };
-      novels.push(novel);
-    });
+    let tempNovel = {} as Plugin.NovelItem;
+    tempNovel.name = '';
+    const baseUrl = this.site
+    let isParsingNovel = false;
+    let isTitleTag = false;
+    let isNovelName = false;
+    const parser = new Parser({
+      onopentag(name, attribs) {
+        if (attribs['class']?.includes('short-cont')){
+          isParsingNovel = true;
+        }
+        if (isParsingNovel){
+          if (name === 'h2' && attribs['class']?.includes('title')){
+            isTitleTag = true;
+          }
+          if (isTitleTag && name === 'a'){
+            tempNovel.path = attribs['href'].slice(baseUrl.length);
+            isNovelName = true;
+          }
+          if (name === 'figure'){
+            tempNovel.cover = attribs['style']
+              .replace(/.*url\((.*?)\)./g, '$1');
+          }
+          if (tempNovel.path && tempNovel.cover){
+            novels.push(tempNovel);
+            tempNovel = {} as Plugin.NovelItem;
+            tempNovel.name = '';
+          }
+        }
+      },
+      ontext(data){
+        if(isNovelName){
+          tempNovel.name += data;
+        }
+      },
+      onclosetag(name){
+        if(name === 'h2'){
+          isNovelName = false;
+          isTitleTag = false;
+        }
+        if(name === 'figure'){
+          isParsingNovel = false;
+        }
+      }
+    })
+    parser.write(html);
+    parser.end();
     return novels;
   }
 
@@ -51,7 +73,7 @@ class RanobesPlugin implements Plugin.PagePlugin {
       chapter.push({
         name: item.title,
         releaseTime: new Date(item.date).toISOString(),
-        path: item.link.replace(this.site, ''),
+        path: item.link.slice(this.site.length),
       });
     });
     return chapter.reverse();
@@ -65,10 +87,9 @@ class RanobesPlugin implements Plugin.PagePlugin {
     }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
     let link = `${this.site}/novels/page/${page}/`;
-    const body = await fetchApi(link).then(result => result.text());
+    const body = await fetchApi(link).then(r => r.text());
 
-    const loadedCheerio = parseHTML(body);
-    return this.parseNovels(loadedCheerio);
+    return this.parseNovels(body);
   }
 
   async parseNovel(
@@ -76,52 +97,133 @@ class RanobesPlugin implements Plugin.PagePlugin {
   ): Promise<Plugin.SourceNovel & { totalPages: number }> {
     const url = this.site + novelPath;
     const result = await fetchApi(url);
-    const body = await result.text();
-
-    let loadedCheerio = parseHTML(body);
-
+    const html = await result.text();
     const novel: Plugin.SourceNovel & { totalPages: number } = {
       path: novelPath,
-      name: loadedCheerio('.poster img').attr('alt') || 'Untitled',
-      cover: this.site + loadedCheerio('.poster img').attr('src'),
-      author: loadedCheerio('[itemprop="creator"]').text(),
+      name: '',
+      summary: '',
       chapters: [],
       totalPages: 1,
-    };
-
-    novel.summary = loadedCheerio('.moreless')
-      .find('br')
-      .replaceWith('\n')
-      .end()
-      .text()
-      .trim();
-
-    novel.status =
-      loadedCheerio('li:contains("Status") span').text() === 'Ongoing'
-        ? 'Ongoing'
-        : 'Completed';
-
-    novel.genres = loadedCheerio('div#mc-fs-genre').text().trim();
-
-    let chapterListUrl = loadedCheerio('.read-continue:last').attr('href');
-
-    if (!chapterListUrl?.startsWith('http')) {
-      chapterListUrl = this.site + chapterListUrl;
     }
+    let baseUrl = this.site;
+    let isCover = false;
+    let isAuthor = false;
+    let isSummary = false;
+    let isStatus = false;
+    let isStatusText = false;
+    let isGenres = false;
+    let isGenresText = false;
+    let genreArray: string[] = []
+    let novelId = '';
+    const parser = new Parser ({
+      onopentag(name,attribs){
+        if (attribs['class'] === 'poster'){
+          isCover = true;
+        }
+        if (isCover && name === 'img'){
+          novel.name = attribs['alt'];
+          novel.cover = baseUrl + attribs['src'];
+        }
+        if (name === 'div' && attribs['class'] === 'moreless'){
+          isSummary = true;
+        }
+        if (name === 'li' && attribs['title']?.includes('Original status')){
+          isStatus = true;
+        }
+        if (name === 'input' && attribs['name'] === 'newsid'){
+          novelId = attribs['value']
+        }
+      },
+      onopentagname(name){
+        if (isSummary && name === 'br'){
+          novel.summary += `/n`;
+        }
+        if (isStatus && name === 'a'){
+          isStatusText = true;
+        }
+        if (isGenres && name === 'a'){
+          isGenresText = true;
+        }
+      },
+      onattribute(name,value){
+        if (name === 'itemprop' && value === 'creator'){
+          isAuthor = true;
+        }
+        if (name === 'id' && value === 'mc-fs-genre'){
+          isGenres = true;
+        }
+      },
+      ontext(data){
+        if(isAuthor){
+          novel.author = data;
+        }
+        if(isSummary){
+          novel.summary += data;
+        }
+        if(isStatusText){
+          novel.status = data === 'Ongoing'
+            ? 'Ongoing'
+            : 'Completed';
+        }
+        if(isGenresText){
+          genreArray.push(data);
+        }
+      },
+      onclosetag(name){
+        if(name === 'a'){
+          isCover = false;
+          isAuthor = false;
+          isStatusText = false;
+          isGenresText = false;
+          isStatus = false;
+        }
+        if(name === 'div'){
+          isSummary = false;
+          isGenres = false;
+        }
+      }
+    })
+    parser.write(html);
+    parser.end();
+    novel.genres = genreArray.join(', ');
 
-    const chaptersHtmlToString = await fetchApi(chapterListUrl).then(r =>
+    const chapterListUrl = this.site + '/chapters/' + novelId + '/';
+    const chaptersHtml = await fetchApi(chapterListUrl).then(r =>
       r.text(),
     );
-    const pageCheerio = parseHTML(chaptersHtmlToString);
+    let dataJson: { 
+      pages_count: string, 
+      chapters: ChapterEntry[] 
+    } = { pages_count: '', chapters : [] };
+    let isScript = false;
+    const parser2 = new Parser ({
+      ontext(data){
+        if(isScript){
+          if (data.includes('window.__DATA__ =')){
+            dataJson = JSON.parse(
+              data.replace('window.__DATA__ =', '')
+            );
+          }
+        }
+      },
+      onclosetag(name){
+        if(name === 'main'){
+          isScript = true;
+        }
+        if (name === 'script'){
+          isScript = false;
+        }
+      },
+    })
+    parser2.write(chaptersHtml);
+    parser2.end();
 
-    const json = pageCheerio('#dle-content main').next().html()!;
-    const data = JSON.parse(json.replace('window.__DATA__ =', ''));
-    novel.totalPages = Number(data.pages_count);
-    novel.chapters = this.parseChapters(data);
+    novel.totalPages = Number(dataJson.pages_count);
+    novel.chapters = this.parseChapters(dataJson);
 
-    const latestChapterUrl = data.chapters[0].link;
-    const latestChapterName = data.chapters[0].title;
-    const latestChapterDate = data.chapters[0].date;
+    const latestChapterUrl = dataJson.chapters[0].link;
+    const latestChapterName = dataJson.chapters[0].title;
+    const latestChapterDate = dataJson.chapters[0].date;
 
     novel.latestChapter = latestChapterUrl
       ? {
@@ -138,10 +240,33 @@ class RanobesPlugin implements Plugin.PagePlugin {
     const firstUrl = this.site + '/chapters' + pagePath.replace('novels/', '');
     const pageUrl = firstUrl + '/page/' + page;
     const pageBody = await fetchApi(pageUrl).then(r => r.text());
-    const loadedCheerio = parseHTML(pageBody);
-    const json = loadedCheerio('#dle-content main').next().html()!;
-    const data = JSON.parse(json.replace('window.__DATA__ =', ''));
-    const chapters = this.parseChapters(data);
+    let isScript = false;
+    let dataJson: { 
+      pages_count: string, 
+      chapters: ChapterEntry[] 
+    } = { pages_count: '', chapters : [] };
+    const parser = new Parser({
+      ontext(data){
+        if(isScript){
+          if (data.includes('window.__DATA__ =')){
+            dataJson = JSON.parse(
+              data.replace('window.__DATA__ =', '')
+            );
+          }
+        }
+      },
+      onclosetag(name){
+        if(name === 'main'){
+          isScript = true;
+        }
+        if (name === 'script'){
+          isScript = false;
+        }
+      }
+    })
+    parser.write(pageBody);
+    parser.end();
+    const chapters = this.parseChapters(dataJson);
     return {
       chapters,
     };
@@ -149,11 +274,99 @@ class RanobesPlugin implements Plugin.PagePlugin {
 
   async parseChapter(chapterPath: string): Promise<string> {
     const result = await fetchApi(this.site + chapterPath);
-    const body = await result.text();
-
-    const loadedCheerio = parseHTML(body);
-
-    const chapterText = loadedCheerio('#arrticle').html() || '';
+    const html = await result.text();
+    let chapterText = '';
+    let isChapter = false;
+    let isPtag = false;
+    let isStyleText = false;
+    const parser = new Parser({
+      onopentag(name,attribs){
+        if (isChapter && name === 'div'){
+          let stylediv = attribs['style']
+          if(stylediv){
+            chapterText += `<div style="${stylediv}">`
+            isStyleText = true;
+          } else {
+            chapterText += `<div>`
+          }
+        }
+        if (isChapter && name === 'table'){
+          let w = attribs['width'];
+          if(w) {
+            chapterText += `<table width="${w}">`;
+          } else {
+            chapterText += `<table>`;
+          }
+        }
+        if (isChapter && name === 'tbody'){
+          chapterText += `<tbody>`;
+        }
+        if (isChapter && name === 'tr'){
+          chapterText += `<tr>`;
+        }
+        if (isChapter && name === 'td'){
+          let w1 = attribs['width'];
+          if(w1) {
+            chapterText += `<td width="${w1}">`;
+          } else {
+            chapterText += `<td>`;
+          }
+        }
+      },
+      onattribute(name, value){
+        if (name === 'id' && value === 'arrticle'){
+          isChapter = true;
+        }
+        if (name === 'class' && value === 'category grey ellipses'){
+          isChapter = false;
+          isPtag = false;
+        }
+      },
+      onopentagname(name){
+        if (isChapter && name === 'p'){
+          chapterText += '<p>';
+          isPtag = true;
+          if(isStyleText){
+            isStyleText = false;
+          }
+        }
+        if (isChapter && name === 'br'){
+          chapterText += `<br>`;
+        }
+      },
+      ontext(data){
+        if(isPtag){
+          chapterText += data;
+        }
+        if(isStyleText){
+          chapterText += data;
+        }
+      },
+      onclosetag(name){
+        if (name === 'p'){
+          isPtag = false;
+          chapterText += '</p>'
+        }
+        if (isChapter && name === 'td'){
+          chapterText += `</td>`;
+        }
+        if (isChapter && name === 'tr'){
+          chapterText += `</tr>`;
+        }
+        if (isChapter && name === 'tbody'){
+          chapterText += `</tbody>`;
+        }
+        if (isChapter && name === 'table'){
+          chapterText += `</table>`;
+        }
+        if (isChapter && name === 'div'){
+          isStyleText = false;
+          chapterText += `</div>`
+        }
+      }
+    })
+    parser.write(html)
+    parser.end();
 
     return chapterText;
   }
@@ -163,15 +376,21 @@ class RanobesPlugin implements Plugin.PagePlugin {
     page: number,
   ): Promise<Plugin.NovelItem[]> {
     let link = `${this.site}/search/${searchTerm}/page/${page}`;
-
     const body = await fetchApi(link).then(r => r.text());
 
-    const loadedCheerio = parseHTML(body);
-    return this.parseNovels(loadedCheerio);
+    return this.parseNovels(body);
   }
+
 
   async fetchImage(url: string): Promise<string | undefined> {
     return await fetchFile(url);
   }
 }
 export default new RanobesPlugin();
+
+interface ChapterEntry {
+  id: number;
+  title: string;
+  date: string;
+  link: string;
+}

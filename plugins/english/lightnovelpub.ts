@@ -1,4 +1,4 @@
-import { load as parseHTML } from 'cheerio';
+import { Parser } from 'htmlparser2';
 import { fetchApi, fetchFile } from '@libs/fetch';
 import { Plugin } from '@typings/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
@@ -7,13 +7,49 @@ import dayjs from 'dayjs';
 class LightNovelPub implements Plugin.PagePlugin {
   id = 'lightnovelpub';
   name = 'LightNovelPub';
-  version = '1.0.1';
+  version = '2.0.0';
   icon = 'src/en/lightnovelpub/icon.png';
   site = 'https://www.lightnovelpub.com/';
   headers = {
     Accept: 'application/json',
     'Content-Type': 'application/json',
   };
+
+  parseNovels(html: string) {
+    const novels: Plugin.NovelItem[] = [];
+    let tempNovel = {} as Plugin.NovelItem;
+    let isParsingNovel = false;
+    const parser = new Parser ({
+      onopentag(name, attribs){
+        if (isParsingNovel){
+          if (name === 'a'){
+            tempNovel.path = attribs['href'].slice(1);
+            tempNovel.name = attribs['title'];
+          }
+          if (name === 'img'){
+            tempNovel.cover = attribs['data-src'] || attribs['src'];
+          }
+          if (tempNovel.path && tempNovel.cover){
+            novels.push(tempNovel);
+            tempNovel = {} as Plugin.NovelItem;
+          }
+        }
+      },
+      onattribute(name, value){
+        if (name === 'class' && value === 'novel-item'){
+          isParsingNovel = true;
+        }
+      },
+      onclosetag(name){
+        if(name === 'li'){
+          isParsingNovel = false;
+        }
+      }
+    })
+    parser.write(html);
+    parser.end();
+    return novels;
+  }
 
   async popularNovels(
     page: number,
@@ -27,91 +63,171 @@ class LightNovelPub implements Plugin.PagePlugin {
 
     const body = await fetchApi(link).then(r => r.text());
 
-    const loadedCheerio = parseHTML(body);
-
-    const novels: Plugin.NovelItem[] = [];
-
-    loadedCheerio('.novel-item.ads').remove();
-
-    loadedCheerio('.novel-item').each((idx, ele) => {
-      const novelName = loadedCheerio(ele).find('.novel-title').text().trim();
-      const novelCover = loadedCheerio(ele).find('img').attr('data-src');
-      const novelUrl = loadedCheerio(ele)
-        .find('.novel-title > a')
-        .attr('href')
-        ?.substring(1);
-
-      if (!novelUrl) return;
-      const novel = {
-        name: novelName,
-        cover: novelCover,
-        path: novelUrl,
-      };
-
-      novels.push(novel);
-    });
-
-    return novels;
+    return this.parseNovels(body);
   }
 
   async parseNovel(
     novelPath: string,
   ): Promise<Plugin.SourceNovel & { totalPages: number }> {
     const body = await fetchApi(this.site + novelPath).then(r => r.text());
-
-    const loadedCheerio = parseHTML(body);
-    const totalChapters = parseInt(
-      loadedCheerio('.header-stats span:first strong').text(),
-      10,
-    );
-
     const novel: Plugin.SourceNovel & { totalPages: number } = {
       path: novelPath,
-      name: loadedCheerio('h1.novel-title').text().trim() || 'Untitled',
-      cover: loadedCheerio('figure.cover > img').attr('data-src'),
-      author: loadedCheerio('.author > a > span').text(),
-      summary: loadedCheerio('.summary > .content').text().trim(),
-      status: loadedCheerio('.header-stats span:last strong').text(),
-      totalPages: Math.ceil(totalChapters / 100),
+      name: '',
+      summary: '',
+      totalPages: 1,
       chapters: [],
-    };
-
-    novel.genres = loadedCheerio('.categories ul li')
-      .map((a, ex) => loadedCheerio(ex).text().trim())
-      .toArray()
-      .join(',');
-
+    }
+    let isHeaderStats = false;
+    let isStatus = false;
+    let isTotalChapters = false;
+    let isNovelName = false;
+    let isAuthorName = false;
+    let isSummary = false;
+    let isGenres = false;
+    let isTags = false;
+    let genreArray: string[] = []
+    let isCover = false;
+    const parser = new Parser({
+      onopentag(name, attribs){
+        if(name === 'h1' && attribs['class']?.includes('novel-title')){
+          isNovelName = true;
+        }
+        if(name === 'div' && attribs['class']?.includes('content')){
+          isSummary = true;
+        }
+        if(name === 'figure' && attribs['class'] === 'cover'){
+          isCover = true;
+        }
+        if(isCover){
+          if(name === 'img'){
+            novel.cover = attribs['data-src'] || attribs['src'];
+          }
+        }
+      },
+      onopentagname(name){
+        if (isHeaderStats && name === 'strong'){
+          isStatus = true;
+        }
+        if (isSummary && name === 'br'){
+          novel.summary += '\n';
+        }
+        if (isGenres && name === 'a'){
+          isTags = true;
+        }
+      },
+      onattribute(name,value){
+        if (name === 'class' && value === 'header-stats'){
+          isTotalChapters = true;
+          isHeaderStats = true;
+        }
+        if (name === 'itemprop' && value === 'author'){
+          isAuthorName = true;
+        }
+        if (name === 'class' && value === 'categories'){
+          isGenres = true;
+        }
+      },
+      ontext(data){
+        if(isTotalChapters){
+          novel.totalPages = Math.ceil(parseInt(data, 10) / 100);
+        }
+        if(isStatus){
+          novel.status = data.trim();
+        }
+        if(isNovelName){
+          novel.name += data.trim();
+        }
+        if(isAuthorName){
+          novel.author = data;
+        }
+        if(isSummary){
+          novel.summary += data;
+        }
+        if(isTags){
+          genreArray.push(data);
+        }
+      },
+      onclosetag(name){
+        if(name === 'strong'){
+          isTotalChapters = false;
+          isStatus = false;
+        }
+        if(name === 'i'){
+          isStatus = false;
+        }
+        if(name === 'h1'){
+          isNovelName = false;
+        }
+        if(name === 'span'){
+          isAuthorName = false;
+        }
+        if(name === 'div'){
+          isHeaderStats = false;
+          isSummary = false;
+          isGenres = false;
+        }
+        if(name === 'a'){
+          isTags = false;
+        }
+        if(name === 'figure'){
+          isCover = false;
+        }
+      }
+    })
+    parser.write(body);
+    parser.end();
+    novel.genres = genreArray.join(', ');
     return novel;
   }
 
   async parsePage(novelPath: string, page: string): Promise<Plugin.SourcePage> {
     const url = this.site + novelPath + '/chapters/page-' + page;
     const body = await fetchApi(url).then(res => res.text());
-    const loadedCheerio = parseHTML(body);
     const chapter: Plugin.ChapterItem[] = [];
-    loadedCheerio('.chapter-list li').each(function () {
-      const chapterName =
-        'Chapter ' +
-        loadedCheerio(this).find('.chapter-no').text().trim() +
-        ' - ' +
-        loadedCheerio(this).find('.chapter-title').text().trim();
-
-      const releaseDate = loadedCheerio(this)
-        .find('.chapter-update')
-        .attr('datetime');
-
-      const chapterUrl = loadedCheerio(this)
-        .find('a')
-        .attr('href')
-        ?.substring(1);
-      if (!chapterUrl) return;
-
-      chapter.push({
-        name: chapterName,
-        path: chapterUrl,
-        releaseTime: dayjs(releaseDate).toISOString(),
-      });
-    });
+    let tempChapter = {} as Plugin.ChapterItem; 
+    let isChapterItem = false;
+    let isChapterList = false;
+    const parser = new Parser ({
+      onopentag(name, attribs){
+        if(isChapterList){
+          if (name === 'li'){
+            isChapterItem = true;
+            tempChapter.chapterNumber = Number(attribs['data-orderno']);
+          }
+          if (isChapterItem){
+            if (name === 'a'){
+              tempChapter.name = attribs['title'];
+              tempChapter.path = attribs['href'].slice(1);
+            }
+            if (name === 'time'){
+              tempChapter.releaseTime = dayjs(attribs['datetime']).toISOString();
+            }
+            if (
+              tempChapter.chapterNumber && 
+              tempChapter.path && 
+              tempChapter.releaseTime){
+                chapter.push(tempChapter);
+                tempChapter = {} as Plugin.ChapterItem;
+            }
+          }
+        }
+      },
+      onattribute(name, value){
+        if (name === 'class' && value === 'chapter-list'){
+          isChapterList = true;
+        }
+      },
+      onclosetag(name){
+        if (name === 'a'){
+          isChapterItem = false;
+        }
+        if (name === 'ul'){
+          isChapterList = false;
+        }
+      }
+    })
+    parser.write(body);
+    parser.end();
     const chapters = chapter;
     return { chapters };
   }
@@ -119,9 +235,98 @@ class LightNovelPub implements Plugin.PagePlugin {
   async parseChapter(chapterPath: string): Promise<string> {
     const body = await fetchApi(this.site + chapterPath).then(r => r.text());
 
-    const loadedCheerio = parseHTML(body);
-
-    let chapterText = loadedCheerio('#chapter-container').html() || '';
+    let chapterText = '';
+    let isChapter = false;
+    let isPtag = false;
+    let isStyleText = false;
+    const parser = new Parser({
+      onopentag(name,attribs){
+        if (isChapter && name === 'div'){
+          let stylediv = attribs['style']
+          if(stylediv){
+            chapterText += `<div style="${stylediv}">`
+            isStyleText = true;
+          } else {
+            chapterText += `<div>`
+          }
+        }
+        if (isChapter && name === 'table'){
+          let w = attribs['width'];
+          if(w) {
+            chapterText += `<table width="${w}">`;
+          } else {
+            chapterText += `<table>`;
+          }
+        }
+        if (isChapter && name === 'tbody'){
+          chapterText += `<tbody>`;
+        }
+        if (isChapter && name === 'tr'){
+          chapterText += `<tr>`;
+        }
+        if (isChapter && name === 'td'){
+          let w1 = attribs['width'];
+          if(w1) {
+            chapterText += `<td width="${w1}">`;
+          } else {
+            chapterText += `<td>`;
+          }
+        }
+      },
+      onattribute(name, value){
+        if (name === 'id' && value === 'chapter-container'){
+          isChapter = true;
+        }
+        if (name === 'class' && value?.includes('chapternav')){
+          isChapter = false;
+          isPtag = false;
+        }
+      },
+      onopentagname(name){
+        if (isChapter && name === 'p'){
+          chapterText += '<p>';
+          isPtag = true;
+          if(isStyleText){
+            isStyleText = false;
+          }
+        }
+        if (isChapter && name === 'br'){
+          chapterText += `<br>`;
+        }
+      },
+      ontext(data){
+        if(isPtag){
+          chapterText += data;
+        }
+        if(isStyleText){
+          chapterText += data;
+        }
+      },
+      onclosetag(name){
+        if (name === 'p'){
+          isPtag = false;
+          chapterText += '</p>'
+        }
+        if (isChapter && name === 'td'){
+          chapterText += `</td>`;
+        }
+        if (isChapter && name === 'tr'){
+          chapterText += `</tr>`;
+        }
+        if (isChapter && name === 'tbody'){
+          chapterText += `</tbody>`;
+        }
+        if (isChapter && name === 'table'){
+          chapterText += `</table>`;
+        }
+        if (isChapter && name === 'div'){
+          isStyleText = false;
+          chapterText += `</div>`
+        }
+      }
+    })
+    parser.write(body)
+    parser.end();
 
     return chapterText;
   }
@@ -133,39 +338,27 @@ class LightNovelPub implements Plugin.PagePlugin {
     const url = `${this.site}lnsearchlive`;
     const link = `${this.site}search`;
     const response = await fetchApi(link).then(r => r.text());
-    const token = parseHTML(response);
-    let verifytoken = token('#novelSearchForm > input').attr('value');
+    let verifytoken = '';
+    const parser = new Parser ({
+      onopentag(name, attribs) {
+        if (name === 'input' && attribs['name']?.includes('LNRequestVerifyToken')){
+          verifytoken = attribs['value'];
+        }
+      },
+    })
+    parser.write(response);
+    parser.end();
 
-    let formData = new FormData();
+    const formData = new FormData();
     formData.append('inputContent', searchTerm);
 
     const body = await fetchApi(url, {
       method: 'POST',
       headers: { LNRequestVerifyToken: verifytoken! },
       body: formData,
-    }).then(r => r.text());
+    }).then(r => r.json());
 
-    let loadedCheerio = parseHTML(body);
-
-    let novels: Plugin.NovelItem[] = [];
-
-    let results = JSON.parse(loadedCheerio('body').text());
-
-    loadedCheerio = parseHTML(results.resultview);
-
-    loadedCheerio('.novel-item').each((idx, ele) => {
-      const novelName = loadedCheerio(ele).find('h4.novel-title').text().trim();
-      const novelCover = loadedCheerio(ele).find('img').attr('src');
-      const novelUrl = loadedCheerio(ele).find('a').attr('href')?.substring(1);
-      if (!novelUrl) return;
-      novels.push({
-        name: novelName,
-        path: novelUrl,
-        cover: novelCover,
-      });
-    });
-
-    return novels;
+    return this.parseNovels(body.resultview)
   }
 
   async fetchImage(url: string): Promise<string | undefined> {
