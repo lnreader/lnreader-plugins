@@ -7,7 +7,7 @@ class WTRLAB implements Plugin.PluginBase {
   id = 'WTRLAB';
   name = 'WTR-LAB';
   site = 'https://wtr-lab.com/';
-  version = '1.0.0';
+  version = '1.0.1';
   icon = 'src/en/wtrlab/icon.png';
   sourceLang = 'en/';
 
@@ -53,7 +53,6 @@ class WTRLAB implements Plugin.PluginBase {
     } else {
       const body = await fetchApi(link).then(res => res.text());
       const loadedCheerio = parseHTML(body);
-      //console.log(link);
       const novels: Plugin.NovelItem[] = loadedCheerio('.serie-item')
         .map((index, element) => ({
           name:
@@ -74,7 +73,6 @@ class WTRLAB implements Plugin.PluginBase {
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
     const body = await fetchApi(this.site + novelPath).then(res => res.text());
     const loadedCheerio = parseHTML(body);
-    //console.log(this.site + novelPath);
 
     const novel: Plugin.SourceNovel = {
       path: novelPath,
@@ -106,7 +104,7 @@ class WTRLAB implements Plugin.PluginBase {
     const chapters: Plugin.ChapterItem[] =
       jsonData.props.pageProps.serie.chapters.map(
         (jsonChapter, chapterIndex) => ({
-          name: 'Chapter ' + jsonChapter.slug + ' ' + jsonChapter.title,
+          name: jsonChapter.title,
           path:
             this.sourceLang +
             'serie-' +
@@ -114,8 +112,10 @@ class WTRLAB implements Plugin.PluginBase {
             '/' +
             jsonData.props.pageProps.serie.serie_data.slug +
             '/chapter-' +
-            jsonChapter.slug, // Assuming 'slug' is the intended path
-          releaseTime: jsonChapter.created_at.substring(0, 10),
+            jsonChapter.order, // Assuming 'slug' is the intended path
+          releaseTime: (
+            jsonChapter?.created_at || jsonChapter?.updated_at
+          )?.substring(0, 10),
           chapterNumber: chapterIndex + 1,
         }),
       );
@@ -129,16 +129,14 @@ class WTRLAB implements Plugin.PluginBase {
     const body = await fetchApi(this.site + chapterPath).then(res =>
       res.text(),
     );
+
     const loadedCheerio = parseHTML(body);
     const chapterJson = loadedCheerio('#__NEXT_DATA__').html() + '';
     const jsonData: NovelJson = JSON.parse(chapterJson);
 
-    //console.log(body);
-
     const chapterContent = JSON.stringify(
       jsonData.props.pageProps.serie.chapter_data.data.body,
     );
-    //console.log(chapterContent);
     const parsedArray = JSON.parse(chapterContent);
     let htmlString = '';
 
@@ -239,10 +237,12 @@ interface Serie {
 interface Chapter {
   serie_id: number;
   id: number;
+  order: number;
   slug: string;
   title: string;
   name: string;
   created_at: string;
+  updated_at: string;
 }
 interface ChapterData {
   data: ChapterContent;
