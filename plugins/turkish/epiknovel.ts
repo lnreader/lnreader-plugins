@@ -4,17 +4,16 @@ import { Plugin } from '@typings/plugin';
 import { Filters } from '@libs/filterInputs';
 
 class EpikNovel implements Plugin.PluginBase {
-  id = 'epiknovel.com';
+  id = 'epiknovel';
   name = 'EpikNovel';
   icon = 'src/tr/epiknovel/icon.png';
   site = 'https://www.epiknovel.com/';
   version = '1.0.0';
-  baseUrl = this.site;
   async popularNovels(
     pageNo: number,
     options: Plugin.PopularNovelsOptions<Filters>,
   ): Promise<Plugin.NovelItem[]> {
-    let url = this.baseUrl + 'seri-listesi?Sayfa=' + pageNo;
+    let url = this.site + 'seri-listesi?Sayfa=' + pageNo;
 
     const result = await fetch(url);
     const body = await result.text();
@@ -23,17 +22,17 @@ class EpikNovel implements Plugin.PluginBase {
 
     let novels: Plugin.NovelItem[] = [];
 
-    loadedCheerio('div.col-lg-12.col-md-12').each(function () {
-      const novelName = loadedCheerio(this).find('h3').text();
-      const novelCover = loadedCheerio(this).find('img').attr('data-src');
-      const novelUrl = loadedCheerio(this).find('h3 > a').attr('href');
+    loadedCheerio('div.col-lg-12.col-md-12').each((idx, ele) => {
+      const novelName = loadedCheerio(ele).find('h3').text();
+      const novelCover = loadedCheerio(ele).find('img').attr('data-src');
+      const novelUrl = loadedCheerio(ele).find('h3 > a').attr('href');
 
       if (!novelUrl) return;
 
       const novel = {
         name: novelName,
         cover: novelCover,
-        url: novelUrl,
+        path: novelUrl.replace(this.site, ''),
       };
 
       novels.push(novel);
@@ -43,8 +42,8 @@ class EpikNovel implements Plugin.PluginBase {
 
     return novels;
   }
-  async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
-    const url = novelUrl;
+  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+    const url = this.site + novelPath;
     // console.log(url);
 
     const result = await fetch(url);
@@ -52,9 +51,10 @@ class EpikNovel implements Plugin.PluginBase {
 
     let loadedCheerio = parseHTML(body);
 
-    let novel: Plugin.SourceNovel = { url };
-
-    novel.name = loadedCheerio('h1#tables').text().trim();
+    let novel: Plugin.SourceNovel = {
+      path: novelPath,
+      name: loadedCheerio('h1#tables').text().trim(),
+    };
 
     novel.cover = loadedCheerio('img.manga-cover').attr('src');
 
@@ -81,18 +81,16 @@ class EpikNovel implements Plugin.PluginBase {
 
     loadedCheerio('table')
       .find('tr')
-      .each(function () {
-        const releaseDate = loadedCheerio(this).find('td:nth-child(3)').text();
+      .each((idx, ele) => {
+        const releaseDate = loadedCheerio(ele).find('td:nth-child(3)').text();
 
-        let chapterName = loadedCheerio(this)
-          .find('td:nth-child(1) > a')
-          .text();
+        let chapterName = loadedCheerio(ele).find('td:nth-child(1) > a').text();
 
-        if (loadedCheerio(this).find('td:nth-child(1) > span').length > 0) {
+        if (loadedCheerio(ele).find('td:nth-child(1) > span').length > 0) {
           chapterName = '🔒 ' + chapterName;
         }
 
-        const chapterUrl = loadedCheerio(this)
+        const chapterUrl = loadedCheerio(ele)
           .find(' td:nth-child(1) > a')
           .attr('href');
 
@@ -100,7 +98,7 @@ class EpikNovel implements Plugin.PluginBase {
 
         novelChapters.push({
           name: chapterName,
-          url: chapterUrl,
+          path: chapterUrl.replace(this.site, ''),
           releaseTime: releaseDate,
         });
       });
@@ -110,8 +108,8 @@ class EpikNovel implements Plugin.PluginBase {
 
     return novel;
   }
-  async parseChapter(chapterUrl: string): Promise<string> {
-    const url = chapterUrl;
+  async parseChapter(chapterPath: string): Promise<string> {
+    const url = this.site + chapterPath;
 
     // console.log(url);
 
@@ -134,8 +132,7 @@ class EpikNovel implements Plugin.PluginBase {
     searchTerm: string,
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
-    const url =
-      this.baseUrl + 'seri-listesi?q=' + searchTerm + '&Sayfa=' + pageNo;
+    const url = this.site + 'seri-listesi?q=' + searchTerm + '&Sayfa=' + pageNo;
 
     const result = await fetch(url);
     const body = await result.text();
@@ -144,17 +141,17 @@ class EpikNovel implements Plugin.PluginBase {
 
     let novels: Plugin.NovelItem[] = [];
 
-    loadedCheerio('div.col-lg-12.col-md-12').each(function () {
-      const novelName = loadedCheerio(this).find('h3').text();
-      const novelCover = loadedCheerio(this).find('img').attr('data-src');
-      const novelUrl = loadedCheerio(this).find('h3 > a').attr('href');
+    loadedCheerio('div.col-lg-12.col-md-12').each((idx, ele) => {
+      const novelName = loadedCheerio(ele).find('h3').text();
+      const novelCover = loadedCheerio(ele).find('img').attr('data-src');
+      const novelUrl = loadedCheerio(ele).find('h3 > a').attr('href');
 
       if (!novelUrl) return;
 
       const novel = {
         name: novelName,
         cover: novelCover,
-        url: novelUrl,
+        path: novelUrl.replace(this.site, ''),
       };
 
       novels.push(novel);
