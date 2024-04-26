@@ -3,28 +3,19 @@ import { Filters } from '@libs/filterInputs';
 import { Plugin } from '@typings/plugin';
 import { load as parseHTML } from 'cheerio';
 
-export const id = 'yuukitls.com';
-export const name = 'Yuuki Tls';
-export const site = 'https://yuukitls.com/';
-export const version = '1.0.0';
-export const icon = 'src/es/yuukitls/icon.png';
-
-const baseUrl = site;
-
 class Yuuki implements Plugin.PluginBase {
-  id = 'yuukitls.com';
+  id = 'yuukitls';
   name = 'Yuuki Tls';
   icon = 'src/es/yuukitls/icon.png';
   site = 'https://yuukitls.com/';
   filters?: Filters | undefined;
   version = '1.0.0';
-  baseUrl = this.site;
 
   async popularNovels(
     pageNo: number,
     options: Plugin.PopularNovelsOptions<Filters>,
   ): Promise<Plugin.NovelItem[]> {
-    let url = baseUrl;
+    let url = this.site;
 
     const result = await fetchApi(url);
     const body = await result.text();
@@ -35,18 +26,18 @@ class Yuuki implements Plugin.PluginBase {
 
     loadedCheerio('.quadmenu-navbar-collapse ul li:nth-child(2)')
       .find('li')
-      .each(function () {
-        const novelName = loadedCheerio(this)
+      .each((idx, ele) => {
+        const novelName = loadedCheerio(ele)
           .text()
           .replace(/[\s\n]+/g, ' ');
-        const novelCover = loadedCheerio(this).find('img').attr('src');
+        const novelCover = loadedCheerio(ele).find('img').attr('src');
 
-        let novelUrl = loadedCheerio(this).find('a').attr('href');
+        let novelUrl = loadedCheerio(ele).find('a').attr('href');
         if (!novelUrl) return;
         const novel = {
           name: novelName,
           cover: novelCover,
-          url: novelUrl,
+          path: novelUrl.replace(this.site, ''),
         };
 
         novels.push(novel);
@@ -54,8 +45,8 @@ class Yuuki implements Plugin.PluginBase {
 
     return novels;
   }
-  async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
-    const url = novelUrl;
+  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+    const url = this.site + novelPath;
 
     const result = await fetchApi(url);
     const body = await result.text();
@@ -63,13 +54,12 @@ class Yuuki implements Plugin.PluginBase {
     let loadedCheerio = parseHTML(body);
 
     let novel: Plugin.SourceNovel = {
-      url,
+      path: novelPath,
+      name: loadedCheerio('h1.entry-title')
+        .text()
+        .replace(/[\t\n]/g, '')
+        .trim(),
     };
-
-    novel.name = loadedCheerio('h1.entry-title')
-      .text()
-      .replace(/[\t\n]/g, '')
-      .trim();
 
     novel.cover = loadedCheerio('img[loading="lazy"]').attr('src');
 
@@ -98,17 +88,17 @@ class Yuuki implements Plugin.PluginBase {
     if (loadedCheerio('.entry-content').find('li').length) {
       loadedCheerio('.entry-content')
         .find('li')
-        .each(function () {
-          let chapterUrl = loadedCheerio(this).find('a').attr('href');
+        .each((idx, ele) => {
+          let chapterUrl = loadedCheerio(ele).find('a').attr('href');
 
-          if (chapterUrl && chapterUrl.includes(baseUrl)) {
-            const chapterName = loadedCheerio(this).text();
+          if (chapterUrl && chapterUrl.includes(this.site)) {
+            const chapterName = loadedCheerio(ele).text();
             const releaseDate = null;
 
             const chapter = {
               name: chapterName,
               releaseTime: releaseDate,
-              url: chapterUrl,
+              path: chapterUrl.replace(this.site, ''),
             };
 
             novelChapters.push(chapter);
@@ -117,17 +107,17 @@ class Yuuki implements Plugin.PluginBase {
     } else {
       loadedCheerio('.entry-content')
         .find('p')
-        .each(function () {
-          let chapterUrl = loadedCheerio(this).find('a').attr('href');
+        .each((idx, ele) => {
+          let chapterUrl = loadedCheerio(ele).find('a').attr('href');
 
-          if (chapterUrl && chapterUrl.includes(baseUrl)) {
-            const chapterName = loadedCheerio(this).text();
+          if (chapterUrl && chapterUrl.includes(this.site)) {
+            const chapterName = loadedCheerio(ele).text();
             const releaseDate = null;
 
             const chapter = {
               name: chapterName,
               releaseTime: releaseDate,
-              url: chapterUrl,
+              path: chapterUrl.replace(this.site, ''),
             };
 
             novelChapters.push(chapter);
@@ -139,8 +129,8 @@ class Yuuki implements Plugin.PluginBase {
 
     return novel;
   }
-  async parseChapter(chapterUrl: string): Promise<string> {
-    const url = chapterUrl;
+  async parseChapter(chapterPath: string): Promise<string> {
+    const url = this.site + chapterPath;
 
     const result = await fetchApi(url);
     const body = await result.text();
@@ -156,7 +146,7 @@ class Yuuki implements Plugin.PluginBase {
   ): Promise<Plugin.NovelItem[]> {
     searchTerm = searchTerm.toLowerCase();
 
-    let url = baseUrl;
+    let url = this.site;
 
     const result = await fetchApi(url);
     const body = await result.text();
@@ -167,17 +157,17 @@ class Yuuki implements Plugin.PluginBase {
 
     loadedCheerio('.menu-item-2869')
       .find('.menu-item.menu-item-type-post_type.menu-item-object-post')
-      .each(function () {
-        const novelName = loadedCheerio(this).text();
-        const novelCover = loadedCheerio(this).find('img').attr('src');
+      .each((idx, ele) => {
+        const novelName = loadedCheerio(ele).text();
+        const novelCover = loadedCheerio(ele).find('img').attr('src');
 
-        let novelUrl = loadedCheerio(this).find('a').attr('href');
+        let novelUrl = loadedCheerio(ele).find('a').attr('href');
         if (!novelUrl) return;
 
         const novel = {
           name: novelName,
           cover: novelCover,
-          url: novelUrl,
+          path: novelUrl.replace(this.site, ''),
         };
 
         novels.push(novel);

@@ -5,13 +5,12 @@ import { defaultCover } from '@libs/defaultCover';
 import { Filters } from '@libs/filterInputs';
 
 class ReinoWuxia implements Plugin.PluginBase {
-  id = 'awuxia.com';
+  id = 'reinowuxia';
   name = 'ReinoWuxia';
-  icon = 'src/es/novelawuxia/icon.png';
+  icon = 'src/es/reinowuxia/icon.png';
   filters?: Filters | undefined;
   version = '1.0.0';
   site = 'http://www.reinowuxia.com/';
-  baseUrl = this.site;
   getNovelName(y: string | undefined) {
     return y?.replace(/-/g, ' ').replace(/(?:^|\s)\S/g, a => a.toUpperCase());
   }
@@ -19,7 +18,7 @@ class ReinoWuxia implements Plugin.PluginBase {
     pageNo: number,
     options: Plugin.PopularNovelsOptions<Filters>,
   ): Promise<Plugin.NovelItem[]> {
-    let url = this.baseUrl + 'p/todas-las-novelas.html';
+    let url = this.site + 'p/todas-las-novelas.html';
 
     const result = await fetchApi(url, {
       method: 'GET',
@@ -48,7 +47,7 @@ class ReinoWuxia implements Plugin.PluginBase {
         const novel = {
           name: novelName,
           cover: novelCover,
-          url: novelUrl,
+          path: novelUrl.replace(this.site, ''),
         };
 
         novels.push(novel);
@@ -56,17 +55,18 @@ class ReinoWuxia implements Plugin.PluginBase {
 
     return novels;
   }
-  async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
-    const url = novelUrl;
+  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+    const url = this.site + novelPath;
 
     const result = await fetchApi(url);
     const body = await result.text();
 
     let loadedCheerio = parseHTML(body);
 
-    let novel: Plugin.SourceNovel = { url };
-
-    novel.name = loadedCheerio('h1.post-title').text().trim();
+    let novel: Plugin.SourceNovel = {
+      path: novelPath,
+      name: loadedCheerio('h1.post-title').text().trim(),
+    };
 
     novel.cover = loadedCheerio('div.separator').find('a').attr('href');
 
@@ -94,13 +94,17 @@ class ReinoWuxia implements Plugin.PluginBase {
 
     let novelChapters: Plugin.ChapterItem[] = [];
 
-    loadedCheerio('div').each(function () {
-      const detailName = loadedCheerio(this).text();
+    loadedCheerio('div').each((idx, rootEle) => {
+      const detailName = loadedCheerio(rootEle).text();
       if (detailName.includes('Sinopsis')) {
         novel.summary =
-          loadedCheerio(this).next().text() !== ''
-            ? loadedCheerio(this).next().text().replace('Sinopsis', '').trim()
-            : loadedCheerio(this)
+          loadedCheerio(rootEle).next().text() !== ''
+            ? loadedCheerio(rootEle)
+                .next()
+                .text()
+                .replace('Sinopsis', '')
+                .trim()
+            : loadedCheerio(rootEle)
                 .next()
                 .next()
                 .text()
@@ -109,22 +113,25 @@ class ReinoWuxia implements Plugin.PluginBase {
       }
 
       if (detailName.includes('Lista de Capítulos')) {
-        loadedCheerio(this)
+        loadedCheerio(rootEle)
           .find('a')
-          .each(function (res) {
-            const chapterName = loadedCheerio(this).text();
-            let chapterUrl = loadedCheerio(this).attr('href');
+          .each((idx, ele) => {
+            const chapterName = loadedCheerio(ele).text();
+            const chapterPath = loadedCheerio(ele)
+              .attr('href')
+              ?.replace(this.site, '');
             const releaseDate = null;
 
             if (
               chapterName &&
-              chapterUrl &&
+              chapterPath &&
+              chapterPath !== '/' &&
               !novelChapters.some(chap => chap.name === chapterName)
             ) {
               const chapter = {
                 name: chapterName,
                 releaseTime: releaseDate,
-                url: chapterUrl,
+                path: chapterPath,
               };
 
               novelChapters.push(chapter);
@@ -137,8 +144,8 @@ class ReinoWuxia implements Plugin.PluginBase {
 
     return novel;
   }
-  async parseChapter(chapterUrl: string): Promise<string> {
-    const url = chapterUrl;
+  async parseChapter(chapterPath: string): Promise<string> {
+    const url = this.site + chapterPath;
 
     const result = await fetchApi(url);
     const body = await result.text();
@@ -153,7 +160,7 @@ class ReinoWuxia implements Plugin.PluginBase {
     searchTerm: string,
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
-    const url = `${this.baseUrl}search?q=${searchTerm}`;
+    const url = `${this.site}search?q=${searchTerm}`;
 
     const result = await fetchApi(url);
     const body = await result.text();
@@ -183,7 +190,7 @@ class ReinoWuxia implements Plugin.PluginBase {
         const novel = {
           name: novelName,
           cover: novelCover,
-          url: novelUrl,
+          path: novelUrl.replace(this.site, ''),
         };
 
         novels.push(novel);

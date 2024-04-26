@@ -57,7 +57,7 @@ used.add(path.join(root, '..', 'icons', 'coverNotAvailable.webp'));
 
         if (!skip[id] && icon && site) {
           const image = await fetch(
-            `https://www.google.com/s2/favicons?domain=${site}&sz=${size}`,
+            `https://www.google.com/s2/favicons?domain=${site}&sz=${size}&type=png`,
           )
             .then(res => res.arrayBuffer())
             .then(res => Buffer.from(res));

@@ -6,7 +6,7 @@ import { Plugin } from '@typings/plugin';
 class LightNovelBrasil implements Plugin.PluginBase {
   id = 'lightnovelbrasil';
   name = 'Light Novel Brasil';
-  icon = 'multisrc/wpmangastream/icons/lightnovelbrasil.png';
+  icon = 'src/pt/lightnovelbrasil/icon.png';
   site = 'https://lightnovelbrasil.com/';
   version = '1.0.0';
 
@@ -35,19 +35,19 @@ class LightNovelBrasil implements Plugin.PluginBase {
 
     const novels: Plugin.NovelItem[] = [];
 
-    loadedCheerio('article.bs').each(function () {
-      const novelName = loadedCheerio(this).find('.ntitle').text().trim();
-      let image = loadedCheerio(this).find('img');
+    loadedCheerio('article.bs').each((idx, ele) => {
+      const novelName = loadedCheerio(ele).find('.ntitle').text().trim();
+      let image = loadedCheerio(ele).find('img');
       const novelCover = image.attr('data-src') || image.attr('src');
 
-      const novelUrl = loadedCheerio(this).find('a').attr('href');
+      const novelUrl = loadedCheerio(ele).find('a').attr('href');
 
       if (!novelUrl) return;
 
       const novel = {
         name: novelName,
         cover: novelCover,
-        url: novelUrl,
+        path: novelUrl.replace(this.site, ''),
       };
 
       novels.push(novel);
@@ -56,8 +56,8 @@ class LightNovelBrasil implements Plugin.PluginBase {
     return novels;
   }
 
-  async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
-    const url = novelUrl;
+  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+    const url = this.site + novelPath;
     const headers = new Headers();
     const result = await fetchApi(url, { headers });
     const body = await result.text();
@@ -65,11 +65,10 @@ class LightNovelBrasil implements Plugin.PluginBase {
     let loadedCheerio = parseHTML(body);
 
     const novel: Plugin.SourceNovel = {
-      url,
+      path: novelPath,
+      name: loadedCheerio('.entry-title').text(),
       chapters: [],
     };
-
-    novel.name = loadedCheerio('.entry-title').text();
 
     novel.cover =
       loadedCheerio('img.wp-post-image').attr('data-src') ||
@@ -103,22 +102,22 @@ class LightNovelBrasil implements Plugin.PluginBase {
 
     loadedCheerio('.eplister')
       .find('li')
-      .each(function () {
+      .each((idx, ele) => {
         const chapterName =
-          loadedCheerio(this).find('.epl-num').text() +
+          loadedCheerio(ele).find('.epl-num').text() +
           ' - ' +
-          loadedCheerio(this).find('.epl-title').text();
+          loadedCheerio(ele).find('.epl-title').text();
 
-        const releaseDate = loadedCheerio(this).find('.epl-date').text().trim();
+        const releaseDate = loadedCheerio(ele).find('.epl-date').text().trim();
 
-        const chapterUrl = loadedCheerio(this).find('a').attr('href');
+        const chapterUrl = loadedCheerio(ele).find('a').attr('href');
 
         if (!chapterUrl) return;
 
         chapter.push({
           name: chapterName,
           releaseTime: releaseDate,
-          url: chapterUrl,
+          path: chapterUrl.replace(this.site, ''),
         });
       });
 
@@ -126,9 +125,9 @@ class LightNovelBrasil implements Plugin.PluginBase {
 
     return novel;
   }
-  async parseChapter(chapterUrl: string): Promise<string> {
+  async parseChapter(chapterPath: string): Promise<string> {
     const headers = new Headers();
-    const result = await fetchApi(chapterUrl, { headers });
+    const result = await fetchApi(this.site + chapterPath, { headers });
     const body = await result.text();
 
     const loadedCheerio = parseHTML(body);
@@ -151,15 +150,15 @@ class LightNovelBrasil implements Plugin.PluginBase {
 
     const novels: Plugin.NovelItem[] = [];
 
-    loadedCheerio('article.bs').each(function () {
-      const novelName = loadedCheerio(this).find('.ntitle').text().trim();
-      const novelCover = loadedCheerio(this).find('img').attr('src');
-      const novelUrl = loadedCheerio(this).find('a').attr('href');
+    loadedCheerio('article.bs').each((idx, ele) => {
+      const novelName = loadedCheerio(ele).find('.ntitle').text().trim();
+      const novelCover = loadedCheerio(ele).find('img').attr('src');
+      const novelUrl = loadedCheerio(ele).find('a').attr('href');
       if (!novelUrl) return;
 
       novels.push({
         name: novelName,
-        url: novelUrl,
+        path: novelUrl.replace(this.site, ''),
         cover: novelCover,
       });
     });
