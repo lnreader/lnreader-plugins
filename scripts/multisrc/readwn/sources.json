@@ -11,22 +11,36 @@
   },
   {
     "id": "ltnovel",
-    "sourceSite": "https://www.ltnovel.com",
-    "sourceName": "Ltnovel"
+    "sourceSite": "https://www.ltnovels.com",
+    "sourceName": "Ltnovel",
+    "options": {
+      "versionIncrements": 1
+    }
   },
   {
     "id": "wuxiamtl",
-    "sourceSite": "https://www.fansmtl.com",
-    "sourceName": "Fans MTL"
+    "sourceSite": "https://www.fansmtl.org",
+    "sourceName": "Fans MTL",
+    "options": {
+      "versionIncrements": 1
+    }
   },
   {
     "id": "fannovel",
-    "sourceSite": "https://www.fannovel.com",
-    "sourceName": "FanNovel"
+    "sourceSite": "https://www.fannovels.org",
+    "sourceName": "FanNovel",
+    "options": {
+      "versionIncrements": 1
+    }
   },
   {
     "id": "wuxiaspace",
     "sourceSite": "https://www.wuxiaspace.com",
     "sourceName": "Wuxia Space"
+  },
+  {
+    "id": "wuxiav",
+    "sourceSite": "https://www.wuxiav.com",
+    "sourceName": "WuxiaV" 
   }
 ]

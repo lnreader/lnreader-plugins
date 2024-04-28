@@ -8,7 +8,7 @@ class StorySeedlingPlugin implements Plugin.PluginBase {
   name = 'StorySeedling';
   icon = 'src/en/storyseedling/icon.png';
   site = 'https://storyseedling.com/';
-  version = '1.0.0';
+  version = '1.0.1';
 
   async popularNovels(pageNo: number): Promise<Plugin.NovelItem[]> {
     let novels: Plugin.NovelItem[] = [];
@@ -25,11 +25,11 @@ class StorySeedlingPlugin implements Plugin.PluginBase {
       .replace("')", '') as string;
 
     var data = new FormData();
-    data.set('search', '');
-    data.set('orderBy', 'recent');
-    data.set('curpage', pageNo.toString());
-    data.set('post', postValue);
-    data.set('action', 'fetch_browse');
+    data.append('search', '');
+    data.append('orderBy', 'recent');
+    data.append('curpage', pageNo.toString());
+    data.append('post', postValue);
+    data.append('action', 'fetch_browse');
 
     var response = await (
       await fetchApi(url, { body: data, method: 'POST' })
@@ -135,11 +135,11 @@ class StorySeedlingPlugin implements Plugin.PluginBase {
       .replace("')", '') as string;
 
     var data = new FormData();
-    data.set('search', searchTerm);
-    data.set('orderBy', 'recent');
-    data.set('curpage', pageNo.toString());
-    data.set('post', postValue);
-    data.set('action', 'fetch_browse');
+    data.append('search', searchTerm);
+    data.append('orderBy', 'recent');
+    data.append('curpage', pageNo.toString());
+    data.append('post', postValue);
+    data.append('action', 'fetch_browse');
 
     var response = await (
       await fetchApi(url, { body: data, method: 'POST' })

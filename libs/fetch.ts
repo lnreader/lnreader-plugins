@@ -58,7 +58,7 @@ const makeInit = async (init?: FetchInit) => {
  */
 export async function fetchApi(url: string, init?: FetchInit) {
   init = await makeInit(init);
-  // console.log(init.headers);
+  console.log(init.headers);
   // console.log(url, init);
   return await fetch(url, init as RequestInit);
 }

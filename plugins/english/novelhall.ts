@@ -7,7 +7,7 @@ import { defaultCover } from '@libs/defaultCover';
 class NovelHall implements Plugin.PluginBase {
   id = 'novelhall';
   name = 'Novel Hall';
-  version = '1.0.0';
+  version = '1.0.1';
   icon = 'src/en/novelhall/icon.png';
   filters?: Filters | undefined; //TODO: Filters Requires hideOnSelect
   site = 'https://novelhall.com/';
@@ -104,19 +104,20 @@ class NovelHall implements Plugin.PluginBase {
 
     const novels: Plugin.NovelItem[] = [];
 
-    loadedCheerio('#article_list_content > li').each((idx, ele) => {
+    loadedCheerio('table tr').each((idx, ele) => {
       const novelName = loadedCheerio(ele)
-        .find('h3')
+        .find('td:nth-child(2)')
         .text()
         .replace(/\t+/g, '')
         .replace(/\n/g, ' ');
-      const novelCover = loadedCheerio(ele).find('img').attr('data-src');
-      const novelUrl = loadedCheerio(ele).find('a').attr('href')?.slice(1);
+      const novelUrl = loadedCheerio(ele)
+        .find('td:nth-child(2) a')
+        .attr('href');
       if (!novelUrl) return;
 
       const novel = {
         name: novelName,
-        cover: novelCover,
+        cover: defaultCover,
         path: novelUrl,
       };
 

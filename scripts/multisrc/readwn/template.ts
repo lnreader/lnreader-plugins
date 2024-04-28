@@ -6,11 +6,16 @@ import { load as parseHTML } from 'cheerio';
 import dayjs from 'dayjs';
 import qs from 'qs';
 
+interface ReadwnOptions {
+  versionIncrements?: number;
+}
+
 export interface ReadwnMetadata {
   id: string;
   sourceSite: string;
   sourceName: string;
   filters?: any;
+  options?: ReadwnOptions;
 }
 
 class ReadwnPlugin implements Plugin.PluginBase {
@@ -26,7 +31,8 @@ class ReadwnPlugin implements Plugin.PluginBase {
     this.name = metadata.sourceName;
     this.icon = `multisrc/readwn/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
-    this.version = '1.0.1';
+    const versionIncrements = metadata.options?.versionIncrements || 0;
+    this.version = `1.0.${1 + versionIncrements}`;
     this.filters = metadata.filters;
   }
 
