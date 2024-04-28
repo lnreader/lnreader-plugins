@@ -342,5 +342,14 @@
     "options": {
       "useNewChapterEndpoint": true
     }
+  },
+  {
+    "id": "worldnovel",
+    "sourceSite": "https://world-novel.fr/",
+    "sourceName": "WorldNovel",
+    "options": {
+      "useNewChapterEndpoint": true,
+      "lang":"French"
+    }
   }
 ]
