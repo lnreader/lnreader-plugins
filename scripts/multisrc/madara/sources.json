@@ -368,5 +368,85 @@
       "useNewChapterEndpoint": true,
       "lang": "Thai"
     }
+  },
+  {
+    "id": "azora",
+    "sourceSite": "https://azorago.com/",
+    "sourceName": "Azora",
+    "options": {
+      "useNewChapterEndpoint": true,
+      "lang": "Arabic"
+    }
+  },
+  {
+    "id": "translatinotaku",
+    "sourceSite": "https://translatinotaku.net/",
+    "sourceName": "Translation Otaku",
+    "options": {
+      "useNewChapterEndpoint": true,
+      "lang": "English"
+    }
+  },
+  {
+    "id": "dragontea",
+    "sourceSite": "https://dragontea.ink/",
+    "sourceName": "Dragon Tea",
+    "options": {
+      "useNewChapterEndpoint": true,
+      "lang": "English"
+    }
+  },
+  {
+    "id": "novelbookid",
+    "sourceSite": "https://www.novelbook.id/",
+    "sourceName": "NovelBookID",
+    "options": {
+      "useNewChapterEndpoint": true,
+      "lang": "Indonesian"
+    }
+  },
+  {
+    "id": "meownovel",
+    "sourceSite": "https://meownovel.com/",
+    "sourceName": "Meownovel",
+    "options": {
+      "useNewChapterEndpoint": true,
+      "lang": "English"
+    }
+  },
+  {
+    "id": "galaxytranslations",
+    "sourceSite": "https://galaxytranslations97.com/",
+    "sourceName": "Galaxy Translations",
+    "options": {
+      "useNewChapterEndpoint": true,
+      "lang": "English"
+    }
+  },
+  {
+    "id": "olaoe",
+    "sourceSite": "https://olaoe.cyou/",
+    "sourceName": "Olaoe.cyou",
+    "options": {
+      "useNewChapterEndpoint": true,
+      "lang": "Arabic"
+    }
+  },
+  {
+    "id": "wordexcerpt",
+    "sourceSite": "https://wordexcerpt.com/",
+    "sourceName": "WordExcerpt",
+    "options": {
+      "lang": "English"
+    }
+  },
+  {
+    "id": "citrusaurora",
+    "sourceSite": "https://citrusaurora.com/",
+    "sourceName": "Citrus Aurora",
+    "options": {
+      "useNewChapterEndpoint": true,
+      "lang": "English"
+    }
   }
 ]
