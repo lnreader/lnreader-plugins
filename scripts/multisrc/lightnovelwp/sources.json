@@ -166,5 +166,14 @@
       "reverseChapters": true,
       "seriesPath": "/novels/"
     }
+  },
+  {
+    "id": "lightnovelbrasil",
+    "sourceSite": "https://lightnovelbrasil.com/",
+    "sourceName": "Light Novel Brasil",
+    "options": {
+      "lang": "Portuguese",
+      "reverseChapters": true
+    }
   }
 ]
