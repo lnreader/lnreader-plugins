@@ -65,7 +65,7 @@ for (let language in languages) {
       lang: languages[language as keyof typeof languages],
       version,
       url: `${PLUGIN_LINK}/${language.toLowerCase()}/${plugin}`,
-      iconUrl: `${ICON_LINK}/${icon}`,
+      iconUrl: `${ICON_LINK}/${icon || 'siteNotAvailable.png'}`,
     };
 
     if (pluginSet.has(id)) {

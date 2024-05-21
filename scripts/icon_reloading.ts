@@ -1,4 +1,3 @@
-require('module-alias/register');
 import * as fs from 'fs';
 import { Plugin } from '@typings/plugin';
 import { languages } from '@libs/languages';
@@ -9,44 +8,38 @@ const size = 96;
 
 const skip: string[] = [
   //custom icons
-  'ReN',
-  'sektenovel',
   'FWK.US',
+  'ReN',
   'daonovel',
   'dragontea',
   'foxaholic',
   'kiniga',
-  'sonicmtl',
-  'translatinotaku',
-  'wuxiaworld.site',
+  'lightnovelpubvip',
   'moonlightnovel',
   'mtl-novel',
   'mysticalmerries',
-  'lightnovelpubvip',
   'novelTL',
+  'novelsparadise',
+  'sektenovel',
+  'sonicmtl',
+  'translatinotaku',
+  'wuxiaworld.site',
 
   //low quality
   'BLN',
-  'novelhall',
   'NO.net',
   'novelbookid',
+  'novelhall',
   'olaoe',
-
-  //broken icons
-  'guavaread',
-  'LightNovelUpdates',
-  'turkcelightnovels',
-  'novelki.pl',
-  'lunarletters',
-  'novelsparadise',
-  'earlynovel',
-  'wbnovel',
-  'novhell',
-  'RLIB',
 ];
 
 const used = new Set();
 used.add(path.join(root, 'icons', 'coverNotAvailable.webp'));
+used.add(path.join(root, 'icons', 'siteNotAvailable.png'));
+
+const notAvailableImage = fs.readFileSync(
+  path.join(root, 'icons', 'siteNotAvailable.png'),
+);
 
 (async () => {
   console.log('Loading plugins.json ⌛');
@@ -56,6 +49,7 @@ used.add(path.join(root, 'icons', 'coverNotAvailable.webp'));
     return;
   }
   const plugins = JSON.parse(fs.readFileSync(plugin_path, 'utf-8'));
+
   console.log('\nDownloading icons ⌛');
   let language;
   for (let plugin in plugins) {
@@ -79,10 +73,6 @@ used.add(path.join(root, 'icons', 'coverNotAvailable.webp'));
         )
           .then(res => res.arrayBuffer())
           .then(res => Buffer.from(res));
-
-        const notAvailableImage = fs.readFileSync(
-          path.join(root, 'scripts', 'notavailable.png'),
-        );
 
         if (Buffer.compare(image, notAvailableImage) === 0) {
           console.log(
@@ -114,14 +104,6 @@ used.add(path.join(root, 'icons', 'coverNotAvailable.webp'));
   }
   console.log('\nDeleting unused icons  ⌛');
 
-  function fileList(dir: string): string[] {
-    return fs.readdirSync(dir).reduce((list: string[], file: string) => {
-      const name = path.join(dir, file);
-      const isDir = fs.statSync(name).isDirectory();
-      return list.concat(isDir ? fileList(name) : [name]);
-    }, []);
-  }
-
   fileList(path.join(root, 'icons')).forEach(path => {
     if (!used.has(path)) {
       console.log('🗑️', path);
@@ -130,3 +112,11 @@ used.add(path.join(root, 'icons', 'coverNotAvailable.webp'));
   });
   console.log('\nDone ✅');
 })();
+
+function fileList(dir: string): string[] {
+  return fs.readdirSync(dir).reduce((list: string[], file: string) => {
+    const name = path.join(dir, file);
+    const isDir = fs.statSync(name).isDirectory();
+    return list.concat(isDir ? fileList(name) : [name]);
+  }, []);
+}

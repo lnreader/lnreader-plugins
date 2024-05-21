@@ -8,14 +8,14 @@ class novelOvh implements Plugin.PluginBase {
   id = 'novelovh';
   name = 'НовелОВХ';
   site = 'https://novel.ovh';
-  version = '1.0.1';
+  version = '1.0.2';
   icon = 'src/ru/novelovh/icon.png';
 
   async popularNovels(
     pageNo: number,
     { showLatestNovels, filters }: Plugin.PopularNovelsOptions,
   ): Promise<Plugin.NovelItem[]> {
-    let url = this.site + '/novel?page=' + (pageNo - 1);
+    let url = this.site + '/content?page=' + (pageNo - 1);
     url +=
       '&sort=' +
       (showLatestNovels
@@ -41,7 +41,9 @@ class novelOvh implements Plugin.PluginBase {
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
     const { book, chapters }: responseNovel = await fetchApi(
-      this.resolveUrl(novelPath, true) +
+      this.site +
+        '/content/' +
+        novelPath +
         '?_data=routes/reader/book/$slug/index',
     ).then(res => res.json());
 
@@ -98,14 +100,9 @@ class novelOvh implements Plugin.PluginBase {
     return chapterText;
   }
 
-  async searchNovels(
-    searchTerm: string,
-    page: number | undefined = 1,
-  ): Promise<Plugin.NovelItem[]> {
-    const url = `${this.site}/novel?search=${searchTerm}&page=${page - 1}`;
-    const { books }: { books: BooksEntity[] } = await fetchApi(
-      url + '&_data=routes/reader/book/index',
-    ).then(res => res.json());
+  async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
+    const url = `https://api.novel.ovh/v2/books?type=NOVEL&search=${searchTerm}`;
+    const books: BooksEntity[] = await fetchApi(url).then(res => res.json());
 
     const novels: Plugin.NovelItem[] = [];
     books.forEach(novel =>
