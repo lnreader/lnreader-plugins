@@ -36,7 +36,7 @@ class LightNovelWPPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/lightnovelwp/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `1.0.${4 + versionIncrements}`;
+    this.version = `1.0.${5 + versionIncrements}`;
     this.options = metadata.options ?? ({} as LightNovelWPOptions);
     this.filters = metadata.filters satisfies Filters;
   }
@@ -95,7 +95,7 @@ class LightNovelWPPlugin implements Plugin.PluginBase {
       showLatestNovels,
     }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
-    const seriesPath = this.options?.seriesPath ?? '/series/';
+    const seriesPath = this.options?.seriesPath ?? 'series/';
     let url = this.site + seriesPath + '?page=' + pageNo;
     if (!filters) filters = {};
     if (showLatestNovels) url += '&order=latest';
