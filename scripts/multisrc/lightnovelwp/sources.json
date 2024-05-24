@@ -10,12 +10,13 @@
   },
   {
     "id": "kolnovel",
-    "sourceSite": "https://kolnovel.org/",
+    "sourceSite": "https://kolnovel.club",
     "sourceName": "ملوك الروايات",
     "options": {
       "lang": "Arabic",
       "reverseChapters": true,
-      "customJs": "let ignore = $('article > style').text().trim().split(',');ignore.push(...(ignore.pop()?.match(/^\\.\\w+/) || []));ignore.map(tag => $(`p${tag}`).remove());"
+      "customJs": "let ignore = $('article > style').text().trim().split(',');ignore.push(...(ignore.pop()?.match(/^\\.\\w+/) || []));ignore.map(tag => $(`p${tag}`).remove());",
+      "versionIncrements": 1
     }
   },
   {
