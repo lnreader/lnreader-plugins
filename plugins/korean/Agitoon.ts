@@ -9,7 +9,7 @@ class Agitoon implements Plugin.PluginBase {
   name = 'Agitoon';
   icon = 'src/kr/agitoon/icon.png';
   site = 'https://agit655.xyz';
-  version = '2.0.0';
+  version = '2.0.1';
 
   async popularNovels(
     pageNo: number,
@@ -119,7 +119,7 @@ class Agitoon implements Plugin.PluginBase {
   }
 
   async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
-    const rawResults = await fetchApi('https://agit501.xyz/novel/search.php', {
+    const rawResults = await fetchApi(this.site + '/novel/search.php', {
       headers: {
         'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
       },
