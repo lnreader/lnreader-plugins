@@ -81,7 +81,7 @@ class LightNovelWPPlugin implements Plugin.PluginBase {
         novels.push({
           name: novelName,
           cover: image.attr('data-src') || image.attr('src') || defaultCover,
-          path: novelUrl.replace(this.site, ''),
+          path: novelUrl.replace(/https?:\/\/.*?\//, '/'),
         });
       }
     });
@@ -113,7 +113,7 @@ class LightNovelWPPlugin implements Plugin.PluginBase {
     const $ = await this.getCheerio(this.site + novelPath, false);
 
     const novel: Plugin.SourceNovel = {
-      path: novelPath.replace(this.site, ''),
+      path: novelPath.replace(/https?:\/\/.*?\//, '/'),
       name: 'Untitled',
     };
 
@@ -242,7 +242,7 @@ class LightNovelWPPlugin implements Plugin.PluginBase {
       if (isFreeChapter)
         chapters.push({
           name: chapterName,
-          path: chapterUrl.replace(this.site, ''),
+          path: chapterUrl.replace(/https?:\/\/.*?\//, '/'),
           releaseTime: releaseTime,
         });
     });

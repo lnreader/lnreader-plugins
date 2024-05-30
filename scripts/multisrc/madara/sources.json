@@ -134,12 +134,12 @@
   },
   {
     "id": "riwyat",
-    "sourceSite": "https://riwyat.com/",
+    "sourceSite": "https://riwyat.org/",
     "sourceName": "Riwyat",
     "options": {
       "useNewChapterEndpoint": true,
       "lang": "Arabic",
-      "versionIncrements": 1
+      "versionIncrements": 2
     }
   },
   {
@@ -184,7 +184,8 @@
     "sourceSite": "https://mtl-novel.com/",
     "sourceName": "MTL-Novel",
     "options": {
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": false,
+      "versionIncrements": 1
     }
   },
   {
