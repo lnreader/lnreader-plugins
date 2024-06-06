@@ -37,7 +37,7 @@ class LightNovelWPPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/lightnovelwp/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `1.1.${versionIncrements}`;
+    this.version = `1.1.${1 + versionIncrements}`;
     this.options = metadata.options ?? ({} as LightNovelWPOptions);
     this.filters = metadata.filters satisfies Filters;
   }
@@ -380,21 +380,23 @@ class LightNovelWPPlugin implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const data = await this.safeFecth(this.site + chapterPath, false);
-    const chapterText = data.match(
-      /<div.*class="epcontent ([\s\S]*?)<div.*class="bottomnav"/g,
-    )?.[0];
+    let data = await this.safeFecth(this.site + chapterPath, false);
     if (this.options?.customJs) {
       try {
-        const $ = load(chapterText || data);
+        const $ = load(data);
         // CustomJS HERE
-        return $.html();
+        data = $.html();
       } catch (error) {
         console.error('Error executing customJs:', error);
         throw error;
       }
     }
-    return chapterText || '';
+    return (
+      data
+        .match(/<div.*class="epcontent ([\s\S]*?)<div.*class="bottomnav"/g)?.[0]
+        .match(/<p.*>([\s\S]*?)<\/p>/g)
+        ?.join('\n') || ''
+    );
   }
 
   async searchNovels(
