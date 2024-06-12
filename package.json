@@ -32,7 +32,7 @@
         "protobufjs": "^7.2.6",
         "qs": "^6.11.2",
         "sanitize-html": "^2.12.1",
-        "terser": "^5.31.0",
+        "terser": "^5.31.1",
         "ts-node": "^10.9.2",
         "tsc-alias": "^1.8.8",
         "typescript": "^5.3.3",

@@ -77,8 +77,8 @@ class LightNovelWPPlugin implements Plugin.PluginBase {
 
     const articles = html.match(/<article([\s\S]*?)<\/article>/g) || [];
     articles.forEach(article => {
-      const novelName = article.match(/<a.*title="(.*?)"/)?.[1];
-      const novelUrl = article.match(/<a href="(.*?)"/)?.[1];
+      const [, novelUrl, novelName] =
+        article.match(/<a href="(.*?)".*title="(.*?)"/) || [];
 
       if (novelName && novelUrl) {
         const novelCover =
@@ -148,10 +148,7 @@ class LightNovelWPPlugin implements Plugin.PluginBase {
     const parser = new Parser({
       onopentag(name, attribs) {
         // name and cover
-        if (
-          !novel.cover &&
-          attribs['class']?.includes('ts-post-image' || 'wp-post-image')
-        ) {
+        if (!novel.cover && attribs['class']?.includes('ts-post-image')) {
           novel.name = attribs['title'];
           novel.cover = attribs['data-src'] || attribs['src'] || defaultCover;
         } // genres
