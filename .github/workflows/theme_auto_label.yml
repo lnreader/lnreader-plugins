@@ -1,0 +1,135 @@
+name: Theme auto label
+
+on:
+  issues:
+    types: [labeled]
+
+
+jobs:
+  auto-label:
+    if: contains(github.event.issue.labels.*.name, 'Source Request')
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Get Source Request URL
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        id: get_url
+        run: |
+          URL=$(echo "$ISSUE_BODY" | sed -n '/### Source link/,+2p' | sed '1,2d' | tr -d '[:space:]')
+          echo "URL=$URL" >> $GITHUB_OUTPUT
+          echo "Using URL: \`$URL\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Get User Agent
+        id: get_user_agent
+        run: |
+          if curl --output chromeVersion.json --silent --fail https://chromiumdash.appspot.com/fetch_releases?channel=Stable\&platform=Windows\&num=1; then
+            CHROME_VERSION=$(jq -r '.[0].version' chromeVersion.json)
+          else
+            CHROME_VERSION=126.0.6478.36
+          fi
+          USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/$CHROME_VERSION Safari/537.36"
+          echo "USER_AGENT=$USER_AGENT" >> $GITHUB_OUTPUT
+
+      - name: Check if URL is valid
+        id: url_check
+        env:
+          URL: ${{ steps.get_url.outputs.URL }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          GITHUB_ISSUE_NUMBER: ${{ github.event.issue.number }}
+          USER_AGENT: ${{ steps.get_user_agent.outputs.USER_AGENT }}
+        run: |
+          if [[ -z "$URL" ]]; then
+            echo "url_valid=false" >> $GITHUB_OUTPUT
+            echo "# ❌ Error: URL not found" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            if curl --output /dev/null --silent --head --fail "$URL" -H "User-Agent: $USER_AGENT"; then
+              echo "url_valid=true" >> $GITHUB_OUTPUT
+            else
+              echo "url_valid=false" >> $GITHUB_OUTPUT
+              echo "# ❌ Error: Request failed" >> $GITHUB_STEP_SUMMARY
+              echo "URL is invalid or cloudflare issue or site is down" >> $GITHUB_STEP_SUMMARY
+              gh issue comment $GITHUB_ISSUE_NUMBER -b $'## Warning: Could not check for themes\nThis issue might be because this website has <ins>**cloudflare protection**</ins>, the URL is invalid or the website is down' -R $REPO
+              exit 1
+            fi
+          fi
+
+      - name: Get base URL
+        if: steps.url_check.outputs.url_valid == 'true'
+        id: get_base_url
+        env:
+          URL: ${{ steps.get_url.outputs.URL }}
+        run: |
+          BASE_URL=$(echo "$URL" | sed 's/https\?:\/\///' | cut -d'/' -f1)
+          echo "BASE_URL=$BASE_URL" >> $GITHUB_OUTPUT
+          echo "Using base URL: \`$BASE_URL\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Check Madara theme
+        if: steps.url_check.outputs.url_valid == 'true'
+        id: check_madara
+        env:
+          BASE_URL: ${{ steps.get_base_url.outputs.BASE_URL }}
+          USER_AGENT: ${{ steps.get_user_agent.outputs.USER_AGENT }}
+        run: |
+          if curl --location --output /dev/null --silent --head --fail "https://$BASE_URL/wp-content/themes/madara/style.css" -H "User-Agent: $USER_AGENT"; then
+            echo "madara=true" >> $GITHUB_OUTPUT
+            echo "# ✅ Madara theme found" >> $GITHUB_STEP_SUMMARY
+          elif curl --location --output /dev/null --silent --head --fail "http://$BASE_URL/wp-content/themes/madara/style.css" -H "User-Agent: $USER_AGENT"; then
+            echo "madara=true" >> $GITHUB_OUTPUT
+            echo "# ✅ Madara theme found" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "madara=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check lighnovelwp theme
+        if: steps.url_check.outputs.url_valid == 'true'
+        id: check_lighnovelwp
+        env:
+          BASE_URL: ${{ steps.get_base_url.outputs.BASE_URL }}
+          USER_AGENT: ${{ steps.get_user_agent.outputs.USER_AGENT }}
+        run: |
+          if curl --location --output /dev/null --silent --head --fail "https://$BASE_URL/wp-content/themes/lightnovel/style.css" -H "User-Agent: $USER_AGENT"; then
+            echo "lighnovelwp=true" >> $GITHUB_OUTPUT
+            echo "# ✅ Lighnovelwp theme found" >> $GITHUB_STEP_SUMMARY
+          elif curl --location --output /dev/null --silent --head --fail "http://$BASE_URL/wp-content/themes/lightnovel/style.css" -H "User-Agent: $USER_AGENT"; then
+            echo "lighnovelwp=true" >> $GITHUB_OUTPUT
+            echo "# ✅ Lighnovelwp theme found" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "lighnovelwp=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check if site has multiple themes
+        if: steps.url_check.outputs.url_valid == 'true'
+        id: check_multiple_themes
+        env:
+          MADARA: ${{ steps.check_madara.outputs.madara }}
+          LIGHNOVELWP: ${{ steps.check_lighnovelwp.outputs.lighnovelwp }}
+        run: |
+          if [[ "$MADARA" == "true" && "$LIGHNOVELWP" == "true" ]]; then
+            echo "multiple_themes=true" >> $GITHUB_OUTPUT
+            echo "# ❌ Error: Site has multiple themes" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "multiple_themes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Add label
+        if: steps.check_multiple_themes.outputs.multiple_themes == 'false'
+        env:
+          MADARA: ${{ steps.check_madara.outputs.madara }}
+          LIGHNOVELWP: ${{ steps.check_lighnovelwp.outputs.lighnovelwp }}
+          GITHUB_ISSUE_NUMBER: ${{ github.event.issue.number }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh label create "Theme: Madara" -d "Site uses Madara theme" -R $REPO || true
+          gh label create "Theme: Lighnovelwp" -d "Site uses Lighnovelwp theme" -R $REPO || true
+          if [[ "$MADARA" == "true" ]]; then
+            gh issue edit $GITHUB_ISSUE_NUMBER --add-label "Theme: Madara" -R $REPO
+          elif [[ "$LIGHNOVELWP" == "true" ]]; then
+            gh issue edit $GITHUB_ISSUE_NUMBER --add-label "Theme: Lighnovelwp" -R $REPO
+          else
+            echo "## No theme found" >> $GITHUB_STEP_SUMMARY
+          fi
