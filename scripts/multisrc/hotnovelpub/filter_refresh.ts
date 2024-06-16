@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as cheerio from 'cheerio';
 import * as path from 'path';
-import list from './sources.json';
+import list from './sources.json' with { type: 'json' };
 import { HotNovelPubMetadata } from './template';
 
 async function getFilters(sources: HotNovelPubMetadata) {

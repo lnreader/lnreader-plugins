@@ -4,9 +4,11 @@ node_modules
 config.json
 
 # generated multisrc .ts files
-plugins/*/*\[*\]*.ts
+src/plugins/*/*\[*\]*.ts
 
 # ignore dist stuffs
 .js
 .dist
 .DS_Store
+dist
+total.svg
