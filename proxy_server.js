@@ -86,31 +86,11 @@ const cookiesHandler = (req, res) => {
   });
 };
 
-const pluginPathsHandler = (req, res) => {
-  const pluginsDir = 'src/plugins';
-  const pluginPaths = [];
-  const langNames = fs.readdirSync(pluginsDir);
-  langNames.forEach(langName => {
-    const langDir = pluginsDir + '/' + langName;
-    const pluginNames = fs.readdirSync(langDir);
-    pluginNames.forEach(pluginName => {
-      if (!pluginName.startsWith('.') && !pluginName.includes('broken')) {
-        pluginPaths.push(langName + '/' + pluginName);
-      }
-    });
-  });
-  res.setHeader('Access-Control-Allow-Origin', CLIENT_HOST);
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.end(JSON.stringify(pluginPaths));
-};
-
 http
   .createServer(function (req, res) {
     const path = req.url.replace(/^\//, '');
     if (path === 'cookies') {
       cookiesHandler(req, res);
-    } else if (path === 'pluginPaths') {
-      pluginPathsHandler(req, res);
     } else {
       const _url = new URL(path);
       for (const _header of disAllowedHeaders) {

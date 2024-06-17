@@ -21,6 +21,7 @@ import { FixedSizeList, ListChildComponentProps } from 'react-window';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppState } from '@redux/store';
 import { selectPlugin } from '@redux/pluginSlice';
+import usePlugin from '@hooks/usePlugin';
 
 const resovleIcon = (iconPath: string) => {
   return '/icons/' + iconPath;
@@ -30,9 +31,7 @@ export default function () {
   const [searchedPlugins, setSearchPlugins] = useState<Plugin.PluginBase[]>([]);
   const [keyword, setKeyword] = useState('');
   const [listVisible, setListVisible] = useState(false);
-  const selectedPlugin = useSelector(
-    (state: AppState) => state.plugin.selected,
-  );
+  const plugin = usePlugin();
   const dispatch = useDispatch();
   useEffect(() => {
     const plugins = searchPlugins(keyword);
@@ -128,15 +127,15 @@ export default function () {
               Language
             </Button>
           </InputAdornment>
-          {selectedPlugin ? (
+          {plugin ? (
             <Box sx={{ pl: 2, display: 'flex', alignItems: 'center' }}>
               <Avatar
                 sx={{ mr: 1 }}
-                src={resovleIcon(selectedPlugin.icon)}
+                src={resovleIcon(plugin.icon)}
                 variant="square"
               />
-              <a href={selectedPlugin.site} target="_blank">
-                {selectedPlugin.name} - v{selectedPlugin.version}
+              <a href={plugin.site} target="_blank">
+                {plugin.name} - v{plugin.version}
               </a>
             </Box>
           ) : null}

@@ -1,7 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
-  loading: true,
+  loading: false,
 };
 
 export const overlaySlice = createSlice({

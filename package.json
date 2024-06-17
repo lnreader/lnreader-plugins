@@ -5,7 +5,7 @@
     "main": "index.js",
     "type": "module",
     "scripts": {
-        "start": "concurrently \"npm run dev\" \"npm run proxy\"",
+        "start": "node importPlugins.js && concurrently \"npm run dev\" \"npm run proxy\"",
         "dev": "vite",
         "proxy": "node proxy_server.js",
         "test": "exit 0",
