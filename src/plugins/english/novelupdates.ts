@@ -1,12 +1,12 @@
 import { CheerioAPI, load as parseHTML } from 'cheerio';
-import { fetchApi, fetchFile } from '@libs/fetch';
+import { fetchApi } from '@libs/fetch';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { Plugin } from '@typings/plugin';
 
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.5.4';
+  version = '0.6.0';
   icon = 'src/en/novelupdates/icon.png';
   site = 'https://www.novelupdates.com/';
 
@@ -180,14 +180,13 @@ class NovelUpdates implements Plugin.PluginBase {
     loadedCheerio: CheerioAPI,
     domain: string[],
     url: string,
-    result: Response,
   ) {
     let bloatClasses = [];
     let chapterTitle = '';
     let chapterContent = '';
     let chapterText = '';
 
-    const unwanted = ['blogspot', 'wordpress', 'www'];
+    const unwanted = ['blogspot', 'casper', 'wordpress', 'www'];
     const targetDomain = domain.find(d => !unwanted.includes(d));
 
     switch (targetDomain) {
@@ -203,6 +202,28 @@ class NovelUpdates implements Plugin.PluginBase {
         chapterTitle = titleElementAsura.text()!;
         titleElementAsura.remove();
         chapterContent = loadedCheerio('.post-body').html()!;
+        if (chapterTitle && chapterContent) {
+          chapterText = `<h2>${chapterTitle}</h2><hr><br>${chapterContent}`;
+        }
+        break;
+      case 'fictionread':
+        bloatClasses = [
+          '.content > style',
+          '.highlight-ad-container',
+          '.meaning',
+          '.word',
+        ];
+        bloatClasses.map(tag => loadedCheerio(tag).remove());
+        chapterTitle = loadedCheerio('.title-image span').first().text()!;
+        loadedCheerio('.content')
+          .children()
+          .each((idx, ele) => {
+            if (loadedCheerio(ele).attr('id')?.includes('Chaptertitle-info')) {
+              loadedCheerio(ele).remove();
+              return false;
+            }
+          });
+        chapterContent = loadedCheerio('.content').html()!;
         if (chapterTitle && chapterContent) {
           chapterText = `<h2>${chapterTitle}</h2><hr><br>${chapterContent}`;
         }
@@ -251,6 +272,22 @@ class NovelUpdates implements Plugin.PluginBase {
             '<br><hr><br>TL Notes:<br>' +
             json_inovel.notes.replace(/\n/g, '<br>');
         }
+        if (chapterTitle && chapterContent) {
+          chapterText = `<h2>${chapterTitle}</h2><hr><br>${chapterContent}`;
+        }
+        break;
+      case 'isotls': // mii translates
+        bloatClasses = [
+          'footer',
+          'header',
+          'nav',
+          '.ezoic-ad',
+          '.ezoic-adpicker-ad',
+          '.ezoic-videopicker-video',
+        ];
+        bloatClasses.map(tag => loadedCheerio(tag).remove());
+        chapterTitle = loadedCheerio('head title').first().text()!;
+        chapterContent = loadedCheerio('main article').html()!;
         if (chapterTitle && chapterContent) {
           chapterText = `<h2>${chapterTitle}</h2><hr><br>${chapterContent}`;
         }
@@ -346,6 +383,39 @@ class NovelUpdates implements Plugin.PluginBase {
           chapterText = chapterContent;
         }
         break;
+      case 'redoxtranslation':
+        const chapterID_redox = url.split('/').pop();
+        chapterTitle = `Chapter ${chapterID_redox}`;
+        const url_redox = `${url.split('chapter')[0]}txt/${chapterID_redox}.txt`;
+        chapterContent = await fetchApi(url_redox)
+          .then(r => r.text())
+          .then(text => {
+            // Split text into sentences based on newline characters
+            const sentences_redox = text.split('\n');
+            // Process each sentence individually
+            const formattedSentences_redox = sentences_redox.map(sentence => {
+              // Check if the sentence contains "<hr>"
+              if (sentence.includes('{break}')) {
+                // Create a centered sentence with three stars
+                return '<br> <p>****</p>';
+              } else {
+                // Replace text enclosed within ** with <strong> tags
+                sentence = sentence.replace(
+                  /\*\*(.*?)\*\*/g,
+                  '<strong>$1</strong>',
+                );
+                // Replace text enclosed within ++ with <em> tags
+                sentence = sentence.replace(/\+\+(.*?)\+\+/g, '<em>$1</em>');
+                return sentence;
+              }
+            });
+            // Join the formatted sentences back together with newline characters
+            return formattedSentences_redox.join('<br>');
+          });
+        if (chapterTitle && chapterContent) {
+          chapterText = `<h2>${chapterTitle}</h2><hr><br>${chapterContent}`;
+        }
+        break;
       case 'sacredtexttranslations':
         bloatClasses = [
           '.entry-content blockquote',
@@ -360,8 +430,10 @@ class NovelUpdates implements Plugin.PluginBase {
         }
         break;
       case 'scribblehub':
+        bloatClasses = ['.wi_authornotes'];
+        bloatClasses.map(tag => loadedCheerio(tag).remove());
         chapterTitle = loadedCheerio('.chapter-title').first().text()!;
-        chapterContent = loadedCheerio('div.chp_raw').html()!;
+        chapterContent = loadedCheerio('.chp_raw').html()!;
         if (chapterTitle && chapterContent) {
           chapterText = `<h2>${chapterTitle}</h2><hr><br>${chapterContent}`;
         }
@@ -393,7 +465,12 @@ class NovelUpdates implements Plugin.PluginBase {
         const resultSyringe = await fetchApi(linkSyringe);
         const bodySyringe = await resultSyringe.text();
         const loadedCheerioSyringe = parseHTML(bodySyringe);
-        bloatClasses = ['.wp-block-buttons', '#jp-post-flair', '.wpcnt'];
+        bloatClasses = [
+          '.has-inline-color',
+          '.wp-block-buttons',
+          '.wpcnt',
+          '#jp-post-flair',
+        ];
         bloatClasses.map(tag => loadedCheerioSyringe(tag).remove());
         chapterContent = loadedCheerioSyringe('.entry-content').html()!;
         let titleElementSyringe =
@@ -483,8 +560,8 @@ class NovelUpdates implements Plugin.PluginBase {
 
     const result = await fetchApi(this.site + chapterPath);
     const body = await result.text();
-    const url = result.url.toLowerCase();
-    const domain = url.split('/')[2].split('.');
+    const url = result.url;
+    const domain = url.toLowerCase().split('/')[2].split('.');
 
     const loadedCheerio = parseHTML(body);
 
@@ -513,12 +590,15 @@ class NovelUpdates implements Plugin.PluginBase {
     /**
      * Detect if the site is a Blogspot site
      */
-    let isBlogspotStr = loadedCheerio(
-      'meta[name="google-adsense-platform-domain"]',
-    ).attr('content');
+    let isBlogspotStr =
+      loadedCheerio('meta[name="google-adsense-platform-domain"]').attr(
+        'content',
+      ) || loadedCheerio('meta[name="generator"]').attr('content');
     let isBlogspot = false;
     if (isBlogspotStr) {
-      isBlogspot = isBlogspotStr.toLowerCase().includes('blogspot');
+      isBlogspot =
+        isBlogspotStr.toLowerCase().includes('blogspot') ||
+        isBlogspotStr.toLowerCase().includes('blogger');
     }
 
     /**
@@ -539,7 +619,7 @@ class NovelUpdates implements Plugin.PluginBase {
     /**
      * In case sites are not detected correctly
      */
-    const manualWordPress = ['genesistls'];
+    const manualWordPress = ['genesistls', 'soafp'];
     if (!isWordPress && domain.find(wp => manualWordPress.includes(wp))) {
       isWordPress = true;
     }
@@ -550,6 +630,7 @@ class NovelUpdates implements Plugin.PluginBase {
     const outliers = [
       'anotivereads',
       'asuratls',
+      'fictionread',
       'helscans',
       'mirilu',
       'novelworldtranslations',
@@ -567,6 +648,7 @@ class NovelUpdates implements Plugin.PluginBase {
      * Blogspot sites:
      * - ¼-Assed
      * - AsuraTls (Outlier)
+     * - FictionRead (Outlier)
      * - Novel World Translations (Outlier)
      * - SacredText TL (Outlier)
      *
@@ -576,6 +658,7 @@ class NovelUpdates implements Plugin.PluginBase {
      * - Blossom Translation
      * - Dumahs Translations
      * - ElloMTL
+     * - Femme Fables
      * - Gem Novels
      * - Genesis Translations (Manually added)
      * - Goblinslate
@@ -586,7 +669,7 @@ class NovelUpdates implements Plugin.PluginBase {
      * - Mirilu - Novel Reader Attempts Translating (Outlier)
      * - Neosekai Translations
      * - Shanghai Fantasy
-     * - Soafp
+     * - Soafp (Manually added)
      * - Stabbing with a Syringe (Outlier)
      * - StoneScape
      * - TinyTL (Outlier)
@@ -595,12 +678,7 @@ class NovelUpdates implements Plugin.PluginBase {
      * - Zetro Translation (Outlier)
      */
     if (!isWordPress && !isBlogspot) {
-      chapterText = await this.getChapterBody(
-        loadedCheerio,
-        domain,
-        url,
-        result,
-      );
+      chapterText = await this.getChapterBody(loadedCheerio, domain, url);
     } else if (isBlogspot) {
       bloatClasses = ['.button-container', '.separator'];
       bloatClasses.map(tag => loadedCheerio(tag).remove());
@@ -628,10 +706,12 @@ class NovelUpdates implements Plugin.PluginBase {
         '.pre-bar',
         '.sharedaddy',
         '.sidebar',
+        '.swg-button-v2-light',
         '.wp-block-buttons',
         '.wp-block-image',
         '.wp-dark-mode-switcher',
         '.wp-next-post-navi',
+        '#hpk',
         '#jp-post-flair',
         '#textbox',
       ];
@@ -660,6 +740,7 @@ class NovelUpdates implements Plugin.PluginBase {
         loadedCheerio('.single_post').html() ||
         loadedCheerio('.post-entry').html() ||
         loadedCheerio('.main-content').html() ||
+        loadedCheerio('.post-content').html() ||
         loadedCheerio('.content').html() ||
         loadedCheerio('.page-body').html() ||
         loadedCheerio('.td-page-content').html() ||
@@ -706,7 +787,7 @@ class NovelUpdates implements Plugin.PluginBase {
     );
     searchTerm = longestSearchTerm.replace(/[‘’]/g, "'").replace(/\s+/g, '+');
 
-    const url = this.site + '?s=' + searchTerm + '&post_type=seriesplans';
+    const url = `${this.site}series-finder/?sf=1&sh=${searchTerm}&sort=srank&order=asc&pg=${page}`;
     const result = await fetchApi(url);
     const body = await result.text();
     const loadedCheerio = parseHTML(body);
