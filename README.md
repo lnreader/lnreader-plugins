@@ -11,14 +11,14 @@ Repository to host plugins and related issues, and requests for
 
 ## Installing
 
--   Prerequisites: Nodejs >= 18
+- Prerequisites: Nodejs >= 20
 
 1. `npm install`
 
 ## Contributing
 
--   [Quick start](./docs/quickstart.md)
--   [Documentation](./docs/docs.md)
+- [Quick start](./docs/quickstart.md)
+- [Documentation](./docs/docs.md)
 
 ## Testing
 
@@ -31,12 +31,7 @@ Repository to host plugins and related issues, and requests for
 #### via an app
 
 1. Run `npm run host-linux` or `npm run host-windows` (depending on your operating system)
-2. Change the values in [pluginManager.ts](https://github.com/LNReader/lnreader/blob/master/src/plugins/pluginManager.ts) (in-app) to yours 
-
-```ts
-const githubUsername = "LNReader";
-const githubRepository = "lnreader-plugins";
-```
+2. Add your `https://raw.githubusercontent.com/<username>/<repo>/plugins/<tag>/.dist/plugins.min.json` to app repository
 
 ---
 
