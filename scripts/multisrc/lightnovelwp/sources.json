@@ -187,7 +187,8 @@
     "sourceSite": "https://ippotranslations.com/",
     "sourceName": "Ippotranslations",
     "options": {
-      "lang": "English"
+      "lang": "English",
+      "reverseChapters": true
     }
   },
   {
@@ -197,6 +198,16 @@
     "options": {
       "lang": "English",
       "reverseChapters": true
+    }
+  },
+  {
+    "id": "requiemtls",
+    "sourceSite": "https://requiemtls.com/",
+    "sourceName": "Requiem Translations",
+    "options": {
+      "lang": "English",
+      "reverseChapters": true,
+      "customJs": "\n        $('div.entry-content > p').each(function () {\n          $(this).text($(this).text().replace(/[\\u1000-\\u105F]/g, function (c) {\n            return String.fromCharCode(c.charCodeAt(0) - 4063);\n          }));\n        });\n"
     }
   }
 ]
