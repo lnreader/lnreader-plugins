@@ -1,37 +1,85 @@
 import { load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@typings/plugin';
-import { Filters, FilterTypes } from '@libs/filterInputs';
+import { NovelStatus } from '@libs/novelStatus';
+import { defaultCover } from '@libs/defaultCover';
+import { Filters } from '@libs/filterInputs';
 
-class MTLNovel implements Plugin.PluginBase {
-  id = 'mtlnovel';
-  name = 'MTL Novel';
-  version = '1.0.0';
-  icon = 'src/en/mtlnovel/icon.png';
-  site = 'https://www.mtlnovel.com/';
+interface MTLNovelOptions {
+  lang?: string;
+}
+
+export interface MTLNovelMetadata {
+  id: string;
+  sourceSite: string;
+  sourceName: string;
+  options?: MTLNovelOptions;
+  filters?: any;
+}
+
+class MTLNovelPlugin implements Plugin.PluginBase {
+  id: string;
+  name: string;
+  icon: string;
+  site: string;
+  version: string;
+  options?: MTLNovelOptions;
+  filters?: Filters;
+
+  constructor(metadata: MTLNovelMetadata) {
+    this.id = metadata.id;
+    this.name = metadata.sourceName;
+    this.icon = 'multisrc/mtlnovel/mtlnovel/icon.png';
+    this.site = metadata.sourceSite;
+    this.version = '1.1.0';
+    this.options = metadata.options ?? ({} as MTLNovelOptions);
+    this.filters = metadata.filters satisfies Filters;
+  }
+
+  async safeFecth(
+    url: string,
+    headers: Headers = new Headers(),
+  ): Promise<Response> {
+    headers.append('Alt-Used', 'www.mtlnovel.com');
+    const r = await fetchApi(url, { headers });
+    if (!r.ok)
+      throw new Error(
+        'Could not reach site (' + r.status + ') try to open in webview.',
+      );
+    return r;
+  }
+
   async popularNovels(
     page: number,
-    { filters }: Plugin.PopularNovelsOptions<typeof this.filters>,
+    {
+      filters,
+      showLatestNovels,
+    }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
     let link = `${this.site}novel-list/?`;
-    link += `orderby=${filters.order.value}`;
-    link += `&order=${filters.sort.value}`;
-    link += `&status=${filters.storyStatus.value}`;
+    if (filters) {
+      link += `orderby=${filters.order.value}`;
+      link += `&order=${filters.sort.value}`;
+      link += `&status=${filters.storyStatus.value}`;
+    }
+    if (showLatestNovels) link += '&m_orderby=date';
     link += `&pg=${page}`;
 
-    const headers = new Headers();
-    headers.append('Alt-Used', 'www.mtlnovel.com');
-    const body = await fetchApi(link, { headers }).then(result =>
-      result.text(),
-    );
+    const body = await this.safeFecth(link).then(r => r.text());
 
     const loadedCheerio = parseHTML(body);
 
     const novels: Plugin.NovelItem[] = [];
 
     loadedCheerio('div.box.wide').each((i, el) => {
-      const novelName = loadedCheerio(el).find('a.list-title').text().slice(4);
-      const novelCover = loadedCheerio(el).find('amp-img').attr('src');
+      const novelName = loadedCheerio(el).find('a.list-title').text().trim();
+      let novelCover = loadedCheerio(el).find('amp-img').attr('src');
+      if (
+        !novelCover ||
+        novelCover == 'https://www.mtlnovel.net/no-image.jpg.webp'
+      ) {
+        novelCover = defaultCover;
+      }
       const novelUrl = loadedCheerio(el).find('a.list-title').attr('href');
 
       if (!novelUrl) return;
@@ -47,14 +95,14 @@ class MTLNovel implements Plugin.PluginBase {
 
     return novels;
   }
+
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
     const headers = new Headers();
     headers.append('Referer', `${this.site}novel-list/`);
-    headers.append('Alt-Used', 'www.mtlnovel.com');
 
-    const body = await fetchApi(this.site + novelPath, {
-      headers,
-    }).then(result => result.text());
+    const body = await this.safeFecth(this.site + novelPath, headers).then(r =>
+      r.text(),
+    );
 
     let loadedCheerio = parseHTML(body);
 
@@ -72,8 +120,9 @@ class MTLNovel implements Plugin.PluginBase {
     const chapterListUrl = this.site + novelPath + 'chapter-list/';
 
     const getChapters = async () => {
-      const listResult = await fetchApi(chapterListUrl, { headers });
-      const listBody = await listResult.text();
+      const listBody = await this.safeFecth(chapterListUrl, headers).then(r =>
+        r.text(),
+      );
 
       loadedCheerio = parseHTML(listBody);
 
@@ -101,9 +150,7 @@ class MTLNovel implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const headers = new Headers();
-    headers.append('Alt-Used', 'www.mtlnovel.com');
-    const body = await fetchApi(this.site + chapterPath, { headers }).then(r =>
+    const body = await this.safeFecth(this.site + chapterPath).then(r =>
       r.text(),
     );
 
@@ -114,13 +161,15 @@ class MTLNovel implements Plugin.PluginBase {
     return chapterText;
   }
 
-  async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
-    const headers = new Headers();
-    headers.append('Alt-Used', 'www.mtlnovel.com');
+  async searchNovels(
+    searchTerm: string,
+    pageNo: number,
+  ): Promise<Plugin.NovelItem[]> {
+    if (pageNo !== 1) return [];
     const searchUrl =
       this.site + 'wp-admin/admin-ajax.php?action=autosuggest&q=' + searchTerm;
 
-    const res = await fetchApi(searchUrl, { headers });
+    const res = await this.safeFecth(searchUrl);
     const result = await res.json();
 
     const novels: Plugin.NovelItem[] = [];
@@ -142,37 +191,9 @@ class MTLNovel implements Plugin.PluginBase {
     return novels;
   }
 
-  filters = {
-    order: {
-      value: 'view',
-      label: 'Order by',
-      options: [
-        { label: 'Date', value: 'date' },
-        { label: 'Name', value: 'name' },
-        { label: 'Rating', value: 'rating' },
-        { label: 'View', value: 'view' },
-      ],
-      type: FilterTypes.Picker,
+  imageRequestInit: Plugin.ImageRequestInit = {
+    headers: {
+      'Alt-Used': 'www.mtlnovel.com',
     },
-    sort: {
-      value: 'desc',
-      label: 'Sort by',
-      options: [
-        { label: 'Descending', value: 'desc' },
-        { label: 'Ascending', value: 'asc' },
-      ],
-      type: FilterTypes.Picker,
-    },
-    storyStatus: {
-      value: 'all',
-      label: 'Status',
-      options: [
-        { label: 'All', value: 'all' },
-        { label: 'Ongoing', value: 'ongoing' },
-        { label: 'Complete', value: 'completed' },
-      ],
-      type: FilterTypes.Picker,
-    },
-  } satisfies Filters;
+  };
 }
-export default new MTLNovel();

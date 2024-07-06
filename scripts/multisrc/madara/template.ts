@@ -39,7 +39,7 @@ class MadaraPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/madara/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `1.0.${1 + versionIncrements}`;
+    this.version = `1.0.${2 + versionIncrements}`;
     this.options = metadata.options;
     this.filters = metadata.filters;
   }
@@ -126,7 +126,8 @@ class MadaraPlugin implements Plugin.PluginBase {
         const novelCover =
           image.attr('data-src') ||
           image.attr('src') ||
-          image.attr('data-lazy-srcset');
+          image.attr('data-lazy-srcset') ||
+          defaultCover;
         const novel: Plugin.NovelItem = {
           name: novelName,
           cover: novelCover,
@@ -182,17 +183,22 @@ class MadaraPlugin implements Plugin.PluginBase {
 
       switch (detailName) {
         case 'Genre(s)':
+        case 'Genre':
+        case 'Tags':
         case 'Género(s)':
         case 'التصنيفات':
-          novel.genres = detail;
+          if (novel.genres) novel.genres += ', ' + detail;
+          else novel.genres = detail;
           break;
         case 'Author(s)':
+        case 'Author':
         case 'Autor(es)':
         case 'المؤلف':
         case 'المؤلف (ين)':
           novel.author = detail;
           break;
         case 'Status':
+        case 'Novel':
         case 'Estado':
           novel.status =
             detail.includes('OnGoing') || detail.includes('مستمرة')
@@ -202,7 +208,7 @@ class MadaraPlugin implements Plugin.PluginBase {
       }
     });
 
-    loadedCheerio('div.summary__content .code-block,script').remove();
+    loadedCheerio('div.summary__content .code-block,script,noscript').remove();
     const summary =
       loadedCheerio('div.summary__content') ||
       loadedCheerio('#tab-manga-about') ||
@@ -252,12 +258,14 @@ class MadaraPlugin implements Plugin.PluginBase {
 
       const chapterUrl = loadedCheerio(element).find('a').attr('href') || '';
 
-      chapters.push({
-        name: chapterName,
-        path: chapterUrl.replace(/https?:\/\/.*?\//, '/'),
-        releaseTime: releaseDate || null,
-        chapterNumber: totalChapters - chapterIndex,
-      });
+      if (chapterUrl && chapterUrl != '#') {
+        chapters.push({
+          name: chapterName,
+          path: chapterUrl.replace(/https?:\/\/.*?\//, '/'),
+          releaseTime: releaseDate || null,
+          chapterNumber: totalChapters - chapterIndex,
+        });
+      }
     });
 
     novel.chapters = chapters.reverse();
@@ -295,14 +303,14 @@ class MadaraPlugin implements Plugin.PluginBase {
   }
 
   parseData = (date: string) => {
-    const dayJSDate = dayjs(); // today
+    let dayJSDate = dayjs(); // today
     const timeAgo = date.match(/\d+/)?.[0] || '';
     const timeAgoInt = parseInt(timeAgo, 10);
 
     if (!timeAgo) return date; // there is no number!
 
     if (includesAny(date, ['detik', 'segundo', 'second', 'วินาที'])) {
-      dayJSDate.subtract(timeAgoInt, 'second'); // go back N seconds
+      dayJSDate = dayJSDate.subtract(timeAgoInt, 'second'); // go back N seconds
     } else if (
       includesAny(date, [
         'menit',
@@ -314,7 +322,7 @@ class MadaraPlugin implements Plugin.PluginBase {
         'دقائق',
       ])
     ) {
-      dayJSDate.subtract(timeAgoInt, 'minute'); // go back N minute
+      dayJSDate = dayJSDate.subtract(timeAgoInt, 'minute'); // go back N minute
     } else if (
       includesAny(date, [
         'jam',
@@ -329,7 +337,7 @@ class MadaraPlugin implements Plugin.PluginBase {
         '小时',
       ])
     ) {
-      dayJSDate.subtract(timeAgoInt, 'hours'); // go back N hours
+      dayJSDate = dayJSDate.subtract(timeAgoInt, 'hours'); // go back N hours
     } else if (
       includesAny(date, [
         'hari',
@@ -345,14 +353,17 @@ class MadaraPlugin implements Plugin.PluginBase {
         '天',
       ])
     ) {
-      dayJSDate.subtract(timeAgoInt, 'days'); // go back N days
+      dayJSDate = dayJSDate.subtract(timeAgoInt, 'days'); // go back N days
     } else if (includesAny(date, ['week', 'semana'])) {
-      dayJSDate.subtract(timeAgoInt, 'week'); // go back N a week
+      dayJSDate = dayJSDate.subtract(timeAgoInt, 'week'); // go back N a week
     } else if (includesAny(date, ['month', 'mes'])) {
-      dayJSDate.subtract(timeAgoInt, 'month'); // go back N months
+      dayJSDate = dayJSDate.subtract(timeAgoInt, 'month'); // go back N months
     } else if (includesAny(date, ['year', 'año'])) {
-      dayJSDate.subtract(timeAgoInt, 'year'); // go back N years
+      dayJSDate = dayJSDate.subtract(timeAgoInt, 'year'); // go back N years
     } else {
+      if (dayjs(date).format('LL') !== 'Invalid Date') {
+        return dayjs(date).format('LL');
+      }
       return date;
     }
 

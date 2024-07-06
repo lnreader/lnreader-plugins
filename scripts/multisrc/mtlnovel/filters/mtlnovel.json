@@ -1,0 +1,32 @@
+{
+  "order": {
+    "value": "view",
+    "label": "Order by",
+    "options": [
+      { "label": "Date", "value": "date" },
+      { "label": "Name", "value": "name" },
+      { "label": "Rating", "value": "rating" },
+      { "label": "View", "value": "view" }
+    ],
+    "type": "Picker"
+  },
+  "sort": {
+    "value": "desc",
+    "label": "Sort by",
+    "options": [
+      { "label": "Descending", "value": "desc" },
+      { "label": "Ascending", "value": "asc" }
+    ],
+    "type": "Picker"
+  },
+  "storyStatus": {
+    "value": "all",
+    "label": "Status",
+    "options": [
+      { "label": "All", "value": "all" },
+      { "label": "Ongoing", "value": "ongoing" },
+      { "label": "Complete", "value": "completed" }
+    ],
+    "type": "Picker"
+  }
+}

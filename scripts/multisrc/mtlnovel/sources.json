@@ -1,0 +1,34 @@
+[
+  {
+    "id": "mtlnovel",
+    "sourceSite": "https://www.mtlnovel.com/",
+    "sourceName": "MTL Novel",
+    "options": {
+      "lang": "English"
+    }
+  },
+  {
+    "id": "mtlnovel-fr",
+    "sourceSite": "https://fr.mtlnovel.com/",
+    "sourceName": "MTL Novel",
+    "options": {
+      "lang": "French"
+    }
+  },
+  {
+    "id": "mtlnovel-es",
+    "sourceSite": "https://es.mtlnovel.com/",
+    "sourceName": "MTL Novel",
+    "options": {
+      "lang": "Spanish"
+    }
+  },
+  {
+    "id": "mtlnovel-id",
+    "sourceSite": "https://id.mtlnovel.com/",
+    "sourceName": "MTL Novel",
+    "options": {
+      "lang": "Indonesian"
+    }
+  }
+]
