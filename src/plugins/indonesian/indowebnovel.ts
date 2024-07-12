@@ -1,14 +1,15 @@
 import { CheerioAPI, load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@typings/plugin';
+import { NovelStatus } from '@libs/novelStatus';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 
 class IndoWebNovel implements Plugin.PluginBase {
   id = 'IDWN.id';
   name = 'IndoWebNovel';
   icon = 'src/id/indowebnovel/icon.png';
-  site = 'https://indowebnovel.id/id/';
-  version = '1.2.2';
+  site = 'https://indowebnovel.id/';
+  version = '1.2.3';
 
   parseNovels(loadedCheerio: CheerioAPI) {
     const novels: Plugin.NovelItem[] = [];
@@ -37,7 +38,7 @@ class IndoWebNovel implements Plugin.PluginBase {
 
   async popularNovels(
     page = 1,
-    { filters }: Plugin.PopularNovelsOptions<typeof this.filters>,
+    // { filters }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
     /*
     let link = `${this.site}advanced-search/page/${page}/?title=&author=&yearx=`;
@@ -72,7 +73,10 @@ class IndoWebNovel implements Plugin.PluginBase {
       author: loadedCheerio(".series-infolist li:contains('Author') span")
         .text()
         .trim(),
-      // status: loadedCheerio('.status').text().trim(),
+      status:
+        loadedCheerio('.status').text().trim() === 'Completed'
+          ? NovelStatus.Completed
+          : NovelStatus.Ongoing,
       summary: loadedCheerio('.series-synops').text().trim(),
       chapters: [],
     };
@@ -107,7 +111,7 @@ class IndoWebNovel implements Plugin.PluginBase {
 
     const loadedCheerio = parseHTML(body);
 
-    const chapterText = loadedCheerio('.readersss .text-left ').html() || '';
+    const chapterText = loadedCheerio('.adsads').html() || '';
 
     return chapterText;
   }
@@ -131,89 +135,89 @@ class IndoWebNovel implements Plugin.PluginBase {
     return this.parseNovels(loadedCheerio);
   }
 
-  filters = {
-    status: {
-      value: '',
-      label: 'Status',
-      options: [
-        { label: 'All', value: '' },
-        { label: 'Ongoing', value: 'ongoing' },
-        { label: 'Completed', value: 'completed' },
-      ],
-      type: FilterTypes.Picker,
-    },
-    type: {
-      value: '',
-      label: 'Type',
-      options: [
-        { label: 'All', value: '' },
-        { label: 'Web Novel', value: 'Web+Novel' },
-        { label: 'Light Novel', value: 'Light+Novel' },
-      ],
-      type: FilterTypes.Picker,
-    },
-    sort: {
-      value: 'rating',
-      label: 'Order By',
-      options: [
-        { label: 'A-Z', value: 'title' },
-        { label: 'Z-A', value: 'titlereverse' },
-        { label: 'Latest Update', value: 'update' },
-        { label: 'Latest Added', value: 'latest' },
-        { label: 'Popular', value: 'popular' },
-        { label: 'Rating', value: 'rating' },
-      ],
-      type: FilterTypes.Picker,
-    },
-    lang: {
-      value: ['china', 'jepang', 'korea', 'unknown'],
-      label: 'Country',
-      options: [
-        { label: 'China', value: 'china' },
-        { label: 'Jepang', value: 'jepang' },
-        { label: 'Korea', value: 'korea' },
-        { label: 'Unknown', value: 'unknown' },
-      ],
-      type: FilterTypes.CheckboxGroup,
-    },
-    genre: {
-      value: [],
-      label: 'Genres',
-      options: [
-        { label: 'Action', value: 'action' },
-        { label: 'Adult', value: 'adult' },
-        { label: 'Adventure', value: 'adventure' },
-        { label: 'Comedy', value: 'comedy' },
-        { label: 'Drama', value: 'drama' },
-        { label: 'Ecchi', value: 'ecchi' },
-        { label: 'Fantasy', value: 'fantasy' },
-        { label: 'Gender Bender', value: 'gender-bender' },
-        { label: 'Harem', value: 'harem' },
-        { label: 'Horror', value: 'horror' },
-        { label: 'Josei', value: 'josei' },
-        { label: 'Josei', value: 'josei' },
-        { label: 'Martial Arts', value: 'martial-arts' },
-        { label: 'Mature', value: 'mature' },
-        { label: 'Mecha', value: 'mecha' },
-        { label: 'Mystery', value: 'mystery' },
-        { label: 'Psychological', value: 'psychological' },
-        { label: 'Romance', value: 'romance' },
-        { label: 'School Life', value: 'school-life' },
-        { label: 'Sci-fi', value: 'sci-fi' },
-        { label: 'Seinen', value: 'seinen' },
-        { label: 'Shoujo', value: 'shoujo' },
-        { label: 'Shounen', value: 'shounen' },
-        { label: 'Slice of Life', value: 'slice-of-life' },
-        { label: 'Smut', value: 'smut' },
-        { label: 'Supernatural', value: 'supernatural' },
-        { label: 'Tragedy', value: 'tragedy' },
-        { label: 'Wuxia', value: 'wuxia' },
-        { label: 'Xianxia', value: 'xianxia' },
-        { label: 'Xuanhuan', value: 'xuanhuan' },
-      ],
-      type: FilterTypes.CheckboxGroup,
-    },
-  } satisfies Filters;
+  // filters = {
+  //   status: {
+  //     value: '',
+  //     label: 'Status',
+  //     options: [
+  //       { label: 'All', value: '' },
+  //       { label: 'Ongoing', value: 'ongoing' },
+  //       { label: 'Completed', value: 'completed' },
+  //     ],
+  //     type: FilterTypes.Picker,
+  //   },
+  //   type: {
+  //     value: '',
+  //     label: 'Type',
+  //     options: [
+  //       { label: 'All', value: '' },
+  //       { label: 'Web Novel', value: 'Web+Novel' },
+  //       { label: 'Light Novel', value: 'Light+Novel' },
+  //     ],
+  //     type: FilterTypes.Picker,
+  //   },
+  //   sort: {
+  //     value: 'rating',
+  //     label: 'Order By',
+  //     options: [
+  //       { label: 'A-Z', value: 'title' },
+  //       { label: 'Z-A', value: 'titlereverse' },
+  //       { label: 'Latest Update', value: 'update' },
+  //       { label: 'Latest Added', value: 'latest' },
+  //       { label: 'Popular', value: 'popular' },
+  //       { label: 'Rating', value: 'rating' },
+  //     ],
+  //     type: FilterTypes.Picker,
+  //   },
+  //   lang: {
+  //     value: ['china', 'jepang', 'korea', 'unknown'],
+  //     label: 'Country',
+  //     options: [
+  //       { label: 'China', value: 'china' },
+  //       { label: 'Jepang', value: 'jepang' },
+  //       { label: 'Korea', value: 'korea' },
+  //       { label: 'Unknown', value: 'unknown' },
+  //     ],
+  //     type: FilterTypes.CheckboxGroup,
+  //   },
+  //   genre: {
+  //     value: [],
+  //     label: 'Genres',
+  //     options: [
+  //       { label: 'Action', value: 'action' },
+  //       { label: 'Adult', value: 'adult' },
+  //       { label: 'Adventure', value: 'adventure' },
+  //       { label: 'Comedy', value: 'comedy' },
+  //       { label: 'Drama', value: 'drama' },
+  //       { label: 'Ecchi', value: 'ecchi' },
+  //       { label: 'Fantasy', value: 'fantasy' },
+  //       { label: 'Gender Bender', value: 'gender-bender' },
+  //       { label: 'Harem', value: 'harem' },
+  //       { label: 'Horror', value: 'horror' },
+  //       { label: 'Josei', value: 'josei' },
+  //       { label: 'Josei', value: 'josei' },
+  //       { label: 'Martial Arts', value: 'martial-arts' },
+  //       { label: 'Mature', value: 'mature' },
+  //       { label: 'Mecha', value: 'mecha' },
+  //       { label: 'Mystery', value: 'mystery' },
+  //       { label: 'Psychological', value: 'psychological' },
+  //       { label: 'Romance', value: 'romance' },
+  //       { label: 'School Life', value: 'school-life' },
+  //       { label: 'Sci-fi', value: 'sci-fi' },
+  //       { label: 'Seinen', value: 'seinen' },
+  //       { label: 'Shoujo', value: 'shoujo' },
+  //       { label: 'Shounen', value: 'shounen' },
+  //       { label: 'Slice of Life', value: 'slice-of-life' },
+  //       { label: 'Smut', value: 'smut' },
+  //       { label: 'Supernatural', value: 'supernatural' },
+  //       { label: 'Tragedy', value: 'tragedy' },
+  //       { label: 'Wuxia', value: 'wuxia' },
+  //       { label: 'Xianxia', value: 'xianxia' },
+  //       { label: 'Xuanhuan', value: 'xuanhuan' },
+  //     ],
+  //     type: FilterTypes.CheckboxGroup,
+  //   },
+  // } satisfies Filters;
 }
 
 export default new IndoWebNovel();
