@@ -27,13 +27,15 @@ const skip = new Set([
   'wuxiaworld.site',
 ]);
 
+const folder = path.join('public', 'static');
+
 const used = new Set([
-  path.join('public', 'icons', 'coverNotAvailable.webp'),
-  path.join('public', 'icons', 'siteNotAvailable.png'),
+  path.join(folder, 'coverNotAvailable.webp'),
+  path.join(folder, 'siteNotAvailable.png'),
 ]);
 
 const notAvailableImage = fs.readFileSync(
-  path.join('public', 'icons', 'siteNotAvailable.png'),
+  path.join(folder, 'siteNotAvailable.png'),
 );
 
 (async () => {
@@ -48,8 +50,9 @@ const notAvailableImage = fs.readFileSync(
   console.log('\nDownloading icons ⌛');
   let language;
   for (let plugin in plugins) {
-    const { id, name, site, iconUrl, lang } = plugins[plugin];
-    const icon = iconUrl && 'public/icons/' + iconUrl.split('icons/')[1];
+    const { id, name, site, iconUrl, lang, customJS, customCSS } =
+      plugins[plugin];
+    const icon = iconUrl && path.join(folder, iconUrl.split('/static/')[1]);
 
     if (language !== lang) {
       language = lang;
@@ -61,7 +64,13 @@ const notAvailableImage = fs.readFileSync(
     }
 
     try {
-      if (icon) used.add(path.join(icon));
+      if (customJS) {
+        used.add(path.join(folder, customJS.split('/static/')[1]));
+      }
+      if (customCSS) {
+        used.add(path.join(folder, customCSS.split('/static/')[1]));
+      }
+      if (icon) used.add(icon);
       if (!skip.has(id) && icon && site) {
         const image = await fetch(
           `https://www.google.com/s2/favicons?domain=${site}&sz=${size}&type=png`,
@@ -121,7 +130,7 @@ const notAvailableImage = fs.readFileSync(
   }
   console.log('\nDeleting unused icons  ⌛');
 
-  fileList(path.join('public', 'icons')).forEach(path => {
+  fileList(folder).forEach(path => {
     if (!used.has(path)) {
       console.log('🗑️', path);
       fs.rmSync(path, { force: true });

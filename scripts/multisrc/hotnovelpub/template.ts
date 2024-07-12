@@ -115,7 +115,7 @@ class HotNovelPubPlugin implements Plugin.PluginBase {
     );
 
     let chapterText =
-      body.match(/<div id="content-item" ([\s\S]*?)<\/div>/g)?.[0] || '';
+      body.match(/<div id="content-item" ([\s\S]*?)<\/div>/)?.[0] || '';
 
     if (chapterText) {
       const result = await fetchApi(

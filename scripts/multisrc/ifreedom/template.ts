@@ -140,7 +140,7 @@ class IfreedomPlugin implements Plugin.PluginBase {
       res.text(),
     );
     let chapterText =
-      body.match(/<article id="([\s\S]*?)<\/article>/g)?.[0] || '';
+      body.match(/<article id="([\s\S]*?)<\/article>/)?.[0] || '';
     chapterText = chapterText.replace(/<script[^>]*>[\s\S]*?<\/script>/gim, '');
 
     if (chapterText.includes('<img')) {

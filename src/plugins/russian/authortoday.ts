@@ -175,7 +175,7 @@ class AuthorToday implements Plugin.PluginBase {
   }
 
   resolveUrl = (path: string, isNovel?: boolean) =>
-    isNovel ? this.site + '/work/' + path : this.site + '/reader/' + path;
+    this.site + (isNovel ? '/work/' : '/reader/') + path;
 
   user: authorization | undefined;
   getUser = async () => {
