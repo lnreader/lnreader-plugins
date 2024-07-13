@@ -9,7 +9,7 @@ class Genesis implements Plugin.PluginBase {
   icon = 'src/en/genesis/icon.png';
   customCSS = 'src/en/genesis/customCSS.css';
   site = 'https://genesistudio.com';
-  version = '1.0.0';
+  version = '1.0.1';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = {
     headers: {
       'referrer': this.site,
@@ -17,14 +17,11 @@ class Genesis implements Plugin.PluginBase {
   };
 
   async parseNovels(json: any[]): Promise<Plugin.NovelItem[]> {
-    const assets = 'https://edit.genesistudio.com/assets/';
-    const format = '?format=auto&quality=70&width=400&height=600';
-
     return json.map((novel: any) => {
       return {
         name: novel.novel_title,
         path: `/novels/${novel.abbreviation}`,
-        cover: `${assets}${novel.cover}${format}`,
+        cover: novel.cover,
       };
     });
   }
@@ -63,21 +60,19 @@ class Genesis implements Plugin.PluginBase {
       .map((node: { data: any }) => node.data)[0];
     const novelData = data[data[0].novel];
 
-    const assets = 'https://edit.genesistudio.com/assets/';
-    const format = '?format=auto&quality=70&width=400&height=600';
-
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: data[novelData.novel_title],
-      cover: `${assets}${data[novelData.cover]}${format}`,
+      cover: data[novelData.cover],
       summary: data[novelData.synopsis],
       author: data[novelData.author],
-      status: data[novelData.serialization],
     };
 
     novel.genres = data[novelData.genres]
       .map((index: number) => data[index])
       .join(',');
+
+    novel.status = data[novelData.release_days] ? 'Ongoing' : 'Completed';
 
     const chapterData = data[data[0].chapters];
     const freeChapterData = chapterData.free;
@@ -92,8 +87,7 @@ class Genesis implements Plugin.PluginBase {
           releaseTime: data[chapter.date_created],
           chapterNumber: data[chapter.chapter_number],
         };
-      })
-      .reverse();
+      });
 
     return novel;
   }
