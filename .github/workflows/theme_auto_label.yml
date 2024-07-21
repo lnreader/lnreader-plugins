@@ -13,6 +13,7 @@ jobs:
       ISSUE_NUMBER: ${{ github.event.issue.number }}
     steps:
       - name: Get Source Request URL
+        id: get_url
         env:
           ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
