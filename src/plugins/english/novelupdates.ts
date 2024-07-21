@@ -1,4 +1,3 @@
-/* eslint-disable no-case-declarations */
 import { CheerioAPI, load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Filters, FilterTypes } from '@libs/filterInputs';
@@ -7,7 +6,7 @@ import { Plugin } from '@typings/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.7.1';
+  version = '0.7.2';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -188,7 +187,7 @@ class NovelUpdates implements Plugin.PluginBase {
     let chapterContent = '';
     let chapterText = '';
 
-    const unwanted = ['blogspot', 'casper', 'wordpress', 'www'];
+    const unwanted = ['app', 'blogspot', 'casper', 'wordpress', 'www'];
     const targetDomain = domain.find(d => !unwanted.includes(d));
 
     switch (targetDomain) {
@@ -200,9 +199,9 @@ class NovelUpdates implements Plugin.PluginBase {
         }
         break;
       case 'asuratls':
-        const titleElementAsura = loadedCheerio('.post-body div b').first();
-        chapterTitle = titleElementAsura.text()!;
-        titleElementAsura.remove();
+        const titleElement_asura = loadedCheerio('.post-body div b').first();
+        chapterTitle = titleElement_asura.text()!;
+        titleElement_asura.remove();
         chapterContent = loadedCheerio('.post-body').html()!;
         if (chapterTitle && chapterContent) {
           chapterText = `<h2>${chapterTitle}</h2><hr><br>${chapterContent}`;
@@ -219,7 +218,7 @@ class NovelUpdates implements Plugin.PluginBase {
         chapterTitle = loadedCheerio('.title-image span').first().text()!;
         loadedCheerio('.content')
           .children()
-          .each((idx, ele) => {
+          .each((_, ele) => {
             if (loadedCheerio(ele).attr('id')?.includes('Chaptertitle-info')) {
               loadedCheerio(ele).remove();
               return false;
@@ -242,13 +241,13 @@ class NovelUpdates implements Plugin.PluginBase {
         break;
       case 'helscans':
         chapterTitle = loadedCheerio('.entry-title-main').first().text()!;
-        const chapterStringHelScans =
+        const chapterString_helscans =
           'Chapter ' + chapterTitle.split('Chapter')[1].trim();
         loadedCheerio('#readerarea.rdminimal')
           .children()
-          .each((idx, ele) => {
+          .each((_, ele) => {
             const elementText = loadedCheerio(ele).text();
-            if (elementText.includes(chapterStringHelScans)) {
+            if (elementText.includes(chapterString_helscans)) {
               chapterTitle = elementText;
               loadedCheerio(ele).remove();
               return false;
@@ -305,13 +304,13 @@ class NovelUpdates implements Plugin.PluginBase {
         }
         break;
       case 'ko-fi':
-        const matchResult = loadedCheerio(
+        const matchResult_kofi = loadedCheerio(
           'script:contains("shadowDom.innerHTML")',
         )
           .html()
           ?.match(/shadowDom\.innerHTML \+= '(<div.*?)';/);
-        if (matchResult && matchResult[1]) {
-          chapterText = matchResult[1];
+        if (matchResult_kofi && matchResult_kofi[1]) {
+          chapterText = matchResult_kofi[1];
         } else {
           chapterText = '';
         }
@@ -319,11 +318,11 @@ class NovelUpdates implements Plugin.PluginBase {
       case 'mirilu':
         bloatClasses = ['#jp-post-flair'];
         bloatClasses.map(tag => loadedCheerio(tag).remove());
-        const titleElementMirilu = loadedCheerio(
+        const titleElement_mirilu = loadedCheerio(
           '.entry-content p strong',
         ).first();
-        chapterTitle = titleElementMirilu.text()!;
-        titleElementMirilu.remove();
+        chapterTitle = titleElement_mirilu.text()!;
+        titleElement_mirilu.remove();
         chapterContent = loadedCheerio('.entry-content').html()!;
         if (chapterTitle && chapterContent) {
           chapterText = `<h2>${chapterTitle}</h2><hr><br>${chapterContent}`;
@@ -365,24 +364,28 @@ class NovelUpdates implements Plugin.PluginBase {
       case 'raeitranslations':
         const parts = url.split('/');
         const link_raei = `${parts[0]}//api.${parts[2]}/api/chapters/?id=${parts[3]}&num=${parts[4]}`;
-        const json = await fetchApi(link_raei).then(r => r.json());
-        chapterTitle = 'Chapter ' + json.currentChapter.num;
-        chapterContent =
-          json.currentChapter.head +
-          `<br><hr><br>` +
-          json.currentChapter.body +
-          `<br><hr><br>Translator's Note:<br>` +
-          json.currentChapter.note;
+        const json_raei = await fetchApi(link_raei).then(r => r.json());
+        const titleElement_raei = `Chapter ${json_raei.currentChapter.chapTag}`;
+        chapterTitle = json_raei.currentChapter.chapTitle
+          ? `${titleElement_raei} - ${json_raei.currentChapter.chapTitle}`
+          : titleElement_raei;
+        chapterContent = [
+          json_raei.currentChapter.head,
+          `<br><hr><br>`,
+          json_raei.currentChapter.body,
+          `<br><hr><br>Translator's Note:<br>`,
+          json_raei.currentChapter.note,
+        ].join('');
         chapterContent = chapterContent.replace(/\n/g, '<br>');
         if (chapterTitle && chapterContent) {
           chapterText = `<h2>${chapterTitle}</h2><hr><br>${chapterContent}`;
         }
         break;
       case 'rainofsnow':
-        const displayedDivSnow = loadedCheerio('.bb-item').filter(function () {
+        const displayedDiv_snow = loadedCheerio('.bb-item').filter(function () {
           return loadedCheerio(this).css('display') === 'block';
         });
-        const loadedCheerioSnow = parseHTML(displayedDivSnow.html()!);
+        const loadedCheerioSnow = parseHTML(displayedDiv_snow.html()!);
         bloatClasses = [
           '.responsivevoice-button',
           '.zoomdesc-cont p img',
@@ -390,10 +393,10 @@ class NovelUpdates implements Plugin.PluginBase {
         ];
         bloatClasses.map(tag => loadedCheerioSnow(tag).remove());
         chapterContent = loadedCheerioSnow('.zoomdesc-cont').html()!;
-        const titleElementSnow = loadedCheerioSnow('.scroller h2').first();
-        if (titleElementSnow.length) {
-          chapterTitle = titleElementSnow.text()!;
-          titleElementSnow.remove();
+        const titleElement_snow = loadedCheerioSnow('.scroller h2').first();
+        if (titleElement_snow.length) {
+          chapterTitle = titleElement_snow.text()!;
+          titleElement_snow.remove();
           chapterContent = loadedCheerioSnow('.zoomdesc-cont').html()!;
           if (chapterTitle && chapterContent) {
             chapterText = `<h2>${chapterTitle}</h2><hr><br>${chapterContent}`;
@@ -466,8 +469,10 @@ class NovelUpdates implements Plugin.PluginBase {
         /**
          * Check for age verification
          */
-        const ageVerification = loadedCheerio('main').text().toLowerCase()!;
-        if (ageVerification.includes('age verification required')) {
+        const ageVerification_skydemon = loadedCheerio('main')
+          .text()
+          .toLowerCase()!;
+        if (ageVerification_skydemon.includes('age verification required')) {
           throw new Error('Age verification required, please open in webview.');
         }
         chapterTitle = `${loadedCheerio('.pl-4 h1').first().text()!} | ${loadedCheerio('.pl-4 div').first().text()!}`;
@@ -485,24 +490,24 @@ class NovelUpdates implements Plugin.PluginBase {
         /**
          * Get the chapter link from the main page
          */
-        const linkSyringe = loadedCheerio('.entry-content a').attr('href')!;
-        const resultSyringe = await fetchApi(linkSyringe);
-        const bodySyringe = await resultSyringe.text();
-        const loadedCheerioSyringe = parseHTML(bodySyringe);
+        const link_syringe = loadedCheerio('.entry-content a').attr('href')!;
+        const result_syringe = await fetchApi(link_syringe);
+        const body_syringe = await result_syringe.text();
+        const loadedCheerio_syringe = parseHTML(body_syringe);
         bloatClasses = [
           '.has-inline-color',
           '.wp-block-buttons',
           '.wpcnt',
           '#jp-post-flair',
         ];
-        bloatClasses.map(tag => loadedCheerioSyringe(tag).remove());
-        chapterContent = loadedCheerioSyringe('.entry-content').html()!;
-        const titleElementSyringe =
-          loadedCheerioSyringe('.entry-content h3').first();
-        if (titleElementSyringe.length) {
-          chapterTitle = titleElementSyringe.text();
-          titleElementSyringe.remove();
-          chapterContent = loadedCheerioSyringe('.entry-content').html()!;
+        bloatClasses.map(tag => loadedCheerio_syringe(tag).remove());
+        chapterContent = loadedCheerio_syringe('.entry-content').html()!;
+        const titleElement_syringe =
+          loadedCheerio_syringe('.entry-content h3').first();
+        if (titleElement_syringe.length) {
+          chapterTitle = titleElement_syringe.text();
+          titleElement_syringe.remove();
+          chapterContent = loadedCheerio_syringe('.entry-content').html()!;
           if (chapterTitle && chapterContent) {
             chapterText = `<h2>${chapterTitle}</h2><hr><br>${chapterContent}`;
           }
@@ -555,14 +560,19 @@ class NovelUpdates implements Plugin.PluginBase {
           chapterText = `<h2>${chapterTitle}</h2><hr><br>${chapterContent}`;
         }
         break;
+      case 'yoru':
+        const chapterId_yoru = url.split('/').pop();
+        const link_yoru = `https://pxp-main-531j.onrender.com/api/v1/book_chapters/${chapterId_yoru}/content`;
+        const json_yoru = await fetchApi(link_yoru).then(r => r.json());
+        chapterText = await fetchApi(json_yoru).then(r => r.text());
       case 'zetrotranslation':
         bloatClasses = ['hr', 'p:contains("\u00a0")'];
         bloatClasses.map(tag => loadedCheerio(tag).remove());
         chapterContent = loadedCheerio('.text-left').html()!;
-        const titleElementZetro = loadedCheerio('.text-left h2').first();
-        if (titleElementZetro.length) {
-          chapterTitle = titleElementZetro.text()!;
-          titleElementZetro.remove();
+        const titleElement_zetro = loadedCheerio('.text-left h2').first();
+        if (titleElement_zetro.length) {
+          chapterTitle = titleElement_zetro.text()!;
+          titleElement_zetro.remove();
           chapterContent = loadedCheerio('.text-left').html()!;
           if (chapterTitle && chapterContent) {
             chapterText = `<h2>${chapterTitle}</h2><hr><br>${chapterContent}`;
