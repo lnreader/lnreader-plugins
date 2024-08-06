@@ -15,9 +15,10 @@
   },
   {
     "id": "lunarletters",
-    "sourceSite": "https://www.lunarletters.com/",
+    "sourceSite": "https://lunarletters.com/",
     "sourceName": "LunarLetters",
     "options": {
+      "versionIncrements": 1,
       "useNewChapterEndpoint": true
     }
   },
@@ -345,10 +346,11 @@
   },
   {
     "id": "galaxytranslations",
-    "sourceSite": "https://galaxytranslations97.com/",
+    "sourceSite": "https://galaxytranslations10.com/",
     "sourceName": "Galaxy Translations",
     "options": {
       "useNewChapterEndpoint": true,
+      "versionIncrements": 1,
       "lang": "English"
     }
   },
