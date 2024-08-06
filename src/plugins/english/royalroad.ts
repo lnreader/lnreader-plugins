@@ -7,7 +7,7 @@ import { NovelStatus } from '@libs/novelStatus';
 class RoyalRoad implements Plugin.PluginBase {
   id = 'royalroad';
   name = 'Royal Road';
-  version = '2.0.0';
+  version = '2.0.1';
   icon = 'src/en/royalroad/icon.png';
   site = 'https://www.royalroad.com/';
 
@@ -56,14 +56,29 @@ class RoyalRoad implements Plugin.PluginBase {
 
   async popularNovels(
     page: number,
-    { filters }: Plugin.PopularNovelsOptions<typeof this.filters>,
+    {
+      filters,
+      showLatestNovels,
+    }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
-    let link = `${this.site}fictions/`;
-
-    link += filters.order.value;
+    let link = `${this.site}fictions/search`;
     link += `?page=${page}`;
-
-    if (filters.genre.value !== '') link += `&genre=${filters.genre.value}`;
+    if (!filters) filters = this.filters || {};
+    if (showLatestNovels) link += '&orderBy=last_update';
+    for (const key in filters) {
+      if (filters[key as keyof typeof filters].value === '') continue;
+      if (key === 'genres' || key === 'tags' || key === 'content_warnings') {
+        if (filters[key].value.include)
+          for (const include of filters[key].value.include) {
+            link += `&tagsAdd=${include}`;
+          }
+        if (filters[key].value.exclude)
+          for (const exclude of filters[key].value.exclude) {
+            link += `&tagsRemove=${exclude}`;
+          }
+      } else if (typeof filters[key as keyof typeof filters] === 'object')
+        link += `&${key}=${filters[key as keyof typeof filters].value}`;
+    }
 
     const body = await fetchApi(link).then(r => r.text());
 
@@ -131,7 +146,7 @@ class RoyalRoad implements Plugin.PluginBase {
       },
       ontext(data) {
         if (isNovelName) {
-          novel.name = data;
+          novel.name = novel.name + data;
         }
         if (isAuthorName) {
           novel.author = data;
@@ -340,44 +355,457 @@ class RoyalRoad implements Plugin.PluginBase {
   }
 
   filters = {
-    order: {
-      value: 'weekly-popular',
-      label: 'Order By',
-      options: [
-        { label: 'Best Rated', value: 'best-rated' },
-        { label: 'Trending', value: 'trending' },
-        { label: 'Ongoing Fictions', value: 'active-popular' },
-        { label: 'Complete', value: 'complete' },
-        { label: 'Popular this week', value: 'weekly-popular' },
-        { label: 'Latest Updates', value: 'latest-updates' },
-        { label: 'Newest Fictions', value: 'new' },
-        { label: 'Rising Stars', value: 'rising-stars' },
-        { label: 'Writathon', value: 'writathon' },
-      ],
-      type: FilterTypes.Picker,
+    'keyword': {
+      'type': FilterTypes.TextInput,
+      'label': 'Keyword (title or description)',
+      'value': '',
     },
-    genre: {
-      value: '',
-      label: 'Genres',
-      options: [
-        { label: 'ALL', value: '' },
-        { label: 'Action', value: 'action' },
-        { label: 'Adventure', value: 'adventure' },
-        { label: 'Comedy', value: 'comedy' },
-        { label: 'Contemporary', value: 'contemporary' },
-        { label: 'Drama', value: 'drama' },
-        { label: 'Fantasy', value: 'fantasy' },
-        { label: 'Historical', value: 'historical' },
-        { label: 'Horror', value: 'horror' },
-        { label: 'Mystery', value: 'mystery' },
-        { label: 'Psychological', value: 'psychological' },
-        { label: 'Romance', value: 'romance' },
-        { label: 'Satire', value: 'satire' },
-        { label: 'Sci-fi', value: 'sci_fi' },
-        { label: 'Short Story', value: 'one_shot' },
-        { label: 'Tragedy', value: 'tragedy' },
+    'author': {
+      'type': FilterTypes.TextInput,
+      'label': 'Author',
+      'value': '',
+    },
+    'genres': {
+      'type': FilterTypes.ExcludableCheckboxGroup,
+      'label': 'Genres',
+      'value': {
+        'include': [],
+        'exclude': [],
+      },
+      'options': [
+        {
+          'label': 'Action',
+          'value': 'action',
+        },
+        {
+          'label': 'Adventure',
+          'value': 'adventure',
+        },
+        {
+          'label': 'Comedy',
+          'value': 'comedy',
+        },
+        {
+          'label': 'Contemporary',
+          'value': 'contemporary',
+        },
+        {
+          'label': 'Drama',
+          'value': 'drama',
+        },
+        {
+          'label': 'Fantasy',
+          'value': 'fantasy',
+        },
+        {
+          'label': 'Historical',
+          'value': 'historical',
+        },
+        {
+          'label': 'Horror',
+          'value': 'horror',
+        },
+        {
+          'label': 'Mystery',
+          'value': 'mystery',
+        },
+        {
+          'label': 'Psychological',
+          'value': 'psychological',
+        },
+        {
+          'label': 'Romance',
+          'value': 'romance',
+        },
+        {
+          'label': 'Satire',
+          'value': 'satire',
+        },
+        {
+          'label': 'Sci-fi',
+          'value': 'sci_fi',
+        },
+        {
+          'label': 'Short Story',
+          'value': 'one_shot',
+        },
+        {
+          'label': 'Tragedy',
+          'value': 'tragedy',
+        },
       ],
-      type: FilterTypes.Picker,
+    },
+    'tags': {
+      'type': FilterTypes.ExcludableCheckboxGroup,
+      'label': 'Tags',
+      'value': {
+        'include': [],
+        'exclude': [],
+      },
+      'options': [
+        {
+          'label': 'Anti-Hero Lead',
+          'value': 'anti-hero_lead',
+        },
+        {
+          'label': 'Artificial Intelligence',
+          'value': 'artificial_intelligence',
+        },
+        {
+          'label': 'Attractive Lead',
+          'value': 'attractive_lead',
+        },
+        {
+          'label': 'Cyberpunk',
+          'value': 'cyberpunk',
+        },
+        {
+          'label': 'Dungeon',
+          'value': 'dungeon',
+        },
+        {
+          'label': 'Dystopia',
+          'value': 'dystopia',
+        },
+        {
+          'label': 'Female Lead',
+          'value': 'female_lead',
+        },
+        {
+          'label': 'First Contact',
+          'value': 'first_contact',
+        },
+        {
+          'label': 'GameLit',
+          'value': 'gamelit',
+        },
+        {
+          'label': 'Gender Bender',
+          'value': 'gender_bender',
+        },
+        {
+          'label': 'Genetically Engineered',
+          'value': 'genetically_engineered ',
+        },
+        {
+          'label': 'Grimdark',
+          'value': 'grimdark',
+        },
+        {
+          'label': 'Hard Sci-fi',
+          'value': 'hard_sci-fi',
+        },
+        {
+          'label': 'Harem',
+          'value': 'harem',
+        },
+        {
+          'label': 'High Fantasy',
+          'value': 'high_fantasy',
+        },
+        {
+          'label': 'LitRPG',
+          'value': 'litrpg',
+        },
+        {
+          'label': 'Low Fantasy',
+          'value': 'low_fantasy',
+        },
+        {
+          'label': 'Magic',
+          'value': 'magic',
+        },
+        {
+          'label': 'Male Lead',
+          'value': 'male_lead',
+        },
+        {
+          'label': 'Martial Arts',
+          'value': 'martial_arts',
+        },
+        {
+          'label': 'Multiple Lead Characters',
+          'value': 'multiple_lead',
+        },
+        {
+          'label': 'Mythos',
+          'value': 'mythos',
+        },
+        {
+          'label': 'Non-Human Lead',
+          'value': 'non-human_lead',
+        },
+        {
+          'label': 'Portal Fantasy / Isekai',
+          'value': 'summoned_hero',
+        },
+        {
+          'label': 'Post Apocalyptic',
+          'value': 'post_apocalyptic',
+        },
+        {
+          'label': 'Progression',
+          'value': 'progression',
+        },
+        {
+          'label': 'Reader Interactive',
+          'value': 'reader_interactive',
+        },
+        {
+          'label': 'Reincarnation',
+          'value': 'reincarnation',
+        },
+        {
+          'label': 'Ruling Class',
+          'value': 'ruling_class',
+        },
+        {
+          'label': 'School Life',
+          'value': 'school_life',
+        },
+        {
+          'label': 'Secret Identity',
+          'value': 'secret_identity',
+        },
+        {
+          'label': 'Slice of Life',
+          'value': 'slice_of_life',
+        },
+        {
+          'label': 'Soft Sci-fi',
+          'value': 'soft_sci-fi',
+        },
+        {
+          'label': 'Space Opera',
+          'value': 'space_opera',
+        },
+        {
+          'label': 'Sports',
+          'value': 'sports',
+        },
+        {
+          'label': 'Steampunk',
+          'value': 'steampunk',
+        },
+        {
+          'label': 'Strategy',
+          'value': 'strategy',
+        },
+        {
+          'label': 'Strong Lead',
+          'value': 'strong_lead',
+        },
+        {
+          'label': 'Super Heroes',
+          'value': 'super_heroes',
+        },
+        {
+          'label': 'Supernatural',
+          'value': 'supernatural',
+        },
+        {
+          'label': 'Technologically Engineered',
+          'value': 'technologically_engineered',
+        },
+        {
+          'label': 'Time Loop',
+          'value': 'loop',
+        },
+        {
+          'label': 'Time Travel',
+          'value': 'time_travel',
+        },
+        {
+          'label': 'Urban Fantasy',
+          'value': 'urban_fantasy',
+        },
+        {
+          'label': 'Villainous Lead',
+          'value': 'villainous_lead',
+        },
+        {
+          'label': 'Virtual Reality',
+          'value': 'virtual_reality',
+        },
+        {
+          'label': 'War and Military',
+          'value': 'war_and_military',
+        },
+        {
+          'label': 'Wuxia',
+          'value': 'wuxia',
+        },
+        {
+          'label': 'Xianxia',
+          'value': 'xianxia',
+        },
+      ],
+    },
+    'content_warnings': {
+      'type': FilterTypes.ExcludableCheckboxGroup,
+      'label': 'Content Warnings',
+      'value': {
+        'include': [],
+        'exclude': [],
+      },
+      'options': [
+        {
+          'label': 'Profanity',
+          'value': 'profanity',
+        },
+        {
+          'label': 'Sexual Content',
+          'value': 'sexuality',
+        },
+        {
+          'label': 'Graphic Violence',
+          'value': 'graphic_violence',
+        },
+        {
+          'label': 'Sensitive Content',
+          'value': 'sensitive',
+        },
+        {
+          'label': 'AI-Assisted Content',
+          'value': 'ai_assisted',
+        },
+        {
+          'label': 'AI-Generated Content',
+          'value': 'ai_generated',
+        },
+      ],
+    },
+    'minPages': {
+      'type': FilterTypes.TextInput,
+      'label': 'Min Pages',
+      'value': '0',
+    },
+    'maxPages': {
+      'type': FilterTypes.TextInput,
+      'label': 'Max Pages',
+      'value': '20000',
+    },
+    'minRating': {
+      'type': FilterTypes.TextInput,
+      'label': 'Min Rating (0.0 - 5.0)',
+      'value': '0.0',
+    },
+    'maxRating': {
+      'type': FilterTypes.TextInput,
+      'label': 'Max Rating (0.0 - 5.0)',
+      'value': '5.0',
+    },
+    'status': {
+      'type': FilterTypes.Picker,
+      'label': 'Status',
+      'value': 'ALL',
+      'options': [
+        {
+          'label': 'All',
+          'value': 'ALL',
+        },
+        {
+          'label': 'Completed',
+          'value': 'COMPLETED',
+        },
+        {
+          'label': 'Dropped',
+          'value': 'DROPPED',
+        },
+        {
+          'label': 'Ongoing',
+          'value': 'ONGOING',
+        },
+        {
+          'label': 'Hiatus',
+          'value': 'HIATUS',
+        },
+        {
+          'label': 'Stub',
+          'value': 'STUB',
+        },
+      ],
+    },
+    'orderBy': {
+      'type': FilterTypes.Picker,
+      'label': 'Order by',
+      'value': 'relevance',
+      'options': [
+        {
+          'label': 'Relevance',
+          'value': 'relevance',
+        },
+        {
+          'label': 'Popularity',
+          'value': 'popularity',
+        },
+        {
+          'label': 'Average Rating',
+          'value': 'rating',
+        },
+        {
+          'label': 'Last Update',
+          'value': 'last_update',
+        },
+        {
+          'label': 'Release Date',
+          'value': 'release_date',
+        },
+        {
+          'label': 'Followers',
+          'value': 'followers',
+        },
+        {
+          'label': 'Number of Pages',
+          'value': 'length',
+        },
+        {
+          'label': 'Views',
+          'value': 'views',
+        },
+        {
+          'label': 'Title',
+          'value': 'title',
+        },
+        {
+          'label': 'Author',
+          'value': 'author',
+        },
+      ],
+    },
+    'dir': {
+      'type': FilterTypes.Picker,
+      'label': 'Direction',
+      'value': 'desc',
+      'options': [
+        {
+          'label': 'Ascending',
+          'value': 'asc',
+        },
+        {
+          'label': 'Descending',
+          'value': 'desc',
+        },
+      ],
+    },
+    'type': {
+      'type': FilterTypes.Picker,
+      'label': 'Type',
+      'value': 'ALL',
+      'options': [
+        {
+          'label': 'All',
+          'value': 'ALL',
+        },
+        {
+          'label': 'Fan Fiction',
+          'value': 'fanfiction',
+        },
+        {
+          'label': 'Original',
+          'value': 'original',
+        },
+      ],
     },
   } satisfies Filters;
 }
