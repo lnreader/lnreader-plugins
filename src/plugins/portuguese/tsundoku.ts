@@ -8,7 +8,7 @@ import { Filters, FilterTypes } from '@libs/filterInputs';
 class TsundokuPlugin implements Plugin.PluginBase {
   id = 'tsundoku';
   name = 'Tsundoku Traduções';
-  version = '1.0.0';
+  version = '1.0.1';
   icon = 'src/pt-br/tsundoku/icon.png';
   site = 'https://tsundoku.com.br';
 
@@ -203,12 +203,8 @@ class TsundokuPlugin implements Plugin.PluginBase {
 
     const chapterText = $readerarea.html() || '';
     const parts = chapterText.split(/<hr ?\/?>/);
-    if (
-      parts.length > 1 &&
-      parts[parts.length - 1].includes(
-        'Agradecemos a todos que leram diretamente aqui',
-      )
-    ) {
+    const lastPart = parts[parts.length - 1];
+    if (parts.length > 1 && lastPart.includes('https://discord')) {
       parts.pop();
     }
 
