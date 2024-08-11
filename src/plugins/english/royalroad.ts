@@ -7,7 +7,7 @@ import { NovelStatus } from '@libs/novelStatus';
 class RoyalRoad implements Plugin.PluginBase {
   id = 'royalroad';
   name = 'Royal Road';
-  version = '2.0.1';
+  version = '2.1.0';
   icon = 'src/en/royalroad/icon.png';
   site = 'https://www.royalroad.com/';
 
@@ -232,115 +232,21 @@ class RoyalRoad implements Plugin.PluginBase {
   async parseChapter(chapterPath: string): Promise<string> {
     const result = await fetchApi(this.site + chapterPath);
     const html = await result.text();
-    let chapterText = '';
-    let isChapter = false;
-    let isPtag = false;
-    let isStyle = false;
-    let isStyleText = false;
-    let styles = '';
-    const parser = new Parser({
-      onopentag(name, attribs) {
-        if (isChapter && name === 'div') {
-          const stylediv = attribs['style'];
-          if (stylediv) {
-            chapterText += `<div style="${stylediv}">`;
-            isStyleText = true;
-          } else {
-            chapterText += `<div>`;
-          }
-        }
-        if (isChapter && name === 'table') {
-          const w = attribs['width'];
-          if (w) {
-            chapterText += `<table width="${w}">`;
-          } else {
-            chapterText += `<table>`;
-          }
-        }
-        if (isChapter && name === 'tbody') {
-          chapterText += `<tbody>`;
-        }
-        if (isChapter && name === 'tr') {
-          chapterText += `<tr>`;
-        }
-        if (isChapter && name === 'td') {
-          const w1 = attribs['width'];
-          if (w1) {
-            chapterText += `<td width="${w1}">`;
-          } else {
-            chapterText += `<td>`;
-          }
-        }
-      },
-      onattribute(name, value) {
-        if (name === 'class' && value === 'chapter-inner chapter-content') {
-          isChapter = true;
-        }
-        if (name === 'class' && value === 'portlet light t-center-3') {
-          isChapter = false;
-          isPtag = false;
-        }
-        if (name === 'class' && value === styles) {
-          isPtag = false;
-        }
-      },
-      onopentagname(name) {
-        if (isChapter && name === 'p') {
-          chapterText += '<p>';
-          isPtag = true;
-          if (isStyleText) {
-            isStyleText = false;
-          }
-        }
-        if (name === 'style') {
-          isStyle = true;
-        }
-        if (isChapter && name === 'br') {
-          chapterText += `<br>`;
-        }
-      },
-      ontext(data) {
-        if (isPtag) {
-          chapterText += data;
-        }
-        if (isStyleText) {
-          chapterText += data;
-        }
-        if (isStyle) {
-          if (data.includes('display: none;')) {
-            styles = data.match(/\.(.*)\{/)![1];
-          }
-        }
-      },
-      onclosetag(name) {
-        if (name === 'p') {
-          isPtag = false;
-          chapterText += '</p>';
-        }
-        if (name === 'style') {
-          isStyle = false;
-        }
-        if (isChapter && name === 'td') {
-          chapterText += `</td>`;
-        }
-        if (isChapter && name === 'tr') {
-          chapterText += `</tr>`;
-        }
-        if (isChapter && name === 'tbody') {
-          chapterText += `</tbody>`;
-        }
-        if (isChapter && name === 'table') {
-          chapterText += `</table>`;
-        }
-        if (isChapter && name === 'div') {
-          isStyleText = false;
-          chapterText += `</div>`;
-        }
-      },
-    });
-    parser.write(html);
-    parser.end();
+    const parts: string[] = [];
+    const regexPatterns: RegExp[] = [
+      /(<div class="portlet solid author-note-portlet"[^]+)<div class="margin-bottom-20/,
+      /(<div class="chapter-inner chapter-content"[^]+)<div class="portlet light t-center-3/,
+      /(<\/div>\s+<div class="portlet solid author-note-portlet"[^]+)<div class="row margin-bottom-10/,
+    ];
 
+    const extractContent = (patterns: RegExp[]) => {
+      patterns.forEach(regex => {
+        const match = html.match(regex)?.[1];
+        if (match) parts.push(match);
+      });
+    };
+    extractContent(regexPatterns);
+    const chapterText = parts.join('<hr>');
     return chapterText;
   }
 
