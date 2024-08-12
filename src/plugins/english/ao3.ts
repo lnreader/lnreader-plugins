@@ -7,7 +7,7 @@ import { defaultCover } from '@libs/defaultCover';
 class ArchiveOfOurOwn implements Plugin.PluginBase {
   id = 'archiveofourown';
   name = 'Archive Of Our Own';
-  version = '1.0.1';
+  version = '1.0.2';
   icon = 'src/en/ao3/icon.png';
   site = 'https://archiveofourown.org/';
 
@@ -100,7 +100,11 @@ class ArchiveOfOurOwn implements Plugin.PluginBase {
 
   async parseNovel(novelUrl: string): Promise<Plugin.SourceNovel> {
     const result = await fetchApi(new URL(novelUrl, this.site).toString());
+    const urlchapter = novelUrl + '/navigate';
+    const chapters = await fetchApi(new URL(urlchapter, this.site).toString());
     const body = await result.text();
+    const chapterlisttext = await chapters.text();
+    const chapterlistload = parseHTML(chapterlisttext);
     const loadedCheerio = parseHTML(body);
 
     const novel: Plugin.SourceNovel = {
@@ -144,12 +148,31 @@ class ArchiveOfOurOwn implements Plugin.PluginBase {
       .join(',');
     novel.summary = `Fandom:\n${fandom}\n\nRating:\n${rating}\n\nWarning:\n${warning}\n\nSummary:\n${summary}\n\nSeries:\n${series}\n\nRelationships:\n${relation}\n\nCharacters:\n${character}\n\nStats:\n${stats}`;
     const chapterItems: Plugin.ChapterItem[] = [];
+    const longReleaseDate: string[] = [];
+    let match: RegExpExecArray | null;
+    chapterlistload('ol.index').each((i, ele) => {
+      chapterlistload(ele)
+        .find('li')
+        .each((i, el) => {
+          const chapterNameMatch = chapterlistload(el).find('a').text().trim();
+          const releaseTimeText = chapterlistload(el)
+            .find('span.datetime')
+            .text()
+            .replace(/\(([^)]+)\)/g, '$1')
+            .trim();
+          const releaseTime = releaseTimeText
+            ? new Date(releaseTimeText).toISOString()
+            : '';
+          longReleaseDate.push(releaseTime);
+        });
+    });
     const releaseTimeText = loadedCheerio('.wrapper dd.published')
       .text()
       .trim();
     const releaseTime = releaseTimeText
       ? new Date(releaseTimeText).toISOString()
       : '';
+    let dateCounter: number = 0;
     if (loadedCheerio('#chapter_index select').length > 0) {
       loadedCheerio('#chapter_index select').each((i, selectEl) => {
         loadedCheerio(selectEl)
@@ -158,11 +181,13 @@ class ArchiveOfOurOwn implements Plugin.PluginBase {
             const chapterName = loadedCheerio(el).text().trim();
             const chapterUrlCode = loadedCheerio(el).attr('value')?.trim();
             const chapterUrl = `${novelUrl}/chapters/${chapterUrlCode}`;
-
+            const releaseDate: string = longReleaseDate[dateCounter];
+            dateCounter++;
             if (chapterUrl) {
               chapterItems.push({
                 name: chapterName,
                 path: chapterUrl,
+                releaseTime: releaseDate,
               });
             }
           });
