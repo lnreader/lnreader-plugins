@@ -9,7 +9,7 @@ class Genesis implements Plugin.PluginBase {
   icon = 'src/en/genesis/icon.png';
   customCSS = 'src/en/genesis/customCSS.css';
   site = 'https://genesistudio.com';
-  version = '1.0.1';
+  version = '1.0.2';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = {
     headers: {
       'referrer': this.site,
@@ -101,7 +101,7 @@ class Genesis implements Plugin.PluginBase {
       .filter((node: { type: string }) => node.type === 'data')
       .map((node: { data: any }) => node.data)[0];
 
-    return data[data[0].content];
+    return data[data[0].content] + data[data[0].footnotes] ?? '';
   }
 
   async searchNovels(
