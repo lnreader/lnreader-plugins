@@ -2,6 +2,9 @@
   {
     "id": "readnovelfull",
     "sourceSite": "https://readnovelfull.com",
-    "sourceName": "ReadNovelFull"
+    "sourceName": "ReadNovelFull",
+    "options": {
+      "versionIncrements": 1
+    }
   }
 ]

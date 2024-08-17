@@ -159,7 +159,7 @@ class ReadNovelFullPlugin implements Plugin.PluginBase {
   async parseChapter(chapterPath: string): Promise<string> {
     const $ = await this.getCheerio(this.site + chapterPath, false);
 
-    return $('#chr-content').text();
+    return $('#chr-content').html();
   }
 
   async searchNovels(
