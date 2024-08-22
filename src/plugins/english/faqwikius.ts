@@ -6,15 +6,18 @@ import { NovelStatus } from '@libs/novelStatus';
 class FaqWikiUs implements Plugin.PluginBase {
   id = 'FWK.US';
   name = 'Faq Wiki';
-  site = 'https://faqwiki.us/';
-  version = '1.1.1';
+  site = 'https://www.faqwiki.us/';
+  version = '2.0.0';
   icon = 'src/en/faqwikius/icon.png';
 
   parseNovels(loadedCheerio: CheerioAPI, searchTerm?: string) {
     let novels: Plugin.NovelItem[] = [];
 
-    loadedCheerio('figure.wp-block-image').each((index, element) => {
-      const name = loadedCheerio(element).text();
+    loadedCheerio('.plt-page-item').each((index, element) => {
+      const name = loadedCheerio(element)
+        .text()
+        .replace('Novel – All Chapters', '')
+        .trim();
       let cover = loadedCheerio(element).find('img').attr('data-ezsrc');
 
       // Remove the appended query string
@@ -28,7 +31,8 @@ class FaqWikiUs implements Plugin.PluginBase {
         .find('a')
         .attr('href')
         ?.replace('tp:', 'tps:')
-        ?.slice(this.site.length);
+        ?.replace(this.site, '')
+        ?.replace(/\/+$/, '');
       if (!path) return;
 
       novels.push({ name, cover, path });
@@ -64,55 +68,72 @@ class FaqWikiUs implements Plugin.PluginBase {
       .replace('Novel – All Chapters', '')
       .trim();
 
-    novel.cover = loadedCheerio('.wp-block-image')
-      .find('img')
-      .attr('data-ezsrc')
-      ?.replace(/\?ezimgfmt=.*$/, ''); // Regular expression magic!
+    const img = loadedCheerio('.wp-block-image img');
+    const cover = img.attr('data-ezsrc') || img.attr('src');
+    novel.cover = cover?.replace(/\?ezimgfmt=.*$/, ''); // Regular expression magic!
 
     const status = loadedCheerio(
       "#lcp_instance_0 +:icontains('complete')",
     ).text();
     novel.status = status ? NovelStatus.Completed : NovelStatus.Ongoing;
 
-    const div = loadedCheerio('.book-review-block__meta-item-value');
+    loadedCheerio('.entry-content strong').each((i, el) => {
+      const key = loadedCheerio(el).text().trim().toLowerCase();
+      const parent = loadedCheerio(el).parent();
+      const values = [parent.text().slice(key.length).trim()].concat(
+        parent
+          .nextUntil('p:has(strong)')
+          .map((e, ax) => loadedCheerio(ax).text().trim())
+          .get(),
+      );
+      let genreText = values.join(' ').trim();
+      const multiWordGenres = [
+        //add more when found
+        'Slice of Life',
+        'School Life',
+      ];
+      multiWordGenres.forEach(genre => {
+        genreText = genreText.replace(
+          new RegExp(`\\b${genre}\\b`, 'g'),
+          genre.replace(/ /g, '_'),
+        );
+      });
+      const genres = genreText
+        .split(/\s+/)
+        .map(word => word.replace(/_/g, ' '))
+        .join(', ');
 
-    div.html(div.html()?.replace(/(?<=>)([^<]+)(?=<br\s*\/?>)/g, '<p>$1</p>'));
+      switch (key) {
+        case 'description:':
+          novel.summary = values.join('\n');
+          break;
+        case 'author(s):':
+          novel.author = values[0];
+          break;
+        case 'genre:':
+          novel.genres = genres;
+      }
+    });
 
-    loadedCheerio('.book-review-block__meta-item-value strong').each(
-      (i, el) => {
-        const key = loadedCheerio(el)
-          .text()
-          .replace(':', '')
-          .trim()
-          .toLowerCase();
-        const value = loadedCheerio(el).next().text().replace(':', '').trim();
-
-        switch (key) {
-          case 'description':
-            novel.summary = value;
-            break;
-          case 'author(s)':
-            novel.author = value;
-            break;
-          case 'genre':
-            novel.genres = value.split(' ').join(',');
-        }
-      },
-    );
-
-    const chapters: Plugin.ChapterItem[] = loadedCheerio(
-      '.lcp_catlist > li > a',
-    )
-      .map((chapterIndex, element) => ({
-        name: loadedCheerio(element)
-          .text()
-          .replace(novel.name + '', '')
-          .replace('Novel' + '', '')
-          .trim(),
-        path: '' + loadedCheerio(element).attr('href')?.slice(this.site.length),
-        chapterNumber: chapterIndex + 1,
-      }))
-      .get();
+    const chapters: Plugin.ChapterItem[] = [];
+    loadedCheerio('.lcp_catlist li a').each((chapterIndex, element) => {
+      const name = loadedCheerio(element)
+        .text()
+        .replace(novel.name + '', '')
+        .replace('Novel' + '', '')
+        .trim();
+      const path = loadedCheerio(element)
+        .attr('href')
+        ?.replace(this.site, '')
+        ?.replace(/\/+$/, '');
+      const chapterNumber = chapterIndex + 1;
+      if (!path) return;
+      chapters.push({
+        name,
+        path,
+        chapterNumber,
+      });
+    });
 
     novel.chapters = chapters;
     return novel;
@@ -123,33 +144,37 @@ class FaqWikiUs implements Plugin.PluginBase {
       res.text(),
     );
     const loadedCheerio = parseHTML(body);
-    loadedCheerio('span').remove();
+    const removal = ['.entry-content span', '.entry-content div', 'script'];
+    removal.map(e => {
+      loadedCheerio(e).remove();
+    });
 
-    const chapterParagraphs = loadedCheerio('.entry-content p');
+    const chapterText = loadedCheerio('.entry-content').html()!;
+    // const chapterParagraphs = loadedCheerio('.entry-content p');
 
-    let chapterContent; // Variable to store the result
+    // let chapterContent; // Save this code in case needed
 
-    if (chapterParagraphs.length < 5) {
-      //some chapter in this site store their whole text in 1-4 <p>,
-      chapterContent = chapterParagraphs
-        .map((index, element) => {
-          const text = loadedCheerio(element).html();
-          return text;
-        })
-        .get()
-        .join('\n\n');
-    } else {
-      // Multiple paragraphs case
-      chapterContent = chapterParagraphs
-        .map((index, element) => {
-          const text = loadedCheerio(element).text().trim();
-          return `<p>${text}</p>`;
-        })
-        .get()
-        .join('\n\n');
-    }
+    // if (chapterParagraphs.length < 5) {
+    //   //some chapter in this site store their whole text in 1-4 <p>,
+    //   chapterContent = chapterParagraphs
+    //     .map((index, element) => {
+    //       const text = loadedCheerio(element).html();
+    //       return text;
+    //     })
+    //     .get()
+    //     .join('\n\n');
+    // } else {
+    //   // Multiple paragraphs case
+    //   chapterContent = chapterParagraphs
+    //     .map((index, element) => {
+    //       const text = loadedCheerio(element).text().trim();
+    //       return `<p>${text}</p>`;
+    //     })
+    //     .get()
+    //     .join('\n\n');
+    // }
 
-    return chapterContent;
+    return chapterText;
   }
 
   async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
