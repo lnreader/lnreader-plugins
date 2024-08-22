@@ -7,7 +7,7 @@ import dayjs from 'dayjs';
 class LightNovelPub implements Plugin.PagePlugin {
   id = 'lightnovelpub';
   name = 'LightNovelPub';
-  version = '2.0.0';
+  version = '2.1.0';
   icon = 'src/en/lightnovelpub/icon.png';
   site = 'https://www.lightnovelpub.com/';
   headers = {
@@ -236,102 +236,20 @@ class LightNovelPub implements Plugin.PagePlugin {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const body = await fetchApi(this.site + chapterPath).then(r => r.text());
-
-    let chapterText = '';
-    let isChapter = false;
-    let isPtag = false;
-    let isStyleText = false;
-    const parser = new Parser({
-      onopentag(name, attribs) {
-        if (isChapter && name === 'div') {
-          const stylediv = attribs['style'];
-          if (stylediv) {
-            chapterText += `<div style="${stylediv}">`;
-            isStyleText = true;
-          } else {
-            chapterText += `<div>`;
-          }
-        }
-        if (isChapter && name === 'table') {
-          const w = attribs['width'];
-          if (w) {
-            chapterText += `<table width="${w}">`;
-          } else {
-            chapterText += `<table>`;
-          }
-        }
-        if (isChapter && name === 'tbody') {
-          chapterText += `<tbody>`;
-        }
-        if (isChapter && name === 'tr') {
-          chapterText += `<tr>`;
-        }
-        if (isChapter && name === 'td') {
-          const w1 = attribs['width'];
-          if (w1) {
-            chapterText += `<td width="${w1}">`;
-          } else {
-            chapterText += `<td>`;
-          }
-        }
-      },
-      onattribute(name, value) {
-        if (name === 'id' && value === 'chapter-container') {
-          isChapter = true;
-        }
-        if (name === 'class' && value?.includes('chapternav')) {
-          isChapter = false;
-          isPtag = false;
-        }
-      },
-      onopentagname(name) {
-        if (isChapter && name === 'p') {
-          chapterText += '<p>';
-          isPtag = true;
-          if (isStyleText) {
-            isStyleText = false;
-          }
-        }
-        if (isChapter && name === 'br') {
-          chapterText += `<br>`;
-        }
-      },
-      ontext(data) {
-        if (isPtag) {
-          chapterText += data;
-        }
-        if (isStyleText) {
-          chapterText += data;
-        }
-      },
-      onclosetag(name) {
-        if (name === 'p') {
-          isPtag = false;
-          chapterText += '</p>';
-        }
-        if (isChapter && name === 'td') {
-          chapterText += `</td>`;
-        }
-        if (isChapter && name === 'tr') {
-          chapterText += `</tr>`;
-        }
-        if (isChapter && name === 'tbody') {
-          chapterText += `</tbody>`;
-        }
-        if (isChapter && name === 'table') {
-          chapterText += `</table>`;
-        }
-        if (isChapter && name === 'div') {
-          isStyleText = false;
-          chapterText += `</div>`;
-        }
-      },
-    });
-    parser.write(body);
-    parser.end();
-
-    return chapterText;
+    const html = await fetchApi(this.site + chapterPath).then(r => r.text());
+    const parts: string[] = [];
+    const regexPatterns: RegExp[] = [
+      /(<div id="chapter-container[^]+?)<div class="chapternav/,
+    ];
+    const extractContent = (patterns: RegExp[]) => {
+      patterns.forEach(regex => {
+        const match = html.match(regex)?.[1];
+        if (match) parts.push(match);
+      });
+    };
+    extractContent(regexPatterns);
+    const chapterText = parts.join();
+    return chapterText.replace(/(?<=\/p>).*?(?=<p>)/g, '');
   }
 
   async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {

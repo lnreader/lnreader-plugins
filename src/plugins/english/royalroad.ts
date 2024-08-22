@@ -7,7 +7,7 @@ import { NovelStatus } from '@libs/novelStatus';
 class RoyalRoad implements Plugin.PluginBase {
   id = 'royalroad';
   name = 'Royal Road';
-  version = '2.1.1';
+  version = '2.1.2';
   icon = 'src/en/royalroad/icon.png';
   site = 'https://www.royalroad.com/';
 
@@ -234,10 +234,10 @@ class RoyalRoad implements Plugin.PluginBase {
     const html = await result.text();
     const parts: string[] = [];
     const regexPatterns: RegExp[] = [
-      /<style>\n\s+.(.+?){[^]+speak: never;/,
-      /(<div class="portlet solid author-note-portlet"[^]+)<div class="margin-bottom-20/,
-      /(<div class="chapter-inner chapter-content"[^]+)<div class="portlet light t-center-3/,
-      /(<\/div>\s+<div class="portlet solid author-note-portlet"[^]+)<div class="row margin-bottom-10/,
+      /<style>\n\s+.(.+?){[^]+?display: none;/,
+      /(<div class="portlet solid author-note-portlet"[^]+?)<div class="margin-bottom-20/,
+      /(<div class="chapter-inner chapter-content"[^]+?)<div class="portlet light t-center-3/,
+      /(<\/div>\s+<div class="portlet solid author-note-portlet"[^]+?)<div class="row margin-bottom-10/,
     ];
 
     const extractContent = (patterns: RegExp[]) => {
@@ -247,11 +247,11 @@ class RoyalRoad implements Plugin.PluginBase {
       });
     };
     extractContent(regexPatterns);
-    const cleanup = new RegExp(`<p class=\"${parts[0]}.+?<\/p>`, 'g');
+    const cleanup = new RegExp(`<p class="${parts[0]}.+?</p>`, 'g');
     const chapterText = parts.slice(1).join('<hr>');
     return chapterText
       .replace(cleanup, '')
-      .replace(/<p class=\"[^><]+>/g, '<p>');
+      .replace(/<p class="[^><]+>/g, '<p>');
   }
 
   async searchNovels(
