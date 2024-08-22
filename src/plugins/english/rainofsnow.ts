@@ -9,7 +9,7 @@ class Rainofsnow implements Plugin.PagePlugin {
   name = 'Rainofsnow';
   icon = 'src/en/rainofsnow/icon.png';
   site = 'https://rainofsnow.com/';
-  version = '1.1.0';
+  version = '1.1.1';
 
   parseNovels(loadedCheerio: CheerioAPI) {
     const novels: Plugin.NovelItem[] = [];
@@ -97,18 +97,40 @@ class Rainofsnow implements Plugin.PagePlugin {
     const chapter: Plugin.ChapterItem[] = [];
 
     loadedCheerio('#chapter .march1 li').each((i, el) => {
-      const name = loadedCheerio(el).find('.chapter').first().text().trim();
-      const releaseTime = new Date(
-        loadedCheerio(el).find('small').text().trim(),
-      ).toISOString();
       const path = loadedCheerio(el)
         .find('a')
         .attr('href')
         ?.slice(this.site.length);
+      if (!path) return;
+      const name = loadedCheerio(el).find('.chapter').first().text().trim();
+      const date = loadedCheerio(el).find('small').text().trim().toLowerCase();
+      const months = [
+        'jan',
+        'feb',
+        'mar',
+        'apr',
+        'may',
+        'jun',
+        'jul',
+        'aug',
+        'sep',
+        'oct',
+        'nov',
+        'dec',
+      ];
+      const regex = /([a-z]+) (..?), (.+)/;
+      const [, monthName, day, year] = regex.exec(date) || [];
+      const month = months.indexOf(monthName.slice(0, 3));
+      const releaseTime =
+        monthName && month !== -1
+          ? new Date(+year, month, +day).toISOString()
+          : null;
 
-      if (path && name) {
-        chapter.push({ name, path, releaseTime });
-      }
+      chapter.push({
+        name,
+        path,
+        releaseTime,
+      });
     });
 
     return chapter;
