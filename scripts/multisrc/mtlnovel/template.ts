@@ -32,8 +32,8 @@ class MTLNovelPlugin implements Plugin.PluginBase {
     this.name = metadata.sourceName;
     this.icon = 'multisrc/mtlnovel/mtlnovel/icon.png';
     this.site = metadata.sourceSite;
-    this.mainUrl = 'https://www.mtlnovel.com/';
-    this.version = '1.1.1';
+    this.mainUrl = 'https://www.mtlnovels.com/';
+    this.version = '1.1.2';
     this.options = metadata.options ?? ({} as MTLNovelOptions);
     this.filters = metadata.filters satisfies Filters;
   }
@@ -42,7 +42,7 @@ class MTLNovelPlugin implements Plugin.PluginBase {
     url: string,
     headers: Headers = new Headers(),
   ): Promise<Response> {
-    headers.append('Alt-Used', 'www.mtlnovel.com');
+    headers.append('Alt-Used', 'www.mtlnovels.com');
     const r = await fetchApi(url, { headers });
     if (!r.ok)
       throw new Error(
@@ -124,17 +124,23 @@ class MTLNovelPlugin implements Plugin.PluginBase {
         case 'Mots Clés':
         case 'Género':
         case 'Label':
+        case 'Gênero':
+        case 'Tag':
+        case 'Теги':
           if (novel.genres) novel.genres += ', ' + infoValue;
           else novel.genres = infoValue;
           break;
         case 'Author':
         case 'Auteur':
         case 'Autor(a)':
+        case 'Autor':
+        case 'Автор':
           novel.author = infoValue;
           break;
         case 'Status':
         case 'Statut':
         case 'Estado':
+        case 'Положение дел':
           if (infoValue == 'Hiatus') novel.status = NovelStatus.OnHiatus;
           else novel.status = infoValue;
           break;
@@ -169,6 +175,12 @@ class MTLNovelPlugin implements Plugin.PluginBase {
     };
 
     novel.chapters = await getChapters();
+
+    if (novel.genres) {
+      const genresArray = novel.genres.split(', ');
+      genresArray.pop();
+      novel.genres = genresArray.join(', ');
+    }
 
     return novel;
   }
@@ -219,7 +231,7 @@ class MTLNovelPlugin implements Plugin.PluginBase {
 
   imageRequestInit: Plugin.ImageRequestInit = {
     headers: {
-      'Alt-Used': 'www.mtlnovel.com',
+      'Alt-Used': 'www.mtlnovels.com',
     },
   };
 }
