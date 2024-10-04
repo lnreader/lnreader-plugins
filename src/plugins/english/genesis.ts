@@ -18,87 +18,103 @@ class Genesis implements Plugin.PluginBase {
   icon = 'src/en/genesis/icon.png';
   customCSS = 'src/en/genesis/customCSS.css';
   site = 'https://genesistudio.com';
-  version = '1.0.3';
+  version = '1.0.4';
+
   imageRequestInit?: Plugin.ImageRequestInit | undefined = {
     headers: {
       'referrer': this.site,
     },
   };
 
-  async parseNovels(json: any[]): Promise<Plugin.NovelItem[]> {
-    return json.map((novel: any) => {
-      return {
-        name: novel.novel_title,
-        path: `/novels/${novel.abbreviation}`,
-        cover: novel.cover,
-      };
-    });
+  async parseNovels(json: any[]): Promise<Plugin.SourceNovel[]> {
+    return json.map((novel: any) => ({
+      name: novel.novel_title,
+      path: `/novels/${novel.abbreviation}`,
+      cover: novel.cover,
+    }));
   }
 
   async popularNovels(
     pageNo: number,
-    {
-      showLatestNovels,
-      filters,
-    }: Plugin.PopularNovelsOptions<typeof this.filters>,
-  ): Promise<Plugin.NovelItem[]> {
+    { showLatestNovels, filters }: Plugin.PopularNovelsOptions,
+  ): Promise<Plugin.SourceNovel[]> {
     if (pageNo !== 1) return [];
-
-    let link = `https://genesistudio.com/api/search?`;
+    let link = `${this.site}/api/search?`;
     if (showLatestNovels) {
       link += 'sort=Recent';
     } else {
-      if (filters!.genres.value.length) {
-        link += filters!.genres.value.join('&');
+      if (filters!.genres.value) {
+        link += filters!.genres.value;
       }
       link += `&${filters!.storyStatus.value}&${filters!.sort.value}`;
     }
-
     const json = await fetchApi(link).then(r => r.json());
-
     return this.parseNovels(json);
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
     const url = `${this.site}${novelPath}/__data.json?x-sveltekit-invalidated=001`;
     const json = await fetchApi(url).then(r => r.json());
-
     const nodes = json.nodes;
     const data = nodes
       .filter((node: { type: string }) => node.type === 'data')
       .map((node: { data: any }) => node.data)[0];
-    const novelData = data[data[0].novel];
 
     const novel: Plugin.SourceNovel = {
       path: novelPath,
-      name: data[novelData.novel_title],
-      cover: data[novelData.cover],
-      summary: data[novelData.synopsis],
-      author: data[novelData.author],
+      name: '',
+      cover: '',
+      summary: '',
+      author: '',
+      status: 'Unknown',
+      chapters: [],
     };
 
-    novel.genres = data[novelData.genres]
-      .map((index: number) => data[index])
-      .join(',');
+    for (const key in data) {
+      const value = data[key];
+      if (typeof value === 'object' && value !== null) {
+        if ('novel_title' in value) {
+          novel.name = data[value.novel_title];
+          novel.cover = data[value.cover];
+          novel.summary = data[value.synopsis];
+          novel.author = data[value.author];
+          novel.genres = (data[value.genres] as number[])
+            .map((genreId: number) => data[genreId])
+            .join(', ');
+          novel.status = value.release_days ? 'Ongoing' : 'Completed';
+        } else if ('chapters_list' in value) {
+          const chaptersFunction = data[value.chapters_list];
+          const chapterMatches = chaptersFunction.match(
+            /'id':((?!_)\w+),'chapter_title':(?:'([^'\\]*(?:\\.[^'\\]*)*)'|(\w+\([^\)]+\))),'chapter_number':(\w+),'required_tier':(\w+),'date_created':([^,]*),/g,
+          );
 
-    novel.status = data[novelData.release_days] ? 'Ongoing' : 'Completed';
+          if (chapterMatches) {
+            novel.chapters = chapterMatches
+              .map((match: string) => {
+                const [, id, title, , number, requiredTier, dateCreated] =
+                  match.match(
+                    /'id':(\w+),'chapter_title':(?:'([^'\\]*(?:\\.[^'\\]*)*)'|(\w+\([^\)]+\))),'chapter_number':(\w+),'required_tier':(\w+),'date_created':([^,]*),/,
+                  )!;
 
-    const chapterData = data[data[0].chapters];
-    const freeChapterData = chapterData.free_chapters;
-
-    /** Premium chapters not yet implemented */
-    // const premiumChapterData = chapterData.premium_chapters;
-
-    novel.chapters = data[freeChapterData]
-      .map((index: number) => data[index])
-      .map((chapter: any) => {
-        return {
-          name: `Chapter ${data[chapter.chapter_number]}: ${data[chapter.chapter_title]}`,
-          path: `/viewer/${data[chapter.id]}`,
-          releaseTime: data[chapter.date_created],
-          chapterNumber: data[chapter.chapter_number],
-        };
-      });
+                if (parseInt(requiredTier, 16) === 0) {
+                  return {
+                    name: `Chapter ${parseInt(number, 16)}: ${title || 'Unknown Title'}`,
+                    path: `/viewer/${parseInt(id, 16)}`,
+                    releaseTime: dateCreated.replace(/^'|'$/g, ''),
+                    chapterNumber: parseInt(number, 16),
+                  };
+                }
+                return null;
+              })
+              .filter(
+                (
+                  chapter: Plugin.ChapterItem | null,
+                ): chapter is Plugin.ChapterItem => chapter !== null,
+              );
+          }
+        }
+      }
+    }
 
     return novel;
   }
@@ -106,28 +122,22 @@ class Genesis implements Plugin.PluginBase {
   async parseChapter(chapterPath: string): Promise<string> {
     const url = `${this.site}${chapterPath}/__data.json?x-sveltekit-invalidated=001`;
     const json = await fetchApi(url).then(r => r.json());
-
     const nodes = json.nodes;
     const data = nodes
       .filter((node: { type: string }) => node.type === 'data')
       .map((node: { data: any }) => node.data)[0];
-
-    /** May change in the future */
     const content = data[19];
     const footnotes = data[data[0].footnotes];
-
-    return content + footnotes ?? '';
+    return content + (footnotes ?? '');
   }
 
   async searchNovels(
     searchTerm: string,
     pageNo: number,
-  ): Promise<Plugin.NovelItem[]> {
+  ): Promise<Plugin.SourceNovel[]> {
     if (pageNo !== 1) return [];
-
     const url = `${this.site}/api/search?serialization=All&sort=Popular&title=${searchTerm}`;
     const json = await fetchApi(url).then(r => r.json());
-
     return this.parseNovels(json);
   }
 

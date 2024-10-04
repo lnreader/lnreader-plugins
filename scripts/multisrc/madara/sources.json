@@ -347,11 +347,11 @@
   },
   {
     "id": "galaxytranslations",
-    "sourceSite": "https://galaxytranslations11.com/",
+    "sourceSite": "https://darkstartranslations.com/",
     "sourceName": "Galaxy Translations",
     "options": {
       "useNewChapterEndpoint": true,
-      "versionIncrements": 2,
+      "versionIncrements": 3,
       "lang": "English"
     }
   },
