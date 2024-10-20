@@ -5,6 +5,7 @@ import fs from 'fs';
 //   lang: string;
 //   filename: string;
 //   pluginScript: string;
+//   down?: boolean;
 // };
 
 // export type ScrpitGeneratorFunction = () => GeneratedScript[];
@@ -19,7 +20,7 @@ const generate = async name => {
     if (!isScriptGenerator(generateAll)) return false;
     const sources = generateAll();
     for (let source of sources) {
-      const { lang, filename, pluginScript } = source;
+      const { lang, filename, pluginScript, down } = source;
       if (!lang || !filename || !pluginScript) {
         console.warn(name, ': lang, filename, pluginScript are required!');
         continue;
@@ -28,7 +29,8 @@ const generate = async name => {
       const filePath = path.join(
         pluginsDir,
         lang.toLowerCase(),
-        filename.replace(/[\s-.]+/g, '') + `[${name}].ts`,
+        filename.replace(/[\s-\.]+/g, '') +
+          `[${name}]${down ? '.down' : ''}.ts`,
       );
       fs.writeFileSync(filePath, pluginScript, { encoding: 'utf-8' });
     }

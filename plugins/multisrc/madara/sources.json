@@ -25,6 +25,15 @@
     }
   },
   {
+    "id": "freenovel.me",
+    "sourceSite": "https://freenovel.me/",
+    "sourceName": "FreeNovelMe",
+    "options": {
+      "down": true,
+      "downSince": "2024-03-04"
+    }
+  },
+  {
     "id": "1stkissnovel",
     "sourceSite": "https://1stkissnovel.org/",
     "sourceName": "FirstKissNovel",
@@ -89,6 +98,15 @@
     }
   },
   {
+    "id": "readwebnovels",
+    "sourceSite": "https://readwebnovels.net/",
+    "sourceName": "ReadWebNovels",
+    "options": {
+      "down": true,
+      "downSince": "2024-03-04"
+    }
+  },
+  {
     "id": "wbnovel",
     "sourceSite": "https://wbnovel.com/",
     "sourceName": "WBNovel",
@@ -119,6 +137,16 @@
     "options": {
       "useNewChapterEndpoint": true,
       "lang": "Indonesian"
+    }
+  },
+  {
+    "id": "onlymtl",
+    "sourceSite": "https://www.onlymtl.com/",
+    "sourceName": "OnlyMTL",
+    "options": {
+      "useNewChapterEndpoint": true,
+      "down": true,
+      "downSince": "2024-03-04"
     }
   },
   {
@@ -167,6 +195,16 @@
     }
   },
   {
+    "id": "mtlnovel.club",
+    "sourceSite": "https://mtlnovel.club/",
+    "sourceName": "MTLNovel.Club",
+    "options": {
+      "useNewChapterEndpoint": true,
+      "down": true,
+      "downSince": "2024-03-04"
+    }
+  },
+  {
     "id": "guavaread",
     "sourceSite": "https://guavaread.com/",
     "sourceName": "Guavaread",
@@ -174,6 +212,26 @@
       "useNewChapterEndpoint": true,
       "down": true,
       "downSince": 1768289212912
+    }
+  },
+  {
+    "id": "sweetEscapeTL",
+    "sourceSite": "https://sweetescapetranslations.com/",
+    "sourceName": "Sweet Escape Translations",
+    "options": {
+      "useNewChapterEndpoint": false,
+      "down": true,
+      "downSince": "2024-03-04"
+    }
+  },
+  {
+    "id": "novelstic",
+    "sourceSite": "https://novelstic.com/",
+    "sourceName": "Novelstic",
+    "options": {
+      "useNewChapterEndpoint": true,
+      "down": true,
+      "downSince": "2024-03-04"
     }
   },
   {
@@ -197,6 +255,34 @@
     "sourceName": "Zetro Translation",
     "options": {
       "hasLocked": true
+    }
+  },
+  {
+    "id": "nocturneTLS",
+    "sourceSite": "https://nocturnetls.net/",
+    "sourceName": "Nocturne Translations",
+    "options": {
+      "down": true,
+      "downSince": "2024-03-04"
+    }
+  },
+  {
+    "id": "novelroom",
+    "sourceSite": "https://novelroom.net/",
+    "sourceName": "Novelroom.net",
+    "options": {
+      "down": true,
+      "downSince": "2024-03-04"
+    }
+  },
+  {
+    "id": "novelr18",
+    "sourceSite": "https://novelr18.com/",
+    "sourceName": "NovelR18",
+    "options": {
+      "useNewChapterEndpoint": true,
+      "down": true,
+      "downSince": "2024-03-04"
     }
   },
   {
