@@ -136,12 +136,12 @@
   },
   {
     "id": "riwyat",
-    "sourceSite": "https://riwyatspace.com/",
+    "sourceSite": "https://cenele.com/",
     "sourceName": "Riwyat",
     "options": {
       "useNewChapterEndpoint": true,
       "lang": "Arabic",
-      "versionIncrements": 3
+      "versionIncrements": 4
     }
   },
   {
