@@ -6,7 +6,7 @@ import { Plugin } from '@typings/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.7.9';
+  version = '0.7.10';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -410,14 +410,14 @@ class NovelUpdates implements Plugin.PluginBase {
         break;
       case 'raeitranslations':
         const parts = url.split('/');
-        const link_raei = `${parts[0]}//api.${parts[2]}/api/chapters/?id=${parts[3]}&num=${parts[4]}`;
+        const link_raei = `${parts[0]}//api.${parts[2]}/api/chapters/single?id=${parts[3]}&num=${parts[4]}`;
         const json_raei = await fetchApi(link_raei).then(r => r.json());
         const titleElement_raei = `Chapter ${json_raei.currentChapter.chapTag}`;
         chapterTitle = json_raei.currentChapter.chapTitle
           ? `${titleElement_raei} - ${json_raei.currentChapter.chapTitle}`
           : titleElement_raei;
         chapterContent = [
-          json_raei.currentChapter.head,
+          json_raei.novelHead,
           `<br><hr><br>`,
           json_raei.currentChapter.body,
           `<br><hr><br>Translator's Note:<br>`,
