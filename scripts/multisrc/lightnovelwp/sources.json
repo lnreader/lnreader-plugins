@@ -207,5 +207,13 @@
     "options": {
       "lang": "Portuguese"
     }
+  },
+  {
+    "id": "arcane",
+    "sourceSite": "https://arcanetranslations.com/",
+    "sourceName": "Arcane Translations",
+    "options": {
+      "lang": "English"
+    }
   }
 ]

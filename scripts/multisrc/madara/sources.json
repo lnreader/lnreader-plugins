@@ -252,8 +252,8 @@
     "sourceSite": "https://srankmanga.com/",
     "sourceName": "Srank Manga",
     "options": {
-        "useNewChapterEndpoint": true,
-        "versionIncrements": 1
+      "useNewChapterEndpoint": true,
+      "versionIncrements": 1
     }
   },
   {
@@ -379,6 +379,42 @@
     "options": {
       "useNewChapterEndpoint": true,
       "lang": "English"
+    }
+  },
+  {
+    "id": "duskblossoms",
+    "sourceSite": "https://duskblossoms.com/",
+    "sourceName": "Dusk Blossoms",
+    "options": {
+      "useNewChapterEndpoint": true,
+      "lang": "English"
+    }
+  },
+  {
+    "id": "fenrir",
+    "sourceSite": "https://fenrirtranslations.com/",
+    "sourceName": "Fenrir Translations",
+    "options": {
+      "useNewChapterEndpoint": true,
+      "lang": "English"
+    }
+  },
+  {
+    "id": "bellereservoir",
+    "sourceSite": "https://bellereservoir.com/",
+    "sourceName": "Belle Reservoir",
+    "options": {
+      "useNewChapterEndpoint": true,
+      "lang": "English"
+    }
+  },
+  {
+    "id": "traducciones",
+    "sourceSite": "https://traduccionesamistosas.eyudud.net/",
+    "sourceName": "Traducciones Amistosas",
+    "options": {
+      "useNewChapterEndpoint": true,
+      "lang": "Spanish"
     }
   }
 ]
