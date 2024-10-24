@@ -416,5 +416,23 @@
       "useNewChapterEndpoint": true,
       "lang": "Spanish"
     }
+  },
+  {
+    "id": "coralboutique",
+    "sourceSite": "https://coralboutique.xyz/",
+    "sourceName": "Coral Boutique",
+    "options": {
+      "useNewChapterEndpoint": true,
+      "lang": "English"
+    }
+  },
+  {
+    "id": "pasteltales",
+    "sourceSite": "https://pasteltales.com/",
+    "sourceName": "Pastel Tales",
+    "options": {
+      "useNewChapterEndpoint": true,
+      "lang": "English"
+    }
   }
 ]

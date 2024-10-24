@@ -1,0 +1,160 @@
+{
+  "filters": {
+    "genre[]": {
+      "type": "Checkbox",
+      "label": "Türler",
+      "value": [],
+      "options": [
+        {
+          "label": "Aksiyon",
+          "value": "aksiyon"
+        },
+        {
+          "label": "Bilimkurgu",
+          "value": "bilimkurgu"
+        },
+        {
+          "label": "Doğaüstü",
+          "value": "dogaustu"
+        },
+        {
+          "label": "Dram",
+          "value": "dram"
+        },
+        {
+          "label": "Ecchi",
+          "value": "ecchi"
+        },
+        {
+          "label": "Fantastik",
+          "value": "fantastik"
+        },
+        {
+          "label": "Fantezi",
+          "value": "fantezi"
+        },
+        {
+          "label": "Gizem",
+          "value": "gizem"
+        },
+        {
+          "label": "Harem",
+          "value": "harem"
+        },
+        {
+          "label": "Komedi",
+          "value": "komedi"
+        },
+        {
+          "label": "Macera",
+          "value": "macera"
+        },
+        {
+          "label": "Mecha",
+          "value": "mecha"
+        },
+        {
+          "label": "Okul hayatı",
+          "value": "okul-hayati"
+        },
+        {
+          "label": "Romantik",
+          "value": "romantik"
+        },
+        {
+          "label": "Seinen",
+          "value": "seinen"
+        },
+        {
+          "label": "Shoujo",
+          "value": "shoujo"
+        },
+        {
+          "label": "Shounen",
+          "value": "shounen"
+        },
+        {
+          "label": "Trajedi",
+          "value": "trajedi"
+        },
+        {
+          "label": "Yetişkin",
+          "value": "yetiskin"
+        }
+      ]
+    },
+    "type[]": {
+      "type": "Checkbox",
+      "label": "Yazım Şekli",
+      "value": [],
+      "options": [
+        {
+          "label": "Light Novel (JP)",
+          "value": "light-novel-jp"
+        },
+        {
+          "label": "Web Novel",
+          "value": "web-novel"
+        }
+      ]
+    },
+    "status": {
+      "type": "Picker",
+      "label": "Durum",
+      "value": "",
+      "options": [
+        {
+          "label": "Tümü",
+          "value": ""
+        },
+        {
+          "label": "Devam Ediyor",
+          "value": "ongoing"
+        },
+        {
+          "label": "Ara Verildi",
+          "value": "hiatus"
+        },
+        {
+          "label": "Tamamlandı",
+          "value": "completed"
+        }
+      ]
+    },
+    "order": {
+      "type": "Picker",
+      "label": "Sıralama",
+      "value": "",
+      "options": [
+        {
+          "label": "Varsayılan",
+          "value": ""
+        },
+        {
+          "label": "A-Z",
+          "value": "title"
+        },
+        {
+          "label": "Z-A",
+          "value": "titlereverse"
+        },
+        {
+          "label": "Son Güncellemeler",
+          "value": "update"
+        },
+        {
+          "label": "Son Eklenenler",
+          "value": "latest"
+        },
+        {
+          "label": "Popüler",
+          "value": "popular"
+        },
+        {
+          "label": "Puanlama",
+          "value": "rating"
+        }
+      ]
+    }
+  }
+}

@@ -1,10 +1,16 @@
 import * as fs from 'fs';
 import * as cheerio from 'cheerio';
 import * as path from 'path';
+import * as readline from 'readline';
+import process from 'process';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
-function getFilters(name: string, html: string) {
-  const $: cheerio.CheerioAPI = cheerio.load(html);
-  const filters: any = {
+function getFilters(name, html) {
+  const $ = cheerio.load(html);
+  const filters = {
     filters: {
       'genre[]': {
         type: 'Checkbox',
@@ -155,7 +161,7 @@ function getFilters(name: string, html: string) {
   console.log(`✅Filters created successfully for ${name}✅`);
 }
 
-async function getFiltersFromURL(name: string, url: string) {
+async function getFiltersFromURL(name, url) {
   const response = await fetch(url + '/?s=&post_type=wp-manga');
   if (!response.ok) {
     throw new Error(
@@ -171,45 +177,45 @@ async function getFiltersFromURL(name: string, url: string) {
 }
 
 async function askGetFilter() {
-  const readline = require('readline').createInterface({
+  const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
   });
 
   const EREASE_PREV_LINE = '\x1b[1A\r\x1b[2K';
-  await readline.question(
+  await rl.question(
     'Enter the id of the site (same one as in sources.json): ',
-    async (name: string) => {
-      await readline.question(
+    async name => {
+      await rl.question(
         EREASE_PREV_LINE +
           "Do you want to get the filters from a URL or the html text? (if url dosen't work try html) (url/html): ",
-        async (method: string) => {
+        async method => {
           if (method.toLowerCase() === 'url') {
             const sources = JSON.parse(
               fs.readFileSync(path.join(__dirname, 'sources.json'), 'utf-8'),
             );
-            const source = sources.find((s: any) => s.id === name);
+            const source = sources.find(s => s.id === name);
             if (source && source.sourceSite) {
               console.log('Getting filters from', source.sourceSite);
               try {
                 await getFiltersFromURL(name, source.sourceSite);
-              } catch (e: any) {
+              } catch (e) {
                 console.error(
                   'Error while getting filters from',
                   source.sourceSite,
                 );
                 console.log(e.message || e);
               }
-              readline.close();
+              rl.close();
             } else {
-              await readline.question(
+              await rl.question(
                 EREASE_PREV_LINE +
                   'Enter the URL (same one as in sources.json): ',
-                async (url: string) => {
-                  readline.close();
+                async url => {
+                  rl.close();
                   try {
                     await getFiltersFromURL(name, url);
-                  } catch (e: any) {
+                  } catch (e) {
                     console.error('Error while getting filters from', url);
                     console.log(e.message || e);
                   }
@@ -222,12 +228,12 @@ async function askGetFilter() {
                 `Enter the html text from the page at {sourceSite}/?s=&post_type=wp-manga (at the end press ENTER then press CTRL+C): `,
             );
             let html = '';
-            readline.on('SIGINT', () => {
+            rl.on('SIGINT', () => {
               console.log('Stopeed reading input, creating filters file');
               getFilters(name, html);
-              readline.close();
+              rl.close();
             });
-            readline.on('line', (line: string) => {
+            rl.on('line', line => {
               html += line + '\n';
             });
           }

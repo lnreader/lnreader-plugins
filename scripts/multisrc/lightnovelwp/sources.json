@@ -213,7 +213,18 @@
     "sourceSite": "https://arcanetranslations.com/",
     "sourceName": "Arcane Translations",
     "options": {
+      "reverseChapters": true,
       "lang": "English"
+    }
+  },
+  {
+    "id": "namevt",
+    "sourceSite": "https://namevt.com/",
+    "sourceName": "Namevt",
+    "options": {
+      "reverseChapters": true,
+      "seriesPath": "/seri/",
+      "lang": "Turkish"
     }
   }
 ]
