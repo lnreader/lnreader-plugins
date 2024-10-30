@@ -39,7 +39,7 @@ class MadaraPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/madara/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `1.0.${3 + versionIncrements}`;
+    this.version = `1.0.${4 + versionIncrements}`;
     this.options = metadata.options;
     this.filters = metadata.filters;
   }
@@ -156,7 +156,7 @@ class MadaraPlugin implements Plugin.PluginBase {
           url += `&${key}=${value}`;
       else if (filters[key].value) url += `&${key}=${filters[key].value}`;
     }
-    const loadedCheerio = await this.getCheerio(url, false);
+    const loadedCheerio = await this.getCheerio(url, pageNo != 1);
     return this.parseNovels(loadedCheerio);
   }
 
