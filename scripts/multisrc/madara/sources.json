@@ -68,12 +68,12 @@
   },
   {
     "id": "arnovel",
-    "sourceSite": "https://ar-novel.com/",
+    "sourceSite": "https://ar-no.com/",
     "sourceName": "ArNovel",
     "options": {
       "useNewChapterEndpoint": true,
       "lang": "Arabic",
-      "versionIncrements": 1
+      "versionIncrements": 2
     }
   },
   {
