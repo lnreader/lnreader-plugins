@@ -68,30 +68,35 @@ jobs:
             echo "lighnovelwp=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Check if the site has multiple themes
-        id: check_multiple_themes
+      - name: Check HotNovelPub theme
+        id: check_hotnovelpub
         env:
-          MADARA: ${{ steps.check_madara.outputs.madara }}
-          LIGHNOVELWP: ${{ steps.check_lighnovelwp.outputs.lighnovelwp }}
+          BASE_URL: ${{ steps.get_base_url.outputs.BASE_URL }}
+          USER_AGENT: ${{ steps.get_user_agent.outputs.USER_AGENT }}
         run: |
-          if [[ "$MADARA" == "true" && "$LIGHNOVELWP" == "true" ]]; then
-            echo "multiple_themes=true" >> $GITHUB_OUTPUT
-            echo "❌ Error: Multiple Themes Detected on Site" >> $GITHUB_STEP_SUMMARY
-            exit 1
-          fi
-          echo "multiple_themes=false" >> $GITHUB_OUTPUT
+          if curl --location --silent --fail "https://api.$BASE_URL" -H "User-Agent: $USER_AGENT" | grep -q "Hello\!"; then
+          echo "hotnovelpub=true" >> $GITHUB_OUTPUT
+          echo "✅ HotNovelPub Theme Detected" >> $GITHUB_STEP_SUMMARY
+            elif curl --location --silent --fail "http://api.$BASE_URL" -H "User-Agent: $USER_AGENT" | grep -q "Hello\!"; then
+          echo "hotnovelpub=true" >> $GITHUB_OUTPUT
+          echo "✅ HotNovelPub Theme Detected" >> $GITHUB_STEP_SUMMARY
+            else
+          echo "hotnovelpub=false" >> $GITHUB_OUTPUT
+            fi
 
       - name: Add Label
-        if: steps.check_multiple_themes.outputs.multiple_themes == 'false'
         env:
           MADARA: ${{ steps.check_madara.outputs.madara }}
           LIGHNOVELWP: ${{ steps.check_lighnovelwp.outputs.lighnovelwp }}
+          HOTNOVELPUB: ${{ steps.check_hotnovelpub.outputs.hotnovelpub }}
           GH_TOKEN: ${{ github.token }}
         run: |
           if [[ "$MADARA" == "true" ]]; then
             gh issue edit $ISSUE_NUMBER --add-label "Theme: Madara" -R $REPO
           elif [[ "$LIGHNOVELWP" == "true" ]]; then
             gh issue edit $ISSUE_NUMBER --add-label "Theme: Lighnovelwp" -R $REPO
+          elif [[ "$HOTNOVELPUB" == "true" ]]; then
+            gh issue edit $ISSUE_NUMBER --add-label "Theme: Hotnovelpub" -R $REPO
           else
             echo "No Theme Detected" >> $GITHUB_STEP_SUMMARY
           fi
