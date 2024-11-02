@@ -6,7 +6,7 @@ import { Plugin } from '@typings/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.7.10';
+  version = '0.7.11';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -327,17 +327,9 @@ class NovelUpdates implements Plugin.PluginBase {
         chapterText = `<h2>${chapterTitle}</h2><hr><br>${chapterContent}`;
         break;
       case 'inoveltranslation':
-        const link_inovel = 'https://api.' + url.slice(8);
-        const json_inovel = await fetchApi(link_inovel).then(r => r.json());
-        chapterTitle =
-          'Chapter ' + json_inovel.chapter + ' | ' + json_inovel.title;
-        chapterContent = json_inovel.content.replace(/\n/g, '<br>');
-        if (json_inovel.notes) {
-          chapterContent +=
-            '<br><hr><br>TL Notes:<br>' +
-            json_inovel.notes.replace(/\n/g, '<br>');
-        }
-        chapterText = `<h2>${chapterTitle}</h2><hr><br>${chapterContent}`;
+        bloatElements = ['header', 'section'];
+        bloatElements.forEach(tag => loadedCheerio(tag).remove());
+        chapterText = loadedCheerio('.styles_content__JHK8G').html()!;
         break;
       case 'isotls': // mii translates
         bloatElements = [
