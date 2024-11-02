@@ -39,7 +39,7 @@ class MadaraPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/madara/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `1.0.${4 + versionIncrements}`;
+    this.version = `1.0.${5 + versionIncrements}`;
     this.options = metadata.options;
     this.filters = metadata.filters;
   }
@@ -179,41 +179,79 @@ class MadaraPlugin implements Plugin.PluginBase {
 
     loadedCheerio('.post-content_item, .post-content').each(function () {
       const detailName = loadedCheerio(this).find('h5').text().trim();
-      const detail = loadedCheerio(this).find('.summary-content').text().trim();
+      const detail = loadedCheerio(this).find('.summary-content');
 
       switch (detailName) {
         case 'Genre(s)':
         case 'Genre':
+        case 'Tags(s)':
+        case 'Tag(s)':
         case 'Tags':
         case 'Género(s)':
         case 'التصنيفات':
-          if (novel.genres) novel.genres += ', ' + detail;
-          else novel.genres = detail;
+          if (novel.genres)
+            novel.genres +=
+              ', ' +
+              detail
+                .find('a')
+                .map((i, el) => loadedCheerio(el).text())
+                .get()
+                .join(', ');
+          else
+            novel.genres = detail
+              .find('a')
+              .map((i, el) => loadedCheerio(el).text())
+              .get()
+              .join(', ');
           break;
         case 'Author(s)':
         case 'Author':
         case 'Autor(es)':
         case 'المؤلف':
         case 'المؤلف (ين)':
-          novel.author = detail;
+          novel.author = detail.text().trim();
           break;
         case 'Status':
         case 'Novel':
         case 'Estado':
           novel.status =
-            detail.includes('OnGoing') || detail.includes('مستمرة')
+            detail.text().trim().includes('OnGoing') ||
+            detail.text().trim().includes('مستمرة')
               ? NovelStatus.Ongoing
               : NovelStatus.Completed;
+          break;
+        case 'Artist(s)':
+          novel.artist = detail.text().trim();
           break;
       }
     });
 
+    if (!novel.author)
+      novel.author = loadedCheerio('.manga-authors').text().trim();
+
     loadedCheerio('div.summary__content .code-block,script,noscript').remove();
-    const summary =
-      loadedCheerio('div.summary__content') ||
-      loadedCheerio('#tab-manga-about') ||
-      loadedCheerio('.post-content_item h5:contains("Summary")').next();
-    novel.summary = this.translateDragontea(summary).text().trim();
+    novel.summary =
+      this.translateDragontea(loadedCheerio('div.summary__content'))
+        .text()
+        .trim() ||
+      loadedCheerio('#tab-manga-about').text().trim() ||
+      loadedCheerio('.post-content_item h5:contains("Summary")')
+        .next()
+        .find('span')
+        .map((i, el) => loadedCheerio(el).text())
+        .get()
+        .join('\n\n')
+        .trim() ||
+      loadedCheerio('.manga-summary p')
+        .map((i, el) => loadedCheerio(el).text())
+        .get()
+        .join('\n\n')
+        .trim() ||
+      loadedCheerio('.manga-excerpt p')
+        .map((i, el) => loadedCheerio(el).text())
+        .get()
+        .join('\n\n')
+        .trim();
     const chapters: Plugin.ChapterItem[] = [];
     let html = '';
 
