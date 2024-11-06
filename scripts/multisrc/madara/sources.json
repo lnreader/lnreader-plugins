@@ -489,5 +489,14 @@
       "useNewChapterEndpoint": true,
       "lang": "English"
     }
+  },
+  {
+    "id": "eternalune",
+    "sourceName": "Eternalune",
+    "sourceSite": "https://eternalune.com/",
+    "options": {
+      "lang": "English",
+      "useNewChapterEndpoint": true
+    }
   }
 ]
