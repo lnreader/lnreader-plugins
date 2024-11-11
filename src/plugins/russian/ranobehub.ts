@@ -13,7 +13,7 @@ const statusKey: Record<number, string> = {
 class RNBH implements Plugin.PluginBase {
   id = 'RNBH.org';
   name = 'RanobeHub';
-  version = '1.0.1';
+  version = '1.0.2';
   site = 'https://ranobehub.org';
   icon = 'src/ru/ranobehub/icon.png';
 
@@ -124,10 +124,7 @@ class RNBH implements Plugin.PluginBase {
     );
 
     const indexA = body.indexOf('<div class="title-wrapper">');
-    const indexB = body.indexOf(
-      '<div class="ui text container" style>',
-      indexA,
-    );
+    const indexB = body.indexOf('<div class="ui text container"', indexA);
 
     const chapterText = body
       .substring(indexA, indexB)
