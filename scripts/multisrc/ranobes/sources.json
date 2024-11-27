@@ -1,0 +1,20 @@
+[
+    {
+      "id": "ranobes",
+      "sourceSite": "https://ranobes.top",
+      "sourceName": "Ranobes",
+      "options": {
+        "lang": "English",
+        "path": "novels"
+      }
+    },
+    {
+      "id": "ranobes-ru",
+      "sourceSite": "https://ranobes.com",
+      "sourceName": "Ranobes (RU)",
+      "options": {
+        "lang": "Russian",
+        "path": "ranobe"
+      }
+    }
+]
