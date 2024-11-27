@@ -2,13 +2,34 @@ import { CheerioAPI, load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@typings/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
+import { Parser } from 'htmlparser2';
+
+//has to be here cus this scoping moment
+const parserData: {
+  inTag?: string;
+  depthRatingWrapper?: number;
+  depth: number;
+  ret?: {
+    path: string;
+    cover: string;
+    name?: string;
+    avgReview?: string;
+    reviewCount?: string;
+    chapterCount?: string;
+    updated?: string;
+    created?: string;
+    genres?: string;
+    tags?: string;
+  };
+  parser?: Parser;
+} = { depth: 0 };
 
 class MVLEMPYRPlugin implements Plugin.PluginBase {
   id = 'mvlempyr.com';
   name = 'MVLEMPYR';
   icon = 'src/en/mvlempyr/icon.png';
   site = 'https://www.mvlempyr.com/';
-  version = '1.0.1';
+  version = '1.0.2';
 
   _chapSite = 'https://chp.mvlempyr.net/';
   _allNovels: (Plugin.NovelItem & ExtraNovelData)[] | undefined;
@@ -47,7 +68,7 @@ class MVLEMPYRPlugin implements Plugin.PluginBase {
 
   parseNovelsFast(body: string) {
     const novelInfosStart = body.split('<div class="novelcolumn">');
-    novelInfosStart.shift(); //remove first element that doesent have a novel
+    novelInfosStart.shift(); //remove first element that doesn't have a novel
 
     const ret = [];
     for (const novelInfo of novelInfosStart) {
@@ -60,6 +81,134 @@ class MVLEMPYRPlugin implements Plugin.PluginBase {
     }
 
     return ret;
+  }
+
+  /**
+   * Equivalent to parseNovelsFast except uses htmlparser2 instead of cheerio for even more fast-fast
+   */
+  parseNovelsFastNew(body: string) {
+    const novelInfosStart = body.split('<div class="novelcolumn">');
+    novelInfosStart.shift(); //remove first element that doesn't have a novel
+
+    const ret = [];
+    for (const novelInfo of novelInfosStart) {
+      const realNovelInfo =
+        novelInfo.split('READ</a></div></div></div>')[0] +
+        'READ</a></div></div></div>';
+
+      ret.push(this.parseNovelHtmlNew(realNovelInfo));
+    }
+
+    console.log(ret);
+    return ret;
+  }
+
+  parseNovelHtmlNew(el: string): Plugin.NovelItem & ExtraNovelData {
+    parserData.ret = {
+      name: '',
+      path: '',
+      cover: '',
+      avgReview: '',
+      reviewCount: '',
+      chapterCount: '',
+      updated: '',
+      created: '',
+      genres: '',
+      tags: '',
+    };
+    parserData.inTag = '';
+    parserData.depth = 0;
+    parserData.depthRatingWrapper = 0;
+    if (!parserData.parser) {
+      parserData.parser = new Parser({
+        onopentag(
+          name: string,
+          attribs: Record<string, string>,
+          isImplied: boolean,
+        ) {
+          if (parserData.depthRatingWrapper) parserData.depthRatingWrapper++;
+          if (parserData.inTag) {
+            parserData.depth++;
+            return;
+          }
+
+          if (attribs['class']?.includes?.('ratingwrapper'))
+            parserData.depthRatingWrapper = 1;
+
+          if (name === 'h2' && attribs['fs-cmsfilter-field'] === 'name')
+            parserData.inTag = 'name';
+          if (name === 'a' && !parserData.ret!.path)
+            parserData.ret!.path = attribs['href'].replace(/^\//, '');
+          if (name === 'img' && !parserData.ret!.cover)
+            parserData.ret!.cover = attribs['src'];
+          if (
+            name === 'div' &&
+            attribs['fs-cmssort-field'] === 'avgr' &&
+            parserData.depthRatingWrapper
+          )
+            parserData.inTag = 'avgReview';
+          if (
+            name === 'div' &&
+            attribs['fs-cmssort-field'] === 'reviews' &&
+            parserData.depthRatingWrapper
+          )
+            parserData.inTag = 'reviewCount';
+          if (
+            name === 'div' &&
+            attribs['fs-cmssort-field'] === 'chapter' &&
+            attribs['class']?.includes?.('chapter-count')
+          )
+            parserData.inTag = 'chapterCount';
+          if (name === 'div' && attribs['fs-cmssort-field'] === 'update')
+            parserData.inTag = 'updated';
+          if (name === 'div' && attribs['fs-cmssort-field'] === 'crdate')
+            parserData.inTag = 'created';
+          if (name === 'div' && attribs['fs-cmsnest-collection'] === 'genre')
+            parserData.inTag = 'genres';
+          if (name === 'div' && attribs['fs-cmsnest-collection'] === 'tags')
+            parserData.inTag = 'tags';
+
+          if (parserData.inTag) {
+            parserData.depth++;
+          }
+        },
+        ontext(data: string) {
+          if (!parserData.inTag) return;
+
+          // @ts-ignore
+          parserData.ret[parserData.inTag] =
+            (parserData.ret[parserData.inTag] || '') + data;
+        },
+        onclosetag(name: string, isImplied: boolean) {
+          if (parserData.depthRatingWrapper) parserData.depthRatingWrapper--;
+          if (!parserData.inTag) return;
+          parserData.depth--;
+          if (!parserData.depth) parserData.inTag = '';
+        },
+      });
+    }
+
+    parserData.parser.reset();
+    parserData.parser.write(el);
+    parserData.parser.end();
+
+    // @ts-ignore
+    parserData.ret.avgReview = parseFloat(parserData.ret.avgReview);
+    // @ts-ignore
+    parserData.ret.reviewCount = parseFloat(parserData.ret.reviewCount);
+    // @ts-ignore
+    parserData.ret.chapterCount = parseFloat(parserData.ret.chapterCount);
+    // @ts-ignore
+    parserData.ret.updated = new Date(parserData.ret.updated).getTime();
+    // @ts-ignore
+    parserData.ret.created = new Date(parserData.ret.created).getTime();
+    // @ts-ignore
+    parserData.ret.genres = parserData.ret.genres.split(', ');
+    // @ts-ignore
+    parserData.ret.tags = parserData.ret.tags.split(', ');
+
+    // @ts-ignore
+    return parserData.ret;
   }
 
   parseNovelHtml(el: CheerioAPI) {
@@ -138,7 +287,7 @@ class MVLEMPYRPlugin implements Plugin.PluginBase {
     });
     const body = await result.text();
     if (!nextPageConsumer) {
-      return this.parseNovelsFast(body);
+      return this.parseNovelsFastNew(body);
     }
 
     const loadedCheerio = parseHTML(body);
@@ -247,8 +396,11 @@ class MVLEMPYRPlugin implements Plugin.PluginBase {
       return this._allNovels;
     }
     this._allNovelsPromise = this.loadAll();
-    this._allNovels = await this._allNovelsPromise;
-    this._allNovelsPromise = undefined;
+    try {
+      this._allNovels = await this._allNovelsPromise;
+    } finally {
+      this._allNovelsPromise = undefined;
+    }
     return this._allNovels;
   }
 
