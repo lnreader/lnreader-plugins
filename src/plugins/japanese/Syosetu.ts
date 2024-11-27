@@ -77,11 +77,26 @@ class Syosetu implements Plugin.PluginBase {
     const body = await result.text();
     const loadedCheerio = loadCheerio(body, { decodeEntities: false });
 
+    // Parse novel status
+    let status = 'Unknown';
+    if (loadedCheerio('.c-announce').text().includes('連載中')) {
+      status = 'Ongoing';
+    } else if (loadedCheerio('.c-announce').text().includes('完結')) {
+      status = 'Completed';
+    } else if (loadedCheerio('.c-announce').text().includes('約2ヶ月以上')) {
+      status = 'On Hiatus';
+    }
+
     // Create novel object with basic metadata
     const novel: Plugin.SourceNovel = {
       path: novelPath,
-      name: loadedCheerio('.novel_title').text(),
-      author: loadedCheerio('.novel_writername').text().replace('作者：', ''),
+      name: loadedCheerio('.p-novel__title').text(),
+      author: loadedCheerio('.p-novel__author')
+        .text()
+        .replace('作者：', '')
+        .trim(),
+      status: status,
+      artist: '', // Not available on syosetu
       cover: defaultCover,
     };
 
@@ -96,8 +111,9 @@ class Syosetu implements Plugin.PluginBase {
       const releaseDate = loadedCheerio(element)
         .find('.p-eplist__update')
         .text()
-        .trim();
-
+        .trim()
+        .split(' ')[0] // Get just the date part
+        .replace(/\//g, '-'); // Format date as YYYY-MM-DD
       if (chapterUrl) {
         chapters.push({
           name: chapterName,
