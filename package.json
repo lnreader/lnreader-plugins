@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "clearMultisrc": "find . -type f -wholename \"*plugins*\\[*\\]*.[t,j]s\" -delete",
+    "clearMultisrc-windows": "powershell -Command \"Get-ChildItem -Recurse -Include \\\"*].ts\\\",\\\"*].js\\\" | Where-Object { $_.FullName -like \\\"*plugins*\\\" } | Remove-Item\"",
     "dev": "vite",
     "generate": "node ./scripts/multisrc/generate.js",
     "host-linux": "chmod +x ./host.sh && ./host.sh",
