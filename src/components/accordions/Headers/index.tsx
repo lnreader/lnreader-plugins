@@ -11,12 +11,13 @@ import {
 } from '@mui/material';
 import Checkbox from '@mui/material/Checkbox';
 import useDebounce from '@hooks/useDebounce';
+import { FetchMode } from '@typings/types';
 
 export default function HeadersSection() {
   const [loading, setLoading] = useState(false);
   const [cookies, setCookies] = useState('');
   const debounceCookies = useDebounce(cookies, 500);
-  const [fetchMode, setFetchMode] = useState('proxy');
+  const [fetchMode, setFetchMode] = useState(FetchMode.PROXY);
   const [alertVisible, setAlertVisble] = useState(false);
   const [useUserAgent, setUseUserAgent] = useState(true);
   useEffect(() => {
@@ -109,11 +110,11 @@ export default function HeadersSection() {
           variant="outlined"
           label="Fetcher"
           value={fetchMode}
-          onChange={e => setFetchMode(e.target.value)}
+          onChange={e => setFetchMode(e.target.value as FetchMode)}
         >
-          <MenuItem value="proxy">Proxy</MenuItem>
-          <MenuItem value="node-fetch">Node fetch</MenuItem>
-          <MenuItem value="curl">Curl</MenuItem>
+          <MenuItem value={FetchMode.PROXY}>Proxy</MenuItem>
+          <MenuItem value={FetchMode.NODE_FETCH}>Node fetch</MenuItem>
+          <MenuItem value={FetchMode.CURL}>Curl</MenuItem>
         </Select>
       </div>
     </AccordionContainer>
