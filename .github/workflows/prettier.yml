@@ -15,7 +15,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: '20'
 
       - name: Install Dependencies
         run: |
@@ -23,7 +23,7 @@ jobs:
           rm package-lock.json
           npm init -y
           npm pkg set type="module"
-          npm i prettier
+          npm i prettier@3.2.5
 
       - name: Prettier
         run: npx prettier --check "./src/**/*.{ts,tsx,js,css}"
