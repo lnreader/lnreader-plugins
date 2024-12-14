@@ -126,7 +126,7 @@ class RLIB implements Plugin.PluginBase {
       novel.genres = genres.join(', ');
     }
 
-    const branch_name: Record<number, string> = { 0: 'главная страница' };
+    const branch_name: Record<number, string> = { 0: 'Главная страница' };
     if (data.teams.length) {
       data.teams.forEach(
         ({ name, details }) => (branch_name[details?.branch_id || '0'] = name),

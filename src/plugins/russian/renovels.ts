@@ -11,7 +11,7 @@ class ReN implements Plugin.PluginBase {
   name = 'Renovels';
   icon = 'src/ru/renovels/icon.png';
   site = 'https://renovels.org';
-  version = '1.0.1';
+  version = '1.0.2';
 
   async popularNovels(
     pageNo: number,
@@ -80,7 +80,7 @@ class ReN implements Plugin.PluginBase {
     }
 
     const totalPages =
-      (content.branches?.[0]?.count_chapters || content.count_chapters) / 100;
+      (content.branches?.[0]?.count_chapters || content.count_chapters) / 50;
     const branch_id = content.branches?.[0]?.id || content.id;
     const chapters: Plugin.ChapterItem[] = [];
 
@@ -92,9 +92,10 @@ class ReN implements Plugin.PluginBase {
         this.site +
           '/api/titles/chapters/?branch_id=' +
           branch_id +
-          '&count=100&page=' +
+          '&ordering=index&user_data=1&count=50&page=' +
           (page + 1),
       ).then(res => res.json());
+      let skip = false;
 
       volumes.content.forEach(chapter => {
         if (!chapter.is_paid || chapter.is_bought) {
@@ -109,21 +110,23 @@ class ReN implements Plugin.PluginBase {
             releaseTime: dayjs(chapter.upload_date).format('LLL'),
             chapterNumber: chapter.index,
           });
+        } else {
+          skip = true;
         }
       });
+      if (skip) break;
     }
 
-    novel.chapters = chapters.reverse();
+    novel.chapters = chapters;
     return novel;
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const url = this.site + '/api/titles/chapters/' + chapterPath.split('/')[1];
-    const result: { content: responseСhapter } = await fetchApi(url).then(res =>
-      res.json(),
-    );
+    const url =
+      this.site + '/api/v2/titles/chapters/' + chapterPath.split('/')[1];
+    const result: responseСhapter = await fetchApi(url).then(res => res.json());
 
-    return result.content.content || '';
+    return result.content || '';
   }
 
   async searchNovels(

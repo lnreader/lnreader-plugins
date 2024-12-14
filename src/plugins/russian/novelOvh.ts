@@ -9,14 +9,14 @@ class novelOvh implements Plugin.PluginBase {
   name = 'НовелОВХ';
   site = 'https://novel.ovh';
   apiSite = 'https://api.novel.ovh/v2/';
-  version = '1.0.2';
+  version = '1.0.3';
   icon = 'src/ru/novelovh/icon.png';
 
   async popularNovels(
     pageNo: number,
     { showLatestNovels, filters }: Plugin.PopularNovelsOptions,
   ): Promise<Plugin.NovelItem[]> {
-    let url = this.site + '/content?page=' + (pageNo - 1);
+    let url = this.apiSite + 'books?page=' + (pageNo - 1);
     url +=
       '&sort=' +
       (showLatestNovels
@@ -24,9 +24,7 @@ class novelOvh implements Plugin.PluginBase {
         : filters?.sort?.value || 'averageRating') +
       ',desc';
 
-    const { books }: { books: BooksEntity[] } = await fetchApi(
-      url + '&_data=routes/reader/book/index',
-    ).then(res => res.json());
+    const books: BooksEntity[] = await fetchApi(url).then(res => res.json());
 
     const novels: Plugin.NovelItem[] = [];
     books.forEach(novel =>
@@ -41,7 +39,7 @@ class novelOvh implements Plugin.PluginBase {
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const { book, chapters }: responseNovel = await fetchApi(
+    const { book, branches, chapters }: responseNovel = await fetchApi(
       this.site +
         '/content/' +
         novelPath +
@@ -69,8 +67,15 @@ class novelOvh implements Plugin.PluginBase {
       }
     });
 
-    const chaptersRes: Plugin.ChapterItem[] = [];
+    const branch_name: Record<string, string> = {};
+    if (branches.length) {
+      branches.forEach(({ id, publishers }) => {
+        if (id && publishers?.length)
+          branch_name[id] = publishers[0].name || 'Неизвестный';
+      });
+    }
 
+    const chaptersRes: Plugin.ChapterItem[] = [];
     chapters.forEach((chapter, chapterIndex) =>
       chaptersRes.push({
         name:
@@ -80,9 +85,10 @@ class novelOvh implements Plugin.PluginBase {
             ' ' +
             (chapter.name ||
               'Глава ' + (chapter.number || chapters.length - chapterIndex)),
-        path: novelPath + '/' + chapter.id + '/0',
+        path: novelPath + '/' + chapter.id,
         releaseTime: dayjs(chapter.createdAt).format('LLL'),
         chapterNumber: chapters.length - chapterIndex,
+        page: branch_name[chapter.branchId] || 'Главная страница',
       }),
     );
 
@@ -140,15 +146,67 @@ class novelOvh implements Plugin.PluginBase {
           break;
         case 'paragraph':
           html +=
-            '<p' +
-            (element?.attrs?.textAlign
-              ? ` style="text-align: ${element.attrs.textAlign}"`
-              : '') +
-            '>' +
+            '<p>' +
             (element.content
               ? this.jsonToHtml(element.content, image)
               : '<br>') +
             '</p>';
+          break;
+        case 'orderedList':
+          html +=
+            '<ol>' +
+            (element.content
+              ? this.jsonToHtml(element.content, image)
+              : '<br>') +
+            '</ol>';
+          break;
+        case 'listItem':
+          html +=
+            '<li>' +
+            (element.content
+              ? this.jsonToHtml(element.content, image)
+              : '<br>') +
+            '</li>';
+          break;
+        case 'blockquote':
+          html +=
+            '<blockquote>' +
+            (element.content
+              ? this.jsonToHtml(element.content, image)
+              : '<br>') +
+            '</blockquote>';
+          break;
+        case 'italic':
+          html +=
+            '<i>' +
+            (element.content
+              ? this.jsonToHtml(element.content, image)
+              : '<br>') +
+            '</i>';
+          break;
+        case 'bold':
+          html +=
+            '<b>' +
+            (element.content
+              ? this.jsonToHtml(element.content, image)
+              : '<br>') +
+            '</b>';
+          break;
+        case 'underline':
+          html +=
+            '<u>' +
+            (element.content
+              ? this.jsonToHtml(element.content, image)
+              : '<br>') +
+            '</u>';
+          break;
+        case 'heading':
+          html +=
+            '<h2>' +
+            (element.content
+              ? this.jsonToHtml(element.content, image)
+              : '<br>') +
+            '</h2>';
           break;
         case 'text':
           html += element.text;
@@ -161,7 +219,7 @@ class novelOvh implements Plugin.PluginBase {
     return html;
   };
 
-  resolveUrl = (path: string) => this.site + '/novel/' + path;
+  resolveUrl = (path: string) => this.site + '/content/' + path;
 
   filters = {
     sort: {
