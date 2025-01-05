@@ -2,13 +2,14 @@ import { CheerioAPI, load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@typings/plugin';
 import { NovelStatus } from '@libs/novelStatus';
+import { FilterTypes, Filters } from '@libs/filterInputs';
 
 class TruyenFull implements Plugin.PagePlugin {
   id = 'truyenfull';
   name = 'Truyện Full';
   icon = 'src/vi/truyenfull/icon.png';
   site = 'https://truyenfull.io';
-  version = '1.0.1';
+  version = '1.0.2';
 
   parseNovels(loadedCheerio: CheerioAPI) {
     const novels: Plugin.NovelItem[] = [];
@@ -44,14 +45,27 @@ class TruyenFull implements Plugin.PagePlugin {
         };
       });
   }
-  async popularNovels(pageNo: number): Promise<Plugin.NovelItem[]> {
-    const url = `${this.site}/danh-sach/truyen-hot/trang-${pageNo}/`;
+  async popularNovels(
+    pageNo: number,
+    { filters }: Plugin.PopularNovelsOptions<typeof this.filters>,
+  ): Promise<Plugin.NovelItem[]> {
+    let url = this.site + '/danh-sach';
+
+    if (filters) {
+      if (filters.sort.value !== '') {
+        url += `/${filters.sort.value}`;
+      } else {
+        url += `/truyen-hot`;
+      }
+      for (const status of filters.status.value) {
+        url += `/${status}`;
+      }
+    }
+    url += `/trang-${pageNo}`;
 
     const result = await fetchApi(url);
     const body = await result.text();
-
     const loadedCheerio = parseHTML(body);
-
     return this.parseNovels(loadedCheerio);
   }
   async parseNovel(
@@ -138,6 +152,35 @@ class TruyenFull implements Plugin.PagePlugin {
     const loadedCheerio = parseHTML(body);
     return this.parseNovels(loadedCheerio);
   }
+  filters = {
+    status: {
+      type: FilterTypes.CheckboxGroup,
+      label: 'Tình trạng',
+      value: [],
+      options: [{ label: 'Đã hoàn thành', value: 'hoan' }],
+    },
+    sort: {
+      type: FilterTypes.Picker,
+      label: 'Sắp xếp',
+      value: '',
+      options: [
+        { label: 'Truyện mới cập nhật', value: 'truyen-moi' },
+        { label: 'Truyện hot', value: 'truyen-hot' },
+        { label: 'Truyện full', value: 'truyen-full' },
+        { label: 'Tiên hiệp hay', value: 'tien-hiep-hay' },
+        { label: 'Kiếm hiệp hay', value: 'kiem-hiep-hay' },
+        { label: 'Truyện teen hay', value: 'truyen-teen-hay' },
+        { label: 'Ngôn tình hay', value: 'ngon-tinh-hay' },
+        { label: 'Ngôn tình ngược', value: 'ngon-tinh-nguoc' },
+        { label: 'Ngôn tình sủng', value: 'ngon-tinh-sung' },
+        { label: 'Ngôn tình hài', value: 'ngon-tinh-hai' },
+        { label: 'Đam mỹ hay', value: 'dam-my-hay' },
+        { label: 'Đam mỹ hài', value: 'dam-my-hai' },
+        { label: 'Đam mỹ h văn', value: 'dam-my-h-van' },
+        { label: 'Đam mỹ sắc', value: 'dam-my-sac' },
+      ],
+    },
+  } satisfies Filters;
 }
 
 export default new TruyenFull();
