@@ -1,0 +1,668 @@
+{
+  "filters": {
+    "genre[]": {
+      "type": "Checkbox",
+      "label": "Genre",
+      "value": [],
+      "options": [
+        {
+          "label": "Abandoned Children",
+          "value": "abandoned-children"
+        },
+        {
+          "label": "Academy",
+          "value": "academy"
+        },
+        {
+          "label": "Action",
+          "value": "action"
+        },
+        {
+          "label": "Adopted Protagonist",
+          "value": "adopted-protagonist"
+        },
+        {
+          "label": "Adult",
+          "value": "adult"
+        },
+        {
+          "label": "Adventure",
+          "value": "adventure"
+        },
+        {
+          "label": "Age progression",
+          "value": "age-progression"
+        },
+        {
+          "label": "Alternate World",
+          "value": "alternate-world"
+        },
+        {
+          "label": "Animated",
+          "value": "animated"
+        },
+        {
+          "label": "Anime",
+          "value": "anime"
+        },
+        {
+          "label": "Apocalypse",
+          "value": "apocalypse"
+        },
+        {
+          "label": "Aristocracy",
+          "value": "aristocracy"
+        },
+        {
+          "label": "Arts",
+          "value": "arts"
+        },
+        {
+          "label": "Award Winning",
+          "value": "award-winning"
+        },
+        {
+          "label": "Betrayal",
+          "value": "betrayal"
+        },
+        {
+          "label": "Body Swap",
+          "value": "body-swap"
+        },
+        {
+          "label": "Business",
+          "value": "business"
+        },
+        {
+          "label": "Card Game",
+          "value": "card-game"
+        },
+        {
+          "label": "Cartoon",
+          "value": "cartoon"
+        },
+        {
+          "label": "Chaebol",
+          "value": "chaebol"
+        },
+        {
+          "label": "Cheat",
+          "value": "cheat"
+        },
+        {
+          "label": "Childcare",
+          "value": "childcare"
+        },
+        {
+          "label": "Chinese",
+          "value": "chinese"
+        },
+        {
+          "label": "Civilization",
+          "value": "civilization"
+        },
+        {
+          "label": "Clan Building",
+          "value": "clan-building-2"
+        },
+        {
+          "label": "Clan Building]",
+          "value": "clan-building"
+        },
+        {
+          "label": "Clever protagonist",
+          "value": "clever-protagonist"
+        },
+        {
+          "label": "Comedy",
+          "value": "comedy"
+        },
+        {
+          "label": "Comic",
+          "value": "comic"
+        },
+        {
+          "label": "Cooking",
+          "value": "cooking"
+        },
+        {
+          "label": "Dark",
+          "value": "dark"
+        },
+        {
+          "label": "Detective",
+          "value": "detective"
+        },
+        {
+          "label": "Disabilities",
+          "value": "disabilities"
+        },
+        {
+          "label": "Doujinshi",
+          "value": "doujinshi"
+        },
+        {
+          "label": "Drama",
+          "value": "drama"
+        },
+        {
+          "label": "Dying",
+          "value": "dying"
+        },
+        {
+          "label": "Eastern Fantasy",
+          "value": "eastern-fantasy"
+        },
+        {
+          "label": "Ecchi",
+          "value": "ecchi"
+        },
+        {
+          "label": "Evil organization",
+          "value": "evil-organization"
+        },
+        {
+          "label": "evil protagonist",
+          "value": "evil-protagonist"
+        },
+        {
+          "label": "Exorcism",
+          "value": "exorcism"
+        },
+        {
+          "label": "Extra character",
+          "value": "extra-character"
+        },
+        {
+          "label": "Fanfiction",
+          "value": "fanfiction"
+        },
+        {
+          "label": "Fantasy",
+          "value": "fantasy"
+        },
+        {
+          "label": "Farming",
+          "value": "farming"
+        },
+        {
+          "label": "Fashion",
+          "value": "fashion"
+        },
+        {
+          "label": "Female MC",
+          "value": "female-mc"
+        },
+        {
+          "label": "Firearms",
+          "value": "firearms"
+        },
+        {
+          "label": "Futuristic",
+          "value": "futuristic"
+        },
+        {
+          "label": "Game",
+          "value": "game"
+        },
+        {
+          "label": "Game character",
+          "value": "game-character"
+        },
+        {
+          "label": "Game element",
+          "value": "game-element"
+        },
+        {
+          "label": "Gate to another world",
+          "value": "gate-to-another-world"
+        },
+        {
+          "label": "Gender Bender",
+          "value": "gender-bender"
+        },
+        {
+          "label": "Genius",
+          "value": "genius"
+        },
+        {
+          "label": "Ghost posessed",
+          "value": "ghost-posessed"
+        },
+        {
+          "label": "Harem",
+          "value": "harem"
+        },
+        {
+          "label": "Healthcare",
+          "value": "healthcare"
+        },
+        {
+          "label": "Historical",
+          "value": "historical"
+        },
+        {
+          "label": "Horror",
+          "value": "horror"
+        },
+        {
+          "label": "human to animal",
+          "value": "human-to-animal"
+        },
+        {
+          "label": "Japanese",
+          "value": "japanese"
+        },
+        {
+          "label": "Josei",
+          "value": "josei"
+        },
+        {
+          "label": "Judicial",
+          "value": "judicial"
+        },
+        {
+          "label": "Korean",
+          "value": "korean"
+        },
+        {
+          "label": "Level system",
+          "value": "level-system"
+        },
+        {
+          "label": "Live action",
+          "value": "live-action"
+        },
+        {
+          "label": "Manga",
+          "value": "manga"
+        },
+        {
+          "label": "Manhua",
+          "value": "manhua"
+        },
+        {
+          "label": "Manhwa",
+          "value": "manhwa"
+        },
+        {
+          "label": "Married life",
+          "value": "married-life"
+        },
+        {
+          "label": "Martial Arts",
+          "value": "martial-arts"
+        },
+        {
+          "label": "Mature",
+          "value": "mature"
+        },
+        {
+          "label": "Mecha",
+          "value": "mecha"
+        },
+        {
+          "label": "Medical",
+          "value": "medical"
+        },
+        {
+          "label": "Military",
+          "value": "military"
+        },
+        {
+          "label": "misunderstanding",
+          "value": "misunderstanding"
+        },
+        {
+          "label": "Modern",
+          "value": "modern"
+        },
+        {
+          "label": "Monster Life",
+          "value": "monster-life"
+        },
+        {
+          "label": "Monster tamer",
+          "value": "monster-tamer"
+        },
+        {
+          "label": "MTL",
+          "value": "mtl"
+        },
+        {
+          "label": "Music",
+          "value": "music"
+        },
+        {
+          "label": "Mystery",
+          "value": "mystery"
+        },
+        {
+          "label": "Novel Character",
+          "value": "novel-character"
+        },
+        {
+          "label": "One shot",
+          "value": "one-shot"
+        },
+        {
+          "label": "Original",
+          "value": "original"
+        },
+        {
+          "label": "Outer Space",
+          "value": "outer-space"
+        },
+        {
+          "label": "Overpowered",
+          "value": "overpowered"
+        },
+        {
+          "label": "Political",
+          "value": "political"
+        },
+        {
+          "label": "Polygamy",
+          "value": "polygamy"
+        },
+        {
+          "label": "Possesion",
+          "value": "possesion"
+        },
+        {
+          "label": "Post-Apocalypse",
+          "value": "post-apocalypse"
+        },
+        {
+          "label": "Premium",
+          "value": "premium"
+        },
+        {
+          "label": "Psychological",
+          "value": "psychological"
+        },
+        {
+          "label": "RAW",
+          "value": "raw"
+        },
+        {
+          "label": "Regression",
+          "value": "regression"
+        },
+        {
+          "label": "Reincarnation",
+          "value": "reincarnation"
+        },
+        {
+          "label": "Request",
+          "value": "request"
+        },
+        {
+          "label": "Returnee",
+          "value": "returnee"
+        },
+        {
+          "label": "Revenge",
+          "value": "revenge"
+        },
+        {
+          "label": "Reverse Harem",
+          "value": "reverse-harem"
+        },
+        {
+          "label": "Romance",
+          "value": "romance"
+        },
+        {
+          "label": "Romance Fantasy",
+          "value": "romance-fantasy"
+        },
+        {
+          "label": "Royal family",
+          "value": "royal-family"
+        },
+        {
+          "label": "School Life",
+          "value": "school-life"
+        },
+        {
+          "label": "Sci-fi",
+          "value": "sci-fi"
+        },
+        {
+          "label": "Science Fiction",
+          "value": "science-fiction"
+        },
+        {
+          "label": "Seinen",
+          "value": "seinen"
+        },
+        {
+          "label": "Shoujo",
+          "value": "shoujo"
+        },
+        {
+          "label": "Shoujo Ai",
+          "value": "shoujo-ai"
+        },
+        {
+          "label": "Shounen",
+          "value": "shounen"
+        },
+        {
+          "label": "Shounen Ai",
+          "value": "shounen-ai"
+        },
+        {
+          "label": "Showbiz",
+          "value": "showbiz"
+        },
+        {
+          "label": "Slice of Life",
+          "value": "slice-of-life"
+        },
+        {
+          "label": "Smut",
+          "value": "smut"
+        },
+        {
+          "label": "Soft Yaoi",
+          "value": "soft-yaoi"
+        },
+        {
+          "label": "Soft Yuri",
+          "value": "soft-yuri"
+        },
+        {
+          "label": "Sports",
+          "value": "sports"
+        },
+        {
+          "label": "Strong to stronger",
+          "value": "strong-to-stronger"
+        },
+        {
+          "label": "Sudden Rich",
+          "value": "sudden-rich"
+        },
+        {
+          "label": "Superhero theme",
+          "value": "superhero-theme"
+        },
+        {
+          "label": "Supernatural",
+          "value": "supernatural"
+        },
+        {
+          "label": "Survival",
+          "value": "survival"
+        },
+        {
+          "label": "System",
+          "value": "system"
+        },
+        {
+          "label": "Teacher Protagonist",
+          "value": "teacher-protagonist"
+        },
+        {
+          "label": "Time",
+          "value": "time"
+        },
+        {
+          "label": "Tragedy",
+          "value": "tragedy"
+        },
+        {
+          "label": "Tragic past",
+          "value": "tragic-past"
+        },
+        {
+          "label": "Transmigration",
+          "value": "transmigration"
+        },
+        {
+          "label": "Tycoon",
+          "value": "tycoon"
+        },
+        {
+          "label": "Villain",
+          "value": "villain"
+        },
+        {
+          "label": "Warring period",
+          "value": "warring-period"
+        },
+        {
+          "label": "Weak to Strong",
+          "value": "weak-to-strong"
+        },
+        {
+          "label": "Webtoon",
+          "value": "webtoon"
+        },
+        {
+          "label": "World Hopping",
+          "value": "world-hopping"
+        },
+        {
+          "label": "Writer",
+          "value": "writer"
+        },
+        {
+          "label": "Yandere",
+          "value": "yandere"
+        },
+        {
+          "label": "Yaoi",
+          "value": "yaoi"
+        },
+        {
+          "label": "Yuri",
+          "value": "yuri"
+        }
+      ]
+    },
+    "op": {
+      "type": "Switch",
+      "label": "having all selected genres",
+      "value": false
+    },
+    "author": {
+      "type": "Text",
+      "label": "Author",
+      "value": ""
+    },
+    "artist": {
+      "type": "Text",
+      "label": "Artist",
+      "value": ""
+    },
+    "release": {
+      "type": "Text",
+      "label": "Year of Released",
+      "value": ""
+    },
+    "adult": {
+      "type": "Picker",
+      "label": "Adult content",
+      "value": "",
+      "options": [
+        {
+          "label": "All",
+          "value": ""
+        },
+        {
+          "label": "None adult content",
+          "value": "0"
+        },
+        {
+          "label": "Only adult content",
+          "value": "1"
+        }
+      ]
+    },
+    "status[]": {
+      "type": "Checkbox",
+      "label": "Status",
+      "value": [],
+      "options": [
+        {
+          "label": "OnGoing",
+          "value": "on-going"
+        },
+        {
+          "label": "Completed",
+          "value": "end"
+        },
+        {
+          "label": "Canceled",
+          "value": "canceled"
+        },
+        {
+          "label": "On Hold",
+          "value": "on-hold"
+        },
+        {
+          "label": "Upcoming",
+          "value": "upcoming"
+        }
+      ]
+    },
+    "m_orderby": {
+      "type": "Picker",
+      "label": "Order by",
+      "value": "",
+      "options": [
+        {
+          "label": "Relevance",
+          "value": ""
+        },
+        {
+          "label": "Latest",
+          "value": "latest"
+        },
+        {
+          "label": "A-Z",
+          "value": "alphabet"
+        },
+        {
+          "label": "Rating",
+          "value": "rating"
+        },
+        {
+          "label": "Trending",
+          "value": "trending"
+        },
+        {
+          "label": "Most Views",
+          "value": "views"
+        },
+        {
+          "label": "New",
+          "value": "new-manga"
+        }
+      ]
+    }
+  }
+}

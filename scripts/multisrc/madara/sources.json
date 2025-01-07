@@ -509,7 +509,8 @@
     "sourceName": "Fortune Eternal",
     "options": {
       "lang": "Korean",
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "versionIncrements": 1
     }
   }
 ]
