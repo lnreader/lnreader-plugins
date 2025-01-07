@@ -197,7 +197,8 @@
     "options": {
       "lang": "English",
       "reverseChapters": true,
-      "customJs": "\n        $('div.entry-content > p').each(function () {\n          $(this).text($(this).text().replace(/[\\u1000-\\u105F]/g, function (c) {\n            return String.fromCharCode(c.charCodeAt(0) - 4063);\n          }));\n        });\n"
+      "customJs": "\n        $('div.entry-content > p').each((_,el) => {\n          const url = this.site + chapterPath.slice(0, -1);\n          const encode = url.length * url.charCodeAt(url.length - 1) * 2 % 3;\n\n          const offsets = new Map([[0, 4223], [1, 12415], [2, 7007]]);\n          const offset = offsets.get(encode) ?? 4223;\n\n          $(el).text($(el).text().split('').map(char => {\n            let code = char.charCodeAt(0);\n            return (code < offset || code > offset+255) ? char : String.fromCharCode(code-offset);\n          }).join(''));\n        });\n",
+      "versionIncrements": 1
     }
   },
   {
