@@ -7,7 +7,7 @@ class FreeWebNovel implements Plugin.PluginBase {
   id = 'FWN.com';
   name = 'Free Web Novel';
   site = 'https://freewebnovel.com/';
-  version = '1.1.0';
+  version = '1.1.1';
   icon = 'src/en/freewebnovel/icon.png';
 
   async getCheerio(url: string): Promise<CheerioAPI> {
@@ -124,11 +124,9 @@ class FreeWebNovel implements Plugin.PluginBase {
   }
 
   async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
-    const r = await fetchApi(this.site + 'search/', {
+    const r = await fetchApi(this.site + 'search', {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        Referer: this.site,
-        Origin: this.site,
       },
       method: 'POST',
       body: new URLSearchParams({ searchkey: searchTerm }).toString(),
