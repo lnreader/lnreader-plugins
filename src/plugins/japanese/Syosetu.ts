@@ -223,7 +223,9 @@ class Syosetu implements Plugin.PluginBase {
 
     // Get the chapter content
     const chapterContent =
-      cheerioQuery('.p-novel__body .js-novel-text').html() || '';
+      cheerioQuery(
+        '.p-novel__body .p-novel__text:not([class*="p-novel__text--"])',
+      ).html() || '';
 
     // Combine title and content with proper HTML structure
     return `<h1>${chapterTitle}</h1>${chapterContent}`;
