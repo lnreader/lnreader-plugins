@@ -6,7 +6,7 @@ import { Filters, FilterTypes } from '@libs/filterInputs';
 class NovelFull implements Plugin.PluginBase {
   id = 'novelfull';
   name = 'NovelFull';
-  version = '1.0.0';
+  version = '1.0.1';
   icon = 'src/en/novelfull/icon.png';
   site = 'https://novelfull.com/';
 
@@ -119,7 +119,10 @@ class NovelFull implements Plugin.PluginBase {
     loadedCheerio('#chapter-content div.ads').remove();
     const chapterText = loadedCheerio('#chapter-content').html() || '';
 
-    return chapterText;
+    return chapterText.replace(
+      /If you find any errors \(\s*Ads popup, ads redirect, broken links, non-standard content, etc\.\.\s*\), Please let us know \S* report chapter \S* so we can fix it as soon as possible\./,
+      '',
+    );
   }
 
   async searchNovels(
