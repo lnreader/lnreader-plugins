@@ -29,7 +29,7 @@ class MVLEMPYRPlugin implements Plugin.PluginBase {
   name = 'MVLEMPYR';
   icon = 'src/en/mvlempyr/icon.png';
   site = 'https://www.mvlempyr.com/';
-  version = '1.0.3';
+  version = '1.0.4';
 
   _chapSite = 'https://chp.mvlempyr.net/';
   _allNovels: (Plugin.NovelItem & ExtraNovelData)[] | undefined;
@@ -99,7 +99,7 @@ class MVLEMPYRPlugin implements Plugin.PluginBase {
       ret.push(this.parseNovelHtmlNew(realNovelInfo));
     }
 
-    console.log(ret);
+    // console.log(ret);
     return ret;
   }
 
