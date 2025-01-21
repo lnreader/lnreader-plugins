@@ -1,12 +1,12 @@
 [
   {
     "id": "boxnovel",
-    "sourceSite": "https://boxnovel.com/",
+    "sourceSite": "https://novgo.co/",
     "sourceName": "BoxNovel",
     "options": {
       "useNewChapterEndpoint": true,
       "customJs": "chapterText.find('p').first().next('div').remove()",
-      "versionIncrements": 3
+      "versionIncrements": 4
     }
   },
   {
