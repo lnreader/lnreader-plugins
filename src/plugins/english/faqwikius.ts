@@ -6,8 +6,8 @@ import { NovelStatus } from '@libs/novelStatus';
 class FaqWikiUs implements Plugin.PluginBase {
   id = 'FWK.US';
   name = 'Faq Wiki';
-  site = 'https://www.faqwiki.us/';
-  version = '2.0.0';
+  site = 'https://faqwiki.us/';
+  version = '2.0.1';
   icon = 'src/en/faqwikius/icon.png';
 
   parseNovels(loadedCheerio: CheerioAPI, searchTerm?: string) {
