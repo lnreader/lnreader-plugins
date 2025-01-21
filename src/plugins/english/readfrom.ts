@@ -9,7 +9,7 @@ class ReadFromPlugin implements Plugin.PluginBase {
   name = 'Read From Net';
   icon = 'src/en/readfrom/icon.png';
   site = 'https://readfrom.net';
-  version = '1.0.0';
+  version = '1.0.1';
   filters: Filters | undefined = undefined;
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
@@ -140,6 +140,16 @@ class ReadFromPlugin implements Plugin.PluginBase {
       novel.summary = moreNovelInfo.summary;
       novel.genres = moreNovelInfo.genres;
       novel.author = moreNovelInfo.author;
+    }
+
+    let seriesElm = loadedCheerio('center > b:has(a)').filter((i, el) =>
+      loadedCheerio(el).find('a').attr('href')!.startsWith('/series.html'),
+    )[0];
+
+    if (seriesElm) {
+      let seriesText = loadedCheerio(seriesElm).text().trim();
+
+      novel.summary = seriesText + '\n\n' + novel.summary;
     }
 
     return novel;
