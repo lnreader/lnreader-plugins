@@ -6,7 +6,7 @@ import { Plugin } from '@typings/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.7.12';
+  version = '0.7.13';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -211,6 +211,36 @@ class NovelUpdates implements Plugin.PluginBase {
         chapterContent = loadedCheerio('#spliced-comic').html()!;
         chapterText = `<h2>${chapterTitle}</h2><hr><br>${chapterContent}`;
         break;
+      // Last edited in 0.7.13 - 21/01/2025
+      case 'arcanetranslations':
+        bloatElements = ['.bottomnav'];
+        bloatElements.forEach(tag => loadedCheerio(tag).remove());
+        chapterTitle = loadedCheerio('.epwrapper .cat-series').first().text();
+
+        loadedCheerio('.entry-content div').each((_, element) => {
+          const el = loadedCheerio(element);
+          const style = el.attr('style');
+
+          if (!style) return; // Skip elements without inline styles
+
+          // Check for specific styles
+          if (/border:.*#00219b/.test(style)) {
+            // Check if 'border' contains '#00219b'
+            el.removeAttr('style').addClass('arcane_box_blue');
+          } else if (
+            style.includes('text-transform: uppercase') &&
+            /text-shadow:.*blue/.test(style) // Check if 'text-shadow' contains 'blue'
+          ) {
+            el.removeAttr('style').addClass('arcane_title_blue');
+          } else if (/text-shadow:.*blue/.test(style)) {
+            // Check if 'text-shadow' contains 'blue'
+            el.removeAttr('style').addClass('arcane_text_blue');
+          }
+        });
+
+        chapterContent = loadedCheerio('.entry-content').html()!;
+        chapterText = `<h2>${chapterTitle}</h2><hr><br>${chapterContent}`;
+        break;
       case 'asuratls':
         const titleElement_asura = loadedCheerio('.post-body div b').first();
         chapterTitle = titleElement_asura.text() || 'Title not found';
@@ -281,6 +311,14 @@ class NovelUpdates implements Plugin.PluginBase {
         const footnotes_genesis = data_genesis[data_genesis[0].footnotes];
 
         chapterText = content_genesis + footnotes_genesis ?? '';
+        break;
+      // Last edited in 0.7.13 - 21/01/2025
+      case 'greenztl':
+        const chapterId_greenz = url.split('/').pop();
+        const url_greenz = `https://api.greenztl.com/api//chapters/${chapterId_greenz}`;
+        const json_greenz = await fetchApi(url_greenz).then(r => r.json());
+
+        chapterText = json_greenz.currentChapter.content;
         break;
       case 'helscans':
         chapterTitle =
@@ -532,6 +570,7 @@ class NovelUpdates implements Plugin.PluginBase {
         chapterContent = loadedCheerio('.chp_raw').html()!;
         chapterText = `<h2>${chapterTitle}</h2><hr><br>${chapterContent}`;
         break;
+      // Last edited in 0.7.13 - 21/01/2025
       case 'skydemonorder':
         /**
          * Check for age verification
@@ -542,14 +581,18 @@ class NovelUpdates implements Plugin.PluginBase {
         if (ageVerification_skydemon.includes('age verification required')) {
           throw new Error('Age verification required, please open in webview.');
         }
-        chapterTitle = `${loadedCheerio('header h2').first().text().trim() || 'Title not found'} | ${loadedCheerio('header h3').first().text().trim() || 'Title not found'}`;
+        chapterTitle = `${loadedCheerio('header .font-medium.text-sm').first().text().trim()}`;
         chapterContent = loadedCheerio('#startContainer + * > *')
           .first()
           .html()!;
         if (!chapterContent) {
           chapterContent = `${loadedCheerio('#chapter-body').html()!}<hr><br>There could be missing content, please check in webview.`;
         }
-        chapterText = `<h2>${chapterTitle}</h2><hr><br>${chapterContent}`;
+        if (chapterTitle) {
+          chapterText = `<h2>${chapterTitle}</h2><hr><br>${chapterContent}`;
+        } else {
+          chapterText = chapterContent;
+        }
         break;
       case 'stabbingwithasyringe':
         /**
@@ -744,6 +787,7 @@ class NovelUpdates implements Plugin.PluginBase {
      */
     const outliers = [
       'anotivereads',
+      'arcanetranslations',
       'asuratls',
       'darkstartranslations',
       'fictionread',
@@ -761,6 +805,7 @@ class NovelUpdates implements Plugin.PluginBase {
       isBlogspot = false;
     }
 
+    // Last edited in 0.7.13 - 21/01/2025
     /**
      * Blogspot sites:
      * - ¼-Assed
@@ -772,7 +817,7 @@ class NovelUpdates implements Plugin.PluginBase {
      *
      * WordPress sites:
      * - Anomlaously Creative (Outlier)
-     * - Arcane Translations
+     * - Arcane Translations (Outlier)
      * - Blossom Translation
      * - Darkstar Translations (Outlier)
      * - Dumahs Translations

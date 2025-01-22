@@ -1,4 +1,35 @@
 /**
+ * Novel Updates -> Arcane Translations
+ * https://www.novelupdates.com/group/arcane-translations/
+ * Necessary to display chapterContent correctly
+ */
+
+.arcane_box_blue {
+    text-align: center;
+    border: 2px solid #00219b;
+    padding: 20px;
+    box-shadow: 0 0 10px #00219b;
+    background-color: black;
+    position: relative;
+    z-index: 1;
+}
+
+.arcane_title_blue {
+    color: white;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    text-shadow: 0 0 10px blue;
+}
+
+.arcane_text_blue {
+    color: white;
+    border-top: 2px solid white;
+    padding-top: 10px;
+    text-shadow: 0 0 8px blue;
+}
+
+/**
  * Novel Updates -> Daoist Quest
  * https://www.novelupdates.com/group/daoist-quest/
  * Necessary to display chapterContent correctly
