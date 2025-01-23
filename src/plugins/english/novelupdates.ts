@@ -6,7 +6,7 @@ import { Plugin } from '@typings/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.7.13';
+  version = '0.7.14';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -211,32 +211,37 @@ class NovelUpdates implements Plugin.PluginBase {
         chapterContent = loadedCheerio('#spliced-comic').html()!;
         chapterText = `<h2>${chapterTitle}</h2><hr><br>${chapterContent}`;
         break;
-      // Last edited in 0.7.13 - 21/01/2025
+      // Last edited in 0.7.14 - 22/01/2025
       case 'arcanetranslations':
         bloatElements = ['.bottomnav'];
         bloatElements.forEach(tag => loadedCheerio(tag).remove());
         chapterTitle = loadedCheerio('.epwrapper .cat-series').first().text();
 
-        loadedCheerio('.entry-content div').each((_, element) => {
-          const el = loadedCheerio(element);
-          const style = el.attr('style');
+        loadedCheerio('.entry-content div, .entry-content span').each(
+          (_, element) => {
+            const el = loadedCheerio(element);
+            const style = el.attr('style');
 
-          if (!style) return; // Skip elements without inline styles
+            if (!style) return; // Skip elements without inline styles
 
-          // Check for specific styles
-          if (/border:.*#00219b/.test(style)) {
-            // Check if 'border' contains '#00219b'
-            el.removeAttr('style').addClass('arcane_box_blue');
-          } else if (
-            style.includes('text-transform: uppercase') &&
-            /text-shadow:.*blue/.test(style) // Check if 'text-shadow' contains 'blue'
-          ) {
-            el.removeAttr('style').addClass('arcane_title_blue');
-          } else if (/text-shadow:.*blue/.test(style)) {
-            // Check if 'text-shadow' contains 'blue'
-            el.removeAttr('style').addClass('arcane_text_blue');
-          }
-        });
+            if (/border:.*#00219b/.test(style)) {
+              el.removeAttr('style').addClass('arcane_box_blue'); // Blue box
+            } else if (/border:.*white/.test(style)) {
+              el.removeAttr('style').addClass('arcane_box_white'); // White box
+            } else if (
+              style.includes('text-transform: uppercase') &&
+              /text-shadow:.*blue/.test(style)
+            ) {
+              el.removeAttr('style').addClass('arcane_title_blue'); // Blue title
+            } else if (/text-shadow:.*blue/.test(style)) {
+              el.removeAttr('style').addClass('arcane_text_blue'); // Blue text
+            } else if (/text-shadow:.*lightyellow/.test(style)) {
+              el.removeAttr('style').addClass('arcane_text_lightyellow'); // Lightyellow text
+            } else if (/color:.*#ff00ff/.test(style)) {
+              el.removeAttr('style').addClass('arcane_text_pink'); // Pink text
+            }
+          },
+        );
 
         chapterContent = loadedCheerio('.entry-content').html()!;
         chapterText = `<h2>${chapterTitle}</h2><hr><br>${chapterContent}`;

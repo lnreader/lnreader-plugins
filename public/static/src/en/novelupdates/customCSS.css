@@ -14,6 +14,15 @@
     z-index: 1;
 }
 
+.arcane_box_white {
+    display: block;
+    text-align: center;
+    border: 2px solid white;
+    padding: 20px;
+    box-shadow: 0 0 10px white;
+    background-color: black;
+}
+
 .arcane_title_blue {
     color: white;
     font-weight: bold;
@@ -27,6 +36,16 @@
     border-top: 2px solid white;
     padding-top: 10px;
     text-shadow: 0 0 8px blue;
+}
+
+.arcane_text_lightyellow {
+    color: white;
+    text-shadow: 0 0 8px lightyellow;
+    font-family: 'Amita', cursive;
+}
+
+.arcane_text_pink {
+    color: #ff00ff;
 }
 
 /**
