@@ -84,11 +84,28 @@ jobs:
           echo "hotnovelpub=false" >> $GITHUB_OUTPUT
             fi
 
+      - name: Check Fictioneer theme
+        id: check_fictioneer
+        env:
+          BASE_URL: ${{ steps.get_base_url.outputs.BASE_URL }}
+          USER_AGENT: ${{ steps.get_user_agent.outputs.USER_AGENT }}
+        run: |
+          if curl --location --output /dev/null --silent --head --fail "https://$BASE_URL/wp-content/themes/fictioneer/css/application.css" -H "User-Agent: $USER_AGENT"; then
+            echo "fictioneer=true" >> $GITHUB_OUTPUT
+            echo "✅ Fictioneer Theme Detected" >> $GITHUB_STEP_SUMMARY
+          elif curl --location --output /dev/null --silent --head --fail "http://$BASE_URL/wp-content/themes/fictioneer/css/application.css" -H "User-Agent: $USER_AGENT"; then
+            echo "fictioneer=true" >> $GITHUB_OUTPUT
+            echo "✅ Fictioneer Theme Detected" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "fictioneer=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Add Label
         env:
           MADARA: ${{ steps.check_madara.outputs.madara }}
           LIGHNOVELWP: ${{ steps.check_lighnovelwp.outputs.lighnovelwp }}
           HOTNOVELPUB: ${{ steps.check_hotnovelpub.outputs.hotnovelpub }}
+          FICTIONEER: ${{ steps.check_fictioneer.outputs.fictioneer }}
           GH_TOKEN: ${{ github.token }}
         run: |
           if [[ "$MADARA" == "true" ]]; then
@@ -97,6 +114,8 @@ jobs:
             gh issue edit $ISSUE_NUMBER --add-label "Theme: Lighnovelwp" -R $REPO
           elif [[ "$HOTNOVELPUB" == "true" ]]; then
             gh issue edit $ISSUE_NUMBER --add-label "Theme: Hotnovelpub" -R $REPO
+          elif [[ "$FICTIONEER" == "true" ]]; then
+            gh issue edit $ISSUE_NUMBER --add-label "Theme: Fictioneer" -R $REPO
           else
             echo "No Theme Detected" >> $GITHUB_STEP_SUMMARY
           fi

@@ -1,0 +1,19 @@
+[
+  {
+    "id": "daoistquest",
+    "sourceSite": "https://daoist.quest",
+    "sourceName": "Daoist Quest",
+    "options": {
+      "browsePage": "collection/novels",
+      "versionIncrements": 1
+    }
+  },
+  {
+    "id": "novelib",
+    "sourceSite": "https://novelib.com",
+    "sourceName": "NovelLib",
+    "options": {
+      "browsePage": "browse"
+    }
+  }
+]
