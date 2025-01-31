@@ -15,5 +15,13 @@
     "options": {
       "browsePage": "browse"
     }
+  },
+  {
+    "id": "lilyonthevalley",
+    "sourceSite": "https://lilyonthevalley.com",
+    "sourceName": "Lily on the Valley",
+    "options": {
+      "browsePage": "stories"
+    }
   }
 ]
