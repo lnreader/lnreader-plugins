@@ -1,0 +1,110 @@
+name: Issue report
+description: Report a source issue in LNReader
+labels: [Bug]
+body:
+  - type: dropdown
+    id: source
+    attributes:
+      label: Plugin
+      description: Select the plugin associated with the issue.
+      multiple: true
+      options:
+        {#CHANGE#}
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: Select the severity of the issue you want to report.
+      multiple: false
+      options:
+        - Wrong formatting
+        - Wrong content
+        - Missing chapter
+        - Missing images
+        - Can't load novels
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce-steps
+    attributes:
+      label: Steps to reproduce
+      description: Provide an example of the issue.
+      placeholder: |
+        Example:
+          1. First step
+          2. Second step
+          3. Issue here
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      placeholder: |
+        Example:
+          "This should happen..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual behavior
+      placeholder: |
+        Example:
+          "This happened instead..."
+    validations:
+      required: true
+
+  - type: input
+    id: lnreader-version
+    attributes:
+      label: LNReader version
+      description: |
+        You can find your LNReader version in **More → About**.
+      placeholder: |
+        Example: "1.1.19"
+    validations:
+      required: true
+
+  - type: input
+    id: android-version
+    attributes:
+      label: Android version
+      description: |
+        You can find this somewhere in your Android settings.
+      placeholder: |
+        Example: "Android 11"
+    validations:
+      required: true
+
+  - type: textarea
+    id: other-details
+    attributes:
+      label: Other details
+      placeholder: |
+        Additional details and attachments.
+
+  - type: checkboxes
+    id: acknowledgements
+    attributes:
+      label: Acknowledgements
+      description: Your issue will be closed if you haven't done these steps.
+      options:
+        - label: I have searched the existing issues and this is a new ticket, **NOT** a duplicate or related to another open issue.
+          required: true
+        - label: I have written a short but informative title.
+          required: true
+        - label: I have updated the app to version **[1.1.19](https://github.com/LNReader/lnreader/releases/latest)**.
+          required: true
+        - label: I have updated all installed extensions.
+          required: true
+        - label: If this is an issue with the app itself, I should be opening an issue in the [app repository](https://github.com/LNReader/lnreader/issues/new/choose).
+          required: true
+        
