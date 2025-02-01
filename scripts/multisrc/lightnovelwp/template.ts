@@ -5,6 +5,7 @@ import { Plugin } from '@typings/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { defaultCover } from '@libs/defaultCover';
 import { Filters } from '@libs/filterInputs';
+import { storage } from '@libs/storage';
 
 type LightNovelWPOptions = {
   reverseChapters?: boolean;
@@ -12,6 +13,7 @@ type LightNovelWPOptions = {
   versionIncrements?: number;
   seriesPath?: string;
   customJs?: string;
+  hasLocked?: boolean;
 };
 
 export type LightNovelWPMetadata = {
@@ -31,6 +33,9 @@ class LightNovelWPPlugin implements Plugin.PluginBase {
   options?: LightNovelWPOptions;
   filters?: Filters;
 
+  hideLocked = storage.get('hideLocked');
+  pluginSettings?: Record<string, any>;
+
   constructor(metadata: LightNovelWPMetadata) {
     this.id = metadata.id;
     this.name = metadata.sourceName;
@@ -40,6 +45,16 @@ class LightNovelWPPlugin implements Plugin.PluginBase {
     this.version = `1.1.${5 + versionIncrements}`;
     this.options = metadata.options ?? ({} as LightNovelWPOptions);
     this.filters = metadata.filters satisfies Filters;
+
+    if (this.options?.hasLocked) {
+      this.pluginSettings = {
+        hideLocked: {
+          value: '',
+          label: 'Hide locked chapters',
+          type: 'Switch',
+        },
+      };
+    }
   }
 
   getHostname(url: string): string {
@@ -160,8 +175,10 @@ class LightNovelWPPlugin implements Plugin.PluginBase {
     let isReadingChapter = false;
     let isReadingChapterInfo = 0;
     let isPaidChapter = false;
+    let hasLockItemOnChapterNum = false;
     const chapters: Plugin.ChapterItem[] = [];
     let tempChapter = {} as Plugin.ChapterItem;
+    const hideLocked = this.hideLocked;
 
     const parser = new Parser({
       onopentag(name, attribs) {
@@ -294,6 +311,12 @@ class LightNovelWPPlugin implements Plugin.PluginBase {
         else if (isParsingChapterList) {
           if (isReadingChapter) {
             if (isReadingChapterInfo === 1) {
+              if (data.includes('🔒')) {
+                isPaidChapter = true;
+                hasLockItemOnChapterNum = true;
+              } else if (hasLockItemOnChapterNum) {
+                isPaidChapter = false;
+              }
               extractChapterNumber(data, tempChapter);
             } else if (isReadingChapterInfo === 2) {
               tempChapter.name =
@@ -375,7 +398,8 @@ class LightNovelWPPlugin implements Plugin.PluginBase {
             } else if (name === 'li') {
               isReadingChapter = false;
               if (!tempChapter.chapterNumber) tempChapter.chapterNumber = 0;
-              if (!isPaidChapter) chapters.push(tempChapter);
+              if (isPaidChapter) tempChapter.name = '🔒 ' + tempChapter.name;
+              if (!hideLocked || !isPaidChapter) chapters.push(tempChapter);
               tempChapter = {} as Plugin.ChapterItem;
             }
           } else if (name === 'ul') {

@@ -215,7 +215,8 @@
     "sourceName": "Arcane Translations",
     "options": {
       "reverseChapters": true,
-      "lang": "English"
+      "lang": "English",
+      "hasLocked": true
     }
   },
   {
