@@ -5,6 +5,7 @@ import { Cheerio, AnyNode, CheerioAPI, load as parseHTML } from 'cheerio';
 import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 import dayjs from 'dayjs';
+import { storage } from '@libs/storage';
 
 const includesAny = (str: string, keywords: string[]) =>
   new RegExp(keywords.join('|')).test(str);
@@ -15,6 +16,7 @@ type MadaraOptions = {
   orderBy?: string;
   versionIncrements?: number;
   customJs?: string;
+  hasLocked?: boolean;
 };
 
 export type MadaraMetadata = {
@@ -34,15 +36,28 @@ class MadaraPlugin implements Plugin.PluginBase {
   options?: MadaraOptions;
   filters?: Filters | undefined;
 
+  hideLocked = storage.get('hideLocked');
+  pluginSettings?: Record<string, any>;
+
   constructor(metadata: MadaraMetadata) {
     this.id = metadata.id;
     this.name = metadata.sourceName;
     this.icon = `multisrc/madara/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `1.0.${5 + versionIncrements}`;
+    this.version = `1.0.${6 + versionIncrements}`;
     this.options = metadata.options;
     this.filters = metadata.filters;
+
+    if (this.options?.hasLocked) {
+      this.pluginSettings = {
+        hideLocked: {
+          value: '',
+          label: 'Hide locked chapters',
+          type: 'Switch',
+        },
+      };
+    }
   }
 
   translateDragontea(text: Cheerio<AnyNode>): Cheerio<AnyNode> {
@@ -270,7 +285,11 @@ class MadaraPlugin implements Plugin.PluginBase {
 
     const totalChapters = loadedCheerio('.wp-manga-chapter').length;
     loadedCheerio('.wp-manga-chapter').each((chapterIndex, element) => {
-      const chapterName = loadedCheerio(element).find('a').text().trim();
+      let chapterName = loadedCheerio(element).find('a').text().trim();
+      const locked = element.attribs['class'].includes('premium-block');
+      if (locked) {
+        chapterName = '🔒 ' + chapterName;
+      }
 
       let releaseDate = loadedCheerio(element)
         .find('span.chapter-release-date')
@@ -285,7 +304,7 @@ class MadaraPlugin implements Plugin.PluginBase {
 
       const chapterUrl = loadedCheerio(element).find('a').attr('href') || '';
 
-      if (chapterUrl && chapterUrl != '#') {
+      if (chapterUrl && chapterUrl != '#' && !(locked && this.hideLocked)) {
         chapters.push({
           name: chapterName,
           path: chapterUrl.replace(/https?:\/\/.*?\//, '/'),

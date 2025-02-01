@@ -2,11 +2,12 @@ import { CheerioAPI, load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { Plugin } from '@typings/plugin';
+import { storage } from '@libs/storage';
 
 class Webnovel implements Plugin.PluginBase {
   id = 'webnovel';
   name = 'Webnovel';
-  version = '1.0.1';
+  version = '1.0.2';
   icon = 'src/en/webnovel/icon.png';
   site = 'https://www.webnovel.com';
   headers = {
@@ -16,6 +17,14 @@ class Webnovel implements Plugin.PluginBase {
   imageRequestInit?: Plugin.ImageRequestInit | undefined = {
     headers: {
       'referrer': this.site,
+    },
+  };
+  hideLocked = storage.get('hideLocked');
+  pluginSettings = {
+    hideLocked: {
+      value: '',
+      label: 'Hide locked chapters',
+      type: 'Switch',
     },
   };
 
@@ -143,12 +152,11 @@ class Webnovel implements Plugin.PluginBase {
             (loadedCheerio(ele_c).find('a').attr('title')?.trim() ||
               'No Title Found');
           const chapterPath = loadedCheerio(ele_c).find('a').attr('href');
+          const locked = loadedCheerio(ele_c).find('svg').length;
 
-          if (chapterPath) {
+          if (chapterPath && !(locked && this.hideLocked)) {
             chapters.push({
-              name: loadedCheerio(ele_c).find('svg').length
-                ? `${chapterName} 🔒`
-                : chapterName,
+              name: locked ? `${chapterName} 🔒` : chapterName,
               path: chapterPath,
             });
           }

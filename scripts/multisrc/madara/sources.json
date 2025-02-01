@@ -197,7 +197,9 @@
     "id": "zetroTL",
     "sourceSite": "https://zetrotranslation.com/",
     "sourceName": "Zetro Translation",
-    "options": {}
+    "options": {
+      "hasLocked": true
+    }
   },
   {
     "id": "webnoveloku",
