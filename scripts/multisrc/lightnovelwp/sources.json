@@ -256,5 +256,14 @@
       "reverseChapters": false,
       "lang": "English"
     }
+  },
+  {
+    "id": "keopi",
+    "sourceSite": "https://keopitranslations.com",
+    "sourceName": "Keopi Translations",
+    "options": {
+      "lang": "English",
+      "reverseChapters": true
+    }
   }
 ]

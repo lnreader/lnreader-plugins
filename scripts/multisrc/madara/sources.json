@@ -515,5 +515,40 @@
       "useNewChapterEndpoint": true,
       "versionIncrements": 1
     }
+  },
+  {
+    "id": "ragnarscans",
+    "sourceSite": "https://ragnarscans.com/",
+    "sourceName": "Ragnar Scans",
+    "options": {
+      "lang": "Turkish",
+      "useNewChapterEndpoint": true
+    }
+  },
+  {
+    "id": "readfanfic",
+    "sourceSite": "https://readfanfic.com/",
+    "sourceName": "Read Fanfic",
+    "options": {
+      "lang": "English"
+    }
+  },
+  {
+    "id": "violetlily",
+    "sourceSite": "https://violetlilytranslation.com/",
+    "sourceName": "Violet Lily",
+    "options": {
+      "lang": "English",
+      "useNewChapterEndpoint": true
+    }
+  },
+  {
+    "id": "sweetescape",
+    "sourceSite": "https://sweetescapetranslations.com/",
+    "sourceName": "Sweet Escape",
+    "options": {
+      "lang": "English",
+      "useNewChapterEndpoint": true
+    }
   }
 ]

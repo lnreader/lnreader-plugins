@@ -1,0 +1,184 @@
+{
+  "filters": {
+    "genre[]": {
+      "type": "Checkbox",
+      "label": "Genre",
+      "value": [],
+      "options": [
+        {
+          "label": "+18",
+          "value": "18"
+        },
+        {
+          "label": "Akademi",
+          "value": "akademi"
+        },
+        {
+          "label": "Aksiyon",
+          "value": "aksiyon"
+        },
+        {
+          "label": "Büyü",
+          "value": "buyu"
+        },
+        {
+          "label": "Doğaüstü",
+          "value": "dogaustu"
+        },
+        {
+          "label": "Dövüş Sanatları",
+          "value": "dovus-sanatlari"
+        },
+        {
+          "label": "Dram",
+          "value": "dram"
+        },
+        {
+          "label": "Fantastik",
+          "value": "fantastik"
+        },
+        {
+          "label": "Fantezi",
+          "value": "fantezi"
+        },
+        {
+          "label": "Komedi",
+          "value": "komedi"
+        },
+        {
+          "label": "Macera",
+          "value": "macera"
+        },
+        {
+          "label": "Murim",
+          "value": "murim"
+        },
+        {
+          "label": "Novel",
+          "value": "novel"
+        },
+        {
+          "label": "Reenkarnasyon",
+          "value": "reenkarnasyon"
+        },
+        {
+          "label": "Shounen",
+          "value": "shounen"
+        },
+        {
+          "label": "Shuojo",
+          "value": "shuojo"
+        },
+        {
+          "label": "Sistem",
+          "value": "sistem"
+        },
+        {
+          "label": "Zindan",
+          "value": "zindan"
+        }
+      ]
+    },
+    "op": {
+      "type": "Switch",
+      "label": "having all selected genres",
+      "value": false
+    },
+    "author": {
+      "type": "Text",
+      "label": "Yazar",
+      "value": ""
+    },
+    "artist": {
+      "type": "Text",
+      "label": "Çizer",
+      "value": ""
+    },
+    "release": {
+      "type": "Text",
+      "label": "Yayınlanma Yılı",
+      "value": ""
+    },
+    "adult": {
+      "type": "Picker",
+      "label": "Adult content",
+      "value": "",
+      "options": [
+        {
+          "label": "Hepsi",
+          "value": ""
+        },
+        {
+          "label": "None adult content",
+          "value": "0"
+        },
+        {
+          "label": "Only adult content",
+          "value": "1"
+        }
+      ]
+    },
+    "status[]": {
+      "type": "Checkbox",
+      "label": "Durumu",
+      "value": [],
+      "options": [
+        {
+          "label": "Devam Ediyor",
+          "value": "on-going"
+        },
+        {
+          "label": "Final",
+          "value": "end"
+        },
+        {
+          "label": "Canceled",
+          "value": "canceled"
+        },
+        {
+          "label": "On Hold",
+          "value": "on-hold"
+        },
+        {
+          "label": "Yakında",
+          "value": "upcoming"
+        }
+      ]
+    },
+    "m_orderby": {
+      "type": "Picker",
+      "label": "Sırala;",
+      "value": "",
+      "options": [
+        {
+          "label": "İlişkin",
+          "value": ""
+        },
+        {
+          "label": "En Sondan",
+          "value": "latest"
+        },
+        {
+          "label": "A-Z",
+          "value": "alphabet"
+        },
+        {
+          "label": "Oylama",
+          "value": "rating"
+        },
+        {
+          "label": "Popüler",
+          "value": "trending"
+        },
+        {
+          "label": "En Çok Okunan",
+          "value": "views"
+        },
+        {
+          "label": "Yeni",
+          "value": "new-manga"
+        }
+      ]
+    }
+  }
+}
