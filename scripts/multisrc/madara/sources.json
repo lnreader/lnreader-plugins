@@ -399,15 +399,6 @@
     }
   },
   {
-    "id": "fenrir",
-    "sourceSite": "https://fenrirtranslations.com/",
-    "sourceName": "Fenrir Translations",
-    "options": {
-      "useNewChapterEndpoint": true,
-      "lang": "English"
-    }
-  },
-  {
     "id": "bellereservoir",
     "sourceSite": "https://bellereservoir.com/",
     "sourceName": "Belle Reservoir",
