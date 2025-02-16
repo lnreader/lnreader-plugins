@@ -9,13 +9,13 @@ export default function SearchNovels() {
   const plugin = useAppStore(state => state.plugin);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [page] = useState(1);
-  const [novels, setNovels] = useState<Plugin.NovelItem[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [novels, setNovels] = useState<Plugin.NovelItem[] | undefined>([]);
   const [loading, setLoading] = useState(false);
 
   const [fetchError, setFetchError] = useState('');
 
-  const fetchNovels = () => {
+  const fetchNovels = (page: number) => {
     if (plugin) {
       setLoading(true);
       plugin
@@ -27,6 +27,10 @@ export default function SearchNovels() {
         });
     }
   };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [plugin]);
 
   return (
     <AccordionContainer title="Search Novels" loading={loading}>
@@ -40,12 +44,19 @@ export default function SearchNovels() {
         />
         <Button
           disabled={plugin === undefined}
-          onClick={fetchNovels}
+          onClick={() => fetchNovels(currentPage)}
           variant="contained"
         >
           Fetch
         </Button>
-        <Button disabled={plugin === undefined} variant="outlined">
+        <Button
+          disabled={plugin === undefined}
+          variant="outlined"
+          onClick={() => {
+            fetchNovels(currentPage + 1);
+            setCurrentPage(pre => pre + 1);
+          }}
+        >
           Next Page
         </Button>
       </Stack>
@@ -56,7 +67,7 @@ export default function SearchNovels() {
         }}
       >
         <Stack sx={{ width: 'max-content' }} direction={'row'} spacing={2}>
-          {novels.map((novel, index) => (
+          {novels?.map((novel, index) => (
             <NovelItemCard key={'searchedNovelItem_' + index} item={novel} />
           ))}
         </Stack>

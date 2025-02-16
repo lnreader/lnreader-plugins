@@ -9,7 +9,7 @@ class AllNovelFullPlugin implements Plugin.PluginBase {
   name = 'AllNovelFull';
   icon = 'src/en/allnovelfull/icon.png';
   site = 'https://allnovelfull.net';
-  version = '1.0.0';
+  version = '1.0.1';
 
   parseNovels(loadedCheerio: CheerioAPI) {
     const novels: Plugin.NovelItem[] = [];
@@ -145,6 +145,15 @@ class AllNovelFullPlugin implements Plugin.PluginBase {
     const body = await result.text();
 
     const loadedCheerio = parseHTML(body);
+    const lastPage = loadedCheerio('.pagination-container ul li a')
+      .last()
+      .attr('data-page');
+    if (!lastPage) {
+      // no pagination
+      if (page > 1) return [];
+    } else {
+      if (parseInt(lastPage) && page > parseInt(lastPage)) return [];
+    }
     return this.parseNovels(loadedCheerio);
   }
 

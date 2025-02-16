@@ -7,8 +7,15 @@ class FreeWebNovel implements Plugin.PluginBase {
   id = 'FWN.com';
   name = 'Free Web Novel';
   site = 'https://freewebnovel.com/';
-  version = '1.1.1';
+  version = '1.1.2';
   icon = 'src/en/freewebnovel/icon.png';
+
+  lastSearch: number | null = null;
+  searchInterval = 3200;
+
+  async sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
 
   async getCheerio(url: string): Promise<CheerioAPI> {
     const r = await fetchApi(url);
@@ -124,6 +131,10 @@ class FreeWebNovel implements Plugin.PluginBase {
   }
 
   async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
+    const now = Date.now();
+    if (this.lastSearch && now - this.lastSearch <= this.searchInterval) {
+      await this.sleep(this.searchInterval);
+    }
     const r = await fetchApi(this.site + 'search', {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -131,6 +142,7 @@ class FreeWebNovel implements Plugin.PluginBase {
       method: 'POST',
       body: new URLSearchParams({ searchkey: searchTerm }).toString(),
     });
+    this.lastSearch = Date.now();
     if (!r.ok)
       throw new Error(
         'Could not reach site (' + r.status + ') try to open in webview.',
