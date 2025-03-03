@@ -9,7 +9,7 @@ import { NovelStatus } from '@libs/novelStatus';
 class Novelight implements Plugin.PagePlugin {
   id = 'novelight';
   name = 'Novelight';
-  version = '1.0.0';
+  version = '1.1.0';
   icon = 'src/en/novelight/icon.png';
   site = 'https://novelight.net/';
 
@@ -71,8 +71,8 @@ class Novelight implements Plugin.PagePlugin {
     const info = loadedCheerio('div.mini-info > .item').toArray();
     let status = '';
     let translation = '';
-    for (let child of info) {
-      let type = loadedCheerio(child).find('.sub-header').text().trim();
+    for (const child of info) {
+      const type = loadedCheerio(child).find('.sub-header').text().trim();
       if (type === 'Status') {
         status = loadedCheerio(child).find('div.info').text().trim();
       }
@@ -101,7 +101,7 @@ class Novelight implements Plugin.PagePlugin {
 
   async parsePage(novelPath: string, page: string): Promise<Plugin.SourcePage> {
     const rawBody = await fetchApi(this.site + novelPath).then(r => r.text());
-    const csrftoken = rawBody?.match(/window\.CSRF_TOKEN = \"([^"]+)\"/)?.[1];
+    const csrftoken = rawBody?.match(/window\.CSRF_TOKEN = "([^"]+)"/)?.[1];
     const bookId = rawBody?.match(/const OBJECT_BY_COMMENT = ([0-9]+)/)?.[1];
     const totalPages = parseInt(
       rawBody
@@ -153,9 +153,33 @@ class Novelight implements Plugin.PagePlugin {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const body = await fetchApi(this.site + chapterPath).then(r => r.text());
+    const rawBody = await fetchApi(this.site + chapterPath).then(r => {
+      const res = r.text();
+      return res;
+    });
+
+    const csrftoken = rawBody?.match(/window\.CSRF_TOKEN = "([^"]+)"/)?.[1];
+    const chapterId = rawBody?.match(/const CHAPTER_ID = "([0-9]+)/)?.[1];
+
+    let className;
+    const body = await fetchApi(
+      this.site + 'book/ajax/read-chapter/' + chapterId,
+      {
+        method: 'GET',
+        headers: {
+          Cookie: 'csrftoken=' + csrftoken,
+          Referer: this.site + chapterPath,
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+      },
+    ).then(async r => {
+      const res = await r.json();
+      className = res.class;
+      return res.content;
+    });
+
     const loadedCheerio = parseHTML(body);
-    const chapterText = loadedCheerio('.chapter-content').html() || '';
+    const chapterText = loadedCheerio('.' + className).html() || '';
 
     return chapterText.replace(
       /class="advertisment"/g,
