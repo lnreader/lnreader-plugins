@@ -16,7 +16,6 @@
     "lint": "npx eslint .",
     "prepare": "husky install",
     "prettier": "prettier --write \"./**/*.{js,ts}\"",
-    "proxy": "node proxy_server.js",
     "start": "node importPlugins.js && vite",
     "test": "exit 0"
   },
@@ -36,7 +35,7 @@
     "@reduxjs/toolkit": "^2.4.0",
     "@types/eslint__js": "^8.42.3",
     "@types/eslint-config-prettier": "^6.11.3",
-    "@types/http-proxy": "^1.17.15",
+    "@types/http-proxy": "^1.17.16",
     "@types/react": "^18.2.66",
     "@types/react-dom": "^18.2.22",
     "@types/react-window": "^1.8.8",
