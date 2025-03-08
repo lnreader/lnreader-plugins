@@ -10,13 +10,13 @@
   },
   {
     "id": "kolnovel",
-    "sourceSite": "https://kolnovel.org/",
+    "sourceSite": "https://kolbook.xyz/",
     "sourceName": "Kol Novel",
     "options": {
       "lang": "Arabic",
       "reverseChapters": true,
       "customJs": "$('article > style').text().match(/\\.\\w+(?=\\s*[,{])/g)?.forEach(tag => $(`p${tag}`).remove());$('.epcontent .code-block').remove();",
-      "versionIncrements": 6
+      "versionIncrements": 7
     }
   },
   {
