@@ -7,7 +7,7 @@ import { Plugin } from '@typings/plugin';
 class NovelFire implements Plugin.PluginBase {
   id = 'novelfire';
   name = 'Novel Fire';
-  version = '1.0.1';
+  version = '1.0.2';
   icon = 'src/en/novelfire/icon.png';
   site = 'https://novelfire.net/';
 
@@ -230,7 +230,7 @@ class NovelFire implements Plugin.PluginBase {
     searchTerm: string,
     page: number,
   ): Promise<Plugin.NovelItem[]> {
-    const url = `${this.site}search?keyword=${searchTerm}&page=${page}`;
+    const url = `${this.site}search?keyword=${encodeURIComponent(searchTerm)}&page=${page}`;
     const result = await fetchApi(url);
     const body = await result.text();
 

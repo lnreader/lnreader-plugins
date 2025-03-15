@@ -7,7 +7,7 @@ import { storage } from '@libs/storage';
 class Webnovel implements Plugin.PluginBase {
   id = 'webnovel';
   name = 'Webnovel';
-  version = '1.0.2';
+  version = '1.0.3';
   icon = 'src/en/webnovel/icon.png';
   site = 'https://www.webnovel.com';
   headers = {
@@ -240,7 +240,7 @@ class Webnovel implements Plugin.PluginBase {
   ): Promise<Plugin.NovelItem[]> {
     searchTerm = searchTerm.replace(/\s+/g, '+');
 
-    const url = `${this.site}/search?keywords=${searchTerm}&pageIndex=${pageNo}${type ? `&type=${type}` : ''}`;
+    const url = `${this.site}/search?keywords=${encodeURIComponent(searchTerm)}&pageIndex=${pageNo}${type ? `&type=${type}` : ''}`;
     const result = await fetchApi(url, {
       headers: this.headers,
     });

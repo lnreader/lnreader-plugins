@@ -9,7 +9,7 @@ class Rainofsnow implements Plugin.PagePlugin {
   name = 'Rainofsnow';
   icon = 'src/en/rainofsnow/icon.png';
   site = 'https://rainofsnow.com/';
-  version = '1.1.1';
+  version = '1.1.2';
 
   parseNovels(loadedCheerio: CheerioAPI) {
     const novels: Plugin.NovelItem[] = [];
@@ -154,7 +154,7 @@ class Rainofsnow implements Plugin.PagePlugin {
     // no page number, infinite scroll
 
     const newSearch = searchTerm.replace(/\s+/g, '+');
-    const url = this.site + '?s=' + newSearch;
+    const url = this.site + '?s=' + encodeURIComponent(newSearch);
 
     const result = await fetch(url);
     const body = await result.text();

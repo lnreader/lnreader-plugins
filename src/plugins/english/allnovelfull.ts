@@ -9,7 +9,7 @@ class AllNovelFullPlugin implements Plugin.PluginBase {
   name = 'AllNovelFull';
   icon = 'src/en/allnovelfull/icon.png';
   site = 'https://allnovelfull.net';
-  version = '1.0.1';
+  version = '1.0.2';
 
   parseNovels(loadedCheerio: CheerioAPI) {
     const novels: Plugin.NovelItem[] = [];
@@ -140,7 +140,7 @@ class AllNovelFullPlugin implements Plugin.PluginBase {
     searchTerm: string,
     page: number,
   ): Promise<Plugin.NovelItem[]> {
-    const url = `${this.site}/search?keyword=${searchTerm}&page=${page}`;
+    const url = `${this.site}/search?keyword=${encodeURIComponent(searchTerm)}&page=${page}`;
     const result = await fetchApi(url);
     const body = await result.text();
 

@@ -9,7 +9,7 @@ import { NovelStatus } from '@libs/novelStatus';
 class Novelight implements Plugin.PagePlugin {
   id = 'novelight';
   name = 'Novelight';
-  version = '1.1.0';
+  version = '1.1.1';
   icon = 'src/en/novelight/icon.png';
   site = 'https://novelight.net/';
 
@@ -188,7 +188,7 @@ class Novelight implements Plugin.PagePlugin {
   }
 
   async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
-    const url = `${this.site}catalog/?search=${searchTerm}`;
+    const url = `${this.site}catalog/?search=${encodeURIComponent(searchTerm)}`;
     const body = await fetchApi(url).then(r => r.text());
     const loadedCheerio = parseHTML(body);
 

@@ -33,7 +33,7 @@ class MTLNovelPlugin implements Plugin.PluginBase {
     this.icon = 'multisrc/mtlnovel/mtlnovel/icon.png';
     this.site = metadata.sourceSite;
     this.mainUrl = 'https://www.mtlnovels.com/';
-    this.version = '1.1.2';
+    this.version = '1.1.3';
     this.options = metadata.options ?? ({} as MTLNovelOptions);
     this.filters = metadata.filters satisfies Filters;
   }
@@ -203,7 +203,9 @@ class MTLNovelPlugin implements Plugin.PluginBase {
   ): Promise<Plugin.NovelItem[]> {
     if (pageNo !== 1) return [];
     const searchUrl =
-      this.site + 'wp-admin/admin-ajax.php?action=autosuggest&q=' + searchTerm;
+      this.site +
+      'wp-admin/admin-ajax.php?action=autosuggest&q=' +
+      encodeURIComponent(searchTerm);
 
     const res = await this.safeFecth(searchUrl);
     const result = await res.json();

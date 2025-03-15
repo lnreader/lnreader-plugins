@@ -6,7 +6,7 @@ import { Plugin } from '@typings/plugin';
 class EarlyNovelPlugin implements Plugin.PagePlugin {
   id = 'earlynovel';
   name = 'Early Novel';
-  version = '1.0.0';
+  version = '1.0.1';
   icon = 'src/en/earlynovel/icon.png';
   site = 'https://earlynovel.net/';
 
@@ -128,7 +128,7 @@ class EarlyNovelPlugin implements Plugin.PagePlugin {
   }
 
   async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
-    const url = `${this.site}search?keyword=${searchTerm}`;
+    const url = `${this.site}search?keyword=${encodeURIComponent(searchTerm)}`;
     const result = await fetchApi(url);
     const body = await result.text();
 

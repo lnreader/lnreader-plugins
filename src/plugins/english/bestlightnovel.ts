@@ -10,7 +10,7 @@ class BLN implements Plugin.PluginBase {
   name = 'BestLightNovel';
   icon = 'src/en/bestlightnovel/icon.png';
   site = 'https://bestlightnovel.com/';
-  version = '1.0.0';
+  version = '1.0.1';
 
   parseNovels(loadedCheerio: CheerioAPI) {
     const novels: Plugin.NovelItem[] = [];
@@ -160,7 +160,7 @@ class BLN implements Plugin.PluginBase {
     searchTerm: string,
     page: number,
   ): Promise<Plugin.NovelItem[]> {
-    const url = `${this.site}search_novels/${searchTerm}?page=${page}`;
+    const url = `${this.site}search_novels/${encodeURIComponent(searchTerm)}?page=${page}`;
 
     const result = await fetchApi(url);
     const body = await result.text();

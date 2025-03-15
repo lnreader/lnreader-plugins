@@ -6,7 +6,7 @@ import { Plugin } from '@typings/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.7.15';
+  version = '0.7.16';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -1004,7 +1004,7 @@ class NovelUpdates implements Plugin.PluginBase {
     );
     searchTerm = longestSearchTerm.replace(/[‘’]/g, "'").replace(/\s+/g, '+');
 
-    const url = `${this.site}series-finder/?sf=1&sh=${searchTerm}&sort=srank&order=asc&pg=${page}`;
+    const url = `${this.site}series-finder/?sf=1&sh=${encodeURIComponent(searchTerm)}&sort=srank&order=asc&pg=${page}`;
     const result = await fetchApi(url);
     const body = await result.text();
 

@@ -8,7 +8,7 @@ import dayjs from 'dayjs';
 class ReadLiteNovel implements Plugin.PluginBase {
   id = 'rln.app';
   name = 'ReadLiteNovel';
-  version = '1.0.0';
+  version = '1.0.1';
   icon = 'src/en/readlitenovel/icon.png';
   site = 'https://rln.app';
 
@@ -154,7 +154,8 @@ class ReadLiteNovel implements Plugin.PluginBase {
 
   async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
     const url =
-      this.site + `/search/autocomplete?dataType=json&query=${searchTerm}`;
+      this.site +
+      `/search/autocomplete?dataType=json&query=${encodeURIComponent(searchTerm)}`;
     const result = await fetchApi(url);
     const body = await result.json();
     const novels: Plugin.NovelItem[] = [];

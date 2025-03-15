@@ -26,7 +26,7 @@ class RulatePlugin implements Plugin.PluginBase {
     this.name = metadata.sourceName;
     this.icon = `multisrc/rulate/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
-    this.version = '1.0.' + (1 + metadata.versionIncrements);
+    this.version = '1.0.' + (2 + metadata.versionIncrements);
     this.filters = metadata.filters;
   }
 
@@ -217,7 +217,9 @@ class RulatePlugin implements Plugin.PluginBase {
   async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
     const novels: Plugin.NovelItem[] = [];
     const result: response[] = await fetchApi(
-      this.site + '/search/autocomplete?query=' + searchTerm,
+      this.site +
+        '/search/autocomplete?query=' +
+        encodeURIComponent(searchTerm),
     ).then(res => res.json());
 
     result.forEach(novel => {

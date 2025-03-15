@@ -6,7 +6,7 @@ import { Filters, FilterTypes } from '@libs/filterInputs';
 class PawRead implements Plugin.PluginBase {
   id = 'pawread';
   name = 'PawRead';
-  version = '2.0.0';
+  version = '2.0.1';
   icon = 'src/en/pawread/icon.png';
   site = 'https://m.pawread.com/';
 
@@ -128,7 +128,7 @@ class PawRead implements Plugin.PluginBase {
     searchTerm: string,
     page: number,
   ): Promise<Plugin.NovelItem[]> {
-    const searchUrl = `${this.site}search/?keywords=${searchTerm}&page=${page}`;
+    const searchUrl = `${this.site}search/?keywords=${encodeURIComponent(searchTerm)}&page=${page}`;
 
     const result = await fetchApi(searchUrl);
     const body = await result.text();

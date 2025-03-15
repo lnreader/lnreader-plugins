@@ -6,7 +6,7 @@ import { Filters, FilterTypes } from '@libs/filterInputs';
 class NovelFull implements Plugin.PluginBase {
   id = 'novelfull';
   name = 'NovelFull';
-  version = '1.0.2';
+  version = '1.0.3';
   icon = 'src/en/novelfull/icon.png';
   site = 'https://novelfull.com/';
 
@@ -142,7 +142,7 @@ class NovelFull implements Plugin.PluginBase {
     searchTerm: string,
     page: number,
   ): Promise<Plugin.NovelItem[]> {
-    const searchUrl = `${this.site}search?keyword=${searchTerm}&page=${page}`;
+    const searchUrl = `${this.site}search?keyword=${encodeURIComponent(searchTerm)}&page=${page}`;
 
     const result = await fetchApi(searchUrl);
     const body = await result.text();

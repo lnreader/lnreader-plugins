@@ -9,7 +9,7 @@ class NovelBin implements Plugin.PluginBase {
   icon = 'src/en/novelbin/icon.png';
   site = 'https://novelbin.com/';
   subsite = 'https://novelbin.lanovels.net/';
-  version = '1.2.0';
+  version = '1.2.1';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = {
     headers: {
       'referrer': this.site,
@@ -144,7 +144,7 @@ class NovelBin implements Plugin.PluginBase {
   }
 
   async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
-    const url = `${this.site}search/?keyword=${searchTerm}`;
+    const url = `${this.site}search/?keyword=${encodeURIComponent(searchTerm)}`;
     const body = await fetchApi(url).then(r => r.text());
 
     const loadedCheerio = parseHTML(body);

@@ -8,7 +8,7 @@ class ComradeMaoPlugin implements Plugin.PluginBase {
   id = 'comrademao';
   name = 'Comrade Mao';
   site = 'https://comrademao.com/';
-  version = '1.0.0';
+  version = '1.0.1';
   icon = 'src/en/comrademao/icon.png';
 
   parseNovels(loadedCheerio: CheerioAPI) {
@@ -149,7 +149,7 @@ class ComradeMaoPlugin implements Plugin.PluginBase {
     searchTerm: string,
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
-    const url = `${this.site}page/${pageNo}/?s=${searchTerm}&post_type=novel`;
+    const url = `${this.site}page/${pageNo}/?s=${encodeURIComponent(searchTerm)}&post_type=novel`;
 
     const body = await fetchApi(url).then(result => result.text());
 

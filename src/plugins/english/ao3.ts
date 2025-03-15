@@ -7,7 +7,7 @@ import { defaultCover } from '@libs/defaultCover';
 class ArchiveOfOurOwn implements Plugin.PluginBase {
   id = 'archiveofourown';
   name = 'Archive Of Our Own';
-  version = '1.0.2';
+  version = '1.0.3';
   icon = 'src/en/ao3/icon.png';
   site = 'https://archiveofourown.org/';
 
@@ -282,7 +282,7 @@ class ArchiveOfOurOwn implements Plugin.PluginBase {
     searchTerm: string,
     page: number,
   ): Promise<Plugin.NovelItem[]> {
-    const searchUrl = `${this.site}works/search?page=${page}&work_search%5Blanguage_id%5D=en&work_search%5Bquery%5D=${searchTerm}`;
+    const searchUrl = `${this.site}works/search?page=${page}&work_search%5Blanguage_id%5D=en&work_search%5Bquery%5D=${encodeURIComponent(searchTerm)}`;
 
     const result = await fetchApi(searchUrl);
     const body = await result.text();

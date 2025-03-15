@@ -18,7 +18,7 @@ class Genesis implements Plugin.PluginBase {
   icon = 'src/en/genesis/icon.png';
   customCSS = 'src/en/genesis/customCSS.css';
   site = 'https://genesistudio.com';
-  version = '1.1.0';
+  version = '1.1.1';
 
   imageRequestInit?: Plugin.ImageRequestInit | undefined = {
     headers: {
@@ -465,7 +465,7 @@ class Genesis implements Plugin.PluginBase {
     pageNo: number,
   ): Promise<Plugin.SourceNovel[]> {
     if (pageNo !== 1) return [];
-    const url = `${this.site}/api/novels/search?serialization=All&sort=Popular&title=${searchTerm}`;
+    const url = `${this.site}/api/novels/search?serialization=All&sort=Popular&title=${encodeURIComponent(searchTerm)}`;
     const json = await fetchApi(url).then(r => r.json());
     return this.parseNovels(json);
   }

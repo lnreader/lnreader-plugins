@@ -6,7 +6,7 @@ import { defaultCover } from '@libs/defaultCover';
 class NovelHall implements Plugin.PluginBase {
   id = 'novelhall';
   name = 'Novel Hall';
-  version = '1.0.1';
+  version = '1.0.2';
   icon = 'src/en/novelhall/icon.png';
   site = 'https://novelhall.com/';
 
@@ -90,7 +90,7 @@ class NovelHall implements Plugin.PluginBase {
   }
 
   async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
-    const url = `${this.site}index.php?s=so&module=book&keyword=${searchTerm}`;
+    const url = `${this.site}index.php?s=so&module=book&keyword=${encodeURIComponent(searchTerm)}`;
     const body = await fetchApi(url).then(r => r.text());
     const loadedCheerio = parseHTML(body);
 

@@ -107,7 +107,7 @@ class WuxiaWorld implements Plugin.PluginBase {
   site = 'https://www.wuxiaworld.com/';
   apiSite = 'https://api2.wuxiaworld.com/wuxiaworld.api.v2.';
   filters?: Filters | undefined;
-  version = '0.5.0';
+  version = '0.5.1';
 
   parseNovels(data: { items: NovelEntry[] }) {
     const novels: Plugin.NovelItem[] = [];
@@ -270,7 +270,8 @@ class WuxiaWorld implements Plugin.PluginBase {
   }
 
   async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
-    const url = this.site + 'api/novels/search?query=' + searchTerm;
+    const url =
+      this.site + 'api/novels/search?query=' + encodeURIComponent(searchTerm);
 
     const result = await fetchApi(url);
     const data = await result.json();

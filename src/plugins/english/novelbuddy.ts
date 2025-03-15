@@ -7,7 +7,7 @@ class NovelBuddy implements Plugin.PluginBase {
   id = 'novelbuddy';
   name = 'NovelBuddy.io';
   site = 'https://novelbuddy.io/';
-  version = '1.0.2';
+  version = '1.0.3';
   icon = 'src/en/novelbuddy/icon.png';
 
   parseNovels(loadedCheerio: CheerioAPI) {
@@ -177,7 +177,7 @@ class NovelBuddy implements Plugin.PluginBase {
     searchTerm: string,
     page: number,
   ): Promise<Plugin.NovelItem[]> {
-    const url = `${this.site}search?q=${searchTerm}&page=${page}`;
+    const url = `${this.site}search?q=${encodeURIComponent(searchTerm)}&page=${page}`;
 
     const result = await fetchApi(url);
     const body = await result.text();

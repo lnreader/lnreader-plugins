@@ -4,11 +4,13 @@ import { Filters, FilterTypes, FilterValueWithType } from '@libs/filterInputs';
 import { Plugin } from '@typings/plugin';
 import { load as parseHTML } from 'cheerio';
 
+//TODO: this looks similar to fictioneer source? maybe use multisrc someday
+
 class DDLPlugin implements Plugin.PluginBase {
   id = 'DDL.com';
   name = 'Divine Dao Library';
   site = 'https://www.divinedaolibrary.com/';
-  version = '1.1.0';
+  version = '1.1.1';
   icon = 'src/en/divinedaolibrary/icon.png';
 
   filters = {

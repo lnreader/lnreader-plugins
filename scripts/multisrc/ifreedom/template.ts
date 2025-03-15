@@ -25,7 +25,7 @@ class IfreedomPlugin implements Plugin.PluginBase {
     this.name = metadata.sourceName;
     this.icon = `multisrc/ifreedom/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
-    this.version = '1.0.1';
+    this.version = '1.0.2';
     this.filters = metadata.filters;
   }
 
@@ -166,7 +166,11 @@ class IfreedomPlugin implements Plugin.PluginBase {
     page: number | undefined = 1,
   ): Promise<Plugin.NovelItem[]> {
     const url =
-      this.site + '/vse-knigi/?searchname=' + searchTerm + '&bpage=' + page;
+      this.site +
+      '/vse-knigi/?searchname=' +
+      encodeURIComponent(searchTerm) +
+      '&bpage=' +
+      page;
     const result = await fetchApi(url).then(res => res.text());
     const loadedCheerio = parseHTML(result);
 

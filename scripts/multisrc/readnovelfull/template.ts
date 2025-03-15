@@ -34,7 +34,7 @@ class ReadNovelFullPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/readnovelfull/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `1.0.${0 + versionIncrements}`;
+    this.version = `1.0.${1 + versionIncrements}`;
     this.options = metadata.options;
   }
 
@@ -229,7 +229,7 @@ class ReadNovelFullPlugin implements Plugin.PluginBase {
       this.site +
       '/' +
       this.options?.searchPage
-        .replace('%%SEARCH%%', searchTerm)
+        .replace('%%SEARCH%%', encodeURIComponent(searchTerm))
         .replace('%%PAGE%%', page.toString());
     const $ = await this.getCheerio(url, true);
 

@@ -5,7 +5,7 @@ import { Plugin } from '@typings/plugin';
 class MTLReader implements Plugin.PluginBase {
   id = 'mtlreader';
   name = 'MTL Reader';
-  version = '1.0.0';
+  version = '1.0.1';
   icon = 'src/en/mtlreader/icon.png';
   site = 'https://mtlreader.com/';
 
@@ -92,7 +92,7 @@ class MTLReader implements Plugin.PluginBase {
     const tokenCheerio = parseHTML(body);
     const token = tokenCheerio('input[name="_token"]').attr('value');
 
-    const searchUrl = `${this.site}search?_token=${token}&input=${searchTerm}`;
+    const searchUrl = `${this.site}search?_token=${token}&input=${encodeURIComponent(searchTerm)}`;
     const seacrhBody = await fetchApi(searchUrl).then(r => r.text());
     const loadedCheerio = parseHTML(seacrhBody);
     return this.parseNovels(loadedCheerio);

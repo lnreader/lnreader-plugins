@@ -7,7 +7,7 @@ import { NovelStatus } from '@libs/novelStatus';
 class RoyalRoad implements Plugin.PluginBase {
   id = 'royalroad';
   name = 'Royal Road';
-  version = '2.1.2';
+  version = '2.1.3';
   icon = 'src/en/royalroad/icon.png';
   site = 'https://www.royalroad.com/';
 
@@ -258,7 +258,7 @@ class RoyalRoad implements Plugin.PluginBase {
     searchTerm: string,
     page: number,
   ): Promise<Plugin.NovelItem[]> {
-    const searchUrl = `${this.site}fictions/search?page=${page}&title=${searchTerm}`;
+    const searchUrl = `${this.site}fictions/search?page=${page}&title=${encodeURIComponent(searchTerm)}`;
 
     const body = await fetchApi(searchUrl).then(r => r.text());
     return this.parseNovels(body);
