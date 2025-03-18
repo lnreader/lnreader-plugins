@@ -23,5 +23,13 @@
     "options": {
       "browsePage": "stories"
     }
+  },
+  {
+    "id": "penguinsquad",
+    "sourceSite": "https://penguin-squad.com",
+    "sourceName": "Penguin Squad",
+    "options": {
+      "browsePage": "novels"
+    }
   }
 ]

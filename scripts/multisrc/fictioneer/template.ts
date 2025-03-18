@@ -90,7 +90,7 @@ class FictioneerPlugin implements Plugin.PluginBase {
       .replace('by ', '')
       .trim();
     novel.cover = loadedCheerio('figure.story__thumbnail > a').attr('href');
-    novel.genres = loadedCheerio('div.tag-group > a')
+    novel.genres = loadedCheerio('div.tag-group > a, section.tag-group > a')
       .map((i, el) => loadedCheerio(el).text())
       .toArray()
       .join(',');
@@ -98,6 +98,14 @@ class FictioneerPlugin implements Plugin.PluginBase {
 
     novel.chapters = loadedCheerio('li.chapter-group__list-item._publish')
       .filter((i, el) => !el.attribs['class'].includes('_password'))
+      .filter(
+        (i, el) =>
+          !loadedCheerio(el)
+            .find('i')
+            .first()!
+            .attr('class')!
+            .includes('fa-lock'),
+      )
       .map((i, el) => {
         const chapterName = loadedCheerio(el).find('a').text();
         const chapterUrl = loadedCheerio(el)
