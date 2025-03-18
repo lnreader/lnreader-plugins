@@ -30,6 +30,8 @@ export namespace Plugin {
     author?: string;
     artist?: string;
     status?: string;
+    /** Rating out of 5 as float */
+    rating?: number;
     chapters?: ChapterItem[];
   } & NovelItem;
 

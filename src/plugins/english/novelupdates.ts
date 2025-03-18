@@ -6,7 +6,7 @@ import { Plugin } from '@typings/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.7.16';
+  version = '0.8.0';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -143,6 +143,14 @@ class NovelUpdates implements Plugin.PluginBase {
     const summary = loadedCheerio('#editdescription').text().trim();
 
     novel.summary = summary + `\n\nType: ${type}`;
+
+    const rating = loadedCheerio('.seriesother .uvotes')
+      .text()
+      .match(/(\d+\.\d+) \/ \d+\.\d+/)?.[1];
+
+    if (rating) {
+      novel.rating = parseFloat(rating);
+    }
 
     const chapter: Plugin.ChapterItem[] = [];
 
@@ -1004,7 +1012,7 @@ class NovelUpdates implements Plugin.PluginBase {
     );
     searchTerm = longestSearchTerm.replace(/[‘’]/g, "'").replace(/\s+/g, '+');
 
-    const url = `${this.site}series-finder/?sf=1&sh=${encodeURIComponent(searchTerm)}&sort=srank&order=asc&pg=${page}`;
+    const url = `${this.site}series-finder/?sf=1&sh=${searchTerm}&sort=srank&order=asc&pg=${page}`;
     const result = await fetchApi(url);
     const body = await result.text();
 

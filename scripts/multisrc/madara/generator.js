@@ -27,10 +27,7 @@ const generator = function generator(source) {
   });
 
   const pluginScript = `
-${madaraTemplate.replace(
-  '// CustomJS HERE',
-  source.options?.customJs || '',
-)}
+${madaraTemplate.replace('// CustomJS HERE', source.options?.customJs || '')}
 const plugin = new MadaraPlugin(${JSON.stringify(source)});
 export default plugin;
     `.trim();
