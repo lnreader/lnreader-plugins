@@ -18,7 +18,7 @@ class Genesis implements Plugin.PluginBase {
   icon = 'src/en/genesis/icon.png';
   customCSS = 'src/en/genesis/customCSS.css';
   site = 'https://genesistudio.com';
-  version = '1.1.1';
+  version = '1.1.2';
 
   imageRequestInit?: Plugin.ImageRequestInit | undefined = {
     headers: {
@@ -421,6 +421,7 @@ class Genesis implements Plugin.PluginBase {
     // Extract the main novel data from the nodes
     const data = this.extractData(nodes);
 
+    // Look for chapter container with required fields
     const contentKey = 'content';
     const notesKey = 'notes';
     const footnotesKey = 'footnotes';
@@ -429,7 +430,7 @@ class Genesis implements Plugin.PluginBase {
     for (const key in data) {
       const mapping = data[key];
 
-      // Look for an object with a 'chapters' key
+      // Check container for keys that match the required fields
       if (
         mapping &&
         typeof mapping === 'object' &&
@@ -437,21 +438,16 @@ class Genesis implements Plugin.PluginBase {
         notesKey in mapping &&
         footnotesKey in mapping
       ) {
-        // Use the found mapping object to determine the actual keys.
-        const contentMappingKey = mapping[contentKey];
-        const notesMappingKey = mapping[notesKey];
-        const footnotesMappingKey = mapping[footnotesKey];
-
         // Retrieve the chapter's content, notes, and footnotes using the mapping.
-        // Provide a fallback for content if needed.
-        const content = data[contentMappingKey] ?? data[19];
-        const notes = data[notesMappingKey];
-        const footnotes = data[footnotesMappingKey];
+        const content = data[mapping[contentKey]];
+        const notes = data[mapping[notesKey]];
+        const footnotes = data[mapping[footnotesKey]];
 
+        // Return the combined parts with appropriate formatting
         return (
           content +
-          (notes ? `<b>Notes</b><br>${notes}` : '') +
-          (footnotes ? `<b>Footnotes</b><br>${footnotes}` : '')
+          (notes ? `<h2>Notes</h2><br>${notes}` : '') +
+          (footnotes ?? '')
         );
       }
     }
