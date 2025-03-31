@@ -30,8 +30,13 @@ Repository to host plugins and related issues, and requests for
 
 #### via an app
 
-1. Run `npm run host-linux` or `npm run host-windows` (depending on your operating system)
-2. Add your `https://raw.githubusercontent.com/<username>/<repo>/plugins/<tag>/.dist/plugins.min.json` to app repository
+1. Plugins from GitHub
+    * Run `npm run host-linux` or `npm run host-windows` (depending on your operating system)
+    * Add your `https://raw.githubusercontent.com/<username>/<repo>/plugins/<tag>/.dist/plugins.min.json` to app repository
+2. Plugins from localhost
+    * Copy `.env.template` to `.env` and update `USER_CONTENT_BASE` according to the comment there
+    * Run `npm run host-dev`
+    * Add plugin listing to app repository (e.g. for android emulator `http://10.0.2.2/.dist/plugins.min.json`)
 
 ---
 

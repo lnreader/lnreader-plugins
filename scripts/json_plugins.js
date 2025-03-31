@@ -14,7 +14,9 @@ const matched = REMOTE.match(/([^:/]+?)\/([^/.]+)(\.git)?$/);
 if (!matched) throw Error('Cant parse git url');
 const USERNAME = matched[1];
 const REPO = matched[2];
-const USER_CONTENT_LINK = `https://raw.githubusercontent.com/${USERNAME}/${REPO}/${CURRENT_BRANCH}`;
+const USER_CONTENT_LINK = process.env.USER_CONTENT_BASE
+  ? process.env.USER_CONTENT_BASE
+  : `https://raw.githubusercontent.com/${USERNAME}/${REPO}/${CURRENT_BRANCH}`;
 
 const STATIC_LINK = `${USER_CONTENT_LINK}/public/static`;
 const PLUGIN_LINK = `${USER_CONTENT_LINK}/.js/src/plugins`;
