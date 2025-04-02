@@ -9,7 +9,7 @@ class Shu69 implements Plugin.PluginBase {
   name = '69书吧';
   icon = 'src/cn/69shu/icon.png';
   site = 'https://www.69shu.xyz';
-  version = '0.2.0';
+  version = '0.2.1';
 
   async popularNovels(
     pageNo: number,
@@ -44,7 +44,7 @@ class Shu69 implements Plugin.PluginBase {
       const novel = {
         name: novelName,
         cover: novelCover,
-        path: url,
+        path: url.replace(this.site, ''),
       };
 
       novels.push(novel);
@@ -88,7 +88,7 @@ class Shu69 implements Plugin.PluginBase {
 
     const allUrl = loadedCheerio('dd.all > a').attr('href');
     if (allUrl) {
-      const chaptersUrl = this.site + allUrl;
+      const chaptersUrl = new URL(allUrl, this.site).toString();
       const chaptersBody = await fetchText(chaptersUrl);
 
       const chaptersLoadedCheerio = parseHTML(chaptersBody);
@@ -97,9 +97,12 @@ class Shu69 implements Plugin.PluginBase {
         const chapterUrl = chaptersLoadedCheerio(el).find('a').attr('href');
         const chapterName = chaptersLoadedCheerio(el).find('a').text().trim();
         if (chapterUrl) {
+          const relativeChapterUrl = chapterUrl.startsWith('http')
+            ? chapterUrl.replace(this.site, '')
+            : chapterUrl;
           chapters.push({
             name: chapterName,
-            path: chapterUrl,
+            path: relativeChapterUrl,
           });
         }
       });
@@ -110,9 +113,12 @@ class Shu69 implements Plugin.PluginBase {
         const chapterUrl = loadedCheerio(el).find('a').attr('href');
         const chapterName = loadedCheerio(el).find('a').text().trim();
         if (chapterUrl) {
+          const relativeChapterUrl = chapterUrl.startsWith('http')
+            ? chapterUrl.replace(this.site, '')
+            : chapterUrl;
           chapters.push({
             name: chapterName,
-            path: chapterUrl,
+            path: relativeChapterUrl,
           });
         }
       });
@@ -124,7 +130,8 @@ class Shu69 implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const body = await fetchText(this.site + chapterPath);
+    const chapterUrl = new URL(chapterPath, this.site).toString();
+    const body = await fetchText(chapterUrl);
 
     const loadedCheerio = parseHTML(body);
 
@@ -171,7 +178,7 @@ class Shu69 implements Plugin.PluginBase {
       const novel = {
         name: novelName,
         cover: novelCover,
-        path: url,
+        path: url.replace(this.site, ''),
       };
 
       novels.push(novel);
