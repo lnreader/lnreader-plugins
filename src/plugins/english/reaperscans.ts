@@ -83,17 +83,19 @@ class ReaperScans implements Plugin.PluginBase {
   }
 
   private extractChapterContent(chapter: string): string {
-    const content = chapter
-      .split('\n')
-      .find(e => e.substring(0, 50).includes('<p'))!;
-    const prefix = content.substring(0, content.indexOf('<'));
+    const lines = chapter.split('\n');
+    const start = lines.findIndex(line => line.includes('<p'));
+
+    const prefix = lines[start].substring(0, lines[start].indexOf('<'));
     const commonPrefix = prefix.substring(
       prefix.indexOf(':'),
       prefix.indexOf(','),
     );
 
+    const end = lines.lastIndexOf(commonPrefix);
+    const content = lines.slice(start, end).join('\n');
+
     const deduplicated = content.split(commonPrefix)[1];
-    console.log(prefix, commonPrefix, content.length, deduplicated.length);
     return deduplicated.substring(
       deduplicated.indexOf('<'),
       deduplicated.lastIndexOf('>') + 1,
