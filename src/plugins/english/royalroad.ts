@@ -8,15 +8,14 @@ import { isUrlAbsolute } from '@libs/isAbsoluteUrl';
 class RoyalRoad implements Plugin.PluginBase {
   id = 'royalroad';
   name = 'Royal Road';
-  version = '2.2.0';
+  version = '2.2.1';
   icon = 'src/en/royalroad/icon.png';
   site = 'https://www.royalroad.com/';
 
   parseNovels(html: string) {
+    const baseUrl = this.site;
     const novels: Plugin.NovelItem[] = [];
     let tempNovel = {} as Plugin.NovelItem;
-    const baseUrl = this.site;
-    tempNovel.name = '';
     let isParsingNovel = false;
     const parser = new Parser({
       onopentag(name, attribs) {
@@ -24,8 +23,8 @@ class RoyalRoad implements Plugin.PluginBase {
           isParsingNovel = true;
         }
         if (isParsingNovel) {
-          if (name === 'a' && attribs['class']?.includes('bold')) {
-            tempNovel.path = attribs['href'].slice(1);
+          if (name === 'a') {
+            tempNovel.path = attribs['href'].split('/').slice(1, 3).join('/');
           }
           if (name === 'img') {
             tempNovel.name = attribs['alt'];
@@ -37,7 +36,6 @@ class RoyalRoad implements Plugin.PluginBase {
           if (tempNovel.path && tempNovel.name) {
             novels.push(tempNovel);
             tempNovel = {} as Plugin.NovelItem;
-            tempNovel.name = '';
           }
         }
       },
@@ -96,145 +94,192 @@ class RoyalRoad implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: '',
-      summary: '',
+      author: '',
       chapters: [],
     };
     const baseUrl = this.site;
-    let isNovelName = false;
-    let isAuthorName = false;
-    let isDescription = false;
-    let isH4 = false;
-    let isSpan = 0;
-    let isTags = false;
-    let isGenres = false;
+
+    enum ParsingState {
+      Idle,
+      InTitle,
+      InAuthor,
+      InDescription,
+      InTags,
+      InTagLink,
+      InStatusSpan,
+      InScript,
+    }
+
+    let state: ParsingState = ParsingState.Idle;
+    let scriptContent = '';
+    let statusText = '';
+    let statusSpanCounter = 0;
     const genreArray: string[] = [];
-    let isFooter = false;
-    let isScript = false;
     let chapterJson: ChapterEntry[] = [];
     let volumeJson: VolumeEntry[] = [];
+
     const parser = new Parser({
       onopentag(name, attribs) {
-        if (name === 'img' && attribs['class']?.includes('thumbnail')) {
-          novel.cover = attribs['src'];
-          if (novel.cover && !isUrlAbsolute(novel.cover)) {
-            novel.cover = baseUrl + novel.cover.slice(1);
-          }
-        }
-        if (name === 'span' && attribs['class']?.includes('label-sm')) {
-          isSpan++;
-        }
-        if (name === 'span' && attribs['class']?.includes('tags')) {
-          isTags = true;
+        switch (name) {
+          case 'h1':
+            state = ParsingState.InTitle;
+            break;
+          case 'a':
+            if (
+              attribs['href']?.startsWith('/profile/') &&
+              novel.author === ''
+            ) {
+              state = ParsingState.InAuthor;
+            } else if (state === ParsingState.InTags) {
+              state = ParsingState.InTagLink;
+            }
+            break;
+          case 'div':
+            if (attribs['class'] === 'description') {
+              state = ParsingState.InDescription;
+              novel.summary = '';
+            }
+            break;
+          case 'span':
+            if (attribs['class']?.includes('tags')) {
+              state = ParsingState.InTags;
+            } else if (attribs['class']?.includes('label-sm')) {
+              statusSpanCounter++;
+              if (statusSpanCounter === 2) {
+                state = ParsingState.InStatusSpan;
+                statusText = '';
+              }
+            }
+            break;
+          case 'img':
+            if (attribs['class']?.includes('thumbnail')) {
+              novel.cover = attribs['src'];
+              if (novel.cover && !isUrlAbsolute(novel.cover)) {
+                novel.cover = baseUrl + novel.cover.slice(1);
+              }
+            }
+            break;
+          case 'script':
+            state = ParsingState.InScript;
+            scriptContent = '';
+            break;
         }
       },
-      onopentagname(name) {
-        if (name === 'h1') {
-          isNovelName = true;
-        }
-        if (isH4 && name === 'a') {
-          isAuthorName = true;
-        }
-        if (isTags && name === 'a') {
-          isGenres = true;
-        }
-        if (name === 'label') {
-          isDescription = false;
-          isTags = false;
-        }
-        if (isFooter && name === 'script') {
-          isScript = true;
-        }
-      },
-      onattribute(name, value) {
-        if (name === 'class' && value === 'description') {
-          isDescription = true;
-        }
-        if (name === 'class' && value === 'page-footer footer') {
-          isFooter = true;
-        }
-      },
-      ontext(data) {
-        if (isNovelName) {
-          novel.name = novel.name + data;
-        }
-        if (isAuthorName) {
-          novel.author = data;
-          isAuthorName = false;
-        }
-        if (isDescription) {
-          novel.summary += data;
-        }
-        if (isSpan === 2) {
-          novel.status = data.trim();
-          isSpan++;
-        }
-        if (isGenres) {
-          genreArray.push(data);
-        }
-        if (isScript) {
-          if (data.includes('window.chapters =')) {
-            chapterJson = JSON.parse(
-              data.match(/window.chapters = (.+])(?=;)/)![1],
-            );
-            volumeJson = JSON.parse(
-              data.match(/window.volumes = (.+])(?=;)/)![1],
-            );
-          }
+      ontext(text) {
+        const trimmedText = text.trim();
+        if (!trimmedText && state !== ParsingState.InScript) return;
+
+        switch (state) {
+          case ParsingState.InTitle:
+            novel.name += text;
+            break;
+          case ParsingState.InAuthor:
+            novel.author = trimmedText;
+            break;
+          case ParsingState.InDescription:
+            novel.summary += text;
+            break;
+          case ParsingState.InStatusSpan:
+            statusText = trimmedText;
+            break;
+          case ParsingState.InTagLink:
+            genreArray.push(trimmedText);
+            break;
+          case ParsingState.InScript:
+            scriptContent += text;
+            break;
         }
       },
       onclosetag(name) {
-        if (name === 'h1') {
-          isNovelName = false;
-          isH4 = true;
+        switch (name) {
+          case 'h1':
+            if (state === ParsingState.InTitle) {
+              novel.name = novel.name.trim();
+              state = ParsingState.Idle;
+            }
+            break;
+          case 'a':
+            if (state === ParsingState.InTagLink) {
+              state = ParsingState.InTags;
+            } else if (state === ParsingState.InAuthor) {
+              state = ParsingState.Idle;
+            }
+            break;
+          case 'div':
+            if (state === ParsingState.InDescription) {
+              if (novel.summary) {
+                novel.summary = novel.summary.trim();
+              }
+              state = ParsingState.Idle;
+            }
+            break;
+          case 'span':
+            if (state === ParsingState.InTags) {
+              novel.genres = genreArray.join(', ');
+              state = ParsingState.Idle;
+            } else if (state === ParsingState.InStatusSpan) {
+              state = ParsingState.Idle;
+            }
+            break;
+          case 'script':
+            if (state === ParsingState.InScript) {
+              state = ParsingState.Idle;
+              const chapterMatch = scriptContent.match(
+                /window\.chapters\s*=\s*(\[.*?\]);/,
+              );
+              const volumeMatch = scriptContent.match(
+                /window\.volumes\s*=\s*(\[.*?\]);/,
+              );
+
+              if (chapterMatch?.[1]) {
+                chapterJson = JSON.parse(chapterMatch[1]);
+              }
+              if (volumeMatch?.[1]) {
+                volumeJson = JSON.parse(volumeMatch[1]);
+              }
+            }
+            break;
         }
-        if (name === 'h4') {
-          isH4 = false;
+      },
+      onend() {
+        switch (statusText) {
+          case 'ONGOING':
+            novel.status = NovelStatus.Ongoing;
+            break;
+          case 'HIATUS':
+            novel.status = NovelStatus.OnHiatus;
+            break;
+          case 'COMPLETED':
+            novel.status = NovelStatus.Completed;
+            break;
+          default:
+            novel.status = NovelStatus.Unknown;
         }
-        if (name === 'a') {
-          isGenres = false;
-        }
-        if (name === 'script') {
-          isScript = false;
-        }
-        if (name === 'body') {
-          isFooter = false;
-        }
+
+        novel.chapters = chapterJson.map((chapter: ChapterEntry) => {
+          const matchingVolume = volumeJson.find(
+            (volume: VolumeEntry) => volume.id === chapter.volumeId,
+          );
+          return {
+            name: chapter.title,
+            path: (() => {
+              const parts = chapter.url.split('/');
+              return `${parts[1]}/${parts[2]}/${parts[4]}/${parts[5]}`;
+            })(),
+            releaseTime: chapter.date,
+            chapterNumber: chapter?.order,
+            page: matchingVolume?.title,
+          };
+        });
+      },
+      onerror(error) {
+        console.error('HTML Parser Error:', error);
       },
     });
+
     parser.write(html);
     parser.end();
-    novel.summary = novel.summary?.trim();
-    novel.genres = genreArray.join(', ');
-    switch (novel.status) {
-      case 'ONGOING':
-        novel.status = NovelStatus.Ongoing;
-        break;
-      case 'HIATUS':
-        novel.status = NovelStatus.OnHiatus;
-        break;
-      case 'COMPLETED':
-        novel.status = NovelStatus.Completed;
-        break;
-      default:
-        novel.status = NovelStatus.Unknown;
-    }
 
-    const chapter: Plugin.ChapterItem[] = chapterJson.map(
-      (chapter: ChapterEntry) => {
-        const matchingVolume = volumeJson.find(
-          (volume: VolumeEntry) => volume.id === chapter.volumeId,
-        );
-        return {
-          name: chapter.title,
-          path: chapter.url.slice(1),
-          releaseTime: chapter.date,
-          chapterNumber: chapter?.order,
-          page: matchingVolume?.title,
-        };
-      },
-    );
-
-    novel.chapters = chapter;
     return novel;
   }
 
@@ -242,103 +287,145 @@ class RoyalRoad implements Plugin.PluginBase {
     const result = await fetchApi(this.site + chapterPath);
     const html = await result.text();
 
-    let isChapterContent = false;
-    let isAuthorNote = false;
-    let isBeforeNote = true;
-    let isHiddenContent = false;
+    enum ChapterParsingState {
+      Idle,
+      InNote,
+      InChapter,
+      InHidden,
+    }
+
+    let state = ChapterParsingState.Idle;
+    let stateDepth = 0;
+    let depth = 0;
+
     let chapterHtml = '';
     let notesHtml = '';
     let beforeNotes = '';
     let afterNotes = '';
-    let depth = 0;
-    let noteDepth = 0;
-    let contentDepth = 0;
-    let hiddenDepth = 0;
+    let isBeforeChapter = true;
 
     const match = html.match(/<style>\n\s+.(.+?){[^.]+?display: none;/);
     const hiddenClass = match?.[1]?.trim();
+    let stateBeforeHidden: {
+      state: ChapterParsingState;
+      depth: number;
+    } | null = null;
 
     const parser = new Parser({
       onopentag(name, attribs) {
         depth++;
+        const classes = attribs['class'] || '';
+
         if (
-          isHiddenContent ||
-          (hiddenClass && attribs['class']?.includes(hiddenClass))
+          state !== ChapterParsingState.InHidden &&
+          hiddenClass &&
+          classes.includes(hiddenClass)
         ) {
-          if (!isHiddenContent) {
-            isHiddenContent = true;
-            hiddenDepth = depth;
-          }
+          stateBeforeHidden = { state: state, depth: stateDepth };
+          state = ChapterParsingState.InHidden;
+          stateDepth = depth;
           return;
         }
 
-        if (attribs['class']?.includes('chapter-content')) {
-          isChapterContent = true;
-          isBeforeNote = false;
-          contentDepth = depth;
-          return;
-        }
-        if (attribs['class']?.includes('author-note-portlet')) {
-          isAuthorNote = true;
-          noteDepth = depth;
-          notesHtml = '';
-          return;
+        switch (state) {
+          case ChapterParsingState.Idle:
+            if (classes.includes('chapter-content')) {
+              state = ChapterParsingState.InChapter;
+              stateDepth = depth;
+              isBeforeChapter = false;
+            } else if (classes.includes('author-note-portlet')) {
+              state = ChapterParsingState.InNote;
+              stateDepth = depth;
+              notesHtml = '';
+            }
+            break;
+          case ChapterParsingState.InHidden:
+            return;
         }
 
-        if (isChapterContent || isAuthorNote) {
+        if (
+          state === ChapterParsingState.InChapter ||
+          state === ChapterParsingState.InNote
+        ) {
           let tag = `<${name}`;
           for (const attr in attribs) {
-            tag += ` ${attr}="${attribs[attr].replace(/"/g, '&quot;')}"`;
+            const value = attribs[attr].replace(/"/g, '&quot;');
+            tag += ` ${attr}="${value}"`;
           }
           tag += '>';
-          if (isChapterContent) chapterHtml += tag;
-          if (isAuthorNote) notesHtml += tag;
+
+          if (state === ChapterParsingState.InChapter) {
+            chapterHtml += tag;
+          } else {
+            notesHtml += tag;
+          }
         }
       },
       ontext(text) {
-        if (isHiddenContent) {
-          return;
-        }
-        if (isChapterContent) {
-          chapterHtml += text;
-        }
-        if (isAuthorNote) {
-          notesHtml += text;
+        switch (state) {
+          case ChapterParsingState.InChapter:
+            chapterHtml += text;
+            break;
+          case ChapterParsingState.InNote:
+            notesHtml += text;
+            break;
         }
       },
       onclosetag(name) {
-        if (isHiddenContent) {
-          if (depth === hiddenDepth) {
-            isHiddenContent = false;
+        if (depth === stateDepth) {
+          switch (state) {
+            case ChapterParsingState.InHidden:
+              if (!stateBeforeHidden) {
+                state = ChapterParsingState.Idle; // Attempt recovery
+                stateDepth = 0;
+              } else {
+                state = stateBeforeHidden.state;
+                stateDepth = stateBeforeHidden.depth;
+                stateBeforeHidden = null;
+              }
+              depth--;
+              return;
+            case ChapterParsingState.InChapter:
+              state = ChapterParsingState.Idle;
+              stateDepth = 0;
+              depth--;
+              return;
+            case ChapterParsingState.InNote:
+              const noteClass = `author-note-${isBeforeChapter ? 'before' : 'after'}`;
+              const fullNote = `<div class="${noteClass}">${notesHtml.trim()}</div>`;
+              if (isBeforeChapter) {
+                beforeNotes += fullNote;
+              } else {
+                afterNotes += fullNote;
+              }
+              notesHtml = '';
+              state = ChapterParsingState.Idle;
+              stateDepth = 0;
+              depth--;
+              return;
           }
-          depth--;
-          return;
         }
 
-        if (isChapterContent && depth === contentDepth) {
-          isChapterContent = false;
-        } else if (isAuthorNote && depth === noteDepth) {
-          isAuthorNote = false;
-          const fullNote = `<div class="author-note-${isBeforeNote ? 'before' : 'after'}">${notesHtml}</div>`;
-          if (isBeforeNote) {
-            beforeNotes += fullNote + '\n';
-          } else {
-            afterNotes += fullNote + '\n';
-          }
-          notesHtml = '';
-        } else if (isChapterContent || isAuthorNote) {
+        if (
+          state === ChapterParsingState.InChapter ||
+          state === ChapterParsingState.InNote
+        ) {
           const closingTag = `</${name}>`;
-          if (isChapterContent) chapterHtml += closingTag;
-          if (isAuthorNote) notesHtml += closingTag;
+          if (state === ChapterParsingState.InChapter) {
+            chapterHtml += closingTag;
+          } else {
+            notesHtml += closingTag;
+          }
         }
         depth--;
       },
     });
     parser.write(html);
     parser.end();
-    return [beforeNotes.trim(), chapterHtml.trim(), afterNotes.trim()]
+
+    return [beforeNotes, chapterHtml.trim(), afterNotes]
       .filter(Boolean)
-      .join('\n');
+      .join('\n<hr class="notes-separator">\n');
   }
 
   async searchNovels(
