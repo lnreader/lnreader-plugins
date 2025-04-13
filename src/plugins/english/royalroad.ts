@@ -8,7 +8,7 @@ import { isUrlAbsolute } from '@libs/isAbsoluteUrl';
 class RoyalRoad implements Plugin.PluginBase {
   id = 'royalroad';
   name = 'Royal Road';
-  version = '2.2.1';
+  version = '2.2.2';
   icon = 'src/en/royalroad/icon.png';
   site = 'https://www.royalroad.com/';
 
@@ -45,8 +45,10 @@ class RoyalRoad implements Plugin.PluginBase {
         }
       },
     });
+
     parser.write(html);
     parser.end();
+
     return novels;
   }
 
@@ -111,10 +113,14 @@ class RoyalRoad implements Plugin.PluginBase {
     }
 
     let state: ParsingState = ParsingState.Idle;
-    let scriptContent = '';
     let statusText = '';
     let statusSpanCounter = 0;
+
+    const nameParts: string[] = [];
+    const summaryParts: string[] = [];
+    const scriptContentParts: string[] = [];
     const genreArray: string[] = [];
+
     let chapterJson: ChapterEntry[] = [];
     let volumeJson: VolumeEntry[] = [];
 
@@ -137,7 +143,16 @@ class RoyalRoad implements Plugin.PluginBase {
           case 'div':
             if (attribs['class'] === 'description') {
               state = ParsingState.InDescription;
-              novel.summary = '';
+            }
+            break;
+          case 'hr':
+            if (state === ParsingState.InDescription) {
+              summaryParts.push('\n---\n');
+            }
+            break;
+          case 'br':
+            if (state === ParsingState.InDescription) {
+              summaryParts.push('\n\n');
             }
             break;
           case 'span':
@@ -161,7 +176,6 @@ class RoyalRoad implements Plugin.PluginBase {
             break;
           case 'script':
             state = ParsingState.InScript;
-            scriptContent = '';
             break;
         }
       },
@@ -171,13 +185,13 @@ class RoyalRoad implements Plugin.PluginBase {
 
         switch (state) {
           case ParsingState.InTitle:
-            novel.name += text;
+            nameParts.push(text);
             break;
           case ParsingState.InAuthor:
             novel.author = trimmedText;
             break;
           case ParsingState.InDescription:
-            novel.summary += text;
+            summaryParts.push(text);
             break;
           case ParsingState.InStatusSpan:
             statusText = trimmedText;
@@ -186,7 +200,7 @@ class RoyalRoad implements Plugin.PluginBase {
             genreArray.push(trimmedText);
             break;
           case ParsingState.InScript:
-            scriptContent += text;
+            scriptContentParts.push(text);
             break;
         }
       },
@@ -194,7 +208,7 @@ class RoyalRoad implements Plugin.PluginBase {
         switch (name) {
           case 'h1':
             if (state === ParsingState.InTitle) {
-              novel.name = novel.name.trim();
+              novel.name = nameParts.join('').trim();
               state = ParsingState.Idle;
             }
             break;
@@ -205,11 +219,20 @@ class RoyalRoad implements Plugin.PluginBase {
               state = ParsingState.Idle;
             }
             break;
+          case 'p':
+            if (state === ParsingState.InDescription) {
+              summaryParts.push('\n\n');
+            }
+            break;
           case 'div':
             if (state === ParsingState.InDescription) {
-              if (novel.summary) {
-                novel.summary = novel.summary.trim();
-              }
+              novel.summary = summaryParts
+                .join('')
+                .replace(/&nbsp;/g, ' ')
+                .replace(/\s*\n\s*/g, '\n')
+                .replace(/\n{3,}/g, '\n\n')
+                .trim();
+              summaryParts.length = 0;
               state = ParsingState.Idle;
             }
             break;
@@ -224,6 +247,7 @@ class RoyalRoad implements Plugin.PluginBase {
           case 'script':
             if (state === ParsingState.InScript) {
               state = ParsingState.Idle;
+              const scriptContent = scriptContentParts.join('');
               const chapterMatch = scriptContent.match(
                 /window\.chapters\s*=\s*(\[.*?\]);/,
               );
@@ -272,9 +296,6 @@ class RoyalRoad implements Plugin.PluginBase {
           };
         });
       },
-      onerror(error) {
-        console.error('HTML Parser Error:', error);
-      },
     });
 
     parser.write(html);
@@ -298,13 +319,13 @@ class RoyalRoad implements Plugin.PluginBase {
     let stateDepth = 0;
     let depth = 0;
 
-    let chapterHtml = '';
-    let notesHtml = '';
-    let beforeNotes = '';
-    let afterNotes = '';
+    const chapterHtmlParts: string[] = [];
+    const notesHtmlParts: string[] = [];
+    const beforeNotesParts: string[] = [];
+    const afterNotesParts: string[] = [];
     let isBeforeChapter = true;
 
-    const match = html.match(/<style>\n\s+.(.+?){[^.]+?display: none;/);
+    const match = html.match(/<style>\n\s+.(.+?){[^{]+?display: none;/);
     const hiddenClass = match?.[1]?.trim();
     let stateBeforeHidden: {
       state: ChapterParsingState;
@@ -336,7 +357,6 @@ class RoyalRoad implements Plugin.PluginBase {
             } else if (classes.includes('author-note-portlet')) {
               state = ChapterParsingState.InNote;
               stateDepth = depth;
-              notesHtml = '';
             }
             break;
           case ChapterParsingState.InHidden:
@@ -355,19 +375,19 @@ class RoyalRoad implements Plugin.PluginBase {
           tag += '>';
 
           if (state === ChapterParsingState.InChapter) {
-            chapterHtml += tag;
+            chapterHtmlParts.push(tag);
           } else {
-            notesHtml += tag;
+            notesHtmlParts.push(tag);
           }
         }
       },
       ontext(text) {
         switch (state) {
           case ChapterParsingState.InChapter:
-            chapterHtml += text;
+            chapterHtmlParts.push(text);
             break;
           case ChapterParsingState.InNote:
-            notesHtml += text;
+            notesHtmlParts.push(text);
             break;
         }
       },
@@ -392,38 +412,46 @@ class RoyalRoad implements Plugin.PluginBase {
               return;
             case ChapterParsingState.InNote:
               const noteClass = `author-note-${isBeforeChapter ? 'before' : 'after'}`;
-              const fullNote = `<div class="${noteClass}">${notesHtml.trim()}</div>`;
+              const notesHtml = notesHtmlParts.join('').trim();
+              const fullNote = `<div class="${noteClass}">${notesHtml}</div>`;
               if (isBeforeChapter) {
-                beforeNotes += fullNote;
+                beforeNotesParts.push(fullNote);
               } else {
-                afterNotes += fullNote;
+                afterNotesParts.push(fullNote);
               }
-              notesHtml = '';
+              notesHtmlParts.length = 0;
               state = ChapterParsingState.Idle;
               stateDepth = 0;
               depth--;
               return;
           }
-        }
-
-        if (
+        } else if (
           state === ChapterParsingState.InChapter ||
           state === ChapterParsingState.InNote
         ) {
-          const closingTag = `</${name}>`;
-          if (state === ChapterParsingState.InChapter) {
-            chapterHtml += closingTag;
-          } else {
-            notesHtml += closingTag;
+          // Avoid adding closing tags for self-closing elements
+          const selfClosingTags = ['img', 'br', 'hr'];
+          if (!selfClosingTags.includes(name)) {
+            const closingTag = `</${name}>`;
+            if (state === ChapterParsingState.InChapter) {
+              chapterHtmlParts.push(closingTag);
+            } else {
+              notesHtmlParts.push(closingTag);
+            }
           }
         }
         depth--;
       },
     });
+
     parser.write(html);
     parser.end();
 
-    return [beforeNotes, chapterHtml.trim(), afterNotes]
+    return [
+      beforeNotesParts.length > 0 ? beforeNotesParts.join('') : null,
+      chapterHtmlParts.length > 0 ? chapterHtmlParts.join('').trim() : null,
+      afterNotesParts.length > 0 ? afterNotesParts.join('') : null,
+    ]
       .filter(Boolean)
       .join('\n<hr class="notes-separator">\n');
   }
@@ -438,8 +466,8 @@ class RoyalRoad implements Plugin.PluginBase {
       globalFilters: 'true',
     });
     const searchUrl = `${this.site}fictions/search?${params.toString()}`;
-
     const body = await fetchApi(searchUrl).then(r => r.text());
+
     return this.parseNovels(body);
   }
 
