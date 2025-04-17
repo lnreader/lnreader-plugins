@@ -22,6 +22,13 @@ npm run clearMultisrc
 npm run generate
 npx tsc --project tsconfig.production.json
 npm run json
+
+if [ ! -d ".dist" ] || [ -z "$(ls -A .dist)" ]; then
+    echo "=========="
+    echo "JSON files were not generated! See the error above and fix it!"
+    exit 1
+fi
+
 git add -f public/static .dist .js/src/plugins total.svg
 git commit -m "chore: Publish Plugins"
 git push -f origin $dist
