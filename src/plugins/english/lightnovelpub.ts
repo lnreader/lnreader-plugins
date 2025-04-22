@@ -7,7 +7,7 @@ import dayjs from 'dayjs';
 class LightNovelPub implements Plugin.PagePlugin {
   id = 'lightnovelpub';
   name = 'LightNovelPub';
-  version = '2.1.0';
+  version = '2.2.0';
   icon = 'src/en/lightnovelpub/icon.png';
   site = 'https://www.lightnovelpub.com/';
   headers = {
@@ -17,37 +17,39 @@ class LightNovelPub implements Plugin.PagePlugin {
 
   parseNovels(html: string) {
     const novels: Plugin.NovelItem[] = [];
-    let tempNovel = {} as Plugin.NovelItem;
-    let isParsingNovel = false;
+    let tempNovel: Partial<Plugin.NovelItem> = {};
+    let state: ParsingState = ParsingState.Idle;
     const parser = new Parser({
       onopentag(name, attribs) {
-        if (isParsingNovel) {
-          if (name === 'a') {
+        if (attribs['class'] === 'novel-item') {
+          state = ParsingState.Novel;
+        }
+        if (state !== ParsingState.Novel) return;
+
+        switch (name) {
+          case 'a':
             tempNovel.path = attribs['href'].slice(1);
             tempNovel.name = attribs['title'];
-          }
-          if (name === 'img') {
+            break;
+          case 'img':
             tempNovel.cover = attribs['data-src'] || attribs['src'];
-          }
-          if (tempNovel.path && tempNovel.cover) {
-            novels.push(tempNovel);
-            tempNovel = {} as Plugin.NovelItem;
-          }
-        }
-      },
-      onattribute(name, value) {
-        if (name === 'class' && value === 'novel-item') {
-          isParsingNovel = true;
+            break;
         }
       },
       onclosetag(name) {
         if (name === 'li') {
-          isParsingNovel = false;
+          if (tempNovel.path && tempNovel.cover) {
+            novels.push(tempNovel as Plugin.NovelItem);
+            tempNovel = {};
+          }
+          state = ParsingState.Idle;
         }
       },
     });
+
     parser.write(html);
     parser.end();
+
     return novels;
   }
 
@@ -55,13 +57,15 @@ class LightNovelPub implements Plugin.PagePlugin {
     page: number,
     { filters }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
-    let link = `${this.site}browse/`;
-    link += `${filters.genres.value}/`;
-    link += `${filters.order.value}/`;
-    link += `${filters.status.value}/`;
-    link += page;
+    const linkParts = [
+      this.site + 'browse',
+      filters.genres.value,
+      filters.order.value,
+      filters.status.value,
+      page.toString(),
+    ];
 
-    const body = await fetchApi(link).then(r => r.text());
+    const body = await fetchApi(linkParts.join('/')).then(r => r.text());
 
     return this.parseNovels(body);
   }
@@ -70,186 +74,305 @@ class LightNovelPub implements Plugin.PagePlugin {
     novelPath: string,
   ): Promise<Plugin.SourceNovel & { totalPages: number }> {
     const body = await fetchApi(this.site + novelPath).then(r => r.text());
-    const novel: Plugin.SourceNovel & { totalPages: number } = {
-      path: novelPath,
-      name: '',
-      summary: '',
-      totalPages: 1,
-      chapters: [],
-    };
-    let isHeaderStats = false;
-    let isStatus = false;
-    let isTotalChapters = false;
-    let isNovelName = false;
-    let isAuthorName = false;
-    let isSummary = false;
-    let isGenres = false;
-    let isTags = false;
+    const novel: Partial<Plugin.SourceNovel> & Partial<{ totalPages: number }> =
+      {
+        path: novelPath,
+        chapters: [],
+      };
+    let state: ParsingState = ParsingState.Idle;
+    const summaryParts: string[] = [];
     const genreArray: string[] = [];
-    let isCover = false;
     const parser = new Parser({
       onopentag(name, attribs) {
-        if (name === 'h1' && attribs['class']?.includes('novel-title')) {
-          isNovelName = true;
-        }
-        if (name === 'div' && attribs['class']?.includes('content')) {
-          isSummary = true;
-        }
-        if (name === 'figure' && attribs['class'] === 'cover') {
-          isCover = true;
-        }
-        if (isCover) {
-          if (name === 'img') {
-            novel.cover = attribs['data-src'] || attribs['src'];
-          }
-        }
-      },
-      onopentagname(name) {
-        if (isHeaderStats && name === 'strong') {
-          isStatus = true;
-        }
-        if (isSummary && name === 'br') {
-          novel.summary += '\n';
-        }
-        if (isGenres && name === 'a') {
-          isTags = true;
-        }
-      },
-      onattribute(name, value) {
-        if (name === 'class' && value === 'header-stats') {
-          isTotalChapters = true;
-          isHeaderStats = true;
-        }
-        if (name === 'itemprop' && value === 'author') {
-          isAuthorName = true;
-        }
-        if (name === 'class' && value === 'categories') {
-          isGenres = true;
+        switch (name) {
+          case 'h1':
+            if (attribs['class']?.includes('novel-title')) {
+              state = ParsingState.NovelName;
+            }
+            break;
+          case 'figure':
+            if (attribs['class'] === 'cover') {
+              state = ParsingState.Cover;
+            }
+            break;
+          case 'img':
+            if (state === ParsingState.Cover) {
+              novel.cover = attribs['data-src'] || attribs['src'];
+            }
+            break;
+          case 'strong':
+            if (state === ParsingState.HeaderStats) {
+              if (attribs['class']) {
+                state = ParsingState.Status;
+              } else {
+                state = ParsingState.TotalChapters;
+              }
+            }
+            break;
+          case 'br':
+            if (state === ParsingState.Summary) {
+              summaryParts.push('<LINE_BREAK>');
+            }
+            break;
+          case 'a':
+            if (state === ParsingState.Genres) {
+              state = ParsingState.Tags;
+            }
+            break;
+          case 'div':
+            if (attribs['class']) {
+              if (attribs['class'].includes('content')) {
+                state = ParsingState.Summary;
+              } else {
+                const map: Record<string, ParsingState> = {
+                  'categories': ParsingState.Genres,
+                  'header-stats': ParsingState.HeaderStats,
+                  'expand': ParsingState.Idle,
+                };
+                state = map[attribs['class']] ?? state;
+              }
+            }
+            break;
+          default:
+            if (attribs['itemprop'] === 'author') {
+              state = ParsingState.AuthorName;
+            }
+            break;
         }
       },
       ontext(data) {
-        if (isTotalChapters) {
-          novel.totalPages = Math.ceil(parseInt(data, 10) / 100);
-        }
-        if (isStatus) {
-          novel.status = data.trim();
-        }
-        if (isNovelName) {
-          novel.name += data.trim();
-        }
-        if (isAuthorName) {
-          novel.author = data;
-        }
-        if (isSummary) {
-          novel.summary += data;
-        }
-        if (isTags) {
-          genreArray.push(data);
+        switch (state) {
+          case ParsingState.TotalChapters:
+            if (!novel.totalPages) {
+              novel.totalPages = Math.ceil(parseInt(data, 10) / 100);
+            }
+            break;
+          case ParsingState.Status:
+            novel.status = data.trim();
+            break;
+          case ParsingState.NovelName:
+            novel.name = (novel.name || '') + data.trim();
+            break;
+          case ParsingState.AuthorName:
+            novel.author = data;
+            break;
+          case ParsingState.Summary:
+            summaryParts.push(data);
+            break;
+          case ParsingState.Tags:
+            genreArray.push(data);
+            break;
         }
       },
       onclosetag(name) {
-        if (name === 'strong') {
-          isTotalChapters = false;
-          isStatus = false;
-        }
-        if (name === 'i') {
-          isStatus = false;
-        }
-        if (name === 'h1') {
-          isNovelName = false;
-        }
-        if (name === 'span') {
-          isAuthorName = false;
-        }
-        if (name === 'div') {
-          isHeaderStats = false;
-          isSummary = false;
-          isGenres = false;
-        }
-        if (name === 'a') {
-          isTags = false;
-        }
-        if (name === 'figure') {
-          isCover = false;
+        switch (name) {
+          case 'strong':
+            if (state === ParsingState.TotalChapters) {
+              state = ParsingState.HeaderStats;
+            } else if (state === ParsingState.Status) {
+              state = ParsingState.Idle;
+            }
+            break;
+          case 'i':
+            if (state === ParsingState.Status) {
+              state = ParsingState.Idle;
+            }
+            break;
+          case 'h1':
+            if (state === ParsingState.NovelName) {
+              state = ParsingState.Idle;
+            }
+            break;
+          case 'span':
+            if (state === ParsingState.AuthorName) {
+              state = ParsingState.Idle;
+            }
+            break;
+          case 'div':
+            if (
+              state === ParsingState.Summary ||
+              state === ParsingState.Genres
+            ) {
+              state = ParsingState.Idle;
+            }
+            break;
+          case 'a':
+            if (state === ParsingState.Tags) {
+              state = ParsingState.Genres;
+            }
+            break;
+          case 'figure':
+            if (state === ParsingState.Cover) {
+              state = ParsingState.Idle;
+            }
+            break;
+          case 'p':
+            if (state === ParsingState.Summary) {
+              summaryParts.push('<PARAGRAPH_BREAK>');
+            }
+            break;
         }
       },
+      onend() {
+        const text = summaryParts
+          .join('')
+          .replace(/<PARAGRAPH_BREAK>/g, '\n\n')
+          .replace(/<LINE_BREAK>/g, '\n')
+          .replace(/\r\n/g, '\n')
+          .replace(/&nbsp;/g, ' ');
+
+        const paragraphs = text
+          .split('\n\n')
+          .map(p => p.trim().replace(/[ \t]+/g, ' '))
+          .filter(p => p.length > 0);
+
+        novel.summary = paragraphs.join('\n\n');
+        summaryParts.length = 0;
+
+        novel.genres = genreArray.join(', ');
+      },
     });
+
     parser.write(body);
     parser.end();
-    novel.genres = genreArray.join(', ');
-    return novel;
+
+    return novel as Plugin.SourceNovel & { totalPages: number };
   }
 
   async parsePage(novelPath: string, page: string): Promise<Plugin.SourcePage> {
     const url = this.site + novelPath + '/chapters/page-' + page;
     const body = await fetchApi(url).then(res => res.text());
-    const chapter: Plugin.ChapterItem[] = [];
-    let tempChapter = {} as Plugin.ChapterItem;
-    let isChapterItem = false;
-    let isChapterList = false;
+    const chapters: Plugin.ChapterItem[] = [];
+    let tempChapter: Partial<Plugin.ChapterItem> = {};
+    let state: ParsingState = ParsingState.Idle;
+
     const parser = new Parser({
       onopentag(name, attribs) {
-        if (isChapterList) {
-          if (name === 'li') {
-            isChapterItem = true;
-            tempChapter.chapterNumber = Number(attribs['data-orderno']);
-          }
-          if (isChapterItem) {
-            if (name === 'a') {
-              tempChapter.name = attribs['title'];
-              tempChapter.path = attribs['href'].slice(1);
-            }
-            if (name === 'time') {
-              tempChapter.releaseTime = dayjs(
-                attribs['datetime'],
-              ).toISOString();
-            }
-            if (
-              tempChapter.chapterNumber &&
-              tempChapter.path &&
-              tempChapter.releaseTime
-            ) {
-              chapter.push(tempChapter);
-              tempChapter = {} as Plugin.ChapterItem;
-            }
-          }
+        if (attribs['class'] === 'chapter-list') {
+          state = ParsingState.ChapterList;
+          return;
         }
-      },
-      onattribute(name, value) {
-        if (name === 'class' && value === 'chapter-list') {
-          isChapterList = true;
+
+        switch (state) {
+          case ParsingState.ChapterList:
+            if (name === 'li') {
+              state = ParsingState.ChapterItem;
+              tempChapter = {
+                chapterNumber: Number(attribs['data-orderno'] || 0),
+              };
+            }
+            break;
+          case ParsingState.ChapterItem:
+            switch (name) {
+              case 'a':
+                tempChapter.name = attribs['title'];
+                tempChapter.path = attribs['href']?.slice(1);
+                break;
+              case 'time':
+                tempChapter.releaseTime = dayjs(
+                  attribs['datetime'],
+                ).toISOString();
+                break;
+            }
+            break;
         }
       },
       onclosetag(name) {
-        if (name === 'a') {
-          isChapterItem = false;
-        }
-        if (name === 'ul') {
-          isChapterList = false;
+        switch (state) {
+          case ParsingState.ChapterItem:
+            if (name === 'li') {
+              if (
+                tempChapter.chapterNumber !== undefined &&
+                tempChapter.path &&
+                tempChapter.releaseTime
+              ) {
+                chapters.push(tempChapter as Plugin.ChapterItem);
+              }
+              state = ParsingState.ChapterList;
+            }
+            break;
+          case ParsingState.ChapterList:
+            if (name === 'ul') {
+              state = ParsingState.Idle;
+            }
+            break;
         }
       },
     });
+
     parser.write(body);
     parser.end();
-    const chapters = chapter;
+
     return { chapters };
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
     const html = await fetchApi(this.site + chapterPath).then(r => r.text());
-    const parts: string[] = [];
-    const regexPatterns: RegExp[] = [
-      /(<div id="chapter-container[^]+?)<div class="chapternav/,
-    ];
-    const extractContent = (patterns: RegExp[]) => {
-      patterns.forEach(regex => {
-        const match = html.match(regex)?.[1];
-        if (match) parts.push(match);
-      });
+
+    let depth = 0;
+    let state: ParsingState = ParsingState.Idle;
+    const chapterHtml: string[] = [];
+
+    type EscapeChar = '&' | '<' | '>' | '"' | "'";
+    const escapeRegex = /[&<>"']/g;
+    const escapeMap: Record<EscapeChar, string> = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
     };
-    extractContent(regexPatterns);
-    const chapterText = parts.join();
-    return chapterText.replace(/(?<=\/p>).*?(?=<p>)/g, '');
+    const escapeHtml = (text: string): string =>
+      text.replace(escapeRegex, char => escapeMap[char as EscapeChar]);
+
+    const parser = new Parser({
+      onopentag(name, attribs) {
+        switch (state) {
+          case ParsingState.Idle:
+            if (name === 'div' && attribs['id'] === 'chapter-container') {
+              state = ParsingState.Chapter;
+              depth++;
+            }
+            break;
+          case ParsingState.Chapter:
+            if (name === 'div') depth++;
+            break;
+          default:
+            return;
+        }
+
+        if (state === ParsingState.Chapter) {
+          const attr = Object.keys(attribs).map(key => {
+            const value = attribs[key].replace(/"/g, '&quot;');
+            return ` ${key}="${value}"`;
+          });
+          chapterHtml.push(`<${name}${attr.join('')}>`);
+        }
+      },
+
+      ontext(text) {
+        if (state === ParsingState.Chapter) {
+          chapterHtml.push(escapeHtml(text));
+        }
+      },
+
+      onclosetag(name) {
+        if (state === ParsingState.Chapter) {
+          if (!parser['isVoidElement'](name)) {
+            chapterHtml.push(`</${name}>`);
+          }
+          if (name === 'div') depth--;
+          if (depth === 0) {
+            state = ParsingState.Stopped;
+          }
+        }
+      },
+    });
+
+    parser.write(html);
+    parser.end();
+
+    return chapterHtml.join('');
   }
 
   async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
@@ -356,3 +479,21 @@ class LightNovelPub implements Plugin.PagePlugin {
 }
 
 export default new LightNovelPub();
+
+enum ParsingState {
+  Idle,
+  Novel,
+  HeaderStats,
+  Status,
+  Stopped,
+  Chapter,
+  ChapterItem,
+  ChapterList,
+  TotalChapters,
+  NovelName,
+  AuthorName,
+  Summary,
+  Genres,
+  Tags,
+  Cover,
+}
