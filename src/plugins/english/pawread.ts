@@ -1,4 +1,4 @@
-import { CheerioAPI, load as parseHTML } from 'cheerio';
+import { Parser } from 'htmlparser2';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@typings/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
@@ -6,29 +6,58 @@ import { Filters, FilterTypes } from '@libs/filterInputs';
 class PawRead implements Plugin.PluginBase {
   id = 'pawread';
   name = 'PawRead';
-  version = '2.0.1';
+  version = '2.1.0';
   icon = 'src/en/pawread/icon.png';
   site = 'https://m.pawread.com/';
 
-  parseNovels(loadedCheerio: CheerioAPI) {
+  parseNovels(html: string) {
     const novels: Plugin.NovelItem[] = [];
+    let tempNovel: Partial<Plugin.NovelItem> = {};
+    let state: ParsingState = ParsingState.Idle;
+    const parser = new Parser({
+      onopentag(name, attribs) {
+        if (
+          attribs.class &&
+          (attribs.class.includes('list-comic') ||
+            attribs.class.includes('itemBox'))
+        ) {
+          state = ParsingState.Novel;
+        }
 
-    loadedCheerio('.list-comic, .itemBox').each((idx, ele) => {
-      loadedCheerio(ele).find('.serialise').remove();
-      const novelName = loadedCheerio(ele).find('a').text().trim();
-      const novelCover = loadedCheerio(ele).find('img').attr('src');
-      const novelUrl = loadedCheerio(ele).find('a').attr('href')?.slice(1);
+        if (state !== ParsingState.Novel) return;
 
-      if (!novelUrl) return;
+        switch (name) {
+          case 'a':
+            if (attribs.class === 'txtA' || attribs.class === 'title') {
+              tempNovel.path = attribs.href.split('/').slice(1, 3).join('/');
+              state = ParsingState.NovelName;
+            }
+            break;
+          case 'img':
+            tempNovel.cover = attribs.src;
+            break;
+        }
+      },
 
-      const novel = {
-        name: novelName,
-        cover: novelCover,
-        path: novelUrl,
-      };
+      ontext(text) {
+        if (state === ParsingState.NovelName) {
+          tempNovel.name = (tempNovel.name || '') + text;
+        }
+      },
 
-      novels.push(novel);
+      onclosetag(name) {
+        if (name === 'a') {
+          if (tempNovel.name && tempNovel.cover) {
+            novels.push(tempNovel as Plugin.NovelItem);
+            tempNovel = {};
+            state = ParsingState.Idle;
+          }
+        }
+      },
     });
+
+    parser.write(html);
+    parser.end();
 
     return novels;
   }
@@ -40,101 +69,277 @@ class PawRead implements Plugin.PluginBase {
     let link = `${this.site}list/`;
 
     const filterValues = [
+      filters.genre.value,
       filters.status.value,
       filters.lang.value,
-      filters.genre.value,
-    ];
+    ].filter(value => value !== '');
 
-    link += filterValues.filter(value => value !== '').join('-');
-    if (filterValues.some(value => value !== '')) link += '/';
+    if (filterValues.length > 0) {
+      link += filterValues.join('-') + '/';
+    }
 
-    if (filters.order.value) link += '-';
-
-    link += filters.sort.value;
+    link += (filters.order.value ? '-' : '') + filters.sort.value;
     link += `/?page=${page}`;
 
     const body = await fetchApi(link).then(r => r.text());
-
-    const loadedCheerio = parseHTML(body);
-    return this.parseNovels(loadedCheerio);
+    return this.parseNovels(body);
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const result = await fetchApi(this.site + novelPath);
+    const slash = novelPath.endsWith('/') ? '' : '/';
+    const result = await fetchApi(this.site + novelPath + slash);
     const body = await result.text();
 
-    const loadedCheerio = parseHTML(body);
-
-    const novel: Plugin.SourceNovel = {
+    const novel: Partial<Plugin.SourceNovel> = {
       path: novelPath,
-      name: loadedCheerio('#Cover img').attr('title') || 'Untitled',
-      cover: loadedCheerio('#Cover img').attr('src'),
-      author: loadedCheerio('.icon01 <').text().trim(),
-      status: loadedCheerio('.txtItme:first').text().trim(),
-      chapters: [],
     };
 
-    novel.summary = loadedCheerio('#full-des')
-      .find('br')
-      .replaceWith('\n')
-      .end()
-      .text()
-      .trim();
-
-    novel.genres = loadedCheerio('a.btn-default')
-      .map((i, el) => loadedCheerio(el).text().trim())
-      .toArray()
-      .join(',');
-
+    let depth = 0;
+    let state = ParsingState.Idle;
+    let tempChapter: Partial<Plugin.ChapterItem> = {};
     const chapter: Plugin.ChapterItem[] = [];
+    const summaryParts: string[] = [];
+    const genreArray: string[] = [];
 
-    loadedCheerio('.item-box').each((idx, ele) => {
-      const smallText = loadedCheerio(ele).find('span:last').text().trim();
-      if (smallText === 'Advanced Chapter') return;
-      const releaseDate = smallText.split('.').map(x => Number(x));
-      const chapterName = loadedCheerio(ele).find('span:first').text().trim();
-      const chapterUrl = loadedCheerio(ele).attr('onclick')?.match(/\d+/)![0];
-      if (!chapterUrl) return;
+    const parser = new Parser({
+      onopentag(name, attribs) {
+        switch (name) {
+          case 'div':
+            if (attribs.id === 'Cover') {
+              state = ParsingState.Cover;
+            }
+            if (attribs.class?.includes('item-box')) {
+              state = ParsingState.Chapter;
+              const path = attribs.onclick.match(/\d+/)![0];
+              tempChapter.path = `${novelPath}${slash}${path}.html`;
+              return;
+            }
+            if (state === ParsingState.Chapter) depth++;
+            break;
+          case 'img':
+            if (state === ParsingState.Cover) {
+              novel.name = attribs.title;
+              novel.cover = attribs.src;
+            }
+            break;
+          case 'p':
+            if (attribs.class === 'txtItme') {
+              if (!novel.status) {
+                state = ParsingState.Status;
+              } else if (!novel.author) {
+                state = ParsingState.Author;
+              }
+            } else if (attribs.id === 'full-des') {
+              state = ParsingState.Summary;
+            }
+            break;
+          case 'br':
+            summaryParts.push('\n');
+            break;
+          case 'a':
+            if (attribs.class?.includes('btn-default')) {
+              state = ParsingState.Genres;
+            }
+            break;
+          case 'span':
+            if (state === ParsingState.Chapter) depth++;
+            if (depth === 2) {
+              state = ParsingState.ChapterName;
+            } else if (depth === 1) {
+              state = ParsingState.ChapterTime;
+            }
+            break;
+        }
+      },
 
-      chapter.push({
-        name: chapterName,
-        path: `${novelPath}${chapterUrl}.html`,
-        releaseTime: new Date(
-          releaseDate[0],
-          releaseDate[1],
-          releaseDate[2],
-        ).toISOString(),
-      });
+      ontext(text) {
+        switch (state) {
+          case ParsingState.Status:
+            novel.status = (novel.status || '') + text.trim();
+            break;
+          case ParsingState.Author:
+            novel.author = (novel.author || '') + text.trim();
+            break;
+          case ParsingState.Genres:
+            genreArray.push(text.trim());
+            break;
+          case ParsingState.Summary:
+            summaryParts.push(text);
+            break;
+          case ParsingState.ChapterName:
+            tempChapter.name = (tempChapter.name || '') + text.trim();
+            break;
+          case ParsingState.ChapterTime:
+            if (text?.includes('Advanced')) return;
+            const releaseDate = text.split('.').map(x => Number(x));
+            if (releaseDate.length === 3) {
+              tempChapter.releaseTime = new Date(
+                releaseDate[0],
+                releaseDate[1] - 1,
+                releaseDate[2],
+              ).toISOString();
+            }
+            break;
+        }
+      },
+
+      onclosetag(name) {
+        switch (name) {
+          case 'div':
+            if (state === ParsingState.Cover) {
+              state = ParsingState.Idle;
+            }
+            if (state === ParsingState.Chapter) {
+              depth--;
+              if (depth < 0) {
+                if (
+                  tempChapter.path &&
+                  tempChapter.name &&
+                  tempChapter.releaseTime
+                ) {
+                  chapter.push(tempChapter as Plugin.ChapterItem);
+                }
+                tempChapter = {};
+                depth = 0;
+                state = ParsingState.Idle;
+              }
+            }
+            break;
+          case 'p':
+            if (
+              state === ParsingState.Status ||
+              state === ParsingState.Author ||
+              state === ParsingState.Summary
+            ) {
+              state = ParsingState.Idle;
+            }
+            break;
+          case 'a':
+            if (state === ParsingState.Genres) {
+              state = ParsingState.Idle;
+            }
+            break;
+          case 'span':
+            if (
+              state === ParsingState.ChapterName ||
+              state === ParsingState.ChapterTime
+            ) {
+              state = ParsingState.Chapter;
+              depth--;
+            }
+            break;
+        }
+      },
+
+      onend() {
+        novel.genres = genreArray.join(', ');
+        novel.summary = summaryParts.join('');
+        novel.chapters = chapter;
+      },
     });
 
-    novel.chapters = chapter;
-    return novel;
+    parser.write(body);
+    parser.end();
+
+    return novel as Plugin.SourceNovel;
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const result = await fetchApi(this.site + chapterPath);
-    const body = await result.text();
+    const html = await fetchApi(this.site + chapterPath).then(r => r.text());
 
-    const loadedCheerio = parseHTML(body);
+    let depth = 0;
+    let state: ParsingState = ParsingState.Idle;
+    const chapterHtml: string[] = [];
 
-    const steal = ['bit.ly', 'tinyurl', 'pawread'];
-    steal.map(tag => loadedCheerio(`p:icontains(${tag})`).remove());
-    const chapterText = loadedCheerio('.main').html() || '';
+    type EscapeChar = '&' | '<' | '>' | '"' | "'" | ' ';
+    const escapeRegex = /[&<>"' ]/g;
+    const escapeMap: Record<EscapeChar, string> = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+      ' ': '&nbsp;',
+    };
+    const escapeHtml = (text: string): string =>
+      text.replace(escapeRegex, char => escapeMap[char as EscapeChar]);
 
-    return chapterText;
+    const parser = new Parser({
+      onopentag(name, attribs) {
+        switch (state) {
+          case ParsingState.Idle:
+            if (name === 'div' && attribs.class === 'main') {
+              state = ParsingState.Chapter;
+              depth++;
+            }
+            break;
+          case ParsingState.Chapter:
+            if (name === 'div') depth++;
+            break;
+          default:
+            return;
+        }
+
+        if (state === ParsingState.Chapter) {
+          const attr = Object.keys(attribs).map(key => {
+            const value = attribs[key].replace(/"/g, '&quot;');
+            return ` ${key}="${value}"`;
+          });
+          chapterHtml.push(`<${name}${attr.join('')}>`);
+        }
+      },
+
+      ontext(data) {
+        if (state === ParsingState.Chapter) {
+          const text = escapeHtml(data);
+          const icontains = ['pawread', 'tinyurl', 'bit.ly'];
+
+          if (icontains.some(pattern => text?.includes(pattern))) {
+            state = ParsingState.Hidden;
+            chapterHtml.pop();
+          } else {
+            chapterHtml.push(text);
+          }
+        }
+      },
+
+      onclosetag(name) {
+        switch (state) {
+          case ParsingState.Chapter:
+            if (!parser['isVoidElement'](name)) {
+              chapterHtml.push(`</${name}>`);
+            }
+            if (name === 'div') depth--;
+            if (depth === 0) {
+              state = ParsingState.Stopped;
+            }
+            break;
+          case ParsingState.Hidden:
+            state = ParsingState.Chapter;
+            break;
+        }
+      },
+    });
+
+    parser.write(html);
+    parser.end();
+
+    return chapterHtml.join('');
   }
 
   async searchNovels(
     searchTerm: string,
     page: number,
   ): Promise<Plugin.NovelItem[]> {
-    const searchUrl = `${this.site}search/?keywords=${encodeURIComponent(searchTerm)}&page=${page}`;
+    const params = new URLSearchParams({
+      keywords: searchTerm,
+      page: page.toString(),
+    });
 
-    const result = await fetchApi(searchUrl);
+    const result = await fetchApi(`${this.site}search/?${params.toString()}`);
     const body = await result.text();
 
-    const loadedCheerio = parseHTML(body);
-    return this.parseNovels(loadedCheerio);
+    return this.parseNovels(body);
   }
 
   filters = {
@@ -224,3 +429,19 @@ class PawRead implements Plugin.PluginBase {
 }
 
 export default new PawRead();
+
+enum ParsingState {
+  Idle,
+  Cover,
+  Genres,
+  Author,
+  Status,
+  Hidden,
+  Summary,
+  Stopped,
+  Chapter,
+  ChapterName,
+  ChapterTime,
+  NovelName,
+  Novel,
+}
