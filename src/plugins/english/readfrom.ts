@@ -9,7 +9,7 @@ class ReadFromPlugin implements Plugin.PluginBase {
   name = 'Read From Net';
   icon = 'src/en/readfrom/icon.png';
   site = 'https://readfrom.net';
-  version = '1.0.1';
+  version = '1.0.2';
   filters: Filters | undefined = undefined;
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
@@ -156,12 +156,44 @@ class ReadFromPlugin implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    let data = await fetchApi('https://readfrom.net/' + chapterPath);
-    let text = await data.text();
-    let loadedCheerio = loadCheerio(text);
+    const data = await fetchApi('https://readfrom.net/' + chapterPath);
+    const text = await data.text();
+    const loadedCheerio = loadCheerio(text);
     loadedCheerio('#textToRead > span:empty').remove();
     loadedCheerio('#textToRead > center').remove();
-    return loadedCheerio('#textToRead').html() || '';
+
+    const textToRead = loadedCheerio('#textToRead');
+
+    let paragraph: string[] = [];
+    const chapterHtml: string[] = [];
+
+    textToRead.contents().each((_, element) => {
+      switch (element.type) {
+        case 'text':
+          const content = element.data.trim();
+          if (content) {
+            paragraph.push(content);
+          }
+          break;
+
+        case 'tag':
+          if (paragraph.length > 0) {
+            chapterHtml.push(`<p>${paragraph.join(' ')}</p>`);
+            paragraph = [];
+          }
+          if (element.tagName !== 'br') {
+            chapterHtml.push(loadedCheerio.html(element));
+          }
+          break;
+      }
+    });
+
+    // Close any remaining paragraph
+    if (paragraph.length > 0) {
+      chapterHtml.push(`<p>${paragraph.join(' ')}</p>`);
+    }
+
+    return chapterHtml.join('');
   }
 
   async searchNovels(searchTerm: string, pageNo: number) {
