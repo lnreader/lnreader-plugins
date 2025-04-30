@@ -7,7 +7,7 @@ class FreeWebNovel implements Plugin.PluginBase {
   id = 'FWN.com';
   name = 'Free Web Novel';
   site = 'https://freewebnovel.com/';
-  version = '2.0.1';
+  version = '2.0.2';
   icon = 'src/en/freewebnovel/icon.png';
 
   lastSearch: number | null = null;
@@ -262,9 +262,10 @@ class FreeWebNovel implements Plugin.PluginBase {
 
     const parser = new Parser({
       onopentag(name, attribs) {
+        const attrib = attribs.class?.trim();
         switch (state) {
           case ParsingState.Idle:
-            if (attribs.id === 'article') {
+            if (attrib === 'txt') {
               state = ParsingState.Chapter;
               depth++;
             }
@@ -283,6 +284,7 @@ class FreeWebNovel implements Plugin.PluginBase {
             chapterHtml.push(`<${name}>`);
           } else if (attrKeys.every(key => attribs[key].trim() === '')) {
             // Handle tags with empty attributes as text content
+            // eg: novel/rising-up-from-a-nobleman-to-intergalactic-warlord/chapter-184
             skipClosingTag = true;
             currentTagToSkip = name;
             const uppercaseName = name.replace(/\b\w/g, char =>
