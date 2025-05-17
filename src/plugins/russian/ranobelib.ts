@@ -17,8 +17,8 @@ class RLIB implements Plugin.PluginBase {
   id = 'RLIB';
   name = 'RanobeLib';
   site = 'https://ranobelib.me';
-  apiSite = 'https://api.mangalib.me/api/manga/';
-  version = '2.1.2';
+  apiSite = 'https://api.cdnlibs.org/api/manga/';
+  version = '2.2.0';
   icon = 'src/ru/ranobelib/icon.png';
   webStorageUtilized = true;
 
@@ -94,9 +94,7 @@ class RLIB implements Plugin.PluginBase {
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
     const { data }: { data: DataClass } = await fetchApi(
-      this.apiSite +
-        novelPath +
-        '?fields[]=summary&fields[]=genres&fields[]=tags&fields[]=teams&fields[]=authors&fields[]=status_id&fields[]=artists',
+      `${this.apiSite}${novelPath}?fields[]=summary&fields[]=genres&fields[]=tags&fields[]=teams&fields[]=authors&fields[]=status_id&fields[]=artists`,
       { headers: this.user?.token },
     ).then(res => res.json());
 
@@ -104,7 +102,7 @@ class RLIB implements Plugin.PluginBase {
       path: novelPath,
       name: data.rus_name || data.name,
       cover: data.cover?.default || defaultCover,
-      summary: data.summary,
+      summary: data.summary?.trim(),
     };
 
     if (data.status?.id) {
@@ -126,64 +124,63 @@ class RLIB implements Plugin.PluginBase {
       novel.genres = genres.join(', ');
     }
 
-    const branch_name: Record<number, string> = { 0: 'Главная страница' };
-    if (data.teams.length) {
-      data.teams.forEach(
-        ({ name, details }) => (branch_name[details?.branch_id || '0'] = name),
-      );
-    }
+    const branch_name: Record<string, string> = data.teams?.reduce(
+      (acc, { name, details }) => {
+        acc[String(details?.branch_id ?? '0')] = name;
+        return acc;
+      },
+      { '0': 'Главная страница' } as Record<string, string>,
+    ) || { '0': 'Главная страница' };
 
     const chaptersJSON: { data: DataChapter[] } = await fetchApi(
-      this.apiSite + novelPath + '/chapters',
-      {
-        headers: this.user?.token,
-      },
+      `${this.apiSite}${novelPath}/chapters`,
+      { headers: this.user?.token },
     ).then(res => res.json());
 
-    if (chaptersJSON.data.length) {
-      const chapters: Plugin.ChapterItem[] = [];
-
-      chaptersJSON.data.forEach(chapter =>
-        chapter.branches.forEach(({ branch_id, created_at }) =>
-          chapters.push({
-            name:
-              'Том ' +
-              chapter.volume +
-              ' Глава ' +
-              chapter.number +
-              (chapter.name ? ' ' + chapter.name : ''),
-            path:
-              novelPath +
-              '/' +
-              chapter.volume +
-              '/' +
-              chapter.number +
-              '/' +
-              (branch_id || ''),
-            releaseTime: dayjs(created_at).format('LLL'),
+    if (chaptersJSON.data?.length) {
+      let chapters: Plugin.ChapterItem[] = chaptersJSON.data.flatMap(chapter =>
+        chapter.branches.map(({ branch_id, created_at }) => {
+          const bId = String(branch_id ?? '0');
+          return {
+            name: `Том ${chapter.volume} Глава ${chapter.number}${
+              chapter.name ? ' ' + chapter.name.trim() : ''
+            }`,
+            path: `${novelPath}/${chapter.volume}/${chapter.number}/${bId}`,
+            releaseTime: created_at ? dayjs(created_at).format('LLL') : null,
             chapterNumber: chapter.index,
-            page: branch_name[branch_id || '0'] || 'Неизвестный',
-          }),
-        ),
+            page: branch_name[bId] || 'Неизвестный',
+          };
+        }),
       );
 
-      if (chapters.length && data.teams.length > 1) {
-        //For whatever reason, the chapters overlap with another page.
-        chapters.sort((chapterA, chapterB) => {
-          if (
-            chapterA.page &&
-            chapterB.page &&
-            chapterA.page !== chapterB.page
-          ) {
-            return chapterA.page.localeCompare(chapterB.page);
-          }
-          return (chapterA.chapterNumber || 0) - (chapterB.chapterNumber || 0);
-        });
+      if (chapters.length) {
+        const uniquePages = new Set(chapters.map(c => c.page));
+
+        if (uniquePages.size === 1) {
+          // If only one unique page value, set page to undefined for all chapters
+          // Need more investigation one app side for single page shenanigans
+          chapters = chapters.map(chapter => ({
+            ...chapter,
+            page: undefined,
+          }));
+        } else if (data.teams?.length > 1) {
+          // Original sorting logic for multiple pages, for reasons chapters overlap with one another
+          chapters.sort((chapterA, chapterB) => {
+            if (
+              chapterA.page &&
+              chapterB.page &&
+              chapterA.page !== chapterB.page
+            ) {
+              return chapterA.page.localeCompare(chapterB.page);
+            }
+            return (
+              (chapterA.chapterNumber || 0) - (chapterB.chapterNumber || 0)
+            );
+          });
+        }
+        novel.chapters = chapters;
       }
-
-      novel.chapters = chapters;
     }
-
     return novel;
   }
 
@@ -205,10 +202,12 @@ class RLIB implements Plugin.PluginBase {
       ).then(res => res.json());
       chapterText =
         result?.data?.content?.type == 'doc'
-          ? jsonToHtml(result.data.content.content, result.data.attachments)
+          ? jsonToHtml(
+              result.data.content.content,
+              result.data.attachments || [],
+            )
           : result?.data?.content;
     }
-
     return chapterText;
   }
 
@@ -493,7 +492,7 @@ class RLIB implements Plugin.PluginBase {
 
 export default new RLIB();
 
-function jsonToHtml(json: HTML[], images, html = '') {
+function jsonToHtml(json: HTML[], images: Attachment[], html = '') {
   json.forEach(element => {
     switch (element.type) {
       case 'hardBreak':
@@ -504,14 +503,16 @@ function jsonToHtml(json: HTML[], images, html = '') {
         break;
       case 'image':
         if (element.attrs?.images?.length) {
-          element.attrs.images.forEach(({ image }) => {
-            const file = images.find(
-              file => file.name == image || file.id == image,
-            );
-            if (file) {
-              html += `<img src='${file.url}'>`;
-            }
-          });
+          element.attrs.images.forEach(
+            ({ image }: { image: string | number }) => {
+              const file = images.find(
+                (f: Attachment) => f.name == image || f.id == image,
+              );
+              if (file) {
+                html += `<img src='${file.url}'>`;
+              }
+            },
+          );
         } else if (element.attrs) {
           const attrs = Object.entries(element.attrs)
             .filter(attr => attr?.[1])
@@ -586,9 +587,10 @@ type HTML = {
 };
 
 type Attrs = {
-  src: string;
-  alt: string | null;
-  title: string | null;
+  src?: string;
+  alt?: string | null;
+  title?: string | null;
+  images?: { image: string | number }[];
 };
 
 type authorization = {
@@ -710,7 +712,7 @@ type Subscription = {
 };
 
 type Attachment = {
-  id?: string;
+  id?: string | null; // Allow null for id
   filename: string;
   name: string;
   extension: string;
