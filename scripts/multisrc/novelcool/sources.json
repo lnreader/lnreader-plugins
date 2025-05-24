@@ -1,0 +1,14 @@
+[
+  {
+    "id": "novelcool",
+    "sourceName": "NovelCool",
+    "sourceSite": "https://www.novelcool.com",
+    "options": { "lang": "English", "langCode": "en" }
+  },
+  {
+    "id": "novelcool-ru",
+    "sourceName": "NovelCool (RU)",
+    "sourceSite": "https://ru.novelcool.com",
+    "options": { "lang": "Russian", "langCode": "ru" }
+  }
+]
