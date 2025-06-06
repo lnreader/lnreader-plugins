@@ -198,8 +198,8 @@
     "options": {
       "lang": "English",
       "reverseChapters": true,
-      "customJs": "\n        $('div.entry-content script').remove();\n        $('div.entry-content > p').each((_,el) => {\n          const url = this.site + chapterPath.slice(0, -1);\n          const encode = url.length * url.charCodeAt(url.length - 1) * 2 % 3;\n\n          const offsets = new Map([[0, 4223], [1, 12415], [2, 7007]]);\n          const offset = offsets.get(encode) ?? 4223;\n\n          $(el).text($(el).text().split('').map(char => {\n            let code = char.charCodeAt(0);\n            return (code < offset || code > offset+255) ? char : String.fromCharCode(code-offset);\n          }).join(''));\n        });\n",
-      "versionIncrements": 2
+      "customJs": "\n        $('div.entry-content script').remove();\n        $('div.entry-content > p').each((_,el) => {\n          const url = this.site + chapterPath.slice(0, -1);\n          const encode = url.length * url.charCodeAt(url.length - 1) * 2 % 3;\n\n          const offsets = [[0, 12368, 12462], [1, 6960, 7054], [2, 4176, 4270]];\n          const offsetLower = (offsets[encode] ?? offsets[0])[1];\n          const offsetCap = (offsets[encode] ?? offsets[0])[2];\n\n          $(el).text($(el).text().split('').map(char => {\n            let code = char.charCodeAt(0);\n            let offset;\n            if(code >= offsetLower + 'a'.charCodeAt(0) && code <= offsetLower + 'z'.charCodeAt(0)\n              || code >= offsetLower + 'A'.charCodeAt(0) && code <= offsetLower + \"Z\".charCodeAt(0)) {\n              offset = offsetLower;\n            } else {\n              offset = offsetCap;\n            }\n            return (code < offset || code > offset+255) ? char : String.fromCharCode(code-offset);\n          }).join(''));\n        });\n",
+      "versionIncrements": 3
     }
   },
   {
