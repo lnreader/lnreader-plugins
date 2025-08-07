@@ -164,7 +164,7 @@ class ReLibraryPlugin implements Plugin.PluginBase {
   name = 'Re:Library';
   icon = 'src/en/relibrary/icon.png';
   site = 'https://re-library.com';
-  version = '1.0.0';
+  version = '1.0.1';
 
   private searchFunc = new FuzzySearch<Plugin.NovelItem>(item => [item.name], {
     sort: true,
@@ -209,7 +209,7 @@ class ReLibraryPlugin implements Plugin.PluginBase {
       if (novel.path === undefined || novel.name === undefined) return;
       novel.cover =
         loadedCheerio(el)
-          .find('.entry-content > table > tbody > tr > td > img')
+          .find('.entry-content > table > tbody > tr > td > a >img')
           .attr('src') || defaultCover;
       if (novel.path.startsWith(this.site)) {
         novel.path = novel.path.slice(this.site.length);
@@ -302,7 +302,7 @@ class ReLibraryPlugin implements Plugin.PluginBase {
     let chapter_idx = 0;
     loadedCheerio('.entry-content > div.su-accordion').each((_i1, el) => {
       loadedCheerio(el)
-        .find('li.page_item > a')
+        .find('li > a')
         .each((_i2, chap_el) => {
           chapter_idx += 1;
           let chap_path = loadedCheerio(chap_el).attr('href')?.trim();
