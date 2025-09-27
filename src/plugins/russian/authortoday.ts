@@ -11,7 +11,7 @@ class AuthorToday implements Plugin.PluginBase {
   name = 'Автор Тудей';
   icon = 'src/ru/authortoday/icon.png';
   site = 'https://author.today';
-  version = '1.2.0';
+  version = '1.2.1';
 
   private userAgent =
     'Mozilla/5.0 (Android 15; Mobile; rv:138.0) Gecko/138.0 Firefox/138.0';
@@ -140,7 +140,11 @@ class AuthorToday implements Plugin.PluginBase {
           isParsingGenres = true;
           if (novel.genres) novel.genres = '';
         }
-        if (name === 'label' && attribs['class'].includes('label')) {
+        if (
+          name === 'label' &&
+          attribs['class'] &&
+          attribs['class'].includes('label')
+        ) {
           isParsingStatus = true;
         }
         if (name === 'li' && attribs['class'] === 'clearfix') {

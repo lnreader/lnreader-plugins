@@ -18,9 +18,16 @@ class RLIB implements Plugin.PluginBase {
   name = 'RanobeLib';
   site = 'https://ranobelib.me';
   apiSite = 'https://api.cdnlibs.org/api/manga/';
-  version = '2.2.0';
+  version = '2.2.1';
   icon = 'src/ru/ranobelib/icon.png';
   webStorageUtilized = true;
+  imageRequestInit = {
+    headers: {
+      Accept:
+        'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+      Referer: this.site,
+    },
+  };
 
   async popularNovels(
     pageNo: number,
@@ -95,7 +102,7 @@ class RLIB implements Plugin.PluginBase {
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
     const { data }: { data: DataClass } = await fetchApi(
       `${this.apiSite}${novelPath}?fields[]=summary&fields[]=genres&fields[]=tags&fields[]=teams&fields[]=authors&fields[]=status_id&fields[]=artists`,
-      { headers: this.user?.token },
+      { headers: { ...this.user?.token, 'Site-Id': '3' } },
     ).then(res => res.json());
 
     const novel: Plugin.SourceNovel = {
