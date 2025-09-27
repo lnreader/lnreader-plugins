@@ -4,14 +4,13 @@ import { Plugin } from '@typings/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { defaultCover } from '@libs/defaultCover';
-import dayjs from 'dayjs';
 
 class NovelDeGlacePlugin implements Plugin.PluginBase {
   id = 'noveldeglace';
   name = 'NovelDeGlace';
   icon = 'src/fr/noveldeglace/icon.png';
   site = 'https://noveldeglace.com/';
-  version = '1.0.3';
+  version = '1.0.4';
 
   async getCheerio(url: string): Promise<CheerioAPI | undefined> {
     const r = await fetchApi(url, {
@@ -21,29 +20,6 @@ class NovelDeGlacePlugin implements Plugin.PluginBase {
     const body = await r.text();
     const loadedCheerio = load(body);
     return loadedCheerio;
-  }
-
-  parseDate(date: string): string {
-    const monthMapping: Record<string, number> = {
-      janvier: 1,
-      fevrier: 2,
-      mars: 3,
-      avril: 4,
-      mai: 5,
-      juin: 6,
-      juillet: 7,
-      aout: 8,
-      septembre: 9,
-      octobre: 10,
-      novembre: 11,
-      decembre: 12,
-    };
-
-    const [day, month, year] = date.split(' ');
-    return dayjs(
-      `${day} ${monthMapping[month.normalize('NFD').replace(/[\u0300-\u036f]/g, '')]} ${year}`,
-      'D MMMM YYYY',
-    ).format('DD MMMM YYYY');
   }
 
   parseNovels(
@@ -199,7 +175,7 @@ class NovelDeGlacePlugin implements Plugin.PluginBase {
             if (chapterUrl) {
               const chapter: Plugin.ChapterItem = {
                 name: newChapterName,
-                releaseTime: this.parseDate(releaseDate),
+                releaseTime: releaseDate,
                 path: chapterUrl.replace(site, ''),
                 chapterNumber: chapterIndex,
               };
@@ -231,7 +207,7 @@ class NovelDeGlacePlugin implements Plugin.PluginBase {
               dates.forEach((date, index) => {
                 const chapter: Plugin.ChapterItem = {
                   name: newChapterName + ' (' + (index + 1) + ')',
-                  releaseTime: this.parseDate(date),
+                  releaseTime: date,
                   path: hrefs[index].replace(site, ''),
                   chapterNumber: chapterIndex + (index + 1) / 1000,
                 };
@@ -293,45 +269,45 @@ class NovelDeGlacePlugin implements Plugin.PluginBase {
       options: [
         { label: 'Tous', value: 'all' },
         { label: '═══CATÉGORIES═══', value: 'categorie_roman' },
-        { label: 'Seinen', value: 'c_seinen' },
-        { label: 'Shonen', value: 'c_shonen' },
-        { label: 'Original', value: 'c_original' },
-        { label: 'Yuri', value: 'c_yuri' },
         { label: 'Autre', value: 'c_autre' },
         { label: 'Fille', value: 'c_fille' },
+        { label: 'Original', value: 'c_original' },
         { label: 'Roman pour Adulte', value: 'c_roman-pour-adulte' },
+        { label: 'Seinen', value: 'c_seinen' },
+        { label: 'Shonen', value: 'c_shonen' },
         { label: 'Xuanhuan', value: 'c_xuanhuan' },
         { label: 'Yaoi', value: 'c_yaoi' },
+        { label: 'Yuri', value: 'c_yuri' },
         { label: '═══GENRES═══', value: 'genre' },
         { label: 'Action', value: 'g_action' },
+        { label: 'Adulte', value: 'g_adulte' },
+        { label: 'Anti-Héros', value: 'g_anti-heros' },
+        { label: 'Arts Martiaux', value: 'g_arts-martiaux' },
         { label: 'Aventure', value: 'g_aventure' },
         { label: 'Comédie', value: 'g_comedie' },
         { label: 'Drame', value: 'g_drame' },
+        { label: 'Ecchi', value: 'g_ecchi' },
         { label: 'Fantastique', value: 'g_fantastique' },
         { label: 'Harem', value: 'g_harem' },
-        { label: 'Psychologique', value: 'g_psychologique' },
-        { label: 'Romance', value: 'g_romance' },
-        { label: 'Ecchi', value: 'g_ecchi' },
-        { label: 'Mature', value: 'g_mature' },
-        { label: 'Surnaturel', value: 'g_surnaturel' },
-        { label: 'Vie scolaire', value: 'g_vie-scolaire' },
-        { label: 'Adulte', value: 'g_adulte' },
-        { label: 'Tragédie', value: 'g_tragedie' },
-        { label: 'Arts Martiaux', value: 'g_arts-martiaux' },
-        { label: 'Pas de harem', value: 'g_pas-de-harem' },
-        { label: 'Tranche de vie', value: 'g_tranche-de-vie' },
-        { label: 'Mecha', value: 'g_mecha' },
-        { label: 'Sci-fi', value: 'g_sci-fi' },
-        { label: 'Science-Fiction', value: 'g_science-fiction' },
-        { label: 'Anti-Héros', value: 'g_anti-heros' },
         { label: 'Horreur', value: 'g_horreur' },
         { label: 'Insectes', value: 'g_insectes' },
-        { label: 'Mystère', value: 'g_mystere' },
         { label: 'Lolicon', value: 'g_lolicon' },
+        { label: 'Mature', value: 'g_mature' },
+        { label: 'Mecha', value: 'g_mecha' },
+        { label: 'Mystère', value: 'g_mystere' },
+        { label: 'Pas de harem', value: 'g_pas-de-harem' },
+        { label: 'Psychologique', value: 'g_psychologique' },
+        { label: 'Romance', value: 'g_romance' },
+        { label: 'Sci-fi', value: 'g_sci-fi' },
+        { label: 'Science-Fiction', value: 'g_science-fiction' },
+        { label: 'Shotacon', value: 'g_shotacon' },
         { label: 'Shoujo Ai', value: 'g_shoujo-ai' },
         { label: 'Smut', value: 'g_smut' },
+        { label: 'Surnaturel', value: 'g_surnaturel' },
+        { label: 'Tragédie', value: 'g_tragedie' },
+        { label: 'Tranche de vie', value: 'g_tranche-de-vie' },
+        { label: 'Vie scolaire', value: 'g_vie-scolaire' },
         { label: 'Xuanhuan', value: 'g_xuanhuan' },
-        { label: 'Shotacon', value: 'g_shotacon' },
       ],
     },
   } satisfies Filters;
