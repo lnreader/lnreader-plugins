@@ -34,6 +34,14 @@
           "value": "harem"
         },
         {
+          "label": "High Water Level",
+          "value": "high-water-level"
+        },
+        {
+          "label": "Hypnosis",
+          "value": "hypnosis"
+        },
+        {
           "label": "Josei",
           "value": "josei"
         },
@@ -42,8 +50,32 @@
           "value": "martial-arts"
         },
         {
+          "label": "Masculine",
+          "value": "masculine"
+        },
+        {
           "label": "Mature",
           "value": "mature"
+        },
+        {
+          "label": "Munchkin",
+          "value": "munchkin"
+        },
+        {
+          "label": "NTL",
+          "value": "ntl"
+        },
+        {
+          "label": "Orgy",
+          "value": "orgy"
+        },
+        {
+          "label": "Pure Love",
+          "value": "pure-love"
+        },
+        {
+          "label": "Rice Cake",
+          "value": "rice-cake"
         },
         {
           "label": "Romance",
@@ -80,6 +112,10 @@
         {
           "label": "Tragedy",
           "value": "tragedy"
+        },
+        {
+          "label": "Webtoonization",
+          "value": "webtoonization"
         }
       ]
     },
@@ -93,8 +129,16 @@
           "value": "light-novel-kr"
         },
         {
+          "label": "we",
+          "value": "we"
+        },
+        {
           "label": "Web Novel",
           "value": "web-novel"
+        },
+        {
+          "label": "원룸 패밀리",
+          "value": "원룸-패밀리"
         }
       ]
     },
@@ -149,6 +193,10 @@
         {
           "label": "Popular",
           "value": "popular"
+        },
+        {
+          "label": "Rating",
+          "value": "rating"
         }
       ]
     }

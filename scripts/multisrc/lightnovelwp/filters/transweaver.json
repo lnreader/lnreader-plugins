@@ -10,36 +10,20 @@
           "value": "action"
         },
         {
+          "label": "Adult",
+          "value": "adult"
+        },
+        {
           "label": "Adventure",
           "value": "adventure"
-        },
-        {
-          "label": "Anime",
-          "value": "anime"
-        },
-        {
-          "label": "Anime & Comics",
-          "value": "anime-comics"
         },
         {
           "label": "Comedy",
           "value": "comedy"
         },
         {
-          "label": "Comic",
-          "value": "comic"
-        },
-        {
           "label": "Drama",
           "value": "drama"
-        },
-        {
-          "label": "Fan-Fiction",
-          "value": "fan-fiction"
-        },
-        {
-          "label": "Fanfiction",
-          "value": "fanfiction"
         },
         {
           "label": "Fantasy",
@@ -54,20 +38,32 @@
           "value": "harem"
         },
         {
-          "label": "Isekai",
-          "value": "isekai"
+          "label": "Historical",
+          "value": "historical"
         },
         {
-          "label": "Manga",
-          "value": "manga"
+          "label": "idol",
+          "value": "idol"
+        },
+        {
+          "label": "Josei",
+          "value": "josei"
         },
         {
           "label": "Martial Arts",
           "value": "martial-arts"
         },
         {
+          "label": "Mature",
+          "value": "mature"
+        },
+        {
           "label": "Mystery",
           "value": "mystery"
+        },
+        {
+          "label": "Psychological",
+          "value": "psychological"
         },
         {
           "label": "Romance",
@@ -82,36 +78,44 @@
           "value": "sci-fi"
         },
         {
-          "label": "Seinen",
-          "value": "seinen"
+          "label": "Shoujo",
+          "value": "shoujo"
+        },
+        {
+          "label": "Shounen",
+          "value": "shounen"
+        },
+        {
+          "label": "Shounen Ai",
+          "value": "shounen-ai"
+        },
+        {
+          "label": "Slice of Life",
+          "value": "slice-of-life"
+        },
+        {
+          "label": "Smut",
+          "value": "smut"
+        },
+        {
+          "label": "Sports",
+          "value": "sports"
+        },
+        {
+          "label": "Subscription",
+          "value": "subscription"
         },
         {
           "label": "Supernatural",
           "value": "supernatural"
         },
         {
-          "label": "System",
-          "value": "system"
-        },
-        {
           "label": "Tragedy",
           "value": "tragedy"
         },
         {
-          "label": "Translated Novel",
-          "value": "translated-novel"
-        },
-        {
-          "label": "Wuxia",
-          "value": "wuxia"
-        },
-        {
-          "label": "Xianxia",
-          "value": "xianxia"
-        },
-        {
-          "label": "Xuanhuan",
-          "value": "xuanhuan"
+          "label": "Yaoi",
+          "value": "yaoi"
         }
       ]
     },
@@ -121,8 +125,20 @@
       "value": [],
       "options": [
         {
-          "label": "Webnovel (FF)",
-          "value": "webnovel-ff"
+          "label": "Chinese",
+          "value": "chinese"
+        },
+        {
+          "label": "Light Novel (KR)",
+          "value": "light-novel-kr"
+        },
+        {
+          "label": "Published Novel (KR)",
+          "value": "published-novel-kr"
+        },
+        {
+          "label": "Web Novel",
+          "value": "web-novel"
         }
       ]
     },
@@ -177,6 +193,10 @@
         {
           "label": "Popular",
           "value": "popular"
+        },
+        {
+          "label": "Rating",
+          "value": "rating"
         }
       ]
     }

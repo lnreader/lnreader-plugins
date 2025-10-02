@@ -10,36 +10,136 @@
           "value": "action"
         },
         {
+          "label": "Adult",
+          "value": "adult"
+        },
+        {
           "label": "Adventure",
           "value": "adventure"
+        },
+        {
+          "label": "character growth",
+          "value": "character-growth"
         },
         {
           "label": "Comedy",
           "value": "comedy"
         },
         {
+          "label": "Dark Fantasy",
+          "value": "dark-fantasy"
+        },
+        {
           "label": "drama",
           "value": "drama"
+        },
+        {
+          "label": "Ecchi",
+          "value": "ecchi"
         },
         {
           "label": "Fantasy",
           "value": "fantasy"
         },
         {
+          "label": "Finalized",
+          "value": "finalized"
+        },
+        {
+          "label": "Fusion",
+          "value": "fusion"
+        },
+        {
+          "label": "Fusion Fantasy",
+          "value": "fusion-fantasy"
+        },
+        {
+          "label": "Game-based(LitRPG)",
+          "value": "game-basedlitrpg"
+        },
+        {
+          "label": "Girl's Love",
+          "value": "girls-love"
+        },
+        {
           "label": "Harem",
           "value": "harem"
+        },
+        {
+          "label": "hero",
+          "value": "hero"
+        },
+        {
+          "label": "Historical",
+          "value": "historical"
+        },
+        {
+          "label": "Horror",
+          "value": "horror"
+        },
+        {
+          "label": "Humiliation",
+          "value": "humiliation"
+        },
+        {
+          "label": "Hunter",
+          "value": "hunter"
+        },
+        {
+          "label": "Isekai",
+          "value": "isekai"
+        },
+        {
+          "label": "level up",
+          "value": "level-up"
+        },
+        {
+          "label": "Magic",
+          "value": "magic"
+        },
+        {
+          "label": "Male protagonist",
+          "value": "male-protagonist"
+        },
+        {
+          "label": "Manga",
+          "value": "manga"
         },
         {
           "label": "Martial Arts",
           "value": "martial-arts"
         },
         {
+          "label": "Mature",
+          "value": "mature"
+        },
+        {
+          "label": "Murim",
+          "value": "murim"
+        },
+        {
           "label": "Mystery",
           "value": "mystery"
         },
         {
+          "label": "Political Intrigue",
+          "value": "political-intrigue"
+        },
+        {
           "label": "Psychological",
           "value": "psychological"
+        },
+        {
+          "label": "Pure love",
+          "value": "pure-love"
+        },
+        {
+          "label": "R18",
+          "value": "r18"
+        },
+        {
+          "label": "Reincarnation",
+          "value": "reincarnation"
         },
         {
           "label": "Romance",
@@ -48,6 +148,10 @@
         {
           "label": "School Life",
           "value": "school-life"
+        },
+        {
+          "label": "Sci-fy",
+          "value": "sci-fy"
         },
         {
           "label": "Seinen",
@@ -62,8 +166,48 @@
           "value": "slice-of-life"
         },
         {
+          "label": "Supernatural",
+          "value": "supernatural"
+        },
+        {
+          "label": "sword",
+          "value": "sword"
+        },
+        {
+          "label": "system",
+          "value": "system"
+        },
+        {
+          "label": "Teacher",
+          "value": "teacher"
+        },
+        {
           "label": "Thriller",
           "value": "thriller"
+        },
+        {
+          "label": "Tragedy",
+          "value": "tragedy"
+        },
+        {
+          "label": "Transmigration",
+          "value": "transmigration"
+        },
+        {
+          "label": "Wuxia",
+          "value": "wuxia"
+        },
+        {
+          "label": "Xianxia",
+          "value": "xianxia"
+        },
+        {
+          "label": "Xuanhuan",
+          "value": "xuanhuan"
+        },
+        {
+          "label": "Yandere",
+          "value": "yandere"
         }
       ]
     },

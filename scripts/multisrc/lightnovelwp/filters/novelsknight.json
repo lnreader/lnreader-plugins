@@ -6,12 +6,36 @@
       "value": [],
       "options": [
         {
+          "label": "city",
+          "value": "city"
+        },
+        {
+          "label": "cultivation",
+          "value": "cultivation"
+        },
+        {
+          "label": "faloo",
+          "value": "faloo"
+        },
+        {
           "label": "Fan fiction",
           "value": "fan-fiction"
         },
         {
+          "label": "fanfiction",
+          "value": "fanfiction"
+        },
+        {
+          "label": "fanqie",
+          "value": "fanqie"
+        },
+        {
           "label": "fanstay",
           "value": "fanstay"
+        },
+        {
+          "label": "fantansy",
+          "value": "fantansy"
         },
         {
           "label": "fantasy",
@@ -22,12 +46,40 @@
           "value": "horror"
         },
         {
+          "label": "immortal",
+          "value": "immortal"
+        },
+        {
+          "label": "Infinite Heavens",
+          "value": "infinite-heavens"
+        },
+        {
+          "label": "Infinity",
+          "value": "infinity"
+        },
+        {
+          "label": "light novel",
+          "value": "light-novel"
+        },
+        {
           "label": "martial arts",
           "value": "martial-arts"
         },
         {
           "label": "military history",
           "value": "military-history"
+        },
+        {
+          "label": "novel",
+          "value": "novel"
+        },
+        {
+          "label": "qidian",
+          "value": "qidian"
+        },
+        {
+          "label": "rebirth",
+          "value": "rebirth"
         },
         {
           "label": "romance",
@@ -46,12 +98,36 @@
           "value": "science-fiction-online-game"
         },
         {
+          "label": "sport",
+          "value": "sport"
+        },
+        {
           "label": "Sports",
           "value": "sports"
         },
         {
+          "label": "system",
+          "value": "system"
+        },
+        {
+          "label": "time travel",
+          "value": "time-travel"
+        },
+        {
+          "label": "travel",
+          "value": "travel"
+        },
+        {
+          "label": "Unlimited Heavens",
+          "value": "unlimited-heavens"
+        },
+        {
           "label": "urban",
           "value": "urban"
+        },
+        {
+          "label": "urrban",
+          "value": "urrban"
         }
       ]
     },
@@ -63,6 +139,10 @@
         {
           "label": "Black Basket: Platinum Star",
           "value": "black-basket-platinum-star"
+        },
+        {
+          "label": "chinesse",
+          "value": "chinesse"
         },
         {
           "label": "ciweimao",
@@ -91,6 +171,10 @@
         {
           "label": "faloo",
           "value": "faloo"
+        },
+        {
+          "label": "falooo",
+          "value": "falooo"
         },
         {
           "label": "fan fiction",
@@ -133,6 +217,10 @@
           "value": "infinite-evolution"
         },
         {
+          "label": "jjwxc",
+          "value": "jjwxc"
+        },
+        {
           "label": "Lords: Opens with a Bloody Nest",
           "value": "lords-opens-with-a-bloody-nest"
         },
@@ -173,6 +261,10 @@
           "value": "please"
         },
         {
+          "label": "qiamao",
+          "value": "qiamao"
+        },
+        {
           "label": "qidian",
           "value": "qidian"
         },
@@ -195,6 +287,10 @@
         {
           "label": "Science-fiction",
           "value": "science-fiction"
+        },
+        {
+          "label": "sfacg",
+          "value": "sfacg"
         },
         {
           "label": "this is a world of horror",

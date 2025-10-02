@@ -101,12 +101,13 @@
   },
   {
     "id": "novelsknight",
-    "sourceSite": "https://faloonovels.online/",
+    "sourceSite": "https://novelsknight.punchmanga.online/",
     "sourceName": "NovelsKnight",
     "options": {
       "lang": "English",
       "reverseChapters": true,
-      "versionIncrements": 1
+      "versionIncrements": 2,
+      "customJs": "$('.announ').remove();         return $('.epcontent').eq(-1).find('p').map(function (i, el) {          return '<p>' + $(this).text() + '</p>';        }).toArray().join('\\n') || '';"
     }
   },
   {
@@ -274,6 +275,14 @@
       "lang": "Spanish",
       "reverseChapters": true
     }
+  },
+  {
+    "id": "transweaver",
+    "sourceSite": "https://transweaver.com/",
+    "sourceName": "Translation Weaver",
+    "options": {
+      "lang": "English",
+      "reverseChapters": true
+    }
   }
-
 ]

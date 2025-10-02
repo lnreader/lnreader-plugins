@@ -42,7 +42,7 @@ class LightNovelWPPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/lightnovelwp/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `1.1.${7 + versionIncrements}`;
+    this.version = `1.1.${8 + versionIncrements}`;
     this.options = metadata.options ?? ({} as LightNovelWPOptions);
     this.filters = metadata.filters satisfies Filters;
 
@@ -230,7 +230,7 @@ class LightNovelWPPlugin implements Plugin.PluginBase {
           } else if (attribs['class'] === 'epl-price') {
             isReadingChapterInfo = 4;
           }
-        } else if (isReadingSummary && name === 'div') {
+        } else if (isReadingSummary && (name === 'div' || name === 'script')) {
           isReadingSummary++;
         }
       },
@@ -241,8 +241,8 @@ class LightNovelWPPlugin implements Plugin.PluginBase {
             novel.genres += data + ', ';
           }
         } // summary
-        else if (isReadingSummary === 1) {
-          novel.summary += data.trim();
+        else if (isReadingSummary === 1 && data.trim()) {
+          novel.summary += data.trim() + '\n';
         } // author and status
         else if (isParsingInfo) {
           if (isReadingInfo) {
@@ -365,7 +365,7 @@ class LightNovelWPPlugin implements Plugin.PluginBase {
         else if (isReadingSummary) {
           if (name === 'br') {
             novel.summary += '\n';
-          } else if (name === 'div') {
+          } else if (name === 'div' || name === 'script') {
             isReadingSummary--;
           }
         } // author and status

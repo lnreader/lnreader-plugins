@@ -22,6 +22,10 @@
           "value": "action"
         },
         {
+          "label": "Adapted to Drama CD",
+          "value": "adapted-to-drama-cd"
+        },
+        {
           "label": "Adult",
           "value": "adult"
         },
@@ -70,6 +74,10 @@
           "value": "arranged-marriage"
         },
         {
+          "label": "Arrogant Characters",
+          "value": "arrogant-characters"
+        },
+        {
           "label": "Artificial Intelligence",
           "value": "artificial-intelligence"
         },
@@ -104,6 +112,10 @@
         {
           "label": "Blind Protagonist",
           "value": "blind-protagonist"
+        },
+        {
+          "label": "book wearing",
+          "value": "book-wearing"
         },
         {
           "label": "Boys love",
@@ -144,6 +156,10 @@
         {
           "label": "Character Growth",
           "value": "character-growth"
+        },
+        {
+          "label": "Charismatic Protagonist",
+          "value": "charismatic-protagonist"
         },
         {
           "label": "Charming Protagonist",
@@ -198,6 +214,10 @@
           "value": "cold-protagonist"
         },
         {
+          "label": "Comdey",
+          "value": "comdey"
+        },
+        {
           "label": "comedic undertone",
           "value": "comedic-undertone"
         },
@@ -250,6 +270,10 @@
           "value": "cute-story"
         },
         {
+          "label": "Death of Loved Ones",
+          "value": "death-of-loved-ones"
+        },
+        {
           "label": "Determined Protagonist",
           "value": "determined-protagonist"
         },
@@ -276,6 +300,10 @@
         {
           "label": "Doting Love Interests",
           "value": "doting-love-interests"
+        },
+        {
+          "label": "Doting Older Siblings",
+          "value": "doting-older-siblings"
         },
         {
           "label": "Doting Parents",
@@ -314,6 +342,10 @@
           "value": "evolution"
         },
         {
+          "label": "F*llatio",
+          "value": "fllatio"
+        },
+        {
           "label": "Family Conflict",
           "value": "family-conflict"
         },
@@ -322,8 +354,16 @@
           "value": "fantasy"
         },
         {
+          "label": "Farming",
+          "value": "farming"
+        },
+        {
           "label": "Fated Lovers",
           "value": "fated-lovers"
+        },
+        {
+          "label": "Fearless Protagonist",
+          "value": "fearless-protagonist"
         },
         {
           "label": "Fiction",
@@ -336,6 +376,10 @@
         {
           "label": "First Love",
           "value": "first-love"
+        },
+        {
+          "label": "First-time Interc**rse",
+          "value": "first-time-intercrse"
         },
         {
           "label": "futuristic setting",
@@ -534,6 +578,14 @@
           "value": "medical-knowledge"
         },
         {
+          "label": "Military",
+          "value": "military"
+        },
+        {
+          "label": "Misunderstandings",
+          "value": "misunderstandings"
+        },
+        {
           "label": "Modern",
           "value": "modern"
         },
@@ -554,8 +606,16 @@
           "value": "multiple-worlds"
         },
         {
+          "label": "Music",
+          "value": "music"
+        },
+        {
           "label": "Mute Character",
           "value": "mute-character"
+        },
+        {
+          "label": "mutual crush",
+          "value": "mutual-crush"
         },
         {
           "label": "mutual salvation",
@@ -614,6 +674,10 @@
           "value": "persistent-love-interests"
         },
         {
+          "label": "police",
+          "value": "police"
+        },
+        {
           "label": "Poor Protagonist",
           "value": "poor-protagonist"
         },
@@ -666,8 +730,16 @@
           "value": "quick-transmigration"
         },
         {
+          "label": "R-18",
+          "value": "r-18"
+        },
+        {
           "label": "REBIRTH",
           "value": "rebirth"
+        },
+        {
+          "label": "Reconciliation",
+          "value": "reconciliation"
         },
         {
           "label": "Redemption",
@@ -688,6 +760,10 @@
         {
           "label": "Reverse Harem",
           "value": "reverse-harem"
+        },
+        {
+          "label": "Rich to Poor",
+          "value": "rich-to-poor"
         },
         {
           "label": "Romance",
@@ -734,6 +810,10 @@
           "value": "seinen"
         },
         {
+          "label": "seme protagonist",
+          "value": "seme-protagonist"
+        },
+        {
           "label": "shonen ai",
           "value": "shonen-ai"
         },
@@ -768,6 +848,10 @@
         {
           "label": "Slice of Life",
           "value": "slice-of-life"
+        },
+        {
+          "label": "Slow Romance",
+          "value": "slow-romance"
         },
         {
           "label": "Smut",
@@ -826,6 +910,10 @@
           "value": "time-skip"
         },
         {
+          "label": "Time Travel",
+          "value": "time-travel"
+        },
+        {
           "label": "Tragedy",
           "value": "tragedy"
         },
@@ -882,6 +970,10 @@
           "value": "workplace"
         },
         {
+          "label": "Writers",
+          "value": "writers"
+        },
+        {
           "label": "Wu xia",
           "value": "wu-xia"
         },
@@ -920,6 +1012,10 @@
       "label": "Type",
       "value": [],
       "options": [
+        {
+          "label": "⁸",
+          "value": "⁸"
+        },
         {
           "label": "chinese",
           "value": "chinese"

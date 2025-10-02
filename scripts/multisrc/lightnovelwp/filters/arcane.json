@@ -14,10 +14,6 @@
           "value": "action"
         },
         {
-          "label": "Adult",
-          "value": "adult"
-        },
-        {
           "label": "Adventure",
           "value": "adventure"
         },
@@ -60,10 +56,6 @@
         {
           "label": "Martial Arts",
           "value": "martial-arts"
-        },
-        {
-          "label": "Mature",
-          "value": "mature"
         },
         {
           "label": "Medieval",
@@ -130,6 +122,10 @@
           "value": "slice-of-life"
         },
         {
+          "label": "Smut",
+          "value": "smut"
+        },
+        {
           "label": "Supernatural",
           "value": "supernatural"
         },
@@ -140,6 +136,10 @@
         {
           "label": "Transmigration",
           "value": "transmigration"
+        },
+        {
+          "label": "War",
+          "value": "war"
         },
         {
           "label": "Wuxia",

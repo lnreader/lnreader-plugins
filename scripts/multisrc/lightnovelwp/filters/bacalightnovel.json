@@ -18,6 +18,10 @@
           "value": "adventure"
         },
         {
+          "label": "Antihero",
+          "value": "antihero"
+        },
+        {
           "label": "Comedy",
           "value": "comedy"
         },
@@ -116,6 +120,10 @@
         {
           "label": "Sports",
           "value": "sports"
+        },
+        {
+          "label": "Superhero",
+          "value": "superhero"
         },
         {
           "label": "Supernatural",

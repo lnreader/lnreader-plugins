@@ -30,12 +30,20 @@
           "value": "comedy"
         },
         {
-          "label": "Contemporary Romance",
-          "value": "contemporary-romance"
+          "label": "Cultivation",
+          "value": "cultivation"
         },
         {
           "label": "Drama",
           "value": "drama"
+        },
+        {
+          "label": "Eastern",
+          "value": "eastern"
+        },
+        {
+          "label": "Entertainment",
+          "value": "entertainment"
         },
         {
           "label": "Fantasy",
@@ -64,6 +72,18 @@
         {
           "label": "Josei",
           "value": "josei"
+        },
+        {
+          "label": "Kindergarten",
+          "value": "kindergarten"
+        },
+        {
+          "label": "Korean",
+          "value": "korean"
+        },
+        {
+          "label": "Magic Swordman",
+          "value": "magic-swordman"
         },
         {
           "label": "Martial Arts",
@@ -106,10 +126,6 @@
           "value": "romance"
         },
         {
-          "label": "salvation",
-          "value": "salvation"
-        },
-        {
           "label": "School Life",
           "value": "school-life"
         },
@@ -146,6 +162,10 @@
           "value": "supernatural"
         },
         {
+          "label": "Thriller",
+          "value": "thriller"
+        },
+        {
           "label": "Tragedy",
           "value": "tragedy"
         },
@@ -154,8 +174,20 @@
           "value": "transmigration"
         },
         {
+          "label": "Villainess",
+          "value": "villainess"
+        },
+        {
+          "label": "Web Novel",
+          "value": "web-novel"
+        },
+        {
           "label": "Western Style",
           "value": "western-style"
+        },
+        {
+          "label": "Wuxia",
+          "value": "wuxia"
         },
         {
           "label": "Xianxia",
@@ -185,6 +217,10 @@
           "value": "chinese"
         },
         {
+          "label": "Drama",
+          "value": "drama"
+        },
+        {
           "label": "Indonesian",
           "value": "indonesian"
         },
@@ -199,10 +235,6 @@
         {
           "label": "Original",
           "value": "original"
-        },
-        {
-          "label": "Web Novel",
-          "value": "web-novel"
         }
       ]
     },

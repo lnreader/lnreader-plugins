@@ -201,6 +201,10 @@
           "value": "korean-novel"
         },
         {
+          "label": "Published Novel (CN)",
+          "value": "published-novel-cn"
+        },
+        {
           "label": "Published Novel (KR)",
           "value": "published-novel-kr"
         },

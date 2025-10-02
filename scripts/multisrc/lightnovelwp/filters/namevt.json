@@ -30,16 +30,16 @@
           "value": "fantastik"
         },
         {
-          "label": "Fantezi",
-          "value": "fantezi"
-        },
-        {
           "label": "Gizem",
           "value": "gizem"
         },
         {
           "label": "Harem",
           "value": "harem"
+        },
+        {
+          "label": "Hayattan Kesitler",
+          "value": "hayattan-kesitler"
         },
         {
           "label": "Komedi",
@@ -58,6 +58,10 @@
           "value": "okul-hayati"
         },
         {
+          "label": "Psikolojik",
+          "value": "psikolojik"
+        },
+        {
           "label": "Romantik",
           "value": "romantik"
         },
@@ -72,6 +76,10 @@
         {
           "label": "Shounen",
           "value": "shounen"
+        },
+        {
+          "label": "Tarihi",
+          "value": "tarihi"
         },
         {
           "label": "Trajedi",
