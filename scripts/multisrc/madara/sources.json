@@ -208,7 +208,10 @@
   {
     "id": "foxaholic",
     "sourceSite": "https://www.foxaholic.com/",
-    "sourceName": "Foxaholic"
+    "sourceName": "Foxaholic",
+    "options": {
+      "useNewChapterEndpoint": true
+    }
   },
   {
     "id": "nitromanga",
