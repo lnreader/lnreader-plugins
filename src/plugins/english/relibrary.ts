@@ -4,7 +4,7 @@ import { Filters } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
 import { defaultCover } from '@libs/defaultCover';
 import { NovelItem } from '../../test_web/static/js';
-// import { isUrlAbsolute } from "@libs/isAbsoluteUrl";
+import { NovelStatus } from '@libs/novelStatus';
 
 type FuzzySearchOptions = {
   caseSensitive: boolean;
@@ -164,7 +164,12 @@ class ReLibraryPlugin implements Plugin.PluginBase {
   name = 'Re:Library';
   icon = 'src/en/relibrary/icon.png';
   site = 'https://re-library.com';
-  version = '1.0.1';
+  version = '1.0.2';
+  imageRequestInit: Plugin.ImageRequestInit = {
+    headers: {
+      Referer: 'https://re-library.com/',
+    },
+  };
 
   private searchFunc = new FuzzySearch<Plugin.NovelItem>(item => [item.name], {
     sort: true,
@@ -187,7 +192,11 @@ class ReLibraryPlugin implements Plugin.PluginBase {
       novel.cover =
         loadedCheerio(el)
           .find('table > tbody > tr > td > a > img')
-          .attr('src') || defaultCover;
+          .attr('data-cfsrc') ||
+        loadedCheerio(el)
+          .find('table > tbody > tr > td > a > img')
+          .attr('src') ||
+        defaultCover;
       if (novel.path.startsWith(this.site)) {
         novel.path = novel.path.slice(this.site.length);
       }
@@ -210,7 +219,11 @@ class ReLibraryPlugin implements Plugin.PluginBase {
       novel.cover =
         loadedCheerio(el)
           .find('.entry-content > table > tbody > tr > td > a >img')
-          .attr('src') || defaultCover;
+          .attr('data-cfsrc') ||
+        loadedCheerio(el)
+          .find('.entry-content > table > tbody > tr > td > a >img')
+          .attr('src') ||
+        defaultCover;
       if (novel.path.startsWith(this.site)) {
         novel.path = novel.path.slice(this.site.length);
       }
@@ -259,26 +272,15 @@ class ReLibraryPlugin implements Plugin.PluginBase {
 
     // Find the cover
     novel.cover =
-      loadedCheerio('.entry-content > table > tbody > tr > td > img').attr(
-        'src',
-      ) || defaultCover;
+      loadedCheerio('.entry-content > table img').attr('data-cfsrc') ||
+      loadedCheerio('.entry-content > table img').attr('src') ||
+      defaultCover;
 
-    // Genres in comma separated "list"
-    novel.genres = (() => {
-      const genres: string[] = [];
-      loadedCheerio(
-        '.entry-content > table > tbody > tr > td > p > span > a',
-      ).each((_i, el) => {
-        genres.push(loadedCheerio(el).text().trim());
-      });
-      return genres.join(', ');
-    })();
-
-    // Handle the novel status
-    // Sadly some novels just state the status inside the summary...
-    // I don't even know if the snippet here works for *most* of the novels preset, or only for a few
+    novel.status = NovelStatus.Unknown;
     loadedCheerio('.entry-content > table > tbody > tr > td > p').each(
       function (_i, el) {
+        // Handle the novel status
+        // Sadly some novels just state the status inside the summary...
         if (
           loadedCheerio(el)
             .find('strong')
@@ -288,7 +290,30 @@ class ReLibraryPlugin implements Plugin.PluginBase {
             .startsWith('status')
         ) {
           loadedCheerio(el).find('strong').remove();
-          novel.status = loadedCheerio(el).text();
+          let status = loadedCheerio(el).text().toLowerCase().trim();
+          if (status.includes('on-going')) {
+            novel.status = NovelStatus.Ongoing;
+          } else if (status.includes('completed')) {
+            novel.status = NovelStatus.Completed;
+          } else if (status.includes('hiatus')) {
+            novel.status = NovelStatus.OnHiatus;
+          } else if (status.includes('cancelled')) {
+            novel.status = NovelStatus.Cancelled;
+          } else {
+            novel.status = loadCheerio(el).text();
+          }
+        }
+        // Handle the genres
+        else if (
+          loadedCheerio(el)
+            .find('strong')
+            .text()
+            .toLowerCase()
+            .trim()
+            .startsWith('Category')
+        ) {
+          loadedCheerio(el).find('strong').remove();
+          novel.genres = loadedCheerio(el).text();
         }
       },
     );
@@ -334,20 +359,38 @@ class ReLibraryPlugin implements Plugin.PluginBase {
     const body = await result.text();
 
     const loadedCheerio = loadCheerio(body);
-    const text: string[] = [];
-    loadedCheerio('.entry-content > p')
-      .slice(1)
-      .each((_i, el) => {
-        loadedCheerio(el).find('span').remove();
-        const t = loadedCheerio(el).html();
-        if (t === undefined) return;
-        text.push(`<p>${t}</p>`);
-      });
-    if (text.length == 0)
-      throw new Error(
-        `Invalid Parsing of chapter, couldn't find any text for url "${this.site}/${chapterPath}"`,
-      );
-    return text.join('');
+
+    const entryContent = loadedCheerio('.entry-content');
+    const pageLinkHr = entryContent.find('.PageLink + hr').first();
+    if (pageLinkHr.length) {
+      // Remove all previous siblings before the .PageLink + hr
+      let prev = pageLinkHr.prev();
+      while (prev.length) {
+        prev.remove();
+        prev = pageLinkHr.prev();
+      }
+      const pageLink = pageLinkHr.prev('.PageLink');
+      if (pageLink.length) {
+        pageLink.remove();
+      }
+      pageLinkHr.next().remove();
+      pageLinkHr.remove();
+    }
+
+    // Find the first <hr> followed by a .PageLink and remove everything after
+    const hrAfterPageLink = entryContent.find('hr + .PageLink').first();
+    if (hrAfterPageLink.length) {
+      let next = hrAfterPageLink.next();
+      while (next.length) {
+        const temp = next.next();
+        next.remove();
+        next = temp;
+      }
+      hrAfterPageLink.prev().remove();
+      hrAfterPageLink.remove();
+    }
+
+    return entryContent.html() || '';
   }
 
   async searchNovels(
@@ -363,14 +406,17 @@ class ReLibraryPlugin implements Plugin.PluginBase {
 
     const loadedCheerio = loadCheerio(body);
 
-    loadedCheerio('.entry-content table a').each((_i, el) => {
+    loadedCheerio('article article').each((_i, el) => {
       const e = loadedCheerio(el);
-      if (e && e.attr('href') && e.text()) {
-        let path = e.attr('href')!;
-        if (path.startsWith(this.site)) {
-          path = path.slice(this.site.length);
-        }
-        novels.push({ name: e.text(), path: path, cover: defaultCover });
+      if (e.find('a').attr('href') && e.find('a').text()) {
+        novels.push({
+          name: e.find('h4').text(),
+          path: e.find('a').attr('href')?.replace(this.site, '') || '',
+          cover:
+            e.find('img').attr('data-cfsrc') ||
+            e.find('img').attr('src') ||
+            defaultCover,
+        });
       }
     });
     this.searchFunc.setHaystack(novels);
