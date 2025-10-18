@@ -10,7 +10,7 @@ class NovelMania implements Plugin.PluginBase {
   name = 'Novel Mania';
   icon = 'src/pt-br/novelmania/icon.png';
   site = 'https://novelmania.com.br';
-  version = '1.0.0';
+  version = '1.0.1';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   async popularNovels(
@@ -22,7 +22,7 @@ class NovelMania implements Plugin.PluginBase {
     url += `&status=${filters?.status.value}`;
     url += `&nacionalidade=${filters?.type.value}`;
     url += `&ordem=${filters?.ordem.value}`;
-    url += `&page=${pageNo}`;
+    url += `&page%5Bpage%5D=${pageNo}`;
 
     const body = await fetchApi(url).then(res => res.text());
 
@@ -65,7 +65,9 @@ class NovelMania implements Plugin.PluginBase {
         .trim() || 'Sem título';
     novel.summary =
       loadedCheerio('div.tab-pane.fade.show.active > div.text > p')
-        .text()
+        .map((i, el) => loadedCheerio(el).text())
+        .toArray()
+        .join('\n\n')
         .trim() || '';
     novel.cover =
       loadedCheerio('div.novel-img > img.img-responsive').attr('src') ||
@@ -118,7 +120,7 @@ class NovelMania implements Plugin.PluginBase {
     searchTerm: string,
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
-    const url = `${this.site}/novels?titulo=${searchTerm}&page=${pageNo}`;
+    const url = `${this.site}/novels?titulo=${searchTerm}&page%5Bpage%5D=${pageNo}`;
     const body = await fetchApi(url).then(res => res.text());
     const loadedCheerio = parseHTML(body);
     const load = loadedCheerio('div.top-novels.dark.col-6 > div.row.mb-2');
