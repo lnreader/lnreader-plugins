@@ -10,7 +10,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   name = 'Fenrir Realm';
   icon = 'src/en/fenrirrealm/icon.png';
   site = 'https://fenrirealm.com';
-  version = '1.0.9';
+  version = '1.0.10';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   hideLocked = storage.get('hideLocked');
@@ -91,14 +91,19 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       .map(c => ({
         name:
           (c.locked?.price ? '🔒 ' : '') +
+          (c.group?.index === null ? '' : 'Vol ' + c.group.index + ' ') +
           'Chapter ' +
           c.number +
           (c.title && c.title.trim() != 'Chapter ' + c.number
-            ? ' - ' + c.title
+            ? ' - ' + c.title.replace(/^chapter [0-9]+ . /i, '')
             : ''),
-        path: novelPath + '/chapter-' + c.number,
+        path:
+          novelPath +
+          (c.group?.index === null ? '' : '/' + c.group.slug) +
+          '/chapter-' +
+          c.number,
         releaseTime: c.created_at,
-        chapterNumber: c.number,
+        chapterNumber: c.number + c.group?.index * 1000000000000,
       }))
       .sort((a, b) => a.chapterNumber - b.chapterNumber);
     return novel;
