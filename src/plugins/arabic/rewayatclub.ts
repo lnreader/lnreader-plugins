@@ -7,12 +7,13 @@ import { defaultCover } from '@libs/defaultCover';
 class RewayatClub implements Plugin.PagePlugin {
   id = 'rewayatclub';
   name = 'Rewayat Club';
-  version = '1.0.1';
+  version = '1.0.2';
   icon = 'src/ar/rewayatclub/icon.png';
   site = 'https://rewayat.club/';
 
   parseNovels(data: NovelData): Plugin.NovelItem[] {
     const novels: Plugin.NovelItem[] = [];
+    if (data.results === undefined) return novels;
     data.results.map((item: NovelEntry) => {
       novels.push({
         name: item.arabic || item.novel?.arabic || 'novel',
@@ -144,8 +145,9 @@ class RewayatClub implements Plugin.PagePlugin {
     const result = await fetchApi(link).then(r => r.json());
     let chapterText = result.content
       .flat()
-      .join('')
-      .replace(/<p>\n|\n<p>\n/g, '');
+      .join('<br>')
+      .replace(/\n/g, '')
+      .replace(/<p>/g, '\n');
     chapterText = chapterText.trim();
     return chapterText;
   }
