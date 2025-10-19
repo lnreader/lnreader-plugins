@@ -6,7 +6,7 @@ import { Plugin } from '@typings/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.9.3';
+  version = '0.9.4';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -172,6 +172,29 @@ class NovelUpdates implements Plugin.PluginBase {
     const targetDomain = domain.find(d => !unwanted.includes(d));
 
     switch (targetDomain) {
+      // Last edited in 0.9.4 by Batorian - 15/10/2025
+      case 'akutranslations': {
+        try {
+          const apiUrl = chapterPath.replace('/novel', '/api/novel');
+          const response = await fetchApi(apiUrl);
+          const json = await response.json();
+
+          if (!json?.content) {
+            throw new Error('Invalid API response structure.');
+          }
+
+          chapterContent = json.content
+            .trim()
+            .split(/\n+/)
+            .map((p: string) => p.trim())
+            .filter((p: string) => p.length > 0)
+            .map((p: string) => `<p>${p}</p>`)
+            .join('\n');
+          break;
+        } catch (error) {
+          throw new Error(`Failed to parse AkuTranslations chapter: ${error}`);
+        }
+      }
       // Last edited in 0.9.0 by Batorian - 19/03/2025
       case 'anotivereads': {
         chapterTitle = loadedCheerio('#comic-nav-name').first().text();
@@ -289,10 +312,6 @@ class NovelUpdates implements Plugin.PluginBase {
           const url = `${parts[0]}//${parts[2]}/api/public/chapter-by-slug/${novelSlug}/${chapterSlug}`;
 
           const response = await fetchApi(url);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch chapter: ${response.status}`);
-          }
-
           const json = await response.json();
           if (!json?.data?.currentChapter) {
             throw new Error('Invalid API response structure.');
