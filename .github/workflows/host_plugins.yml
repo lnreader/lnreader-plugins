@@ -2,12 +2,13 @@ name: Publish Plugins
 
 on:
   push:
-    branches:
-      - master
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
 
 jobs:
   Publish:
-    if: github.repository == 'LNReader/lnreader-plugins'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -19,9 +20,17 @@ jobs:
       - name: Install Dependencies
         run: npm install --omit=dev --ignore-scripts
 
-      - name: Publish Plugins
+      - name: Setup Git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          npm run host-linux
+
+      - if: github.repository == 'LNReader/lnreader-plugins'
+        name: Publish Plugins Main Repo
+        run: npm run host-linux 2>> $GITHUB_STEP_SUMMARY
+        shell: bash
+
+      - if: github.repository != 'LNReader/lnreader-plugins'
+        name: Publish Plugins All Branches
+        run: npm run host-linux -- --all-branches
         shell: bash

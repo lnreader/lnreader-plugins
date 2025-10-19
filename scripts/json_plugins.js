@@ -23,14 +23,45 @@ const PLUGIN_LINK = `${USER_CONTENT_LINK}/.js/src/plugins`;
 
 const DIST_DIR = '.dist';
 
-const json = [];
+let json = [];
 if (!fs.existsSync(DIST_DIR)) {
   fs.mkdirSync(DIST_DIR);
 }
 const jsonPath = path.join(DIST_DIR, 'plugins.json');
 const jsonMinPath = path.join(DIST_DIR, 'plugins.min.json');
 const pluginSet = new Set();
-let totalPlugins = 0;
+const pluginsPerLanguage = {};
+const pluginsWithFiltersPerLanguage = {};
+
+const args = process.argv.slice(2);
+let ONLY_NEW = args.includes('--only-new');
+
+let existingPlugins = {};
+if (!fs.existsSync(jsonPath)) ONLY_NEW = false;
+if (ONLY_NEW) {
+  try {
+    const existingJson = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
+    json = existingJson;
+    for (const plugin of existingJson) {
+      existingPlugins[plugin.id] = plugin;
+    }
+  } catch (e) {
+    console.warn('Failed to parse existing plugins.json:', e);
+  }
+}
+
+// Simple semver comparison: "1.2.3" < "1.2.4"
+function compareVersions(a, b) {
+  const pa = a.split('.').map(Number);
+  const pb = b.split('.').map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const na = pa[i] || 0;
+    const nb = pb[i] || 0;
+    if (na > nb) return 1;
+    if (na < nb) return -1;
+  }
+  return 0;
+}
 
 const createRecursiveProxy = () => {
   const target = {};
@@ -55,10 +86,19 @@ const _require = () => proxy;
 const COMPILED_PLUGIN_DIR = './.js/src/plugins';
 
 for (let language in languages) {
-  // language with English name
+  console.log(
+    ` ${language} `
+      .padStart(Math.floor((language.length + 32) / 2), '=')
+      .padEnd(30, '='),
+  );
+
   const langPath = path.join(COMPILED_PLUGIN_DIR, language.toLowerCase());
   if (!fs.existsSync(langPath)) continue;
   const plugins = fs.readdirSync(langPath);
+
+  pluginsPerLanguage[language] = 0;
+  pluginsWithFiltersPerLanguage[language] = 0;
+
   plugins.forEach(plugin => {
     if (plugin.startsWith('.')) return;
     minify(path.join(langPath, plugin));
@@ -73,8 +113,19 @@ for (let language in languages) {
       ${rawCode}; 
       return exports.default`,
     )(_require, {});
-    const { id, name, site, version, icon, customJS, customCSS } = instance;
+    const { id, name, site, version, icon, customJS, customCSS, filters } =
+      instance;
     const normalisedName = name.replace(/\[.*\]/, '');
+
+    // --only-new logic
+    if (
+      ONLY_NEW &&
+      existingPlugins[id] &&
+      compareVersions(existingPlugins[id].version, version) >= 0
+    ) {
+      // console.log(`   Skipping ${name} (${id}) - not newer`, '\r🔁');
+      return;
+    }
 
     const info = {
       id,
@@ -95,8 +146,18 @@ for (let language in languages) {
       pluginSet.add(id);
     }
     json.push(info);
-    totalPlugins += 1;
-    console.log(name, '✅');
+
+    pluginsPerLanguage[language] += 1;
+    if (filters !== undefined) {
+      pluginsWithFiltersPerLanguage[language] += 1;
+    }
+
+    console.log(
+      '   ',
+      name.padEnd(25),
+      ` (${id})`,
+      filters == undefined ? '\r✅' : '\r✅🔍',
+    );
   });
 }
 
@@ -107,12 +168,38 @@ json.sort((a, b) => {
 
 fs.writeFileSync(jsonMinPath, JSON.stringify(json));
 fs.writeFileSync(jsonPath, JSON.stringify(json, null, '\t'));
-fs.writeFileSync(
-  'total.svg',
-  `
-  <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="80" height="20" role="img" aria-label="Plugins: ${totalPlugins}"><title>Plugins: ${totalPlugins}</title><linearGradient id="s" x2="0" y2="100%"><stop offset="0" stop-color="#bbb" stop-opacity=".1"/><stop offset="1" stop-opacity=".1"/></linearGradient><clipPath id="r"><rect width="80" height="20" rx="3" fill="#fff"/></clipPath><g clip-path="url(#r)"><rect width="49" height="20" fill="#555"/><rect x="49" width="31" height="20" fill="#007ec6"/><rect width="80" height="20" fill="url(#s)"/></g><g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="110"><text aria-hidden="true" x="255" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="390">Plugins</text><text x="255" y="140" transform="scale(.1)" fill="#fff" textLength="390">Plugins</text><text aria-hidden="true" x="635" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="210">161</text><text x="635" y="140" transform="scale(.1)" fill="#fff" textLength="210">${totalPlugins}</text></g></svg>
-  `,
+
+const totalPlugins = Object.values(pluginsPerLanguage).reduce(
+  (a, b) => a + b,
+  0,
 );
+if (!ONLY_NEW)
+  fs.writeFileSync(
+    'total.svg',
+    `
+    <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="80" height="20" role="img" aria-label="Plugins: ${totalPlugins}">
+      <title>Plugins: ${totalPlugins}</title>
+      <linearGradient id="s" x2="0" y2="100%">
+        <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+        <stop offset="1" stop-opacity=".1"/>
+      </linearGradient>
+      <clipPath id="r">
+        <rect width="80" height="20" rx="3" fill="#fff"/>
+      </clipPath>
+      <g clip-path="url(#r)">
+        <rect width="49" height="20" fill="#555"/>
+        <rect x="49" width="31" height="20" fill="#007ec6"/>
+        <rect width="80" height="20" fill="url(#s)"/>
+      </g>
+      <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="110">
+        <text aria-hidden="true" x="255" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="390">Plugins</text>
+        <text x="255" y="140" transform="scale(.1)" fill="#fff" textLength="390">Plugins</text>
+        <text aria-hidden="true" x="635" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="210">${totalPlugins}</text>
+        <text x="635" y="140" transform="scale(.1)" fill="#fff" textLength="210">${totalPlugins}</text>
+      </g>
+    </svg>
+    `,
+  );
 
 // check for broken plugins
 for (let language in languages) {
@@ -133,3 +220,18 @@ for (let language in languages) {
 
 console.log(jsonPath);
 console.log('Done ✅');
+
+const totalPluginsWithFilter = Object.values(
+  pluginsWithFiltersPerLanguage,
+).reduce((a, b) => a + b, 0);
+
+// Markdown table for GitHub Actions
+console.warn('\n| Language | Plugins (With Filters) |');
+console.warn('|----------|------------------------|');
+for (const language of Object.keys(languages)) {
+  console.warn(
+    `| ${language} | ${pluginsPerLanguage[language] || 0} (${pluginsWithFiltersPerLanguage[language] || 0}) |`,
+  );
+}
+console.warn('|----------|------------------------|');
+console.warn(`| Total | ${totalPlugins} (${totalPluginsWithFilter}) |`);
