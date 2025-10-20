@@ -1,4 +1,4 @@
-name: Issue moderator
+name: Issue Moderator
 
 on:
   issues:
@@ -6,11 +6,16 @@ on:
   issue_comment:
     types: [created]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
 jobs:
   autoclose:
+    name: Auto Close Invalid Issues
     runs-on: ubuntu-latest
     steps:
-      - name: Moderate issues
+      - name: Moderate Issues
         uses: tachiyomiorg/issue-moderator-action@v2
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -18,10 +23,10 @@ jobs:
 
           duplicate-check-enabled: true
           duplicate-check-labels: |
-            ["Source Request", "Domain Changed"]
+            ["Plugin Request", "Domain Changed"]
 
           existing-check-enabled: false
-            
+
           auto-close-rules: |
             [
               {
@@ -36,7 +41,7 @@ jobs:
               },
               {
                 "type": "title",
-                "regex": ".*(Source name|Short description).*",
+                "regex": ".*(Plugin name|Short description).*",
                 "message": "You did not fill out the description in the title"
               }
             ]

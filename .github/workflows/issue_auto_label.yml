@@ -6,23 +6,28 @@ on:
       - opened
       - edited
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
 jobs:
   auto-label:
+    name: Auto Label Issues
     if: ${{ github.event.issue.body && contains(github.event.issue.body, '### Plugin') }}
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-      - name: Extract the severity from issue body
+      - name: Extract Severity From Issue Body
         id: extract-severity
         run: |
           USER_SELECTED_SEVERITY=$(echo "${{ github.event.issue.body }}" | grep "### Severity" -A 2 | tail -n 1 | sed 's/[[:space:]]*$//')
           SELECTED_SEVERITY=""
 
           case "$USER_SELECTED_SEVERITY" in
-              "Wrong formatting"|"Wrong content"|"Missing chapter"|"Missing images"|"Can't load novels")
+              "Wrong Formatting"|"Wrong Content"|"Missing Chapter"|"Missing Images"|"Can't Load Novels"|"Domain Changed")
                   SELECTED_SEVERITY="$USER_SELECTED_SEVERITY"
                   ;;
               *)
@@ -31,14 +36,14 @@ jobs:
           esac
           echo "SELECTED_SEVERITY=$SELECTED_SEVERITY" >> $GITHUB_ENV
 
-      - name: Extract the plugin from issue body
+      - name: Extract Plugin From Issue Body
         id: parse-issue
-        run: |          
+        run: |
           SELECTED_PLUGIN=$(echo "${{ github.event.issue.body }}" | awk '/### Plugin/ {f=1; next} f && NF {print; exit}' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-          
+
           echo "SELECTED_PLUGIN=$SELECTED_PLUGIN" >> $GITHUB_ENV
 
-      - name: Determine corresponding label
+      - name: Determine Corresponding Label
         id: determine-label
         run: |
           LABELS="$( jq --arg keys "${{ env.SELECTED_PLUGIN }}" '. as $data | $keys | split(", ") as $keyList | $keyList[] | . as $key | if $data[$key] != null then "\($key)[\($data[$key])]" else empty end' ./.github/scripts/keys.json | sed 's/"//g' | sed 's/^[^:]*: //' )"
@@ -49,8 +54,7 @@ jobs:
           # Save to GitHub environment
           printf "LABELS<<EOF\n%s\nEOF\n" "$LABELS_WITH_PREFIX" >> $GITHUB_ENV
 
-
-      - name: Add label to the issue
+      - name: Add Labels To Issue
         if: env.LABELS != ''
         uses: actions-ecosystem/action-add-labels@v1
         with:
@@ -59,6 +63,6 @@ jobs:
             Severity: ${{ env.SELECTED_SEVERITY }}
             ${{ env.LABELS }}
 
-      - name: Handle missing label
+      - name: Handle Missing Label
         if: env.LABELS == ''
         run: echo "No matching label found for the selected plugin."

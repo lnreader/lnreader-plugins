@@ -1,29 +1,33 @@
-name: Prettier
+name: Format Check
 
 on:
   pull_request:
     branches: [master]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  Prettier:
+  format-check:
+    name: Check Code Formatting
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-      - name: Use Node.js
-        uses: actions/setup-node@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Install Dependencies
+      - name: Install Prettier
         run: |
           rm package.json
           rm package-lock.json
           npm init -y
-          npm pkg set type="module"
-          npm i prettier@3.2.5
+          npm install prettier@3.2.5
 
-      - name: Prettier
+      - name: Check Code Formatting
         run: npx prettier --check "./src/**/*.{ts,tsx,js,css}"

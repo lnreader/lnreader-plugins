@@ -2,7 +2,7 @@
 
 <p>
 <img alt="LNReader plugins counting" src="https://raw.githubusercontent.com/LNReader/lnreader-plugins/plugins/v3.0.0/total.svg">
-<img alt="GitHub issues by-label"  src="https://img.shields.io/github/issues/lnreader/lnreader-plugins/Source%20Request?color=success&label=source%20requests">
+<img alt="GitHub issues by-label"  src="https://img.shields.io/github/issues/lnreader/lnreader-plugins/Plugin%20Request?color=success&label=plugin%20requests">
 <img  alt="GitHub issues by-label"  src="https://img.shields.io/github/issues/lnreader/lnreader-plugins/Bug?color=red&label=bugs">
 </p>
 

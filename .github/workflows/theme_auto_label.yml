@@ -4,20 +4,25 @@ on:
   issues:
     types: [labeled]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
 jobs:
   auto-label:
-    if: contains(github.event.issue.labels.*.name, 'Source Request')
+    name: Auto Label Theme
+    if: contains(github.event.issue.labels.*.name, 'Plugin Request')
     runs-on: ubuntu-latest
     env:
       REPO: ${{ github.repository }}
       ISSUE_NUMBER: ${{ github.event.issue.number }}
     steps:
-      - name: Get Source Request URL
+      - name: Get Plugin Website URL
         id: get_url
         env:
           ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
-          URL=$(echo "$ISSUE_BODY" | sed -n '/### Source link/,+2p' | sed '1,2d' | tr -d '[:space:]')
+          URL=$(echo "$ISSUE_BODY" | sed -n '/### Website URL/,+2p' | sed '1,2d' | tr -d '[:space:]')
           echo "URL=$URL" >> $GITHUB_OUTPUT
           echo "Using URL: \`$URL\`" >> $GITHUB_STEP_SUMMARY
 
@@ -36,71 +41,75 @@ jobs:
           CHROME_VERSION=$(curl -s https://chromiumdash.appspot.com/fetch_releases?channel=Stable\&platform=Windows\&num=1 | jq -r '.[0].version // "126.0.6478.36"')
           echo "USER_AGENT=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/$CHROME_VERSION Safari/537.36" >> $GITHUB_OUTPUT
 
-      - name: Check Madara theme
+      - name: Check Madara Theme
         id: check_madara
         env:
           BASE_URL: ${{ steps.get_base_url.outputs.BASE_URL }}
           USER_AGENT: ${{ steps.get_user_agent.outputs.USER_AGENT }}
         run: |
-          if curl --location --output /dev/null --silent --head --fail "https://$BASE_URL/wp-content/themes/madara/style.css" -H "User-Agent: $USER_AGENT"; then
-            echo "madara=true" >> $GITHUB_OUTPUT
-            echo "✅ Madara Theme Detected" >> $GITHUB_STEP_SUMMARY
-          elif curl --location --output /dev/null --silent --head --fail "http://$BASE_URL/wp-content/themes/madara/style.css" -H "User-Agent: $USER_AGENT"; then
+          echo "🔍 Checking for Madara theme..." >> $GITHUB_STEP_SUMMARY
+          if curl --location --output /dev/null --silent --head --fail --max-time 10 "https://$BASE_URL/wp-content/themes/madara/style.css" -H "User-Agent: $USER_AGENT" 2>/dev/null || \
+             curl --location --output /dev/null --silent --head --fail --max-time 10 "http://$BASE_URL/wp-content/themes/madara/style.css" -H "User-Agent: $USER_AGENT" 2>/dev/null; then
             echo "madara=true" >> $GITHUB_OUTPUT
             echo "✅ Madara Theme Detected" >> $GITHUB_STEP_SUMMARY
           else
             echo "madara=false" >> $GITHUB_OUTPUT
+            echo "❌ Madara Theme Not Found" >> $GITHUB_STEP_SUMMARY
           fi
 
-      - name: Check Lighnovelwp theme
+      - name: Check Lightnovelwp Theme
         id: check_lighnovelwp
+        if: always() && steps.check_madara.outputs.madara != 'true'
         env:
           BASE_URL: ${{ steps.get_base_url.outputs.BASE_URL }}
           USER_AGENT: ${{ steps.get_user_agent.outputs.USER_AGENT }}
         run: |
-          if curl --location --output /dev/null --silent --head --fail "https://$BASE_URL/wp-content/themes/lightnovel/style.css" -H "User-Agent: $USER_AGENT"; then
+          echo "🔍 Checking for Lightnovelwp theme..." >> $GITHUB_STEP_SUMMARY
+          if curl --location --output /dev/null --silent --head --fail --max-time 10 "https://$BASE_URL/wp-content/themes/lightnovel/style.css" -H "User-Agent: $USER_AGENT" 2>/dev/null || \
+             curl --location --output /dev/null --silent --head --fail --max-time 10 "http://$BASE_URL/wp-content/themes/lightnovel/style.css" -H "User-Agent: $USER_AGENT" 2>/dev/null; then
             echo "lighnovelwp=true" >> $GITHUB_OUTPUT
-            echo "✅ Lighnovelwp Theme Detected" >> $GITHUB_STEP_SUMMARY
-          elif curl --location --output /dev/null --silent --head --fail "http://$BASE_URL/wp-content/themes/lightnovel/style.css" -H "User-Agent: $USER_AGENT"; then
-            echo "lighnovelwp=true" >> $GITHUB_OUTPUT
-            echo "✅ Lighnovelwp Theme Detected" >> $GITHUB_STEP_SUMMARY
+            echo "✅ Lightnovelwp Theme Detected" >> $GITHUB_STEP_SUMMARY
           else
             echo "lighnovelwp=false" >> $GITHUB_OUTPUT
+            echo "❌ Lightnovelwp Theme Not Found" >> $GITHUB_STEP_SUMMARY
           fi
 
-      - name: Check HotNovelPub theme
+      - name: Check HotNovelPub Theme
         id: check_hotnovelpub
+        if: always() && steps.check_madara.outputs.madara != 'true' && steps.check_lighnovelwp.outputs.lighnovelwp != 'true'
         env:
           BASE_URL: ${{ steps.get_base_url.outputs.BASE_URL }}
           USER_AGENT: ${{ steps.get_user_agent.outputs.USER_AGENT }}
         run: |
-          if curl --location --silent --fail "https://api.$BASE_URL" -H "User-Agent: $USER_AGENT" | grep -q "Hello\!"; then
-          echo "hotnovelpub=true" >> $GITHUB_OUTPUT
-          echo "✅ HotNovelPub Theme Detected" >> $GITHUB_STEP_SUMMARY
-            elif curl --location --silent --fail "http://api.$BASE_URL" -H "User-Agent: $USER_AGENT" | grep -q "Hello\!"; then
-          echo "hotnovelpub=true" >> $GITHUB_OUTPUT
-          echo "✅ HotNovelPub Theme Detected" >> $GITHUB_STEP_SUMMARY
-            else
-          echo "hotnovelpub=false" >> $GITHUB_OUTPUT
-            fi
+          echo "🔍 Checking for HotNovelPub theme..." >> $GITHUB_STEP_SUMMARY
+          if curl --location --silent --fail --max-time 10 "https://api.$BASE_URL" -H "User-Agent: $USER_AGENT" 2>/dev/null | grep -q "Hello\!" || \
+             curl --location --silent --fail --max-time 10 "http://api.$BASE_URL" -H "User-Agent: $USER_AGENT" 2>/dev/null | grep -q "Hello\!"; then
+            echo "hotnovelpub=true" >> $GITHUB_OUTPUT
+            echo "✅ HotNovelPub Theme Detected" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "hotnovelpub=false" >> $GITHUB_OUTPUT
+            echo "❌ HotNovelPub Theme Not Found" >> $GITHUB_STEP_SUMMARY
+          fi
 
-      - name: Check Fictioneer theme
+      - name: Check Fictioneer Theme
         id: check_fictioneer
+        if: always() && steps.check_madara.outputs.madara != 'true' && steps.check_lighnovelwp.outputs.lighnovelwp != 'true' && steps.check_hotnovelpub.outputs.hotnovelpub != 'true'
         env:
           BASE_URL: ${{ steps.get_base_url.outputs.BASE_URL }}
           USER_AGENT: ${{ steps.get_user_agent.outputs.USER_AGENT }}
         run: |
-          if curl --location --output /dev/null --silent --head --fail "https://$BASE_URL/wp-content/themes/fictioneer/css/application.css" -H "User-Agent: $USER_AGENT"; then
-            echo "fictioneer=true" >> $GITHUB_OUTPUT
-            echo "✅ Fictioneer Theme Detected" >> $GITHUB_STEP_SUMMARY
-          elif curl --location --output /dev/null --silent --head --fail "http://$BASE_URL/wp-content/themes/fictioneer/css/application.css" -H "User-Agent: $USER_AGENT"; then
+          echo "🔍 Checking for Fictioneer theme..." >> $GITHUB_STEP_SUMMARY
+          if curl --location --output /dev/null --silent --head --fail --max-time 10 "https://$BASE_URL/wp-content/themes/fictioneer/css/application.css" -H "User-Agent: $USER_AGENT" 2>/dev/null || \
+             curl --location --output /dev/null --silent --head --fail --max-time 10 "http://$BASE_URL/wp-content/themes/fictioneer/css/application.css" -H "User-Agent: $USER_AGENT" 2>/dev/null; then
             echo "fictioneer=true" >> $GITHUB_OUTPUT
             echo "✅ Fictioneer Theme Detected" >> $GITHUB_STEP_SUMMARY
           else
             echo "fictioneer=false" >> $GITHUB_OUTPUT
+            echo "❌ Fictioneer Theme Not Found" >> $GITHUB_STEP_SUMMARY
           fi
 
-      - name: Add Label
+      - name: Add Theme Label To Issue
+        if: always()
         env:
           MADARA: ${{ steps.check_madara.outputs.madara }}
           LIGHNOVELWP: ${{ steps.check_lighnovelwp.outputs.lighnovelwp }}
@@ -108,14 +117,19 @@ jobs:
           FICTIONEER: ${{ steps.check_fictioneer.outputs.fictioneer }}
           GH_TOKEN: ${{ github.token }}
         run: |
+          echo "## Theme Detection Result" >> $GITHUB_STEP_SUMMARY
           if [[ "$MADARA" == "true" ]]; then
+            echo "🏷️ Adding label: Theme: Madara" >> $GITHUB_STEP_SUMMARY
             gh issue edit $ISSUE_NUMBER --add-label "Theme: Madara" -R $REPO
           elif [[ "$LIGHNOVELWP" == "true" ]]; then
+            echo "🏷️ Adding label: Theme: Lighnovelwp" >> $GITHUB_STEP_SUMMARY
             gh issue edit $ISSUE_NUMBER --add-label "Theme: Lighnovelwp" -R $REPO
           elif [[ "$HOTNOVELPUB" == "true" ]]; then
+            echo "🏷️ Adding label: Theme: Hotnovelpub" >> $GITHUB_STEP_SUMMARY
             gh issue edit $ISSUE_NUMBER --add-label "Theme: Hotnovelpub" -R $REPO
           elif [[ "$FICTIONEER" == "true" ]]; then
+            echo "🏷️ Adding label: Theme: Fictioneer" >> $GITHUB_STEP_SUMMARY
             gh issue edit $ISSUE_NUMBER --add-label "Theme: Fictioneer" -R $REPO
           else
-            echo "No Theme Detected" >> $GITHUB_STEP_SUMMARY
+            echo "❌ No Theme Detected" >> $GITHUB_STEP_SUMMARY
           fi

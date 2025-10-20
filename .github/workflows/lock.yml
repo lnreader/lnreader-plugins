@@ -1,19 +1,22 @@
-name: Lock threads
+name: Lock Threads
 
 on:
-  # Daily
   schedule:
-    - cron: "0 0 * * *"
-  # Manual trigger
+    - cron: '0 0 * * *'
   workflow_dispatch:
-    inputs:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
 
 jobs:
   lock:
+    name: Lock Inactive Threads
     runs-on: ubuntu-latest
     steps:
-      - uses: dessant/lock-threads@v2
+      - name: Lock Inactive Issues And Pull Requests
+        uses: dessant/lock-threads@v5
         with:
           github-token: ${{ github.token }}
-          issue-lock-inactive-days: "2"
-          pr-lock-inactive-days: "2"
+          issue-lock-inactive-days: '2'
+          pr-lock-inactive-days: '2'

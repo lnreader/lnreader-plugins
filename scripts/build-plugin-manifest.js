@@ -192,8 +192,8 @@ if (!ONLY_NEW)
         <rect width="80" height="20" fill="url(#s)"/>
       </g>
       <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="110">
-        <text aria-hidden="true" x="255" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="390">Plugins</text>
-        <text x="255" y="140" transform="scale(.1)" fill="#fff" textLength="390">Plugins</text>
+        <text aria-hidden="true" x="255" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="390">plugins</text>
+        <text x="255" y="140" transform="scale(.1)" fill="#fff" textLength="390">plugins</text>
         <text aria-hidden="true" x="635" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="210">${totalPlugins}</text>
         <text x="635" y="140" transform="scale(.1)" fill="#fff" textLength="210">${totalPlugins}</text>
       </g>

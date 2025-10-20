@@ -1,38 +1,39 @@
-name: Feature request
-description: Suggest a feature to improve a source
+name: Request Feature
+description: Suggest an improvement for an existing plugin
 labels: [Feature Request]
 body:
   - type: textarea
     id: feature-description
     attributes:
-      label: Describe your suggested feature
-      description: How can an existing extension be improved?
+      label: Feature Description
+      description: Describe the feature you would like to see added.
       placeholder: |
         Example:
-          "It should work like this..."
+          "Add support for latest novels list in Royal Road plugin..."
     validations:
       required: true
 
   - type: textarea
     id: other-details
     attributes:
-      label: Other details
+      label: Other Details
+      description: Any additional context or mockups.
       placeholder: |
-        Additional details and attachments.
+        Additional information, use cases, or examples.
 
   - type: checkboxes
     id: acknowledgements
     attributes:
       label: Acknowledgements
-      description: Your issue will be closed if you haven't done these steps.
+      description: Your issue will be closed if these requirements are not met.
       options:
-        - label: I have searched the existing issues and this is a new ticket, **NOT** a duplicate or related to another open issue.
+        - label: I have searched existing issues and confirmed this is not a duplicate.
           required: true
-        - label: I have written a short but informative title.
+        - label: I have written a clear and descriptive title.
           required: true
-        - label: If this is an issue with the app itself, I should be opening an issue in the [app repository](https://github.com/LNReader/lnreader/issues/new/choose).
+        - label: I understand that app-specific features should be requested in the [app repository](https://github.com/LNReader/lnreader/issues/new/choose).
           required: true
-        - label: I have updated the app to version **[1.1.19](https://github.com/LNReader/lnreader/releases/latest)**.
+        - label: I have updated the app to the latest version **[1.1.19](https://github.com/LNReader/lnreader/releases/latest)**.
           required: true
-        - label: I will fill out all of the requested information in this form.
+        - label: I have provided all requested information in this form.
           required: true

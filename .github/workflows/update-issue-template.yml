@@ -1,0 +1,53 @@
+name: Update Issue Template
+
+on:
+  workflow_run:
+    workflows:
+      - Publish Plugins
+    types:
+      - completed
+    branches:
+      - master
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  update_template:
+    name: Update Issue Template
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    if: |
+      github.repository == 'LNReader/lnreader-plugins' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: master
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Generate Issue Template Options
+        run: node ./.github/scripts/generate-issue-template-options.cjs
+
+      - name: Create Or Update Pull Request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: 'chore: Update Issue Template Plugin Options [skip ci]'
+          branch: 'update-issue-template'
+          title: 'chore: Update Issue Template Plugin Options'
+          body: |
+            Updates the issue template with the latest plugin dropdown options.
+
+            This PR is automatically generated after plugins are published.
+          labels: 'bot'
+          base: 'master'
+          delete-branch: true
