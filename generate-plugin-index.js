@@ -1,4 +1,5 @@
 import fs from 'fs';
+import { execSync } from 'child_process';
 
 let content = `import { Plugin } from '@typings/plugin';\n`;
 let pluginCounter = 0;
@@ -21,4 +22,7 @@ content += `\nconst PLUGINS: Plugin.PluginBase[] = [${Array(pluginCounter)
   .map((v, index) => 'p_' + index.toString())
   .join(', ')}];\nexport default PLUGINS`;
 
-fs.writeFileSync('./src/plugins/index.ts', content, { encoding: 'utf-8' });
+const outputPath = './src/plugins/index.ts';
+fs.writeFileSync(outputPath, content, { encoding: 'utf-8' });
+
+execSync(`npx prettier --write ${outputPath}`, { stdio: 'inherit' });

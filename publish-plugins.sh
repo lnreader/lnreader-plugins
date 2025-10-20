@@ -13,9 +13,9 @@ if [[ "$1" == "--all-branches" ]]; then
     git fetch --all
     branches=$(git branch -r | grep -v '\->')
     for branch in $branches; do
-        # Check if the branch has the same version of host.sh as the current branch
-        if ! diff host.sh <(git show "$branch:host.sh") >/dev/null; then
-            echo "Branch $branch does not have the current version of host.sh. Skipping."
+        # Check if the branch has the same version of publish-plugins.sh as the current branch
+        if ! diff publish-plugins.sh <(git show "$branch:publish-plugins.sh") >/dev/null; then
+            echo "Branch $branch does not have the current version of publish-plugins.sh. Skipping."
             continue
         fi
         echo "::group::Branch $branch"
@@ -26,11 +26,11 @@ if [[ "$1" == "--all-branches" ]]; then
             git branch -D $dist
         fi
         git stash pop
-        npm run clearMultisrc
-        npm run generate
+        npm run clean:multisrc
+        npm run build:multisrc
         npx tsc --project tsconfig.production.json
         echo "# $branch" >> $GITHUB_STEP_SUMMARY
-        npm run json -- --only-new 2>> $GITHUB_STEP_SUMMARY
+        npm run build:manifest -- --only-new 2>> $GITHUB_STEP_SUMMARY
         if [ ! -d ".dist" ] || [ -z "$(ls -A .dist)" ]; then
             echo "=========="
             echo "JSON files were not generated! See the error above and fix it!"
@@ -73,10 +73,10 @@ fi
 
 git reset
 rm -rf .js
-npm run clearMultisrc
-npm run generate
+npm run clean:multisrc
+npm run build:multisrc
 npx tsc --project tsconfig.production.json
-npm run json
+npm run build:manifest
 
 if [ ! -d ".dist" ] || [ -z "$(ls -A .dist)" ]; then
     echo "=========="

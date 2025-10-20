@@ -43,7 +43,11 @@ const notAvailableImage = fs.readFileSync(
   console.log('Loading plugins.json ⌛');
   const plugin_path = path.join('.dist', 'plugins.json');
   if (!fs.existsSync(plugin_path)) {
-    console.log('❌', plugin_path, 'not found (run "json_plugins.js" first)');
+    console.log(
+      '❌',
+      plugin_path,
+      'not found (run "npm run build:manifest" first)',
+    );
     return;
   }
   const plugins = JSON.parse(fs.readFileSync(plugin_path, 'utf-8'));

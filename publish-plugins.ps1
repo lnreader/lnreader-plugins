@@ -18,10 +18,10 @@ if(-Not $?){
 
 git reset
 rm -r -fo .js
-npm run clearMultisrc
-npm run generate
+npm run clean:multisrc
+npm run build:multisrc
 npx tsc --project tsconfig.production.json
-npm run json
+npm run build:manifest
 
 if (-not (Test-Path .dist) -or -not (Get-ChildItem -Path .dist -Force)) {
     echo "=========="

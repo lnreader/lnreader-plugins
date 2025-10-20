@@ -27,10 +27,10 @@ jobs:
 
       - if: github.repository == 'LNReader/lnreader-plugins'
         name: Publish Plugins Main Repo
-        run: npm run host-linux 2>> $GITHUB_STEP_SUMMARY
+        run: npm run publish:plugins 2>> $GITHUB_STEP_SUMMARY
         shell: bash
 
       - if: github.repository != 'LNReader/lnreader-plugins'
         name: Publish Plugins All Branches
-        run: npm run host-linux -- --all-branches
+        run: npm run publish:plugins -- --all-branches
         shell: bash
