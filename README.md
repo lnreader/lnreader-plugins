@@ -1,45 +1,59 @@
 # LNReader Plugins
 
 <p>
-<img alt="LNReader plugins counting" src="https://raw.githubusercontent.com/LNReader/lnreader-plugins/plugins/v3.0.0/total.svg">
-<img alt="GitHub issues by-label"  src="https://img.shields.io/github/issues/lnreader/lnreader-plugins/Plugin%20Request?color=success&label=plugin%20requests">
-<img  alt="GitHub issues by-label"  src="https://img.shields.io/github/issues/lnreader/lnreader-plugins/Bug?color=red&label=bugs">
+<img alt="Total number of available plugins" src="https://raw.githubusercontent.com/LNReader/lnreader-plugins/plugins/v3.0.0/total.svg">
+<img alt="Open plugin requests" src="https://img.shields.io/github/issues/lnreader/lnreader-plugins/Plugin%20Request?color=success&label=plugin%20requests">
+<img alt="Open bug reports" src="https://img.shields.io/github/issues/lnreader/lnreader-plugins/Bug?color=red&label=bugs">
 </p>
 
-Repository to host plugins and related issues, and requests for
-[LNReader](https://github.com/LNReader/lnreader).
+Community-driven plugin repository for [LNReader](https://github.com/LNReader/lnreader). This repository hosts plugins and manages related issues and requests.
 
-## Installing
+## Quick Start
 
-- Prerequisites: Nodejs >= 20
+**Prerequisites:** Node.js >= 20
 
-1. `npm install`
+```bash
+npm install
+npm run dev:start
+```
 
-## Contributing
+## Documentation
 
-- [Quick start](./docs/quickstart.md)
-- [Documentation](./docs/docs.md)
+- **[Quick Start Guide](./docs/quickstart.md)** - Create your first plugin
+- **[Plugin Development](./docs/docs.md)** - Complete API reference
+- **[Testing Guide](./docs/website-tutorial.md)** - Test plugins using the web interface
+- **[Komga Plugin](./docs/komga-plugin.md)** - Self-hosted server integration
 
-## Testing
+## Testing Methods
 
-#### via the testing website
+### Web Interface
 
-1. Run `npm run dev:start` and open `localhost:3000` to test!
+```bash
+npm run dev:start
+```
 
-[Detailed tutorial for testing website](./docs/website-tutorial.md)
+Open [localhost:3000](http://localhost:3000) to test plugins interactively. See the [testing guide](./docs/website-tutorial.md) for details.
 
-#### via an app
+### Mobile App
 
-1. Plugins from GitHub
-   - Run `npm run publish:plugins` or `npm run publish:plugins:windows` (depending on your operating system)
-   - Add your `https://raw.githubusercontent.com/<username>/<repo>/plugins/<tag>/.dist/plugins.min.json` to app repository
-2. Plugins from localhost
-   - Copy `.env.template` to `.env` and update `USER_CONTENT_BASE` according to the comment there
-   - Run `npm run serve:dev`
-   - Add plugin listing to app repository (e.g. for android emulator `http://10.0.2.2/.dist/plugins.min.json`)
+**From GitHub (Automated):**
 
----
+Push your changes to the `master` branch. The [GitHub Action](./.github/workflows/publish-plugins.yml) automatically builds and publishes plugins to the `plugins` branch.
 
-The developers of this application are not affiliated with any of the content providers.
+Add your repository URL to the app:
 
-If you are a website owner and would like to have a plugin removed from this repository, please reach out via [Discord](https://discord.gg/QdcWN4MD63) or [create a GitHub issue](https://github.com/LNReader/lnreader-plugins/issues/new). We will promptly remove the plugin and add your site to the [blacklist](BLACKLIST.json) to prevent it from being re-added.
+```
+https://raw.githubusercontent.com/<username>/<repo>/plugins/<tag>/.dist/plugins.min.json
+```
+
+**From Localhost:**
+
+```bash
+npm run serve:dev
+```
+
+Add `http://10.0.2.2/.dist/plugins.min.json` (Android emulator) to the app. Requires `.env` configuration (see `.env.template`).
+
+## Disclaimer
+
+The developers are not affiliated with any content providers. Website owners may request plugin removal via [Discord](https://discord.gg/QdcWN4MD63) or by [creating an issue](https://github.com/LNReader/lnreader-plugins/issues/new). Removed sites are added to the [blacklist](BLACKLIST.json).
