@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="12" fill="#E3F1F4" />
+  <text
+    x="50%"
+    y="50%"
+    dominant-baseline="central"
+    text-anchor="middle"
+    font-family="'Noto Sans JP', 'Hiragino Kaku Gothic Pro', sans-serif"
+    font-size="34"
+    fill="#106E81"
+    font-weight="600"
+  >
+    読
+  </text>
+</svg>

@@ -1,2 +1,5 @@
-export const defaultCover =
-  'https://github.com/LNReader/lnreader-plugins/blob/main/icons/src/coverNotAvailable.jpg?raw=true';
+/**
+ * Backward compatibility for 3.0.0 - Re-exports from new location
+ * TODO: Remove in 4.0.0
+ */
+export { defaultCover } from '../types/constants';

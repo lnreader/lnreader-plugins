@@ -1,4 +1,4 @@
-import { Plugin } from '@typings/plugin';
+import { Plugin } from '@/types/plugin';
 
 export type PluginList = Record<string, Plugin.PluginItem[]>;
 
@@ -8,11 +8,11 @@ export enum FetchMode {
   CURL,
 }
 
-export interface ServerSetting {
+export type ServerSetting = {
   CLIENT_HOST: string;
   fetchMode: FetchMode;
   cookies?: string;
   disAllowedRequestHeaders: string[];
   disAllowResponseHeaders: string[];
   useUserAgent: boolean;
-}
+};

@@ -1,11 +1,27 @@
-import { Plugin } from '@typings/plugin';
+import { Plugin } from '@/types/plugin';
 import { StoreCreator } from '.';
-import { getPlugin } from '@provider/plugins';
+import { getPlugin } from '@/provider/plugins';
+import plugins from '@plugins/index';
 
 export type PluginStore = {
   pluginItem?: Plugin.PluginItem;
   plugin?: Plugin.PluginBase;
-  selectPlugin(plugin: Plugin.PluginItem): void;
+  selectPlugin(plugin: Plugin.PluginItem, updateURL?: boolean): void;
+};
+
+const loadPluginFromURL = () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const pluginId = urlParams.get('plugin');
+  if (pluginId) {
+    const pluginItem = plugins.find(p => p.id === pluginId);
+    if (pluginItem) {
+      return {
+        pluginItem,
+        plugin: getPlugin(pluginItem.id),
+      };
+    }
+  }
+  return {};
 };
 
 /**
@@ -13,15 +29,19 @@ export type PluginStore = {
  * @param get State getter for use inside actions, outside of State setter
  */
 export const PluginStore: StoreCreator<PluginStore> = set => ({
-  // this is initial state
-  // selectedPlugin: undefined,
+  ...loadPluginFromURL(),
 
-  // those are actions
-  selectPlugin(pluginItem) {
+  selectPlugin(pluginItem, updateURL = true) {
     set(state => ({
       ...state,
       pluginItem,
       plugin: getPlugin(pluginItem.id),
     }));
+
+    if (updateURL) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('plugin', pluginItem.id);
+      window.history.pushState({}, '', url);
+    }
   },
 });

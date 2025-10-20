@@ -2,10 +2,15 @@ import { create, StateCreator } from 'zustand';
 import { PluginStore } from './pluginStore';
 import { DialogStore } from './dialogStore';
 import { OverlayStore } from './overlayStore';
+import { NavigationStore } from './navigationStore';
 
 export type AppStore = DialogStore &
   OverlayStore &
-  PluginStore & { useSwitches: boolean; setUseSwitches(value: boolean): void };
+  PluginStore &
+  NavigationStore & {
+    useSwitches: boolean;
+    setUseSwitches(value: boolean): void;
+  };
 
 // Helper types to use "slicing" like in Redux... We could just not use slicing, but eh
 export type SetStore = Parameters<StateCreator<AppStore>>[0];
@@ -16,6 +21,7 @@ export const useAppStore = create<AppStore>((set: SetStore, get: GetStore) => ({
   ...DialogStore(set, get),
   ...OverlayStore(set, get),
   ...PluginStore(set, get),
+  ...NavigationStore(set, get),
   useSwitches: !!localStorage.getItem('useSwitches'),
   setUseSwitches(uS: boolean) {
     set(state => ({

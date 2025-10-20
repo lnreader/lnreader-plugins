@@ -5,7 +5,7 @@ node_modules
 config.json
 
 # generated multisrc .ts files
-src/plugins/*/*\[*\]*.ts
+plugins/*/*\[*\]*.ts
 
 # ignore dist stuffs
 .js

@@ -129,10 +129,15 @@ export default tseslint.config(
   ...tseslint.configs.stylistic,
   prettierConfig,
   {
-    ignores: ['.js', 'docs', 'proxy_server.js'],
+    ignores: [
+      '.js',
+      'docs',
+      'proxy_server.js',
+      'plugins/*/*\\[*\\]*.ts', // Files with square brackets in their names
+    ],
   },
   {
-    files: ['./src/plugins/*/*.ts', './scripts/multisrc/*/template.ts'],
+    files: ['./plugins/*/*.ts', './plugins/multisrc/*/template.ts'],
     rules: {
       'no-unused-vars': 'off',
       '@typescript-eslint/no-unused-vars': 'warn',
@@ -150,7 +155,7 @@ export default tseslint.config(
   },
   {
     files: ['**/*.{ts,tsx,mts,cts,js}'],
-    ignores: ['./src/plugins/*/*.ts', './scripts/multisrc/*/template.ts'],
+    ignores: ['./plugins/*/*.ts', './plugins/multisrc/*/template.ts'],
     rules: {
       'no-unused-vars': 'off',
       '@typescript-eslint/no-unused-vars': 'warn',

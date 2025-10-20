@@ -193,7 +193,7 @@ const proxyRequest: Connect.SimpleHandleFunction = (req, res) => {
 };
 
 proxy.on('proxyRes', function (proxyRes, req, res) {
-  var statusCode = proxyRes.statusCode;
+  const statusCode = proxyRes.statusCode;
   // Redirect
   if (
     statusCode === 301 ||

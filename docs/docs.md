@@ -11,7 +11,7 @@
 Most of the Plugin/Novel type definitions accessed using the `Plugin` namespace imported via
 
 ```ts
-import { Plugin } from "@typings/plugin";
+import { Plugin } from '@/types/plugin';
 ```
 
 ### PluginBase
@@ -349,23 +349,24 @@ It is an object representing information how to store/access the novel
 You can use the default `Cover not available` cover by importing
 
 ```ts
-import { defaultCover } from "@libs/defaultCover";
+import { defaultCover } from '@libs/defaultCover';
 ```
 
 ---
 
 ### SourceNovel
 
-| Field | Type   | Required | Desciption |
-| ----- | ------ | -------- | ---------- |
-| url   | string | yes      |            |
-| name  | string | no       | string     |
-|cover|`string`|no||
-|genres|`string`|no||
-|summary|`string`|no||
-|author|`string`|no||
-|artist|`string`|no||
-|status|[NovelStatus] or `string`|no||
+| Field   | Type                      | Required | Desciption |
+| ------- | ------------------------- | -------- | ---------- |
+| url     | string                    | yes      |            |
+| name    | string                    | no       | string     |
+| cover   | `string`                  | no       |            |
+| genres  | `string`                  | no       |            |
+| summary | `string`                  | no       |            |
+| author  | `string`                  | no       |            |
+| artist  | `string`                  | no       |            |
+| status  | [NovelStatus] or `string` | no       |            |
+
         chapters?: ChapterItem[];
 
 ---
@@ -379,7 +380,7 @@ import { defaultCover } from "@libs/defaultCover";
 `Filters` and `FilterTypes` are not in the `Plugin` namespace and are from `@libs/filterInputs` file:
 
 ```ts
-import { FilterTypes, Filters } from "@libs/filterInputs";
+import { FilterTypes, Filters } from '@libs/filterInputs';
 ```
 
 There are 2 main objects when using filters:
@@ -418,11 +419,11 @@ options.filters.order
 filters = {
   genre: {
     type: FilterTypes.CheckboxGroup,
-    label: "Genres",
+    label: 'Genres',
     value: [],
     options: [
-      { label: "Isekai", value: "isekai" },
-      { label: "Romance", value: "romans" },
+      { label: 'Isekai', value: 'isekai' },
+      { label: 'Romance', value: 'romans' },
     ],
   },
 } satisfies Filters;
@@ -445,12 +446,12 @@ Types of filters supported
 ```ts
 options: [
   {
-    label: "default", // in-app label
-    value: "", // in-code value
+    label: 'default', // in-app label
+    value: '', // in-code value
   },
   {
-    label: "Value ABC",
-    value: "abc",
+    label: 'Value ABC',
+    value: 'abc',
   },
 ];
 ```
@@ -460,12 +461,12 @@ options: [
 ```ts
 options: [
   {
-    label: "Value ABC", // in-app label
-    value: "abc", // in-code value
+    label: 'Value ABC', // in-app label
+    value: 'abc', // in-code value
   },
   {
-    label: "Value DEF",
-    value: "def",
+    label: 'Value DEF',
+    value: 'def',
   },
 ];
 ```

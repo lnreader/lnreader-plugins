@@ -1,4 +1,4 @@
-import plugins from '../plugins';
+import plugins from '@plugins/index';
 
 export const searchPlugins = (keyword: string) => {
   return plugins.filter(

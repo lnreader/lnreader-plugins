@@ -1,9 +1,5 @@
-export const NovelStatus = {
-  Unknown: 'Unknown',
-  Ongoing: 'Ongoing',
-  Completed: 'Completed',
-  Licensed: 'Licensed',
-  PublishingFinished: 'Publishing Finished',
-  Cancelled: 'Cancelled',
-  OnHiatus: 'On Hiatus',
-} as const;
+/**
+ * Backward compatibility for 3.0.0 - Re-exports from new location
+ * TODO: Remove in 4.0.0
+ */
+export { NovelStatus } from '../types/constants';

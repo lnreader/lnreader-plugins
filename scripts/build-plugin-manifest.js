@@ -19,7 +19,7 @@ const USER_CONTENT_LINK = process.env.USER_CONTENT_BASE
   : `https://raw.githubusercontent.com/${USERNAME}/${REPO}/${CURRENT_BRANCH}`;
 
 const STATIC_LINK = `${USER_CONTENT_LINK}/public/static`;
-const PLUGIN_LINK = `${USER_CONTENT_LINK}/.js/src/plugins`;
+const PLUGIN_LINK = `${USER_CONTENT_LINK}/.js/plugins`;
 
 const DIST_DIR = '.dist';
 
@@ -83,7 +83,7 @@ const proxy = createRecursiveProxy();
 
 const _require = () => proxy;
 
-const COMPILED_PLUGIN_DIR = './.js/src/plugins';
+const COMPILED_PLUGIN_DIR = './.js/plugins';
 
 for (let language in languages) {
   console.log(
@@ -204,7 +204,7 @@ if (!ONLY_NEW)
 // check for broken plugins
 for (let language in languages) {
   const tsFiles = fs.readdirSync(
-    path.join('./src/plugins', language.toLocaleLowerCase()),
+    path.join('./plugins', language.toLocaleLowerCase()),
   );
   tsFiles
     .filter(f => f.endsWith('.broken.ts'))

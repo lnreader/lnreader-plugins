@@ -29,7 +29,7 @@ if (-not (Test-Path .dist) -or -not (Get-ChildItem -Path .dist -Force)) {
     exit 1
 }
 
-git add -f public/static .dist .js/src/plugins total.svg
+git add -f public/static .dist .js/plugins total.svg
 git commit -m "chore: Publish Plugins"
 git push -f origin $dist
 
