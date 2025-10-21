@@ -43,7 +43,7 @@ jobs:
         with:
           commit-message: 'chore: Update Issue Template Plugin Options [skip ci]'
           branch: 'update-issue-template'
-          title: 'chore: Update Issue Template Plugin Options'
+          title: 'chore: Update Issue Template Plugin Options [skip ci]'
           body: |
             Updates the issue template with the latest plugin dropdown options.
 
