@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Copy, FileText } from 'lucide-react';
+import { Copy, FileText, Code } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useAppStore } from '@/store';
+import { usePluginCustomAssets } from '@/hooks/usePluginCustomAssets';
 
 export default function ParseChapterSection() {
   const plugin = useAppStore(state => state.plugin);
@@ -26,6 +28,10 @@ export default function ParseChapterSection() {
   const [chapterText, setChapterText] = useState('');
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState('');
+  const [showRawHtml, setShowRawHtml] = useState(false);
+
+  const { customCSSLoaded, customJSLoaded, customCSSError, customJSError } =
+    usePluginCustomAssets(plugin, chapterText);
 
   const fetchChapterByPath = async (path: string) => {
     if (plugin && path.trim()) {
@@ -84,7 +90,7 @@ export default function ParseChapterSection() {
     <div className="space-y-6">
       <Card className="p-6">
         <div className="flex items-center justify-between mb-6">
-          <div>
+          <div className="flex-1">
             <h2 className="text-xl font-semibold text-foreground">
               Parse Chapter
             </h2>
@@ -93,6 +99,23 @@ export default function ParseChapterSection() {
                 ? 'Enter a chapter path to fetch content'
                 : 'Select a plugin to parse chapters'}
             </p>
+            {plugin && (plugin.customCSS || plugin.customJS) && (
+              <div className="flex items-center gap-2 mt-2">
+                <span className="text-xs text-muted-foreground">
+                  Available:
+                </span>
+                {plugin.customCSS && (
+                  <span className="text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded border border-blue-500/20">
+                    Custom CSS
+                  </span>
+                )}
+                {plugin.customJS && (
+                  <span className="text-xs bg-purple-500/10 text-purple-600 dark:text-purple-400 px-2 py-0.5 rounded border border-purple-500/20">
+                    Custom JS
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -168,7 +191,17 @@ export default function ParseChapterSection() {
                   {chapterPath}
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-center">
+                <div className="flex items-center gap-2 px-3 py-2 border border-border rounded-lg bg-muted/50">
+                  <Code className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">
+                    Raw HTML
+                  </span>
+                  <Switch
+                    checked={showRawHtml}
+                    onCheckedChange={setShowRawHtml}
+                  />
+                </div>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -211,29 +244,75 @@ export default function ParseChapterSection() {
             <div className="border border-border rounded-lg">
               <div className="bg-muted/50 rounded-t-lg px-4 py-2 border-b border-border">
                 <p className="text-xs text-muted-foreground font-medium">
-                  CHAPTER CONTENT ({chapterText.length} characters)
+                  {showRawHtml ? 'RAW HTML' : 'CHAPTER CONTENT'} (
+                  {chapterText.length} characters)
                 </p>
               </div>
               <div className="bg-background rounded-b-lg p-6 max-h-[600px] overflow-y-auto">
-                <div
-                  className="prose prose-sm dark:prose-invert max-w-none text-foreground"
-                  dangerouslySetInnerHTML={{
-                    __html: chapterText,
-                  }}
-                />
+                {showRawHtml ? (
+                  <pre className="text-xs text-foreground font-mono whitespace-pre-wrap break-words">
+                    {chapterText}
+                  </pre>
+                ) : (
+                  <div
+                    className="prose prose-sm dark:prose-invert max-w-none text-foreground"
+                    dangerouslySetInnerHTML={{
+                      __html: chapterText,
+                    }}
+                  />
+                )}
               </div>
             </div>
 
             <div className="flex items-center justify-between pt-4 border-t border-border">
-              <p className="text-sm text-muted-foreground">
-                Content loaded successfully
-              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-sm text-muted-foreground">
+                  Content loaded successfully
+                </p>
+                {plugin?.customCSS && (
+                  <span
+                    className={`text-xs px-2 py-1 rounded flex items-center gap-1 ${
+                      customCSSLoaded
+                        ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20'
+                        : customCSSError
+                          ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20'
+                          : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
+                    }`}
+                  >
+                    CSS:{' '}
+                    {customCSSLoaded
+                      ? '✓ Applied'
+                      : customCSSError
+                        ? '✗ Failed'
+                        : '⋯ Loading'}
+                  </span>
+                )}
+                {plugin?.customJS && (
+                  <span
+                    className={`text-xs px-2 py-1 rounded flex items-center gap-1 ${
+                      customJSLoaded
+                        ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20'
+                        : customJSError
+                          ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20'
+                          : 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20'
+                    }`}
+                  >
+                    JS:{' '}
+                    {customJSLoaded
+                      ? '✓ Applied'
+                      : customJSError
+                        ? '✗ Failed'
+                        : '⋯ Loading'}
+                  </span>
+                )}
+              </div>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => {
                   setChapterText('');
                   setChapterPath('');
+                  setShowRawHtml(false);
                 }}
               >
                 Clear
