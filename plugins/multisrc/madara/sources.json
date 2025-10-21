@@ -402,11 +402,12 @@
   },
   {
     "id": "traducciones",
-    "sourceSite": "https://traduccionesamistosas.eyudud.net/",
+    "sourceSite": "https://traduccionesamistosas.topmanhuas.org/",
     "sourceName": "Traducciones Amistosas",
     "options": {
       "useNewChapterEndpoint": true,
-      "lang": "Spanish"
+      "lang": "Spanish",
+      "versionIncrements": 1
     }
   },
   {
@@ -586,6 +587,15 @@
     "sourceName": "MassNovel",
     "options": {
       "lang": "French",
+      "useNewChapterEndpoint": true
+    }
+  },
+  {
+    "id": "noicetranslations",
+    "sourceSite": "https://noicetranslations.com/",
+    "sourceName": "Noice Translations",
+    "options": {
+      "lang": "English",
       "useNewChapterEndpoint": true
     }
   }
