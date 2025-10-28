@@ -28,7 +28,7 @@ class MVLEMPYRPlugin implements Plugin.PluginBase {
   name = 'MVLEMPYR';
   icon = 'src/en/mvlempyr/icon.png';
   site = 'https://www.mvlempyr.com/';
-  version = '1.0.9';
+  version = '1.0.10';
 
   _chapSite = 'https://chap.heliosarchive.online/';
   _allNovels: (Plugin.NovelItem & ExtraNovelData)[] | undefined;
@@ -176,7 +176,7 @@ class MVLEMPYRPlugin implements Plugin.PluginBase {
     const loadedCheerio = parseHTML(body);
     this.checkCaptcha(loadedCheerio);
 
-    return loadedCheerio('#chapter').html() || '';
+    return loadedCheerio('#chapter > span').html() || '';
   }
 
   async searchNovels(
