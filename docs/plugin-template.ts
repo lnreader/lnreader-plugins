@@ -1,4 +1,4 @@
-import { fetchApi, fetchProto, fetchText } from '@/lib/fetch';
+import { fetchApi, fetchProto, fetchText } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';

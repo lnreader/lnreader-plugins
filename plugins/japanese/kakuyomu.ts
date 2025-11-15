@@ -1,4 +1,4 @@
-import { fetchText } from '@/lib/fetch';
+import { fetchText } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';

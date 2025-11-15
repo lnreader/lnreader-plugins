@@ -146,6 +146,17 @@ export default tseslint.config(
       '@typescript-eslint/consistent-type-definitions': ['error', 'type'],
       'no-case-declarations': 'warn',
       'no-undef': 'error',
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/lib/fetch*'],
+              message: 'Use @libs/fetch instead of @/lib/fetch',
+            },
+          ],
+        },
+      ],
     },
     languageOptions: {
       ecmaVersion: 5,
@@ -164,6 +175,17 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/ban-ts-comment': 'off',
       'no-undef': 'error',
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/lib/fetch*'],
+              message: 'Use @libs/fetch instead of @/lib/fetch',
+            },
+          ],
+        },
+      ],
     },
     languageOptions: {
       globals: {
