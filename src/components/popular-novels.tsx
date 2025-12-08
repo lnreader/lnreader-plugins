@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Filter, Zap } from 'lucide-react';
+import { Filter, BookOpen } from 'lucide-react';
 
 import { FiltersSheet } from '@/components/filters/filters-sheet';
 import { NovelCard } from '@/components/novel-card';
@@ -182,7 +182,7 @@ export default function PopularNovelsSection({
         ) : novels.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
             <div className="rounded-full bg-muted p-4 mb-4">
-              <Zap className="w-8 h-8 text-muted-foreground" />
+              <BookOpen className="w-8 h-8 text-muted-foreground" />
             </div>
             <h3 className="text-lg font-semibold text-foreground mb-2">
               {plugin ? 'No novels to display' : 'No plugin selected'}

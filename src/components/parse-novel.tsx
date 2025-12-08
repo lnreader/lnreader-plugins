@@ -4,7 +4,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Copy,
-  Zap,
+  ArrowRight,
   Download,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -506,11 +506,11 @@ export default function ParseNovelSection({
                                       handleParseChapter(chapter.path)
                                     }
                                   >
-                                    <Zap className="w-3.5 h-3.5" />
+                                    <ArrowRight className="w-3.5 h-3.5" />
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>Parse chapter</p>
+                                  <p>Open in Parse Chapter tab</p>
                                 </TooltipContent>
                               </Tooltip>
                             </div>
