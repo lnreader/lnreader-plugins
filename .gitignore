@@ -15,3 +15,4 @@ dist
 total.svg
 src/plugins/index.ts
 .history
+broken-sites-report.json
