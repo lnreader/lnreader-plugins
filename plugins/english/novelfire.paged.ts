@@ -4,11 +4,10 @@ import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { defaultCover } from '@/types/constants';
-import { storage } from '@libs/storage';
 
-class NovelFire implements Plugin.PluginBase {
-  id = 'novelfire';
-  name = 'Novel Fire';
+class NovelFirePaged implements Plugin.PagePlugin {
+  id = 'novelfire.paged';
+  name = 'Novel Fire Paged';
   version = '1.1.2';
   icon = 'src/en/novelfire/icon.png';
   site = 'https://novelfire.net/';
@@ -84,108 +83,9 @@ class NovelFire implements Plugin.PluginBase {
       .filter(novel => novel !== null);
   }
 
-  async getAllChapters(
+  async parseNovel(
     novelPath: string,
-    pages: number,
-  ): Promise<Plugin.ChapterItem[]> {
-    const pagesArray = Array.from({ length: pages }, (_, i) => i + 1);
-    const allChapters: Plugin.ChapterItem[] = [];
-
-    // When pages > ~30, we get rate limited. To mitigate, split into chunks and retry chunk on rate limit with delay.
-    const chunkSize = 5; // 5 pages per chunk was tested to be a good balance between speed and rate limiting.
-    const retryCount = 10;
-    const sleepTime = 3.5; // Rate limit seems to be around ~10s, so usually 3 retries should be enough for another ~30 pages.
-
-    const chaptersArray: Plugin.ChapterItem[][] = [];
-
-    for (let i = 0; i < pagesArray.length; i += chunkSize) {
-      const pagesArrayChunk = pagesArray.slice(i, i + chunkSize);
-
-      const firstPage = pagesArrayChunk[0];
-      const lastPage = pagesArrayChunk[pagesArrayChunk.length - 1];
-
-      let attempt = 0;
-
-      while (attempt < retryCount) {
-        try {
-          // Parse all pages in chunk in parallel
-          const chaptersArrayChunk = await Promise.all(
-            pagesArrayChunk.map(page =>
-              this.getChaptersOnPage(novelPath, page.toString()),
-            ),
-          );
-
-          chaptersArray.push(...chaptersArrayChunk);
-          break;
-        } catch (err) {
-          if (err instanceof NovelFireThrottlingError) {
-            attempt += 1;
-            console.warn(
-              `[pages=${firstPage}-${lastPage}] Novel Fire is rate limiting requests. Retry attempt ${attempt + 1} in ${sleepTime} seconds...`,
-            );
-            if (attempt === retryCount) {
-              throw err;
-            }
-
-            // Sleep for X second before retrying
-            await new Promise(resolve => setTimeout(resolve, sleepTime * 1000));
-          } else {
-            throw err;
-          }
-        }
-      }
-    }
-
-    // Merge all chapters into a single array
-    for (const chapters of chaptersArray) {
-      allChapters.push(...chapters);
-    }
-
-    return allChapters;
-  }
-
-  async getChaptersOnPage(
-    novelPath: string,
-    page: string,
-  ): Promise<Plugin.ChapterItem[]> {
-    const url = `${this.site}${novelPath}/chapters?page=${page}`;
-    const result = await fetchApi(url);
-    const body = await result.text();
-
-    const loadedCheerio = load(body);
-
-    if (loadedCheerio.text().includes('You are being rate limited')) {
-      throw new NovelFireThrottlingError();
-    }
-
-    const chapters = loadedCheerio('.chapter-list li')
-      .map((index, ele) => {
-        const chapterName =
-          loadedCheerio(ele).find('a').attr('title') || 'No Title Found';
-        const chapterPath = loadedCheerio(ele).find('a').attr('href');
-
-        if (!chapterPath) return null;
-
-        return {
-          name: chapterName,
-          path: chapterPath.replace(this.site, ''),
-        };
-      })
-      .get()
-      .filter(chapter => chapter !== null) as Plugin.ChapterItem[];
-
-    return chapters;
-  }
-
-  getTotalPages($: CheerioAPI): number {
-    const totalChapters = $('.header-stats .icon-book-open')
-      .parent()
-      .text()
-      .trim();
-    return Math.ceil(parseInt(totalChapters) / 100);
-  }
-
-  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+  ): Promise<Plugin.SourceNovel & { totalPages: number }> {
     const $ = await this.getCheerio(this.site + novelPath, false);
     const baseUrl = this.site;
 
@@ -238,12 +138,42 @@ class NovelFire implements Plugin.PluginBase {
 
     novel.rating = parseFloat($('.nub').text().trim());
 
-    novel.chapters = await this.getAllChapters(
-      novelPath,
-      this.getTotalPages(await this.getCheerio(this.site + novelPath, false)),
-    );
+    const totalChapters = $('.header-stats .icon-book-open')
+      .parent()
+      .text()
+      .trim();
 
-    return novel as Plugin.SourceNovel;
+    novel.totalPages = Math.ceil(parseInt(totalChapters) / 100);
+
+    return novel as Plugin.SourceNovel & { totalPages: number };
+  }
+
+  async parsePage(novelPath: string, page: string): Promise<Plugin.SourcePage> {
+    const url = `${this.site}${novelPath}/chapters?page=${page}`;
+    const result = await fetchApi(url);
+    const body = await result.text();
+
+    const loadedCheerio = load(body);
+
+    const chapters = loadedCheerio('.chapter-list li')
+      .map((index, ele) => {
+        const chapterName =
+          loadedCheerio(ele).find('a').attr('title') || 'No Title Found';
+        const chapterPath = loadedCheerio(ele).find('a').attr('href');
+
+        if (!chapterPath) return null;
+
+        return {
+          name: chapterName,
+          path: chapterPath.replace(this.site, ''),
+        };
+      })
+      .get()
+      .filter(chapter => chapter !== null) as Plugin.ChapterItem[];
+
+    return {
+      chapters,
+    };
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
@@ -441,7 +371,7 @@ class NovelFire implements Plugin.PluginBase {
   } satisfies Filters;
 }
 
-export default new NovelFire();
+export default new NovelFirePaged();
 
 // Custom error for when Novel Fire is rate limiting requests
 class NovelFireThrottlingError extends Error {
