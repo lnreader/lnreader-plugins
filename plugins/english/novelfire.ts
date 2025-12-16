@@ -90,7 +90,7 @@ class NovelFire implements Plugin.PluginBase {
   ): Promise<Plugin.ChapterItem[]> {
     const allChapters: Plugin.ChapterItem[] = [];
 
-    const url = `${this.site}/listChapterDataAjax?post_id=${post_id}`;
+    const url = `${this.site}listChapterDataAjax?post_id=${post_id}`;
     const result = await fetchApi(url);
     const body = await result.text();
 
