@@ -98,6 +98,10 @@ class NovelFire implements Plugin.PluginBase {
       throw new NovelFireThrottlingError();
     }
 
+    if (body.includes('Page Not Found 404')) {
+      throw new NovelFireAjaxNotFound();
+    }
+
     const json = JSON.parse(body);
     const chapters = json.data
       .map(index => {
@@ -380,5 +384,12 @@ class NovelFireThrottlingError extends Error {
   constructor(message = 'Novel Fire is rate limiting requests') {
     super(message);
     this.name = 'NovelFireError';
+  }
+}
+
+class NovelFireAjaxNotFound extends Error {
+  constructor(message = 'Novel Fire says its Ajax interface is not found') {
+    super(message);
+    this.name = 'NovelFireAjaxError';
   }
 }
