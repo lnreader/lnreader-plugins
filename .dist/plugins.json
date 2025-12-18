@@ -994,9 +994,9 @@
 	{
 		"id": "ranobes",
 		"name": "Ranobes",
-		"site": "https://ranobes.top",
+		"site": "https://ranobes.net",
 		"lang": "English",
-		"version": "2.0.2",
+		"version": "2.0.3",
 		"url": "https://raw.githubusercontent.com/lnreader/lnreader-plugins/plugins/v3.0.0/.js/src/plugins/english/Ranobes[ranobes].js",
 		"iconUrl": "https://raw.githubusercontent.com/lnreader/lnreader-plugins/plugins/v3.0.0/public/static/multisrc/ranobes/ranobes/icon.png"
 	},
