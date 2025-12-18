@@ -110,12 +110,14 @@ class NovelFire implements Plugin.PluginBase {
       .map(index => {
         const chapterName = index.title || index.slug;
         const chapterPath = `${novelPath}/chapter-${index.n_sort}`;
+        const sortNumber = index.n_sort;
 
         if (!chapterPath) return null;
 
         return {
           name: chapterName,
           path: chapterPath,
+          chapterNumber: sortNumber,
         };
       })
       .filter(chapter => chapter !== null) as Plugin.ChapterItem[];
