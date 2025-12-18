@@ -65,9 +65,12 @@ class NovelFire implements Plugin.PluginBase {
         const novelName =
           loadedCheerio(ele).find('.novel-title > a').text() ||
           'No Title Found';
-        const novelCover = loadedCheerio(ele)
-          .find('.novel-cover > img')
-          .attr('data-src');
+        const novelCover =
+          this.site +
+          deSlash(
+            loadedCheerio(ele).find('.novel-cover > img').attr('data-src') ||
+              '',
+          );
         const novelPath = loadedCheerio(ele)
           .find('.novel-title > a')
           .attr('href');
@@ -77,7 +80,7 @@ class NovelFire implements Plugin.PluginBase {
         return {
           name: novelName,
           cover: novelCover,
-          path: novelPath.replace(this.site, ''),
+          path: deSlash(novelPath.replace(this.site, '')),
         };
       })
       .get()
@@ -120,13 +123,14 @@ class NovelFire implements Plugin.PluginBase {
     return chapters;
   }
 
-  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+  async parseNovel(novelPathRaw: string): Promise<Plugin.SourceNovel> {
+    const novelPath = deSlash(novelPathRaw);
     const $ = await this.getCheerio(this.site + novelPath, false);
     const baseUrl = this.site;
 
     let post_id = '0';
 
-    const novel: Partial<Plugin.SourceNovel & { totalPages: number }> = {
+    const novel: Partial<Plugin.SourceNovel> = {
       path: novelPath,
     };
 
@@ -207,9 +211,11 @@ class NovelFire implements Plugin.PluginBase {
       .map((index, ele) => {
         const novelName =
           loadedCheerio(ele).find('a').attr('title') || 'No Title Found';
-        const novelCover = loadedCheerio(ele)
-          .find('.novel-cover > img')
-          .attr('src');
+        const novelCover =
+          this.site +
+          deSlash(
+            loadedCheerio(ele).find('.novel-cover > img').attr('src') || '',
+          );
         const novelPath = loadedCheerio(ele).find('a').attr('href');
 
         if (!novelPath) return null;
@@ -217,7 +223,7 @@ class NovelFire implements Plugin.PluginBase {
         return {
           name: novelName,
           cover: novelCover,
-          path: novelPath.replace(this.site, ''),
+          path: deSlash(novelPath.replace(this.site, '')),
         };
       })
       .get()
@@ -392,4 +398,16 @@ class NovelFireAjaxNotFound extends Error {
     super(message);
     this.name = 'NovelFireAjaxError';
   }
+}
+
+function deSlash(url: string): string {
+  let clean: string;
+
+  if (url.charAt(0) == '/') {
+    clean = url.substring(1);
+  } else {
+    clean = url;
+  }
+
+  return clean;
 }
