@@ -8,7 +8,7 @@ import { defaultCover } from '@/types/constants';
 class NovelFire implements Plugin.PluginBase {
   id = 'novelfire';
   name = 'Novel Fire';
-  version = '1.1.3';
+  version = '1.1.4';
   icon = 'src/en/novelfire/icon.png';
   site = 'https://novelfire.net/';
 
