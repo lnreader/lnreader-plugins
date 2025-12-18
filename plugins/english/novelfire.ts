@@ -116,12 +116,15 @@ class NovelFire implements Plugin.PluginBase {
         return {
           name: chapterName,
           path: chapterPath,
-          chapterNumber: sortNumber,
+          chapterNumber: Number(sortNumber),
         };
       })
       .filter(chapter => chapter !== null) as Plugin.ChapterItem[];
+    const sortedChapters = chapters.sort(function (a, b) {
+      return a.chapterNumber - b.chapterNumber;
+    });
 
-    return chapters;
+    return sortedChapters;
   }
 
   async parseNovel(novelPathRaw: string): Promise<Plugin.SourceNovel> {
