@@ -107,7 +107,7 @@ class NovelFire implements Plugin.PluginBase {
     const json = JSON.parse(body);
     const chapters = json.data
       .map(index => {
-        const chapterName = index.title || index.slug;
+        const chapterName = load(index.title || index.slug).text();
         const chapterPath = `${novelPath}/chapter-${index.n_sort}`;
         const sortNumber = index.n_sort;
 
