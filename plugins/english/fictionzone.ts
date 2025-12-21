@@ -1,8 +1,7 @@
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
-import { load as loadCheerio } from 'cheerio';
-import { NovelStatus } from '@/types/constants';
+import { NovelStatus } from '@libs/novelStatus';
 
 class FictionZonePlugin implements Plugin.PluginBase {
   id = 'fictionzone';
@@ -71,7 +70,7 @@ class FictionZonePlugin implements Plugin.PluginBase {
       `/platform/novel-details?slug=${novelSlug}`,
     );
 
-    const novel: Plugin.SourceNovel = {
+    return {
       path: novelPath,
       name: data.data.title,
       cover: `https://cdn.fictionzone.net/insecure/rs:fill:165:250/${data.data.image}.webp`,
@@ -89,10 +88,8 @@ class FictionZonePlugin implements Plugin.PluginBase {
         data.data.contributors.filter((c: any) => c.role == 'author')[0]
           ?.display_name || '',
       summary: data.data.synopsis,
+      chapters: await this.getChapterPage(data.data.id, novelPath),
     };
-    novel.chapters = []; //await this.getChapterPage(data.data.id, novelPath);
-
-    return novel;
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
