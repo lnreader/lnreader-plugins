@@ -106,10 +106,18 @@ class Novelight implements Plugin.PagePlugin {
     for (const child of info) {
       const type = loadedCheerio(child).find('.sub-header').text().trim();
       if (type === 'Status') {
-        status = loadedCheerio(child).find('div.info').text().trim();
+        status = loadedCheerio(child)
+          .find('div.info')
+          .text()
+          .trim()
+          .toLowerCase();
       }
       if (type === 'Translation') {
-        translation = loadedCheerio(child).find('div.info').text().trim();
+        translation = loadedCheerio(child)
+          .find('div.info')
+          .text()
+          .trim()
+          .toLowerCase();
       }
       if (type === 'Author') {
         novel.author = loadedCheerio(child).find('div.info').text().trim();
