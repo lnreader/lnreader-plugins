@@ -90,7 +90,7 @@ class FictionZonePlugin implements Plugin.PluginBase {
           ?.display_name || '',
       summary: data.data.synopsis,
     };
-    novel.chapters = await this.getChapterPage(data.data.id, novelPath);
+    novel.chapters = []; //await this.getChapterPage(data.data.id, novelPath);
 
     return novel;
   }
