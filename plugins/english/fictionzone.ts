@@ -73,7 +73,7 @@ class FictionZonePlugin implements Plugin.PluginBase {
     };
 
     // novel.artist = '';
-    novel.cover = loadedCheerio('div.cover-img > img').attr('src');
+    novel.cover = loadedCheerio('div.cover-imagea > img').attr('src');
     novel.genres = [
       ...loadedCheerio('a.tag--genre')
         .map((i, el) => loadedCheerio(el).text())
