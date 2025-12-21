@@ -1,16 +1,7 @@
 import { fetchApi } from '@libs/fetch';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
-
-/**
- * Example for novel API:
- * https://genesistudio.com/novels/dlh/__data.json?x-sveltekit-invalidated=001
- * -> to view novel remove '__data.json?x-sveltekit-invalidated=001'
- *
- * Example for chapter API:
- * https://genesistudio.com/viewer/2443/__data.json?x-sveltekit-invalidated=001
- * -> to view chapter remove '__data.json?x-sveltekit-invalidated=001'
- */
+import { NovelStatus } from '@libs/novelStatus';
 
 class Genesis implements Plugin.PluginBase {
   id = 'genesistudio';
@@ -18,6 +9,7 @@ class Genesis implements Plugin.PluginBase {
   icon = 'src/en/genesis/icon.png';
   customCSS = 'src/en/genesis/customCSS.css';
   site = 'https://genesistudio.com';
+  api = 'https://api.genesistudio.com';
   version = '1.1.2';
 
   imageRequestInit?: Plugin.ImageRequestInit | undefined = {
@@ -26,38 +18,23 @@ class Genesis implements Plugin.PluginBase {
     },
   };
 
-  async parseNovels(json: any[]): Promise<Plugin.SourceNovel[]> {
+  async parseNovelJSON(json: any[]): Promise<Plugin.SourceNovel[]> {
     return json.map((novel: any) => ({
       name: novel.novel_title,
-      path: `/novels/${novel.abbreviation}`,
-      cover: novel.cover,
+      path: `/novels/${novel.abbreviation}`.trim(),
+      cover: `${this.api}/storage/v1/object/public/directus/${novel.cover}.png`,
+      //TODO: Fix cover to allow gifs
     }));
   }
 
-  async popularNovels(
-    pageNo: number,
-    {
-      showLatestNovels,
-      filters,
-    }: Plugin.PopularNovelsOptions<typeof this.filters>,
-  ): Promise<Plugin.NovelItem[]> {
+  async popularNovels(pageNo: number): Promise<Plugin.NovelItem[]> {
+    // There is only one page of results, and no known page function, so do not try
     if (pageNo !== 1) return [];
-    let link = `${this.site}/api/novels/search?`;
-    if (showLatestNovels) {
-      link += 'serialization=All&sort=Recent';
-    } else {
-      if (filters?.genres.value.length) {
-        link += 'genres=' + filters.genres.value.join('&genres=') + '&';
-      }
-      if (filters?.storyStatus.value) {
-        link += 'serialization=' + `${filters.storyStatus.value}` + '&';
-      }
-      if (filters?.sort.value) {
-        link += 'sort=' + `${filters.sort.value}`;
-      }
-    }
+    // Only 14 results, no use in sorting or status
+    // Also all novels are Ongoing with no Completed, can't test status filter
+    const link = `${this.site}/api/directus/novels?status=published&fields=["novel_title","cover","abbreviation"]&limit=-1`;
     const json = await fetchApi(link).then(r => r.json());
-    return this.parseNovels(json);
+    return this.parseNovelJSON(json);
   }
 
   // Helper function to extract novel data from nodes
@@ -68,57 +45,37 @@ class Genesis implements Plugin.PluginBase {
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const url = `${this.site}${novelPath}/__data.json?x-sveltekit-invalidated=001`;
+    const abbreviation = novelPath.toString().replace('/novels/', '');
+    const url = `${this.site}/api/directus/novels/by-abbreviation/${abbreviation.toString()}`;
 
     // Fetch the novel's data in JSON format
-    const json = await fetchApi(url).then(r => r.json());
-    const nodes = json.nodes;
+    const raw = await fetchApi(url);
+    const json = await raw.json();
+    // const nodes = json.nodes;
 
     // Extract the main novel data from the nodes
-    const data = this.extractData(nodes);
+    // const data = this.extractData(nodes);
 
     // Initialize the novel object with default values
-    const novel: Plugin.SourceNovel = {
-      path: novelPath,
-      name: '',
-      cover: '',
-      summary: '',
-      author: '',
-      status: 'Unknown',
-      chapters: [],
+    const parse = await this.parseNovelJSON([json]);
+    const novel: Plugin.SourceNovel = parse[0];
+    novel.summary = json.synopsis;
+    novel.author = json.author;
+    const map: Record<string, string> = {
+      ongoing: NovelStatus.Ongoing,
+      hiatus: NovelStatus.OnHiatus,
+      dropped: NovelStatus.Cancelled,
+      cancelled: NovelStatus.Cancelled,
+      completed: NovelStatus.Completed,
+      unknown: NovelStatus.Unknown,
     };
-
-    // Parse and assign novel metadata (title, cover, summary, author, etc.)
-    this.populateNovelMetadata(novel, data);
+    novel.status = map[json.serialization.toLowerCase()] ?? NovelStatus.Unknown;
 
     // Parse the chapters if available and assign them to the novel object
-    novel.chapters = this.extractChapters(data);
+    // novel.chapters = this.extractChapters(json);
+    novel.chapters = [];
 
     return novel;
-  }
-
-  // Helper function to populate novel metadata
-  populateNovelMetadata(novel: Plugin.SourceNovel, data: any): void {
-    for (const key in data) {
-      const value = data[key];
-
-      if (
-        typeof value === 'object' &&
-        value !== null &&
-        'novel_title' in value
-      ) {
-        novel.name = data[value.novel_title] || 'Unknown Title';
-        novel.cover = data[value.cover] || '';
-        novel.summary = data[value.synopsis] || '';
-        novel.author = data[value.author] || 'Unknown Author';
-        novel.genres =
-          (data[value.genres] as number[])
-            .map((genreId: number) => data[genreId])
-            .join(', ') || 'Unknown Genre';
-        novel.status = value.release_days ? 'Ongoing' : 'Completed';
-        break; // Break the loop once metadata is found
-      }
-    }
   }
 
   // Helper function to extract and format chapters
@@ -463,7 +420,7 @@ class Genesis implements Plugin.PluginBase {
     if (pageNo !== 1) return [];
     const url = `${this.site}/api/novels/search?serialization=All&sort=Popular&title=${encodeURIComponent(searchTerm)}`;
     const json = await fetchApi(url).then(r => r.json());
-    return this.parseNovels(json);
+    return this.parseNovelJSON(json);
   }
 
   filters = {
