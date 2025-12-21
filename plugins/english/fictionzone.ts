@@ -2,6 +2,7 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
+import { NovelStatus } from '@/types/constants';
 
 class FictionZonePlugin implements Plugin.PluginBase {
   id = 'fictionzone';
@@ -58,54 +59,35 @@ class FictionZonePlugin implements Plugin.PluginBase {
       name: n.title,
       number: n.chapter_number,
       date: new Date(n.published_date).toISOString(),
-      path: `${novelPath}/${n.chapter_id}|/platform/chapter-content?novel_id=15752&chapter_id=1136402`,
+      path: `${novelPath}/${n.chapter_id}|/platform/chapter-content?novel_id=${id}&chapter_id=${n.chapter_id}`,
     }));
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const req = await fetchApi(this.site + '/' + novelPath);
-    const body = await req.text();
-    const loadedCheerio = loadCheerio(body);
+    const novelSlug = novelPath.replace('^novel/', '');
+    const data = await this.getData(
+      `/platform/novel-details?slug=${novelSlug}`,
+    );
 
     const novel: Plugin.SourceNovel = {
       path: novelPath,
-      name: loadedCheerio('h1.novel-title').text(),
+      name: data.data.title,
+      cover: `https://cdn.fictionzone.net/insecure/rs:fill:165:250/${data.data.image.image}.webp`,
+      genres: [
+        ...data.data.genres.map((g: any) => g.name),
+        ...data.data.tags.map((g: any) => g.name),
+      ].join(','),
+      status:
+        data.data.status == 1
+          ? NovelStatus.Ongoing
+          : data.data.status == 0
+            ? NovelStatus.Completed
+            : NovelStatus.Unknown,
+      author: data.data.contributors.filter((c: any) => c.role == 'author')[0]
+        ?.display_name,
+      summary: data.data.synopsis,
     };
-
-    // novel.artist = '';
-    novel.cover = loadedCheerio('div.cover-image > img').attr('src');
-    novel.genres = [
-      ...loadedCheerio('a.tag--genre')
-        .map((i, el) => loadedCheerio(el).text())
-        .toArray(),
-      ...loadedCheerio('a.tag--tag')
-        .map((i, el) => loadedCheerio(el).text())
-        .toArray(),
-    ].join(',');
-    loadedCheerio('.metadata-item > .metadata-content')
-      .toArray()
-      .forEach(el => {
-        const label = loadedCheerio(el).find('.metadata-label').text().trim();
-        const value = loadedCheerio(el).find('.metadata-value').text().trim();
-        if (label == 'Author') {
-          novel.author = value;
-        } else if (label == 'Status') {
-          novel.status = loadedCheerio(el).find('.status-tag').text().trim();
-        }
-      });
-    novel.summary = loadedCheerio('.synopsis-text > div.text-content').text();
-
-    const nuxtData = loadedCheerio('script#__NUXT_DATA__').html();
-    const parsed = JSON.parse(nuxtData!);
-    let id = '';
-    for (const a of parsed) {
-      if (typeof a === 'string' && parseInt(a).toString() == a) {
-        id = a;
-        break;
-      }
-    }
-    // @ts-ignore
-    novel.chapters = await this.getChapterPage(id, novelPath);
+    novel.chapters = await this.getChapterPage(data.data.id, novelPath);
 
     return novel;
   }
