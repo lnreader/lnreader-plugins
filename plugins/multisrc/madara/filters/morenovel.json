@@ -91,19 +91,11 @@
         },
         {
           "label": "Shoujo Ai",
-          "value": "yuri"
-        },
-        {
-          "label": "Shoujo Ai",
           "value": "shoujo-ai"
         },
         {
           "label": "Shounen",
           "value": "shounen"
-        },
-        {
-          "label": "Shounen Ai",
-          "value": "yaoi"
         },
         {
           "label": "Shounen Ai",
@@ -221,18 +213,6 @@
         {
           "label": "A-Z",
           "value": "alphabet"
-        },
-        {
-          "label": "Rating",
-          "value": "rating"
-        },
-        {
-          "label": "Trending",
-          "value": "trending"
-        },
-        {
-          "label": "Most Views",
-          "value": "views"
         },
         {
           "label": "New",
