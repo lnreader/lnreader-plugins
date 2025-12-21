@@ -72,7 +72,7 @@ class FictionZonePlugin implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: data.data.title,
-      cover: `https://cdn.fictionzone.net/insecure/rs:fill:165:250/${data.data.image.image}.webp`,
+      cover: `https://cdn.fictionzone.net/insecure/rs:fill:165:250/${data.data.image}.webp`,
       genres: [
         ...data.data.genres.map((g: any) => g.name),
         ...data.data.tags.map((g: any) => g.name),
