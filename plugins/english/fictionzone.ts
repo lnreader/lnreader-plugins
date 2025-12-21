@@ -10,10 +10,6 @@ class FictionZonePlugin implements Plugin.PluginBase {
   site = 'https://fictionzone.net';
   version = '1.0.2';
   filters: Filters | undefined = undefined;
-  imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
-
-  //flag indicates whether access to LocalStorage, SesesionStorage is required.
-  webStorageUtilized?: boolean;
 
   async popularNovels(
     pageNo: number,
@@ -77,7 +73,7 @@ class FictionZonePlugin implements Plugin.PluginBase {
     };
 
     // novel.artist = '';
-    novel.cover = loadedCheerio('div.novel-img > img').attr('src');
+    novel.cover = loadedCheerio('div.cover-img > img').attr('src');
     novel.genres = [
       ...loadedCheerio('a.tag--genre')
         .map((i, el) => loadedCheerio(el).text())
