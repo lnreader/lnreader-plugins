@@ -37,24 +37,13 @@ class Genesis implements Plugin.PluginBase {
     return this.parseNovelJSON(json);
   }
 
-  // Helper function to extract novel data from nodes
-  extractData(nodes: any[]): any {
-    return nodes
-      .filter((node: { type: string }) => node.type === 'data')
-      .map((node: { data: any }) => node.data)[0];
-  }
-
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const abbreviation = novelPath.toString().replace('/novels/', '');
-    const url = `${this.site}/api/directus/novels/by-abbreviation/${abbreviation.toString()}`;
+    const abbreviation = novelPath.replace('/novels/', '');
+    const url = `${this.site}/api/directus/novels/by-abbreviation/${abbreviation}`;
 
     // Fetch the novel's data in JSON format
     const raw = await fetchApi(url);
     const json = await raw.json();
-    // const nodes = json.nodes;
-
-    // Extract the main novel data from the nodes
-    // const data = this.extractData(nodes);
 
     // Initialize the novel object with default values
     const parse = await this.parseNovelJSON([json]);
@@ -72,87 +61,79 @@ class Genesis implements Plugin.PluginBase {
     novel.status = map[json.serialization.toLowerCase()] ?? NovelStatus.Unknown;
 
     // Parse the chapters if available and assign them to the novel object
-    // novel.chapters = this.extractChapters(json);
-    novel.chapters = [];
+    novel.chapters = await this.extractChapters(json.id);
+    // novel.chapters = [];
 
     return novel;
   }
 
   // Helper function to extract and format chapters
-  extractChapters(data: any): Plugin.ChapterItem[] {
-    const chapterKey = 'chapters';
-    const chapters: Plugin.ChapterItem[] = [];
+  async extractChapters(id: string): Plugin.ChapterItem[] {
+    const url = `${this.site}/api/novels-chapter/${id}`;
 
-    // Iterate over each property in data to find chapter containers
-    for (const key in data) {
-      const value = data[key];
+    // Fetch the chapter data in JSON format
+    const raw = await fetchApi(url);
+    const json = await raw.json();
 
-      // Look for an object with a 'chapters' key
-      if (value && typeof value === 'object' && chapterKey in value) {
-        const chaptersIndexKey = value[chapterKey];
-        const chapterData = data[chaptersIndexKey];
-        if (!chapterData || typeof chapterData !== 'object') continue;
+    // Format each chapter and add only valid ones
+    const chapters = json.data.chapters
+      .map(index => {
+        const chapterName = index.chapter_title;
+        const chapterPath = index.id;
+        const chapterNum = `/viewer/${index.chapter_number}`;
+        const unlocked = index.isUnlocked;
 
-        // Dynamically get chapter indices from every category (free, premium, etc.)
-        let allChapterIndices: number[] = [];
-        for (const category of Object.keys(chapterData)) {
-          const chapterIndices = data[chapterData[category]];
-          if (Array.isArray(chapterIndices)) {
-            allChapterIndices = allChapterIndices.concat(chapterIndices);
-          }
-        }
+        if (!chapterPath) return null;
 
-        // Format each chapter and add only valid ones
-        const formattedChapters = allChapterIndices
-          .map((index: number) => data[index])
-          .map((chapter: any) => this.formatChapter(chapter, data))
-          .filter((chapter): chapter is Plugin.ChapterItem => chapter !== null);
-
-        chapters.push(...formattedChapters);
-      }
-    }
+        return {
+          name: chapterName,
+          path: chapterPath,
+          chapterNumber: Number(chapterNum),
+        };
+      })
+      .filter(chapter => chapter !== null) as Plugin.ChapterItem[];
 
     return chapters;
   }
 
-  // Helper function to format an individual chapter
-  formatChapter(chapter: any, data: any): Plugin.ChapterItem | null {
-    const { id, chapter_title, chapter_number, required_tier, date_created } =
-      chapter;
+  // // Helper function to format an individual chapter
+  // formatChapter(chapter: any, data: any): Plugin.ChapterItem | null {
+  //   const { id, chapter_title, chapter_number, required_tier, date_created } =
+  //     chapter;
 
-    // Destructure from data using computed property names based on chapter keys
-    const {
-      [id]: chapterId,
-      [chapter_title]: chapterTitle,
-      [chapter_number]: chapterNumberVal,
-      [required_tier]: requiredTierVal,
-      [date_created]: dateCreated,
-    } = data;
+  //   // Destructure from data using computed property names based on chapter keys
+  //   const {
+  //     [id]: chapterId,
+  //     [chapter_title]: chapterTitle,
+  //     [chapter_number]: chapterNumberVal,
+  //     [required_tier]: requiredTierVal,
+  //     [date_created]: dateCreated,
+  //   } = data;
 
-    // Validate required fields
-    if (
-      chapterId &&
-      chapterTitle &&
-      chapterNumberVal >= 0 &&
-      requiredTierVal !== null &&
-      dateCreated
-    ) {
-      const chapterNumber = parseInt(String(chapterNumberVal), 10) || 0;
-      const requiredTier = parseInt(String(requiredTierVal), 10) || 0;
+  //   // Validate required fields
+  //   if (
+  //     chapterId &&
+  //     chapterTitle &&
+  //     chapterNumberVal >= 0 &&
+  //     requiredTierVal !== null &&
+  //     dateCreated
+  //   ) {
+  //     const chapterNumber = parseInt(String(chapterNumberVal), 10) || 0;
+  //     const requiredTier = parseInt(String(requiredTierVal), 10) || 0;
 
-      // Only process chapters that do not require a premium tier
-      if (requiredTier === 0) {
-        return {
-          name: `Chapter ${chapterNumber} - ${chapterTitle}`,
-          path: `/viewer/${chapterId}`,
-          releaseTime: dateCreated,
-          chapterNumber: chapterNumber,
-        };
-      }
-    }
+  //     // Only process chapters that do not require a premium tier
+  //     if (requiredTier === 0) {
+  //       return {
+  //         name: `Chapter ${chapterNumber} - ${chapterTitle}`,
+  //         path: `/viewer/${chapterId}`,
+  //         releaseTime: dateCreated,
+  //         chapterNumber: chapterNumber,
+  //       };
+  //     }
+  //   }
 
-    return null;
-  }
+  //   return null;
+  // }
 
   // // Helper function to extract and format chapters
   // extractChapters(data: any): Plugin.ChapterItem[] {
