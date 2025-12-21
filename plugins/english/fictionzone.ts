@@ -64,7 +64,7 @@ class FictionZonePlugin implements Plugin.PluginBase {
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const novelSlug = novelPath.replace('^novel/', '');
+    const novelSlug = novelPath.replace('novel/', '');
     const data = await this.getData(
       `/platform/novel-details?slug=${novelSlug}`,
     );
