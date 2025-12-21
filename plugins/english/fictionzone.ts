@@ -58,7 +58,9 @@ class FictionZonePlugin implements Plugin.PluginBase {
     return data.data.chapters.map((n: any) => ({
       name: n.title,
       number: n.chapter_number,
-      date: new Date(n.published_date).toISOString(),
+      date: n.published_date
+        ? new Date(n.published_date).toISOString()
+        : undefined,
       path: `${novelPath}/${n.chapter_id}|/platform/chapter-content?novel_id=${id}&chapter_id=${n.chapter_id}`,
     }));
   }
@@ -83,8 +85,9 @@ class FictionZonePlugin implements Plugin.PluginBase {
           : data.data.status == 0
             ? NovelStatus.Completed
             : NovelStatus.Unknown,
-      author: data.data.contributors.filter((c: any) => c.role == 'author')[0]
-        ?.display_name,
+      author:
+        data.data.contributors.filter((c: any) => c.role == 'author')[0]
+          ?.display_name || '',
       summary: data.data.synopsis,
     };
     novel.chapters = await this.getChapterPage(data.data.id, novelPath);
