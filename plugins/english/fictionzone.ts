@@ -26,27 +26,33 @@ class FictionZonePlugin implements Plugin.PagePlugin {
       filters,
     }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
-    return await this.getPage(this.site + '/library?page=' + pageNo);
+    return await this.getPage(
+      `/platform/browse?page=${pageNo}&page_size=20&sort_by=${showLatestNovels ? 'created_at' : 'bookmark_count'}&sort_order=desc&include_genres=true`,
+    );
   }
 
   async getPage(url: string) {
-    const req = await fetchApi(url);
-    const body = await req.text();
-    const loadedCheerio = loadCheerio(body);
+    const data = await fetchApi(this.site + '/api/__api_party/fictionzone', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        'path': url,
+        'headers': [
+          ['content-type', 'application/json'],
+          ['x-request-time', new Date().toISOString()],
+        ],
+        'method': 'GET',
+      }),
+    }).then(r => r.json());
 
-    return loadedCheerio('div.novel-card')
-      .map((i, el) => {
-        const novelName = loadedCheerio(el).find('a > div.title > h1').text();
-        const novelCover = loadedCheerio(el).find('img').attr('src');
-        const novelUrl = loadedCheerio(el).find('a').attr('href');
-
-        return {
-          name: novelName,
-          cover: novelCover,
-          path: novelUrl!.replace(/^\//, '').replace(/\/$/, ''),
-        };
-      })
-      .toArray();
+    return data.data.novels.map((n: any) => ({
+      name: n.title,
+      cover: `https://cdn.fictionzone.net/insecure/rs:fill:165:250/${n.image}.webp`,
+      path: `novel/${n.slug}`,
+    }));
   }
 
   async parseNovel(
@@ -156,12 +162,7 @@ class FictionZonePlugin implements Plugin.PagePlugin {
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
     return await this.getPage(
-      this.site +
-        '/library?query=' +
-        encodeURIComponent(searchTerm) +
-        '&page=' +
-        pageNo +
-        '&sort=views-all',
+      `/platform/browse?search=${encodeURIComponent(searchTerm)}&page=${pageNo}&page_size=20&search_in_synopsis=true&sort_by=bookmark_count&sort_order=desc&include_genres=true`,
     );
   }
 
