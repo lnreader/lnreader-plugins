@@ -403,7 +403,8 @@ export default function ParseNovelSection({
             </div>
 
             {/* Chapters Table */}
-            {chapters.length > 0 && (
+            {(chapters.length > 0 ||
+              (sourceNovel.totalPages && sourceNovel.totalPages > 1)) && (
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="font-semibold text-foreground">
