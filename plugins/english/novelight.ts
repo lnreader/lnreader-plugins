@@ -142,7 +142,7 @@ class Novelight implements Plugin.PagePlugin {
         ?.match(/([0-9]+)/)?.[1] ?? '1',
     );
 
-    const result = await fetchApi(
+    const r = await fetchApi(
       `${this.site}book/ajax/chapter-pagination?csrfmiddlewaretoken=${csrftoken}&book_id=${bookId}&page=${totalPages - parseInt(page) + 1}`,
       {
         headers: {
@@ -153,11 +153,15 @@ class Novelight implements Plugin.PagePlugin {
       },
     );
 
-    if ((await result.text()).includes('403:')) {
-      throw new Error('Error: 403');
+    let chaptersRaw;
+    try {
+      chaptersRaw = await r.json();
+      chaptersRaw = chaptersRaw.html;
+    } catch (error) {
+      console.error('Error Parsing Response');
+      console.error(error);
+      throw new Error(error);
     }
-
-    const chaptersRaw = result.json().html;
 
     const chapter: Plugin.ChapterItem[] = [];
 
