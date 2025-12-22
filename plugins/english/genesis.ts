@@ -89,11 +89,11 @@ class Genesis implements Plugin.PluginBase {
     const chapters = json.data.chapters
       .map(index => {
         const title = index.chapter_title;
-        const chapterPath = index.id;
+        const chapterPath = `/viewer/${index.id}`;
         const isLocked = !index.isUnlocked;
         if (this.hideLocked && isLocked) return null;
         const chapterName = isLocked ? '🔒 ' + title : title;
-        const chapterNum = `/viewer/${index.chapter_number}`;
+        const chapterNum = index.chapter_number;
 
         if (!chapterPath) return null;
 
