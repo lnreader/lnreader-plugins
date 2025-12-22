@@ -2,6 +2,7 @@ import { fetchApi } from '@libs/fetch';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
+import { storage } from '@libs/storage';
 
 class Genesis implements Plugin.PluginBase {
   id = 'genesistudio';
@@ -11,6 +12,15 @@ class Genesis implements Plugin.PluginBase {
   site = 'https://genesistudio.com';
   api = 'https://api.genesistudio.com';
   version = '1.1.2';
+
+  hideLocked = storage.get('hideLocked');
+  pluginSettings = {
+    hideLocked: {
+      value: '',
+      label: 'Hide locked chapters',
+      type: 'Switch',
+    },
+  };
 
   imageRequestInit?: Plugin.ImageRequestInit | undefined = {
     headers: {
@@ -78,10 +88,12 @@ class Genesis implements Plugin.PluginBase {
     // Format each chapter and add only valid ones
     const chapters = json.data.chapters
       .map(index => {
-        const chapterName = index.chapter_title;
+        const title = index.chapter_title;
         const chapterPath = index.id;
+        const isLocked = !index.isUnlocked;
+        if (this.hideLocked && isLocked) return null;
+        const chapterName = isLocked ? '🔒 ' + title : title;
         const chapterNum = `/viewer/${index.chapter_number}`;
-        const unlocked = index.isUnlocked;
 
         if (!chapterPath) return null;
 
