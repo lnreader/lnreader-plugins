@@ -11,6 +11,8 @@ class Genesis implements Plugin.PluginBase {
   customCSS = 'src/en/genesis/customCSS.css';
   site = 'https://genesistudio.com';
   api = 'https://api.genesistudio.com';
+  // TODO Unsure if this changes, probably need to scrape in chapter parsing
+  external_api = '';
   version = '1.1.2';
 
   hideLocked = storage.get('hideLocked');
@@ -109,9 +111,27 @@ class Genesis implements Plugin.PluginBase {
 
   async parseChapter(chapterPath: string): Promise<string> {
     const url = `${this.site}${chapterPath}`;
+    const id = chapterPath.replace('/viewer/', '');
+    const path = `${this.external_api}/rest/v1/chapters?select=id,chapter_title,chapter_number,chapter_content,status,novel&id=eq.${id}&status=eq.released`;
 
     // Fetch the novel's data in JSON format
     // const raw = await fetchApi(url);
+
+    // TODO Scrape this somehow
+    const apikey = '';
+
+    const chQuery = await fetchApi(path, {
+      method: 'GET',
+      headers: {
+        // Cookie: 'csrftoken=' + csrftoken,
+        Referer: this.site,
+        'apikey': apikey,
+        'x-client-info': 'supabase-ssr/0.7.0 createBrowserClient',
+      },
+    });
+    const json = await chQuery.json();
+    const ch = json[0].chapter_content.replaceAll('\n', '<br/>');
+    return ch;
 
     // So you have to bypass cloudflare, then it does a REST get to a different site for the actual chapter contents.
     // This get requires an API key, so you have to do some scraping adventure for that.
