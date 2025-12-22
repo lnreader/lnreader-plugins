@@ -1,3 +1,4 @@
+import { CheerioAPI, load } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
@@ -11,8 +12,6 @@ class Genesis implements Plugin.PluginBase {
   customCSS = 'src/en/genesis/customCSS.css';
   site = 'https://genesistudio.com';
   api = 'https://api.genesistudio.com';
-  // TODO Unsure if this changes, probably need to scrape in chapter parsing
-  external_api = '';
   version = '1.1.2';
 
   hideLocked = storage.get('hideLocked');
@@ -112,13 +111,59 @@ class Genesis implements Plugin.PluginBase {
   async parseChapter(chapterPath: string): Promise<string> {
     const url = `${this.site}${chapterPath}`;
     const id = chapterPath.replace('/viewer/', '');
-    const path = `${this.external_api}/rest/v1/chapters?select=id,chapter_title,chapter_number,chapter_content,status,novel&id=eq.${id}&status=eq.released`;
 
     // Fetch the novel's data in JSON format
-    // const raw = await fetchApi(url);
+    const raw = await fetchApi(url);
+    const $ = load(await raw.text());
+    let external_api;
+    let apikey;
 
-    // TODO Scrape this somehow
-    const apikey = '';
+    let URLs = [];
+    let code;
+
+    // Find URL with API Key
+    const srcs = $('head')
+      .find('script')
+      .map(function () {
+        const src = $(this).attr('src');
+        if (src in URLs) {
+          return null;
+        }
+        URLs.push(src);
+      })
+      .toArray();
+    for (let src of URLs) {
+      const script = await fetchApi(`${this.site}${src}`);
+      const raw = await script.text();
+      if (raw.includes('sb_publishable')) {
+        code = raw;
+        break;
+      }
+    }
+    if (!code) {
+      throw new Error('Failed to find API Key');
+    }
+    // Find right segment of code
+    let arr = code.split(';');
+    for (const seg of arr) {
+      if (seg.includes('sb_publishable')) {
+        code = seg;
+        break;
+      }
+    }
+    arr = code.split('"');
+    for (const seg of arr) {
+      if (seg.includes('https')) {
+        external_api = seg;
+        continue;
+      }
+      if (seg.includes('sb_publishable')) {
+        apikey = seg;
+        continue;
+      }
+    }
+
+    const path = `${external_api}/rest/v1/chapters?select=id,chapter_title,chapter_number,chapter_content,status,novel&id=eq.${id}&status=eq.released`;
 
     const chQuery = await fetchApi(path, {
       method: 'GET',
@@ -132,14 +177,6 @@ class Genesis implements Plugin.PluginBase {
     const json = await chQuery.json();
     const ch = json[0].chapter_content.replaceAll('\n', '<br/>');
     return ch;
-
-    // So you have to bypass cloudflare, then it does a REST get to a different site for the actual chapter contents.
-    // This get requires an API key, so you have to do some scraping adventure for that.
-    // The get also uses what looks like a random subdomain, may also have to scrape that.
-    // This appears to be obfuscated.
-
-    // If no mapping object was found, return an empty string or handle appropriately.
-    return "Failed to retreive chapter! Or we just haven't coded it yet. Try webview?";
   }
 
   async searchNovels(
