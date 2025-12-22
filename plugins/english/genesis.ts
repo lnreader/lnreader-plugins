@@ -34,7 +34,6 @@ class Genesis implements Plugin.PluginBase {
       name: novel.novel_title,
       path: `/novels/${novel.abbreviation}`.trim(),
       cover: `${this.api}/storage/v1/object/public/directus/${novel.cover}.png`,
-      // TODO: Fix cover to allow gifs
     }));
   }
 
@@ -43,7 +42,7 @@ class Genesis implements Plugin.PluginBase {
     if (pageNo !== 1) return [];
     // Only 14 results, no use in sorting or status
     // Also all novels are Ongoing with no Completed, can't test status filter
-    const link = `${this.site}/api/directus/novels?status=published&fields=["novel_title","cover","abbreviation"]&limit=-1`;
+    const link = `${this.site}/api/directus/novels?status=published&fields=["cover","novel_title","cover","abbreviation"]&limit=-1`;
     const json = await fetchApi(link).then(r => r.json());
     return this.parseNovelJSON(json);
   }
@@ -70,6 +69,20 @@ class Genesis implements Plugin.PluginBase {
       unknown: NovelStatus.Unknown,
     };
     novel.status = map[json.serialization.toLowerCase()] ?? NovelStatus.Unknown;
+    if (json.cover) {
+      const url = `${this.site}/api/directus-file/${json.cover}`;
+      const imgJson = await (await fetchApi(url)).json();
+      console.log(imgJson.type);
+      novel.cover = `${this.api}/storage/v1/object/public/directus/${json.cover}.png`;
+      if (imgJson.type == 'image/gif') {
+        novel.cover = novel.cover?.replace('.png', '.gif');
+      } else if (imgJson.type !== 'image/png') {
+        novel.cover = novel.cover?.replace(
+          '.png',
+          '.' + imgJson.type.toString().split('/')[1],
+        );
+      }
+    }
 
     // Parse the chapters if available and assign them to the novel object
     novel.chapters = await this.extractChapters(json.id);
