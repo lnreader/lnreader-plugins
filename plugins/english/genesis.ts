@@ -33,7 +33,7 @@ class Genesis implements Plugin.PluginBase {
       name: novel.novel_title,
       path: `/novels/${novel.abbreviation}`.trim(),
       cover: `${this.api}/storage/v1/object/public/directus/${novel.cover}.png`,
-      //TODO: Fix cover to allow gifs
+      // TODO: Fix cover to allow gifs
     }));
   }
 
@@ -72,7 +72,6 @@ class Genesis implements Plugin.PluginBase {
 
     // Parse the chapters if available and assign them to the novel object
     novel.chapters = await this.extractChapters(json.id);
-    // novel.chapters = [];
 
     return novel;
   }
@@ -109,48 +108,18 @@ class Genesis implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const url = `${this.site}${chapterPath}/__data.json?x-sveltekit-invalidated=001`;
+    const url = `${this.site}${chapterPath}`;
 
     // Fetch the novel's data in JSON format
-    const json = await fetchApi(url).then(r => r.json());
-    const nodes = json.nodes;
+    // const raw = await fetchApi(url);
 
-    // Extract the main novel data from the nodes
-    const data = this.extractData(nodes);
-
-    // Look for chapter container with required fields
-    const contentKey = 'content';
-    const notesKey = 'notes';
-    const footnotesKey = 'footnotes';
-
-    // Iterate over each property in data to find chapter containers
-    for (const key in data) {
-      const mapping = data[key];
-
-      // Check container for keys that match the required fields
-      if (
-        mapping &&
-        typeof mapping === 'object' &&
-        contentKey in mapping &&
-        notesKey in mapping &&
-        footnotesKey in mapping
-      ) {
-        // Retrieve the chapter's content, notes, and footnotes using the mapping.
-        const content = data[mapping[contentKey]];
-        const notes = data[mapping[notesKey]];
-        const footnotes = data[mapping[footnotesKey]];
-
-        // Return the combined parts with appropriate formatting
-        return (
-          content +
-          (notes ? `<h2>Notes</h2><br>${notes}` : '') +
-          (footnotes ?? '')
-        );
-      }
-    }
+    // So you have to bypass cloudflare, then it does a REST get to a different site for the actual chapter contents.
+    // This get requires an API key, so you have to do some scraping adventure for that.
+    // The get also uses what looks like a random subdomain, may also have to scrape that.
+    // This appears to be obfuscated.
 
     // If no mapping object was found, return an empty string or handle appropriately.
-    return '';
+    return "Failed to retreive chapter! Or we just haven't coded it yet. Try webview?";
   }
 
   async searchNovels(
@@ -158,7 +127,8 @@ class Genesis implements Plugin.PluginBase {
     pageNo: number,
   ): Promise<Plugin.SourceNovel[]> {
     if (pageNo !== 1) return [];
-    const url = `${this.site}/api/novels/search?serialization=All&sort=Popular&title=${encodeURIComponent(searchTerm)}`;
+    // TODO: Figure out how to search
+    const url = `${this.site}/api/novels/search?title=${encodeURIComponent(searchTerm)}`;
     const json = await fetchApi(url).then(r => r.json());
     return this.parseNovelJSON(json);
   }
@@ -166,10 +136,9 @@ class Genesis implements Plugin.PluginBase {
   filters = {
     sort: {
       label: 'Sort Results By',
-      value: 'Popular',
+      value: 'Date',
       options: [
-        { label: 'Popular', value: 'Popular' },
-        { label: 'Recent', value: 'Recent' },
+        { label: 'Date', value: 'Date' },
         { label: 'Views', value: 'Views' },
       ],
       type: FilterTypes.Picker,
