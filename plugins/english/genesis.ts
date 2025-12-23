@@ -12,7 +12,7 @@ class Genesis implements Plugin.PluginBase {
   customCSS = 'src/en/genesis/customCSS.css';
   site = 'https://genesistudio.com';
   api = 'https://api.genesistudio.com';
-  version = '1.1.3';
+  version = '2.0.0';
 
   hideLocked = storage.get('hideLocked');
   pluginSettings = {
