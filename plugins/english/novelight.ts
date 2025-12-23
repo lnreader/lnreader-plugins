@@ -1,15 +1,16 @@
 import { load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
+import { NovelStatus } from '@libs/novelStatus';
+import { Filters, FilterTypes } from '@libs/filterInputs';
 import { defaultCover } from '@libs/defaultCover';
 import dayjs from 'dayjs';
 import { storage } from '@libs/storage';
-import { NovelStatus } from '@libs/novelStatus';
 
 class Novelight implements Plugin.PagePlugin {
   id = 'novelight';
   name = 'Novelight';
-  version = '1.1.1';
+  version = '1.1.2';
   icon = 'src/en/novelight/icon.png';
   site = 'https://novelight.net/';
 
@@ -22,8 +23,39 @@ class Novelight implements Plugin.PagePlugin {
     },
   };
 
-  async popularNovels(page: number): Promise<Plugin.NovelItem[]> {
-    const url = `${this.site}catalog/?ordering=popularity&page=${page}`;
+  async popularNovels(
+    pageNo: number,
+    {
+      showLatestNovels,
+      filters,
+    }: Plugin.PopularNovelsOptions<typeof this.filters>,
+  ): Promise<Plugin.NovelItem[]> {
+    let url = `${this.site}catalog/`;
+    if (showLatestNovels) {
+      url += `?ordering=-time_updated&page=${pageNo}`;
+    } else if (filters) {
+      const params = new URLSearchParams();
+      for (const country of filters.country.value) {
+        params.append('country', country);
+      }
+      for (const genre of filters.genres.value) {
+        params.append('genre', genre);
+      }
+      for (const translation of filters.translation.value) {
+        params.append('translation', translation);
+      }
+      for (const status of filters.status.value) {
+        params.append('status', status);
+      }
+      for (const novel_type of filters.novel_type.value) {
+        params.append('type', novel_type);
+      }
+      params.append('ordering', filters.sort.value);
+      params.append('page', pageNo.toString());
+      url += `?${params.toString()}`;
+    } else {
+      url += `?&ordering=popularity&page=${pageNo}`;
+    }
 
     const body = await fetchApi(url).then(r => r.text());
 
@@ -74,10 +106,18 @@ class Novelight implements Plugin.PagePlugin {
     for (const child of info) {
       const type = loadedCheerio(child).find('.sub-header').text().trim();
       if (type === 'Status') {
-        status = loadedCheerio(child).find('div.info').text().trim();
+        status = loadedCheerio(child)
+          .find('div.info')
+          .text()
+          .trim()
+          .toLowerCase();
       }
       if (type === 'Translation') {
-        translation = loadedCheerio(child).find('div.info').text().trim();
+        translation = loadedCheerio(child)
+          .find('div.info')
+          .text()
+          .trim()
+          .toLowerCase();
       }
       if (type === 'Author') {
         novel.author = loadedCheerio(child).find('div.info').text().trim();
@@ -110,8 +150,8 @@ class Novelight implements Plugin.PagePlugin {
         ?.match(/([0-9]+)/)?.[1] ?? '1',
     );
 
-    const chaptersRaw = await fetchApi(
-      `${this.site}/book/ajax/chapter-pagination?csrfmiddlewaretoken=${csrftoken}&book_id=${bookId}&page=${totalPages - parseInt(page) + 1}`,
+    const r = await fetchApi(
+      `${this.site}book/ajax/chapter-pagination?csrfmiddlewaretoken=${csrftoken}&book_id=${bookId}&page=${totalPages - parseInt(page) + 1}`,
       {
         headers: {
           'Host': this.site.replace('https://', '').replace('/', ''),
@@ -119,9 +159,17 @@ class Novelight implements Plugin.PagePlugin {
           'X-Requested-With': 'XMLHttpRequest',
         },
       },
-    )
-      .then(r => r.json())
-      .then(r => r.html);
+    );
+
+    let chaptersRaw;
+    try {
+      chaptersRaw = await r.json();
+      chaptersRaw = chaptersRaw.html;
+    } catch (error) {
+      console.error('Error Parsing Response');
+      console.error(error);
+      throw new Error(error);
+    }
 
     const chapter: Plugin.ChapterItem[] = [];
 
@@ -214,6 +262,106 @@ class Novelight implements Plugin.PagePlugin {
 
     return novels;
   }
+
+  filters = {
+    sort: {
+      label: 'Sort Results By',
+      value: 'popularity',
+      options: [
+        { label: 'Title (A>Z)', value: 'title' },
+        { label: 'Publication Date', value: '-time_created' },
+        { label: 'Update Date (Newest)', value: '-time_updated' },
+        { label: 'Year Release', value: '-year_of_release' },
+        { label: 'Popularity', value: 'popularity' },
+      ],
+      type: FilterTypes.Picker,
+    },
+    translation: {
+      label: 'Translation Status',
+      value: [],
+      options: [
+        { label: 'Ongoing', value: 'ongoing' },
+        { label: 'Completed', value: 'completed' },
+        { label: 'Paused', value: 'paused' },
+        { label: 'Dropped', value: 'dropped' },
+        { label: 'None', value: 'none' },
+      ],
+      type: FilterTypes.CheckboxGroup,
+    },
+    status: {
+      label: 'Status',
+      value: [],
+      options: [
+        { label: 'Releasing', value: 'releasing' },
+        { label: 'Completed', value: 'completed' },
+        { label: 'Cancelled', value: 'cancelled' },
+        { label: 'Not yet released', value: 'not+yet+released' },
+      ],
+      type: FilterTypes.CheckboxGroup,
+    },
+    novel_type: {
+      label: 'Type',
+      value: [],
+      options: [
+        { label: 'Fan Fiction', value: '4' },
+        { label: 'Light Novel', value: '1' },
+        { label: 'Published Novel', value: '2' },
+        { label: 'Web Novel', value: '3' },
+      ],
+      type: FilterTypes.CheckboxGroup,
+    },
+    genres: {
+      label: 'Genres',
+      value: [],
+      options: [
+        { label: 'Thriller', value: '1' },
+        { label: 'Supernatural', value: '2' },
+        { label: 'Sports', value: '3' },
+        { label: 'Slice of Life', value: '4' },
+        { label: 'Sci-Fi', value: '5' },
+        { label: 'Romance', value: '6' },
+        { label: 'Psychological', value: '7' },
+        { label: 'Mystery', value: '8' },
+        { label: 'Mecha', value: '9' },
+        { label: 'Horror', value: '10' },
+        { label: 'Fantasy', value: '11' },
+        { label: 'Ecchi', value: '12' },
+        { label: 'Drama', value: '13' },
+        { label: 'Comedy', value: '14' },
+        { label: 'Adventure', value: '15' },
+        { label: 'Action', value: '16' },
+        { label: 'Adult', value: '17' },
+        { label: 'Isekai', value: '18' },
+        { label: 'Wuxia', value: '19' },
+        { label: 'Shounen', value: '20' },
+        { label: 'Yuri', value: '21' },
+        { label: 'Shoujo', value: '22' },
+        { label: 'Shoujo Ai', value: '23' },
+        { label: 'Harem', value: '24' },
+        { label: 'Seinen', value: '25' },
+        { label: 'Tragedy', value: '26' },
+        { label: 'Mature', value: '27' },
+        { label: 'Martial Arts', value: '28' },
+        { label: 'Gender Bender', value: '29' },
+        { label: 'School Life', value: '30' },
+        { label: 'Xuanhuan', value: '31' },
+        { label: 'Yaoi', value: '32' },
+        { label: 'Historical', value: '33' },
+      ],
+      type: FilterTypes.CheckboxGroup,
+    },
+    country: {
+      label: 'Country',
+      value: [],
+      options: [
+        { label: 'China', value: '1' },
+        { label: 'Japan', value: '2' },
+        { label: 'Korea', value: '3' },
+        { label: 'Other', value: '6' },
+      ],
+      type: FilterTypes.CheckboxGroup,
+    },
+  } satisfies Filters;
 }
 
 export default new Novelight();
