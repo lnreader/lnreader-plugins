@@ -135,6 +135,9 @@ class FictioneerPlugin implements Plugin.PluginBase {
     const body = await req.text();
 
     const loadedCheerio = loadCheerio(body);
+
+    // chapterTransformJs HERE
+
     return loadedCheerio('section#chapter-content > div').html() || '';
   }
 

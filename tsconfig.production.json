@@ -122,6 +122,7 @@
     ".github/**",
     ".husky/**",
     "node_modules/**",
-    "./src/**"
+    "./src/**",
+    "./plugins/multisrc/*"
   ]
 }
