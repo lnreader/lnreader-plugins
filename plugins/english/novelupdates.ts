@@ -6,7 +6,7 @@ import { Plugin } from '@/types/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.9.4';
+  version = '0.9.5';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -196,43 +196,6 @@ class NovelUpdates implements Plugin.PluginBase {
         }
       }
       // Last edited in 0.9.0 by Batorian - 19/03/2025
-      case 'anotivereads': {
-        chapterTitle = loadedCheerio('#comic-nav-name').first().text();
-        chapterContent = loadedCheerio('#spliced-comic').html()!;
-        break;
-      }
-      // Last edited in 0.9.0 by Batorian - 19/03/2025
-      case 'arcanetranslations': {
-        bloatElements = ['.bottomnav'];
-        bloatElements.forEach(tag => loadedCheerio(tag).remove());
-        chapterTitle = loadedCheerio('.epwrapper .cat-series').first().text();
-        loadedCheerio('.entry-content div, .entry-content span').each(
-          (_, element) => {
-            const el = loadedCheerio(element);
-            const style = el.attr('style');
-            if (!style) return; // Skip elements without inline styles
-            if (/border:.*#00219b/.test(style)) {
-              el.removeAttr('style').addClass('arcane_box_blue'); // Blue box
-            } else if (/border:.*white/.test(style)) {
-              el.removeAttr('style').addClass('arcane_box_white'); // White box
-            } else if (
-              style.includes('text-transform: uppercase') &&
-              /text-shadow:.*blue/.test(style)
-            ) {
-              el.removeAttr('style').addClass('arcane_title_blue'); // Blue title
-            } else if (/text-shadow:.*blue/.test(style)) {
-              el.removeAttr('style').addClass('arcane_text_blue'); // Blue text
-            } else if (/text-shadow:.*lightyellow/.test(style)) {
-              el.removeAttr('style').addClass('arcane_text_lightyellow'); // Lightyellow text
-            } else if (/color:.*#ff00ff/.test(style)) {
-              el.removeAttr('style').addClass('arcane_text_pink'); // Pink text
-            }
-          },
-        );
-        chapterContent = loadedCheerio('.entry-content').html()!;
-        break;
-      }
-      // Last edited in 0.9.0 by Batorian - 19/03/2025
       case 'asuratls': {
         const titleElement = loadedCheerio('.post-body div b').first();
         chapterTitle = titleElement.text();
@@ -348,6 +311,11 @@ class NovelUpdates implements Plugin.PluginBase {
         chapterContent = loadedCheerio('.chapter__content').html()!;
         break;
       }
+      // Last edited in 0.9.5 by Batorian - 26/12/2025
+      case 'dreamy-translations': {
+        chapterTitle = loadedCheerio('h1 > span').first().text();
+        chapterContent = loadedCheerio('.chapter-content').html()!;
+      }
       // Last edited in 0.9.0 by Batorian - 19/03/2025
       case 'fictionread': {
         bloatElements = [
@@ -411,22 +379,24 @@ class NovelUpdates implements Plugin.PluginBase {
         }
         break;
       }
-      // Last edited in 0.9.0 by Batorian - 19/03/2025
-      case 'helscans': {
-        chapterTitle = loadedCheerio('.entry-title-main').first().text();
-        const chapterString_helscans =
-          'Chapter ' + chapterTitle.split('Chapter')[1].trim();
-        loadedCheerio('#readerarea.rdminimal')
-          .children()
-          .each((_, el) => {
-            const elementText = loadedCheerio(el).text();
-            if (elementText.includes(chapterString_helscans)) {
-              chapterTitle = elementText;
-              loadedCheerio(el).remove();
-              return false;
-            }
-          });
-        chapterContent = loadedCheerio('#readerarea.rdminimal').html()!;
+      // Last edited in 0.9.5 by Batorian - 26/12/2025
+      case 'greenztl': {
+        const chapterSlug = chapterPath.split('/').pop();
+        const apiUrl = `https://greenztl.com/api/chapters/slug/${chapterSlug}`;
+
+        try {
+          const response = await fetchApi(apiUrl);
+          const json = await response.json();
+
+          const chapterName = json.data.name;
+          const chapterNumber = json.data.chapterNumber;
+          const chapterCheerio = parseHTML(json.data.content);
+
+          chapterTitle = `Chapter ${chapterNumber} - ${chapterName}`;
+          chapterContent = chapterCheerio.html()!;
+        } catch (error) {
+          throw new Error(`Failed to parse GreenzTL chapter: ${error}`);
+        }
         break;
       }
       // Last edited in 0.9.0 by Batorian - 19/03/2025
@@ -441,7 +411,7 @@ class NovelUpdates implements Plugin.PluginBase {
         chapterContent = loadedCheerio('#chapter-content').html()!;
         break;
       }
-      // Last edited in 0.9.0 by Batorian - 19/03/2025
+      // Last edited in 0.9.5 by Batorian - 26/12/2025
       case 'infinitenoveltranslations': {
         // Get the chapter link from the main page
         const url = loadedCheerio('article > p > a').first().attr('href')!;
@@ -450,8 +420,8 @@ class NovelUpdates implements Plugin.PluginBase {
           const body = await response.text();
           loadedCheerio = parseHTML(body);
         }
-        chapterContent = loadedCheerio('.hentry').html()!;
-        chapterTitle = loadedCheerio('.page-entry-title').text();
+        chapterContent = loadedCheerio('.entry-content').html()!;
+        chapterTitle = loadedCheerio('.entry-title').text();
         break;
       }
       // Last edited in 0.9.0 by Batorian - 19/03/2025
@@ -535,6 +505,80 @@ class NovelUpdates implements Plugin.PluginBase {
         bloatElements.forEach(tag => loadedCheerio(tag).remove());
         chapterTitle = loadedCheerio('.halChap--jud').first().text();
         chapterContent = loadedCheerio('.halChap--kontenInner ').html()!;
+        break;
+      }
+      case 'novelshub': {
+        const segments = chapterPath.split('/');
+        const novelSlug = segments[segments.length - 2];
+        const chapterSlug = segments[segments.length - 1];
+        const apiUrl = `https://api.novelshub.org/api/chapter?mangaslug=${novelSlug}&chapterslug=${chapterSlug}`;
+
+        try {
+          const response = await fetchApi(apiUrl);
+          const json = await response.json();
+
+          const chapterNumber = json.chapter.number;
+          const chapterCheerio = parseHTML(json.chapter.content);
+
+          chapterTitle = `Chapter ${chapterNumber}`;
+          chapterCheerio('div').each((_, element) => {
+            const el = chapterCheerio(element);
+            const style = el.attr('style');
+            if (!style) return; // Skip elements without inline styles
+            // Orange box
+            if (/border:.*#ff6b00/.test(style)) {
+              el.removeAttr('style').addClass('novels-hub_box_orange');
+              // Orange box title
+            } else if (
+              /color:.*#ff6b00.*text-transform:.*uppercase/.test(style)
+            ) {
+              el.removeAttr('style').addClass('novels-hub_box-title_orange');
+              // Orange box text
+            } else if (/color:.*white.*border-top:.*#ff6b00/.test(style)) {
+              el.removeAttr('style').addClass('novels-hub_box-text_orange');
+              // Green box
+            } else if (/border:.*#00ff88/.test(style)) {
+              el.removeAttr('style').addClass('novels-hub_box_green');
+              // Green box title
+            } else if (
+              /color:.*#00ff88.*text-transform:.*uppercase/.test(style)
+            ) {
+              el.removeAttr('style').addClass('novels-hub_box-title_green');
+              // Green comment
+            } else if (/border-left:.*#00ff88/.test(style)) {
+              el.removeAttr('style').addClass('novels-hub_comment_green');
+              // Blue box
+            } else if (/border:.*#0066ff/.test(style)) {
+              el.removeAttr('style').addClass('novels-hub_box_blue');
+              // Blue box title
+            } else if (
+              /color:.*#0099ff.*text-transform:.*uppercase/.test(style)
+            ) {
+              el.removeAttr('style').addClass('novels-hub_box-title_blue');
+              // Blue box text
+            } else if (/color:.*#d0d0d0/.test(style)) {
+              el.removeAttr('style').addClass('novels-hub_box-text_blue');
+            }
+          });
+          chapterCheerio('span').each((_, element) => {
+            const el = chapterCheerio(element);
+            const style = el.attr('style');
+            if (!style) return; // Skip elements without inline styles
+            // Red text
+            if (/color:.*#ff6b6b/.test(style)) {
+              el.removeAttr('style').addClass('novels-hub_text_red');
+              // Blue text
+            } else if (/color:.*#4d9fff/.test(style)) {
+              el.removeAttr('style').addClass('novels-hub_text_blue');
+              // Purple text
+            } else if (/color:.*#a78bfa/.test(style)) {
+              el.removeAttr('style').addClass('novels-hub_text_purple');
+            }
+          });
+          chapterContent = chapterCheerio.html()!;
+        } catch (error) {
+          throw new Error(`Failed to parse GreenzTL chapter: ${error}`);
+        }
         break;
       }
       // Last edited in 0.9.0 by Batorian - 19/03/2025
@@ -779,19 +823,6 @@ class NovelUpdates implements Plugin.PluginBase {
         chapterText = await fetchApi(json).then(r => r.text());
         break;
       }
-      // Last edited in 0.9.0 by Batorian - 19/03/2025
-      case 'zetrotranslation': {
-        chapterContent = loadedCheerio('.text-left').html()!;
-        const titleElement = loadedCheerio('.text-left h2').first();
-        if (titleElement.length) {
-          chapterTitle = titleElement.text();
-          titleElement.remove();
-          chapterContent = loadedCheerio('.text-left').html()!;
-        } else if (chapterContent) {
-          chapterTitle = loadedCheerio('.active').first().text();
-        }
-        break;
-      }
     }
     if (!chapterText) {
       if (chapterTitle) {
@@ -833,38 +864,70 @@ class NovelUpdates implements Plugin.PluginBase {
       );
     }
 
-    // Detect platforms
-    let isBlogspot = ['blogspot', 'blogger'].some(keyword =>
-      [
-        loadedCheerio('meta[name="google-adsense-platform-domain"]').attr(
-          'content',
-        ),
-        loadedCheerio('meta[name="generator"]').attr('content'),
-      ].some(meta => meta?.toLowerCase().includes(keyword)),
-    );
+    // Helper to safely check if any element matches a regex or string
+    const matches = (selector: string, attr: string | null, regex: RegExp) => {
+      let found = false;
+      loadedCheerio(selector).each((_, el) => {
+        const val = attr
+          ? loadedCheerio(el).attr(attr)
+          : loadedCheerio(el).html() || loadedCheerio(el).text();
+        if (val && regex.test(val.toLowerCase())) {
+          found = true;
+          return false;
+        }
+      });
+      return found;
+    };
 
-    let isWordPress = ['wordpress', 'site kit by google'].some(keyword =>
-      [
-        loadedCheerio('#dcl_comments-js-extra').html(),
-        loadedCheerio('meta[name="generator"]').attr('content'),
-        loadedCheerio('.powered-by').text(),
-        loadedCheerio('footer').text(),
-      ].some(meta => meta?.toLowerCase().includes(keyword)),
-    );
+    // --- WordPress Detection ---
+    let isWordPress = [
+      // 1. Meta Generator
+      matches('meta[name="generator"]', 'content', /wordpress|site kit/i),
+      // 2. Resource Paths (The most reliable way)
+      matches('link, script, img', 'src', /\/wp-content\/|\/wp-includes\//i),
+      matches('link', 'href', /\/wp-content\/|\/wp-includes\//i),
+      // 3. Header Links (REST API, RSD, etc.)
+      matches('link[rel="https://api.w.org/"]', 'href', /.*/),
+      matches('link[rel="EditURI"]', 'href', /xmlrpc\.php/i),
+      // 4. Common Body Classes
+      matches('body', 'class', /wp-admin|wp-custom-logo|logged-in/i),
+      // 5. Scripts containing WP globals
+      matches('script', null, /wp-embed|wp-emoji|wp-block/i),
+    ].some(Boolean);
 
-    // Manually set WordPress flag for known sites
-    const manualWordPress = ['etherreads', 'greenztl2', 'soafp'];
-    if (!isWordPress && domainParts.some(wp => manualWordPress.includes(wp))) {
-      isWordPress = true;
-    }
+    // --- Blogspot / Blogger Detection ---
+    let isBlogspot = [
+      // 1. Meta Tags
+      matches('meta[name="generator"]', 'content', /blogger/i),
+      matches(
+        'meta[name="google-adsense-platform-domain"]',
+        'content',
+        /blogspot/i,
+      ),
+      // 2. Feed links
+      matches(
+        'link[rel="alternate"]',
+        'href',
+        /blogger\.com\/feeds|blogspot\.com\/feeds/i,
+      ),
+      // 3. Specific Blogger CSS/Template markers
+      matches(
+        'link',
+        'href',
+        /www\.blogger\.com\/static|www\.blogger\.com\/dyn-css/i,
+      ),
+      // 4. Blogger Script Widget Manager
+      matches(
+        'script',
+        null,
+        /_WidgetManager\._Init|_WidgetManager\._RegisterWidget/i,
+      ),
+    ].some(Boolean);
 
     // Handle outlier sites
     const outliers = [
-      'anotivereads',
-      'arcanetranslations',
       'asuratls',
       'fictionread',
-      'helscans',
       'hiraethtranslation',
       'infinitenoveltranslations',
       'machineslicedbread',
@@ -874,14 +937,13 @@ class NovelUpdates implements Plugin.PluginBase {
       'stabbingwithasyringe',
       'tinytranslation',
       'vampiramtl',
-      'zetrotranslation',
     ];
     if (domainParts.some(d => outliers.includes(d))) {
       isWordPress = false;
       isBlogspot = false;
     }
 
-    // Last edited in 0.9.2 - 08/09/2025
+    // Last edited in 0.9.5 - 26/12/2025
     /**
      * Blogspot sites:
      * - ¼-Assed
@@ -892,18 +954,13 @@ class NovelUpdates implements Plugin.PluginBase {
      * - Toasteful
      *
      * WordPress sites:
-     * - Anomlaously Creative (Outlier)
-     * - Arcane Translations (Outlier)
-     * - Blossom Translation
      * - Dumah's Translations
-     * - ElloMTL
      * - Ether Reads
      * - Femme Fables
      * - Gadgetized Panda Translation
-     * - Gem Novels
      * - Goblinslate
-     * - Hel Scans (Outlier)
      * - Hiraeth Translation (Outlier)
+     * - Infinite Novel Translations (Outlier)
      * - ippotranslations
      * - JATranslations
      * - Light Novels Translations
@@ -912,98 +969,114 @@ class NovelUpdates implements Plugin.PluginBase {
      * - Neosekai Translations
      * - Noice Translations
      * - Shanghai Fantasy
-     * - Soafp (Manually added)
+     * - Sleepy Translations
+     * - Soafp
      * - Stabbing with a Syringe (Outlier)
      * - StoneScape
      * - TinyTL (Outlier)
      * - VampiraMTL (Outlier)
      * - Wonder Novels
      * - Yong Library
-     * - Zetro Translation (Outlier)
+     * - Zetro Translation
      */
 
-    // Fetch chapter content based on detected platform
+    // Define Platform Configurations
+    const PLATFORM_CONFIG = {
+      wordpress: {
+        bloat: [
+          '.ad',
+          '.author-avatar',
+          '.chapter-warning',
+          '.entry-meta',
+          '.ezoic-ad',
+          '.mb-center',
+          '.modern-footnotes-footnote__note',
+          '.patreon-widget',
+          '.post-cats',
+          '.pre-bar',
+          '.sharedaddy',
+          '.sidebar',
+          '.swg-button-v2-light',
+          '.wp-block-buttons',
+          '.wp-dark-mode-switcher',
+          '.wp-next-post-navi',
+          '#hpk',
+          '#jp-post-flair',
+          '#textbox',
+        ],
+        title: [
+          '.entry-title',
+          '.chapter__title',
+          '.title-content',
+          '.wp-block-post-title',
+          '.title_story',
+          '#chapter-heading',
+          '.chapter-title',
+          'head title',
+          'h1:first-of-type',
+          'h2:first-of-type',
+          '.active',
+        ],
+        content: [
+          '.chapter__content',
+          '.entry-content',
+          '.text_story',
+          '.post-content',
+          '.contenta',
+          '.single_post',
+          '.main-content',
+          '.reader-content',
+          '#content',
+          '#the-content',
+          'article.post',
+          '.chp_raw',
+        ],
+      },
+      blogspot: {
+        bloat: ['.button-container', '.ChapterNav', '.ch-bottom', '.separator'],
+        title: ['.entry-title', '.post-title', 'head title'],
+        content: ['.content-post', '.entry-content', '.post-body'],
+      },
+    };
+
+    // Extraction Logic
     if (!isWordPress && !isBlogspot) {
       chapterText = await this.getChapterBody(loadedCheerio, domainParts, url);
     } else {
-      const bloatElements = isBlogspot
-        ? ['.button-container', '.ChapterNav', '.ch-bottom', '.separator']
-        : [
-            '.ad',
-            '.author-avatar',
-            '.chapter-warning',
-            '.entry-meta',
-            '.ezoic-ad',
-            '.mb-center',
-            '.modern-footnotes-footnote__note',
-            '.patreon-widget',
-            '.post-cats',
-            '.pre-bar',
-            '.sharedaddy',
-            '.sidebar',
-            '.swg-button-v2-light',
-            '.wp-block-buttons',
-            //'.wp-block-columns',
-            '.wp-dark-mode-switcher',
-            '.wp-next-post-navi',
-            '#hpk',
-            '#jp-post-flair',
-            '#textbox',
-          ];
+      const config = isWordPress
+        ? PLATFORM_CONFIG.wordpress
+        : PLATFORM_CONFIG.blogspot;
 
-      bloatElements.forEach(tag => loadedCheerio(tag).remove());
+      // Remove platform-specific bloat
+      config.bloat.forEach(tag => loadedCheerio(tag).remove());
 
-      // Extract title
-      const titleSelectors = isBlogspot
-        ? ['.entry-title', '.post-title', 'head title']
-        : [
-            '.entry-title',
-            '.chapter__title',
-            '.title-content',
-            '.wp-block-post-title',
-            '.title_story',
-            '#chapter-heading',
-            '.chapter-title',
-            'head title',
-            'h1:first-of-type',
-            'h2:first-of-type',
-            '.active',
-          ];
-      let chapterTitle = titleSelectors
-        .map(sel => loadedCheerio(sel).first().text())
-        .find(text => text);
+      // Extract Title (Simplified find)
+      let chapterTitle = config.title
+        .map(sel => loadedCheerio(sel).first().text().trim())
+        .find(text => text.length > 0);
 
-      // Extract subtitle (if any)
+      // Handle Subtitles
       const chapterSubtitle =
         loadedCheerio('.cat-series').first().text() ||
-        loadedCheerio('h1.leading-none ~ span').first().text();
+        loadedCheerio('h1.leading-none ~ span').first().text() ||
+        loadedCheerio('.breadcrumb .active').first().text();
+
       if (chapterSubtitle) chapterTitle = chapterSubtitle;
 
-      // Extract content
-      const contentSelectors = isBlogspot
-        ? ['.content-post', '.entry-content', '.post-body']
-        : [
-            '.chapter__content',
-            '.entry-content',
-            '.text_story',
-            '.post-content',
-            '.contenta',
-            '.single_post',
-            '.main-content',
-            '.reader-content',
-            '#content',
-            '#the-content',
-            'article.post',
-            '.chp_raw',
-          ];
-      const chapterContent = contentSelectors
-        .map(sel => loadedCheerio(sel).html()!)
+      // Extract Content (Scoped search)
+      const chapterContent = config.content
+        .map(sel => {
+          const el = loadedCheerio(sel).first();
+          // Ensure we don't pick up empty containers
+          return el.text().trim().length > 50 ? el.html() : null;
+        })
         .find(html => html);
 
+      // Construct Final Text
       if (chapterTitle && chapterContent) {
         chapterText = `<h2>${chapterTitle}</h2><hr><br>${chapterContent}`;
       } else {
-        chapterText = chapterContent;
+        chapterText = chapterContent || '';
       }
     }
 
