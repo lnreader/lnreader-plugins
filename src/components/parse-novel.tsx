@@ -403,7 +403,7 @@ export default function ParseNovelSection({
             </div>
 
             {/* Chapters Table */}
-            {chapters.length > 0 && (
+            {(chapters.length > 0 || sourceNovel.totalPages) && (
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="font-semibold text-foreground">
@@ -435,6 +435,16 @@ export default function ParseNovelSection({
                         <ChevronRight className="w-4 h-4" />
                       </Button>
                     </div>
+                  )}
+                  {sourceNovel.totalPages && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fetchPage(currentPage)}
+                      disabled={!currentPage || loading}
+                    >
+                      {loading ? 'Fetching...' : 'Chapter Fetch'}
+                    </Button>
                   )}
                 </div>
                 <div className="overflow-x-auto border border-border rounded-lg">
