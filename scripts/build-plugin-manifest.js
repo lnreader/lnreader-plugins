@@ -16,13 +16,11 @@ const CURRENT_BRANCH = (
   .trim()
   .replace('origin/', ''); // Ensure "origin/" prefix is removed if present
 
-// Ensure it defaults to 'master' if still empty to avoid broken URLs
-const FINAL_BRANCH =
-  CURRENT_BRANCH === 'HEAD' || !CURRENT_BRANCH ? 'master' : CURRENT_BRANCH;
-
-const USER_CONTENT_LINK = process.env.USER_CONTENT_BASE
-  ? process.env.USER_CONTENT_BASE
-  : `https://raw.githubusercontent.com/${USERNAME}/${REPO}/${FINAL_BRANCH}`;
+// Final fallback to ensure no double slash in URL
+const BRANCH =
+  CURRENT_BRANCH_DETECTION === 'HEAD' || !CURRENT_BRANCH_DETECTION
+    ? 'master'
+    : CURRENT_BRANCH_DETECTION;
 
 const matched = REMOTE.match(/([^:/]+?)\/([^/.]+)(\.git)?$/);
 if (!matched) throw Error('Cant parse git url');
@@ -30,7 +28,7 @@ const USERNAME = matched[1];
 const REPO = matched[2];
 const USER_CONTENT_LINK = process.env.USER_CONTENT_BASE
   ? process.env.USER_CONTENT_BASE
-  : `https://raw.githubusercontent.com/${USERNAME}/${REPO}/${CURRENT_BRANCH}`;
+  : `https://raw.githubusercontent.com/${USERNAME}/${REPO}/${BRANCH}`;
 
 const STATIC_LINK = `${USER_CONTENT_LINK}/public/static`;
 // Use legacy .js/src/plugins path for backward compatibility
