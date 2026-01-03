@@ -18,11 +18,11 @@ jobs:
   publish:
     name: Publish Plugins
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.REPO_SCOPED_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
