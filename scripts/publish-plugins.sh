@@ -34,7 +34,11 @@ if [[ "$1" == "--all-branches" ]]; then
         echo "Compiling TypeScript..."
         npx tsc --project tsconfig.production.json
         echo "# $branch" >> $GITHUB_STEP_SUMMARY
-        npm run build:manifest -- --only-new 2>> $GITHUB_STEP_SUMMARY
+
+        # FIX: Extract the branch name and pass it as an environment variable
+        BRANCH_NAME=$(echo $branch | sed 's/origin\///')
+        GITHUB_REF_NAME=$BRANCH_NAME npm run build:manifest -- --only-new 2>> $GITHUB_STEP_SUMMARY
+        
         if [ ! -d ".dist" ] || [ -z "$(ls -A .dist)" ]; then
             echo "❌ ERROR: Manifest generation failed - .dist is missing or empty"
             exit 1
@@ -100,4 +104,3 @@ git commit -m "chore: Publish Plugins"
 git push -f origin $dist 2>&1
 git checkout -f $current 2>&1
 echo "✅ Published to $dist"
-

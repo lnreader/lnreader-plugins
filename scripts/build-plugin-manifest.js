@@ -7,9 +7,23 @@ import { minify } from './terser.js';
 const REMOTE = execSync('git remote get-url origin')
   .toString()
   .replace(/[\s\n]/g, '');
-const CURRENT_BRANCH = execSync('git branch --show-current')
-  .toString()
-  .replace(/[\s\n]/g, '');
+// Replace the CURRENT_BRANCH definition with this:
+const CURRENT_BRANCH = (
+  process.env.GITHUB_REF_NAME ||
+  process.env.GITHUB_HEAD_REF ||
+  execSync('git rev-parse --abbrev-ref HEAD').toString()
+)
+  .trim()
+  .replace('origin/', ''); // Ensure "origin/" prefix is removed if present
+
+// Ensure it defaults to 'master' if still empty to avoid broken URLs
+const FINAL_BRANCH =
+  CURRENT_BRANCH === 'HEAD' || !CURRENT_BRANCH ? 'master' : CURRENT_BRANCH;
+
+const USER_CONTENT_LINK = process.env.USER_CONTENT_BASE
+  ? process.env.USER_CONTENT_BASE
+  : `https://raw.githubusercontent.com/${USERNAME}/${REPO}/${FINAL_BRANCH}`;
+
 const matched = REMOTE.match(/([^:/]+?)\/([^/.]+)(\.git)?$/);
 if (!matched) throw Error('Cant parse git url');
 const USERNAME = matched[1];
