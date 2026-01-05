@@ -195,7 +195,13 @@ class NovelFire implements Plugin.PluginBase {
     const loadedCheerio = await this.getCheerio(url, false);
 
     const chapterText = loadedCheerio('#content');
-    chapterText.find(':not(p, h1, span, i, b, u, img, a, div)').remove();
+    const odds = chapterText.find(':not(p, h1, span, i, b, u, img, a, div)');
+    for (const ele of odds.toArray()) {
+      const tag = ele.name.toString();
+      if (tag.length > 5) {
+        loadedCheerio(ele).remove();
+      }
+    }
 
     return chapterText.html()?.replace(/&nbsp;/g, ' ') || '';
   }
