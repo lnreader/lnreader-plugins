@@ -409,42 +409,44 @@ export default function ParseNovelSection({
                   <h4 className="font-semibold text-foreground">
                     Chapters ({chapters.length})
                   </h4>
-                  {sourceNovel.totalPages && sourceNovel.totalPages > 1 && (
+                  {sourceNovel.totalPages && (
                     <div className="flex items-center gap-2">
+                      {sourceNovel.totalPages > 1 && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => fetchPage(currentPage - 1)}
+                            disabled={currentPage === 1 || loading}
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                            Previous
+                          </Button>
+                          <span className="text-sm text-muted-foreground">
+                            Page {currentPage} of {sourceNovel.totalPages}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => fetchPage(currentPage + 1)}
+                            disabled={
+                              currentPage === sourceNovel.totalPages || loading
+                            }
+                          >
+                            Next
+                            <ChevronRight className="w-4 h-4" />
+                          </Button>
+                        </>
+                      )}
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => fetchPage(currentPage - 1)}
-                        disabled={currentPage === 1 || loading}
+                        onClick={() => fetchPage(currentPage || 1)}
+                        disabled={loading}
                       >
-                        <ChevronLeft className="w-4 h-4" />
-                        Previous
-                      </Button>
-                      <span className="text-sm text-muted-foreground">
-                        Page {currentPage} of {sourceNovel.totalPages}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => fetchPage(currentPage + 1)}
-                        disabled={
-                          currentPage === sourceNovel.totalPages || loading
-                        }
-                      >
-                        Next
-                        <ChevronRight className="w-4 h-4" />
+                        {loading ? 'Fetching...' : 'Fetch Page'}
                       </Button>
                     </div>
-                  )}
-                  {sourceNovel.totalPages && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => fetchPage(currentPage)}
-                      disabled={!currentPage || loading}
-                    >
-                      {loading ? 'Fetching...' : 'Chapter Fetch'}
-                    </Button>
                   )}
                 </div>
                 <div className="overflow-x-auto border border-border rounded-lg">
