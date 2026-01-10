@@ -1,0 +1,64 @@
+
+/* Author Feedback */
+.author-feedback {
+    position: relative;
+    cursor: help;
+    border-bottom: 1px dashed var(--theme-primary);
+    color: var(--theme-primary);
+}
+
+.author-feedback:hover::after,
+.author-feedback.active::after {
+    content: attr(data-note);
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%); 
+    background: var(--theme-surface);
+    color: var(--theme-onSurface);
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    max-width: 300px;
+    width: max-content;
+    white-space: pre-line;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    word-wrap: break-word;
+    z-index: 999;
+    box-shadow: var(--theme-outline);
+    pointer-events: none;
+}
+
+.author-feedback.active::after {
+    display: block;
+}
+
+
+blockquote.author_note {
+    padding: 5px 10px;
+    background-color: var(--theme-surfaceVariant);
+    color: var(--theme-onSurfaceVariant);
+    border-left: 4px solid var(--theme-outline);
+    quotes: none;
+}
+blockquote.author_note > p {
+    white-space-collapse: preserve-breaks;
+}
+
+.anchor {
+    position: relative;
+}
+.anchor > span {
+    position: absolute;
+    bottom: 40vh;
+    visibility: hidden;
+    pointer-events: none;
+}
+.footnotes {
+    display: grid;
+    grid-template-columns: auto auto;
+    row-gap: 0.4em;
+    column-gap: 0.6em;
+    justify-content: start;
+}

@@ -3,7 +3,6 @@ import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
 import { defaultCover } from '@libs/defaultCover';
-import { NovelItem } from '../../test_web/static/js';
 import { NovelStatus } from '@libs/novelStatus';
 
 type FuzzySearchOptions = {
@@ -163,8 +162,9 @@ class ReLibraryPlugin implements Plugin.PluginBase {
   id = 'ReLib';
   name = 'Re:Library';
   icon = 'src/en/relibrary/icon.png';
+  customCSS = 'src/en/relibrary/customCss.css';
   site = 'https://re-library.com';
-  version = '1.0.2';
+  version = '1.1.0';
   imageRequestInit: Plugin.ImageRequestInit = {
     headers: {
       Referer: 'https://re-library.com/',
@@ -176,27 +176,48 @@ class ReLibraryPlugin implements Plugin.PluginBase {
     caseSensitive: false,
   });
 
+  private ensurePageOk(response: Response, body: string) {
+    if (!response.ok) {
+      throw new Error(`HTML Error ${response.status}: ${response.statusText}`);
+    }
+    const title = body.match(/<title>(.*?)<\/title>/)?.[1]?.trim();
+
+    if (
+      title &&
+      (title == 'Bot Verification' ||
+        title == 'You are being redirected...' ||
+        title == 'Un instant...' ||
+        title == 'Just a moment...' ||
+        title == 'Redirecting...')
+    ) {
+      throw new Error('Captcha error, please open in webview');
+    }
+  }
+
+  private ensureCover(coverUrl: string | undefined) {
+    if (!coverUrl) return defaultCover;
+
+    if (coverUrl.endsWith('no-image.png')) return defaultCover;
+
+    return coverUrl;
+  }
+
   private async popularNovelsInner(url: string): Promise<Plugin.NovelItem[]> {
     const novels: Plugin.NovelItem[] = [];
     const result = await fetchApi(url);
     const body = await result.text();
+    await this.ensurePageOk(result, body);
 
-    const loadedCheerio = loadCheerio(body);
-    loadedCheerio('.entry-content > ol > li').each((_i, el) => {
-      const novel: Partial<NovelItem> = {};
-      novel.name = loadedCheerio(el).find('h3 > a').text();
-      novel.path = loadedCheerio(el)
-        .find('table > tbody > tr > td > a')
-        .attr('href');
+    const $ = loadCheerio(body);
+    $('.entry-content > ol > li').each((_i, el) => {
+      const novel: Partial<Plugin.NovelItem> = {};
+      novel.name = $(el).find('h3 > a').text();
+      novel.path = $(el).find('table > tbody > tr > td > a').attr('href');
       if (novel.name === undefined || novel.path === undefined) return;
-      novel.cover =
-        loadedCheerio(el)
-          .find('table > tbody > tr > td > a > img')
-          .attr('data-cfsrc') ||
-        loadedCheerio(el)
-          .find('table > tbody > tr > td > a > img')
-          .attr('src') ||
-        defaultCover;
+      novel.cover = this.ensureCover(
+        $(el).find('table > tbody > tr > td > a > img').attr('data-cfsrc') ||
+          $(el).find('table > tbody > tr > td > a > img').attr('src'),
+      );
       if (novel.path.startsWith(this.site)) {
         novel.path = novel.path.slice(this.site.length);
       }
@@ -209,21 +230,22 @@ class ReLibraryPlugin implements Plugin.PluginBase {
     const novels: Plugin.NovelItem[] = [];
     const result = await fetchApi(url);
     const body = await result.text();
+    await this.ensurePageOk(result, body);
 
-    const loadedCheerio = loadCheerio(body);
-    loadedCheerio('article.type-page.page').each((_i, el) => {
+    const $ = loadCheerio(body);
+    $('article.type-page.page').each((_i, el) => {
       const novel: Partial<Plugin.NovelItem> = {};
-      novel.name = loadedCheerio(el).find('.entry-title').text();
-      novel.path = loadedCheerio(el).find('.entry-title a').attr('href');
+      novel.name = $(el).find('.entry-title').text();
+      novel.path = $(el).find('.entry-title a').attr('href');
       if (novel.path === undefined || novel.name === undefined) return;
-      novel.cover =
-        loadedCheerio(el)
+      novel.cover = this.ensureCover(
+        $(el)
           .find('.entry-content > table > tbody > tr > td > a >img')
           .attr('data-cfsrc') ||
-        loadedCheerio(el)
-          .find('.entry-content > table > tbody > tr > td > a >img')
-          .attr('src') ||
-        defaultCover;
+          $(el)
+            .find('.entry-content > table > tbody > tr > td > a >img')
+            .attr('src'),
+      );
       if (novel.path.startsWith(this.site)) {
         novel.path = novel.path.slice(this.site.length);
       }
@@ -259,94 +281,111 @@ class ReLibraryPlugin implements Plugin.PluginBase {
 
     const result = await fetchApi(`${this.site}/${novelPath}`);
     const body = await result.text();
+    await this.ensurePageOk(result, body);
 
-    const loadedCheerio = loadCheerio(body);
+    const $ = loadCheerio(body);
 
     // If it doesn't find the name I should just throw an error (or early return) since the scraping is broken
-    novel.name = loadedCheerio('header.entry-header > .entry-title')
-      .text()
-      .trim();
+    novel.name = $('header.entry-header > .entry-title').text().trim();
 
     if (novel.name === undefined || novel.name === '404 – Page not found')
       throw new Error(`Invalid novel for url ${novelPath}`);
 
     // Find the cover
-    novel.cover =
-      loadedCheerio('.entry-content > table img').attr('data-cfsrc') ||
-      loadedCheerio('.entry-content > table img').attr('src') ||
-      defaultCover;
+    novel.cover = this.ensureCover(
+      // $('.entry-content > table > tbody > tr > td > a > img')
+      $('.entry-content > table img').attr('data-cfsrc') ||
+        $('.entry-content > table img').attr('src'),
+    );
 
     novel.status = NovelStatus.Unknown;
-    loadedCheerio('.entry-content > table > tbody > tr > td > p').each(
-      function (_i, el) {
-        // Handle the novel status
-        // Sadly some novels just state the status inside the summary...
-        if (
-          loadedCheerio(el)
-            .find('strong')
-            .text()
-            .toLowerCase()
-            .trim()
-            .startsWith('status')
-        ) {
-          loadedCheerio(el).find('strong').remove();
-          const status = loadedCheerio(el).text().toLowerCase().trim();
-          if (status.includes('on-going')) {
-            novel.status = NovelStatus.Ongoing;
-          } else if (status.includes('completed')) {
-            novel.status = NovelStatus.Completed;
-          } else if (status.includes('hiatus')) {
-            novel.status = NovelStatus.OnHiatus;
-          } else if (status.includes('cancelled')) {
-            novel.status = NovelStatus.Cancelled;
-          } else {
-            novel.status = loadCheerio(el).text();
-          }
+    $('.entry-content > table > tbody > tr > td > p').each(function (_i, el) {
+      // Handle the novel status
+      // Sadly some novels just state the status inside the summary...
+      if (
+        $(el).find('strong').text().toLowerCase().trim().startsWith('status')
+      ) {
+        $(el).find('strong').remove();
+        const status = $(el).text().toLowerCase().trim();
+        if (status.includes('on-going')) {
+          novel.status = NovelStatus.Ongoing;
+        } else if (status.includes('completed')) {
+          novel.status = NovelStatus.Completed;
+        } else if (status.includes('hiatus')) {
+          novel.status = NovelStatus.OnHiatus;
+        } else if (status.includes('cancelled')) {
+          novel.status = NovelStatus.Cancelled;
+        } else {
+          novel.status = loadCheerio(el).text();
         }
-        // Handle the genres
-        else if (
-          loadedCheerio(el)
-            .find('strong')
-            .text()
-            .toLowerCase()
-            .trim()
-            .startsWith('Category')
-        ) {
-          loadedCheerio(el).find('strong').remove();
-          novel.genres = loadedCheerio(el).text();
+      }
+      // Handle the genres
+      else if (
+        $(el).find('strong').text().toLowerCase().trim().startsWith('Category')
+      ) {
+        $(el).find('strong').remove();
+        // previously, list of '> span > a'
+        novel.genres = $(el).text();
+      }
+    });
+
+    // Handle the author names
+    // Both the author and the translator (if present) seem to be written out as links,
+    // and the paragraph should contain at most two of them (they SHOULD always be first).
+    $('.entry-content > table > tbody > tr > td > span:has(> a)').each(
+      (_i, el) => {
+        const $el = $(el);
+        novel.author = $el.find('a:nth-child(1)').text();
+        const translator = $el.find('a:nth-child(2)').first().text();
+        if (!!translator) {
+          novel.author += ` (translated by: ${translator})`;
         }
       },
     );
 
-    novel.summary = loadedCheerio(
+    novel.summary = $(
       '.entry-content > div.su-box > div.su-box-content',
     ).text();
 
-    const chapters: Plugin.ChapterItem[] = [];
+    const chapters: (Plugin.ChapterItem & { epoch: number | null })[] = [];
 
     let chapter_idx = 0;
-    loadedCheerio('.entry-content > div.su-accordion').each((_i1, el) => {
-      loadedCheerio(el)
-        .find('li > a')
+    $('.entry-content > div.su-accordion').each((_i1, el) => {
+      $(el)
+        .find('li:has(> a)')
         .each((_i2, chap_el) => {
-          chapter_idx += 1;
-          let chap_path = loadedCheerio(chap_el).attr('href')?.trim();
-          if (
-            loadedCheerio(chap_el).text() === undefined ||
-            chap_path === undefined
-          )
-            return;
+          const $a = $(chap_el).find('a');
+
+          let chap_path = $a.attr('href')?.trim();
+          if ($a.text() === undefined || chap_path === undefined) return;
           if (chap_path.startsWith(this.site)) {
             chap_path = chap_path.slice(this.site.length);
           }
+
+          const epochStr = $(chap_el).attr('data-date');
+          // if we can't get the released time (at least without any additional fetches), set it to null purposfully
+          let epoch = null;
+          let releaseTime = null;
+          if (!!epochStr) {
+            epoch = parseInt(epochStr);
+            if (!isNaN(epoch)) {
+              releaseTime = new Date(epoch * 1000).toISOString();
+            }
+          }
+
           chapters.push({
-            name: loadedCheerio(chap_el).text(),
+            name: $a.text(),
             path: chap_path,
-            chapterNumber: chapter_idx,
+            chapterNumber: 0,
             // we KNOW that we can't get the released time (at least without any additional fetches), so set it to null purposfully
-            releaseTime: null,
+            releaseTime,
+            epoch,
           });
         });
+    });
+    chapters.map((c, i) => {
+      c.chapterNumber = i + 1;
+      return c;
     });
 
     novel.chapters = chapters;
@@ -357,40 +396,65 @@ class ReLibraryPlugin implements Plugin.PluginBase {
     // parse chapter text here
     const result = await fetchApi(`${this.site}/${chapterPath}`);
     const body = await result.text();
+    await this.ensurePageOk(result, body);
 
-    const loadedCheerio = loadCheerio(body);
+    const $ = loadCheerio(body);
+    const postId = $('article').attr('id')?.split('-')?.[1] ?? null;
 
-    const entryContent = loadedCheerio('.entry-content');
-    const pageLinkHr = entryContent.find('.PageLink + hr').first();
-    if (pageLinkHr.length) {
-      // Remove all previous siblings before the .PageLink + hr
-      let prev = pageLinkHr.prev();
-      while (prev.length) {
-        prev.remove();
-        prev = pageLinkHr.prev();
-      }
-      const pageLink = pageLinkHr.prev('.PageLink');
-      if (pageLink.length) {
-        pageLink.remove();
-      }
-      pageLinkHr.next().remove();
-      pageLinkHr.remove();
+    const content = $('article > div.entry-content');
+    let topDelimiter = postId
+      ? content.find('> p:has(> span#more-' + postId + ')')
+      : undefined;
+    if (topDelimiter == null) {
+      topDelimiter = content.find('> p:nth-child(1)');
     }
 
-    // Find the first <hr> followed by a .PageLink and remove everything after
-    const hrAfterPageLink = entryContent.find('hr + .PageLink').first();
-    if (hrAfterPageLink.length) {
-      let next = hrAfterPageLink.next();
-      while (next.length) {
-        const temp = next.next();
-        next.remove();
-        next = temp;
-      }
-      hrAfterPageLink.prev().remove();
-      hrAfterPageLink.remove();
+    if (topDelimiter != null) {
+      topDelimiter.prevAll().remove();
+      topDelimiter.remove();
     }
 
-    return entryContent.html() || '';
+    content.find('div:has(>div.ad-slot)').remove();
+
+    const footnotes = content.find('ol.easy-footnotes-wrapper');
+
+    // TODO: use the buttons instead?
+    const btmDelimiter = content.find('> hr:has(~ hr#ref)').last();
+    let authorNote = null;
+    if (btmDelimiter != null) {
+      authorNote = btmDelimiter.next('p');
+
+      btmDelimiter.nextAll().remove();
+      btmDelimiter.remove();
+    }
+
+    // this is a really weird hack that some chapters of one specific novel do.
+    // I need to check if any others have a problem like this.
+    // Generally, we need to set up some kind of large-scale testing for
+    // edge cases like this.
+    content.find('p:has(>code)+code:has(+p:has(>code))').each((_i, el) => {
+      if (
+        el.attribs.style.match(/(.*?;)?font-family: 'Merriweather', serif.*/)
+      ) {
+        $(el.prev!!).remove();
+        $(el.next!!).remove();
+        $(el).children().unwrap();
+      }
+    });
+
+    content.append(footnotes);
+    if (authorNote != null) {
+      content.append(`
+        <blockquote class="author_note">
+          <p>${authorNote.text()}</p>
+        </blockquote>
+        `);
+    }
+
+    content.find('div.PageLink').remove();
+    content.find('table#fixed').remove();
+
+    return content.html() ?? '';
   }
 
   async searchNovels(
@@ -401,13 +465,14 @@ class ReLibraryPlugin implements Plugin.PluginBase {
     if (pageNo !== 1) return [];
 
     const novels: Plugin.NovelItem[] = [];
-    const req = await fetchApi(`${this.site}/translations/`);
-    const body = await req.text();
+    const result = await fetchApi(`${this.site}/translations/`);
+    const body = await result.text();
+    await this.ensurePageOk(result, body);
 
-    const loadedCheerio = loadCheerio(body);
+    const $ = loadCheerio(body);
 
-    loadedCheerio('article article').each((_i, el) => {
-      const e = loadedCheerio(el);
+    $('article article').each((_i, el) => {
+      const e = $(el);
       if (e.find('a').attr('href') && e.find('a').text()) {
         novels.push({
           name: e.find('h4').text(),
