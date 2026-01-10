@@ -10,7 +10,7 @@ import { storage } from '@libs/storage';
 class Novelight implements Plugin.PagePlugin {
   id = 'novelight';
   name = 'Novelight';
-  version = '1.1.2';
+  version = '1.1.3';
   icon = 'src/en/novelight/icon.png';
   site = 'https://novelight.net/';
 
@@ -187,7 +187,10 @@ class Novelight implements Plugin.PagePlugin {
       } catch (error) {}
 
       const chapterName = isLocked ? '🔒 ' + title : title;
-      const chapterUrl = ele.attribs.href;
+      let chapterUrl = ele.attribs.href;
+      if (chapterUrl.charAt(0) == '/') {
+        chapterUrl = chapterUrl.substring(1);
+      }
       chapter.push({
         name: chapterName,
         path: chapterUrl,
@@ -201,6 +204,9 @@ class Novelight implements Plugin.PagePlugin {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
+    if (chapterPath.charAt(0) == '/') {
+      chapterPath = chapterPath.substring(1);
+    }
     const rawBody = await fetchApi(this.site + chapterPath).then(r => {
       const res = r.text();
       return res;
