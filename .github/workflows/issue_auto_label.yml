@@ -43,6 +43,13 @@ jobs:
 
           echo "SELECTED_PLUGIN=$SELECTED_PLUGIN" >> $GITHUB_ENV
 
+      - name: Extract Language From Issue Body
+        id: extract-language
+        run: |
+          SELECTED_LANGUAGE=$(echo "${{ github.event.issue.body }}" | awk '/### Language/ {f=1; next} f && NF {print; exit}' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+
+          echo "SELECTED_LANGUAGE=$SELECTED_LANGUAGE" >> $GITHUB_ENV
+
       - name: Determine Corresponding Label
         id: determine-label
         run: |
@@ -51,8 +58,14 @@ jobs:
           # Add "Plugin: " in front of each label
           LABELS_WITH_PREFIX="$(echo "$LABELS" | sed 's/^/Plugin: /')"
 
+          FINAL_LABELS="$LABELS_WITH_PREFIX"
+
+          if [ -n "$SELECTED_LANGUAGE" ]; then
+            FINAL_LABELS="${FINAL_LABELS}"$'\n'"Language: $SELECTED_LANGUAGE"
+          fi
+
           # Save to GitHub environment
-          printf "LABELS<<EOF\n%s\nEOF\n" "$LABELS_WITH_PREFIX" >> $GITHUB_ENV
+          printf "LABELS<<EOF\n%s\nEOF\n" "$FINAL_LABELS" >> $GITHUB_ENV
 
       - name: Add Labels To Issue
         if: env.LABELS != ''
