@@ -32,7 +32,7 @@ function Home() {
     <div className="min-h-screen bg-background">
       <PluginHeader selectedPlugin={plugin} />
       <div className="flex h-[calc(100vh-64px)]">
-        <aside className="w-64 border-r bg-background flex flex-col">
+        <aside className="w-64 border-r border-border bg-background flex flex-col">
           <div className="p-6 flex-shrink-0 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">

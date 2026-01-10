@@ -27,8 +27,8 @@ class MVLEMPYRPlugin implements Plugin.PluginBase {
   id = 'mvlempyr.com';
   name = 'MVLEMPYR';
   icon = 'src/en/mvlempyr/icon.png';
-  site = 'https://www.mvlempyr.com/';
-  version = '1.0.9';
+  site = 'https://www.mvlempyr.io/';
+  version = '1.0.12';
 
   _chapSite = 'https://chap.heliosarchive.online/';
   _allNovels: (Plugin.NovelItem & ExtraNovelData)[] | undefined;
@@ -176,7 +176,7 @@ class MVLEMPYRPlugin implements Plugin.PluginBase {
     const loadedCheerio = parseHTML(body);
     this.checkCaptcha(loadedCheerio);
 
-    return loadedCheerio('#chapter').html() || '';
+    return loadedCheerio('#chapter > span').html() || '';
   }
 
   async searchNovels(
@@ -229,6 +229,7 @@ class MVLEMPYRPlugin implements Plugin.PluginBase {
         created: new Date(novel['createdOn']).getTime(),
         genres: novel.genre,
         tags: novel.tags,
+        random: Math.random(),
       };
     });
   }
@@ -243,6 +244,7 @@ class MVLEMPYRPlugin implements Plugin.PluginBase {
         { label: 'Best Rated', value: 'avgReview' },
         { label: 'Most Reviewed', value: 'reviewCount' },
         { label: 'Chapter Count', value: 'chapterCount' },
+        { label: 'Random', value: 'random' },
       ],
     },
     // update genres and tags with this script if needed

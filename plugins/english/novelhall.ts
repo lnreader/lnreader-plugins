@@ -6,7 +6,7 @@ import { defaultCover } from '@libs/defaultCover';
 class NovelHall implements Plugin.PluginBase {
   id = 'novelhall';
   name = 'Novel Hall';
-  version = '1.0.2';
+  version = '1.0.3';
   icon = 'src/en/novelhall/icon.png';
   site = 'https://novelhall.com/';
 
@@ -85,7 +85,7 @@ class NovelHall implements Plugin.PluginBase {
   async parseChapter(chapterPath: string): Promise<string> {
     const body = await fetchApi(this.site + chapterPath).then(r => r.text());
     const loadedCheerio = parseHTML(body);
-    const chapterText = loadedCheerio('.content').html() || '';
+    const chapterText = loadedCheerio('#htmlContent').html() || '';
     return chapterText;
   }
 

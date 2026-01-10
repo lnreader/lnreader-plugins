@@ -1,4 +1,4 @@
-import { fetchText } from '@/lib/fetch';
+import { fetchText } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { load as parseHTML } from 'cheerio';

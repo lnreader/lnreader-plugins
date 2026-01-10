@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -20,8 +20,16 @@ const generator = function generator(source) {
     encoding: 'utf-8',
   });
 
+  const chapterTransformJsOrPath = source.options?.customJs?.chapterTransform;
+  const chapterTransformPath = chapterTransformJsOrPath
+    ? join(folder, chapterTransformJsOrPath)
+    : '';
+  const chapterTransformJs = existsSync(chapterTransformPath)
+    ? readFileSync(chapterTransformPath, { encoding: 'utf-8' })
+    : chapterTransformJsOrPath;
+
   const pluginScript = `
-${readNovelFullTemplate}
+${readNovelFullTemplate.replace('// chapterTransformJs HERE', chapterTransformJs || '')}
 const plugin = new FictioneerPlugin(${JSON.stringify(source)});
 export default plugin;
     `.trim();

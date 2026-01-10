@@ -1,4 +1,4 @@
-import { load as parseHTML } from 'cheerio';
+import { CheerioAPI, load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
@@ -6,25 +6,35 @@ import { Filters, FilterTypes } from '@libs/filterInputs';
 class NovelsOnline implements Plugin.PluginBase {
   id = 'NO.net';
   name = 'novelsOnline';
-  site = 'https://novelsonline.net';
+  site = 'https://novelsonline.org';
   icon = 'src/en/novelsonline/icon.png';
-  version = '1.0.0';
+  version = '1.0.1';
 
-  async popularNovels(
-    page: number,
-    { filters }: Plugin.PopularNovelsOptions<typeof this.filters>,
-  ): Promise<Plugin.NovelItem[]> {
-    let link = this.site;
-    if (filters.genre.value !== '') link += `/category/${filters.genre.value}/`;
-    else link += `/top-novel/`;
+  async safeFetch(
+    url: string,
+    init: any | undefined = undefined,
+  ): Promise<CheerioAPI> {
+    const r = await fetchApi(url, init);
+    if (!r.ok)
+      throw new Error(
+        'Could not reach site (' + r.status + ') try to open in webview.',
+      );
+    const body = await r.text();
+    const $ = parseHTML(body);
 
-    link += page;
-    link += `?change_type=${filters.sort.value}`;
+    // Check if the input is random characters
+    // the title element should be empty only if the input is random characters
+    const hasElementNodes = $('title') !== undefined;
+    if (!hasElementNodes)
+      throw new Error(
+        'Captcha protection detected (Input is random characters). Please try opening the page in WebView.',
+      );
 
-    const body = await fetchApi(link).then(r => r.text());
+    return $;
+  }
 
-    const loadedCheerio = parseHTML(body);
-    const novel: Plugin.NovelItem[] = [];
+  async parseNovels(loadedCheerio: CheerioAPI): Promise<Plugin.NovelItem[]> {
+    const novels: Plugin.NovelItem[] = [];
 
     loadedCheerio('.top-novel-block').each((i, el) => {
       const novelName = loadedCheerio(el).find('h2').text();
@@ -34,20 +44,62 @@ class NovelsOnline implements Plugin.PluginBase {
       const novelUrl = loadedCheerio(el).find('h2 a').attr('href');
       if (!novelUrl) return;
 
-      novel.push({
+      novels.push({
         name: novelName,
         cover: novelCover,
         path: novelUrl.replace(this.site, ''),
       });
     });
-    return novel;
+    return novels;
+  }
+
+  async popularNovels(
+    page: number,
+    { filters }: Plugin.PopularNovelsOptions,
+  ): Promise<Plugin.NovelItem[]> {
+    const form = new URLSearchParams();
+
+    for (const key in filters) {
+      if (key === 'keyword') {
+        form.append('keyword', filters[key].value as string);
+      } else if (typeof filters[key].value === 'object') {
+        for (const value of filters[key].value as string[])
+          form.append(`include[${key}][]`, value);
+      } else if (filters[key].value) {
+        form.append(`include[${key}][]`, filters[key].value as string);
+      }
+    }
+    if (form.toString()) {
+      form.append('search', '1');
+      return page == 1 ? this.detailedSearch(form) : [];
+    }
+
+    const $ = await this.safeFetch(this.site + '/top-novel/' + page);
+    return this.parseNovels($);
+  }
+
+  async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
+    const form = new URLSearchParams();
+    form.append('keyword', searchTerm);
+    form.append('search', '1');
+
+    return this.detailedSearch(form);
+  }
+
+  async detailedSearch(form: URLSearchParams): Promise<Plugin.NovelItem[]> {
+    const $ = await this.safeFetch(this.site + '/detailed-search', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: form.toString(),
+    });
+
+    return this.parseNovels($);
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const result = await fetchApi(this.site + novelPath).then(res =>
-      res.text(),
-    );
-    const $ = parseHTML(result);
+    const $ = await this.safeFetch(this.site + novelPath);
 
     const novel: Plugin.SourceNovel = {
       path: novelPath,
@@ -78,6 +130,14 @@ class NovelsOnline implements Plugin.PluginBase {
             .get()
             .join(', ');
           break;
+        case 'Artist(s)':
+          const artist = detail
+            .find('li')
+            .map((_, el) => $(el).text())
+            .get()
+            .join(', ');
+          if (artist && artist != 'N/A') novel.artist = artist;
+          break;
         case 'Status':
           novel.status = detail.text().trim();
           break;
@@ -100,98 +160,89 @@ class NovelsOnline implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const result = await fetchApi(this.site + chapterPath).then(res =>
-      res.text(),
-    );
-    const loadedCheerio = parseHTML(result);
+    const loadedCheerio = await this.safeFetch(this.site + chapterPath);
 
     const chapterText = loadedCheerio('#contentall').html() || '';
 
     return chapterText;
   }
 
-  async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
-    const result = await fetchApi(this.site + '/sResults.php', {
-      headers: {
-        Accept: '*/*',
-        'Accept-Language': 'pl,en-US;q=0.7,en;q=0.3',
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-      },
-      method: 'POST',
-      body: new URLSearchParams({ q: searchTerm }).toString(),
-    }).then(res => res.text());
-
-    const $ = parseHTML(result);
-
-    const headers = $('li');
-    return headers
-      .map((i, h) => {
-        const novelName = $(h).text();
-        const novelUrl = $(h).find('a').attr('href');
-        const novelCover = $(h).find('img').attr('src');
-
-        if (!novelUrl) return;
-
-        return {
-          name: novelName,
-          cover: novelCover,
-          path: novelUrl.replace(this.site, ''),
-        };
-      })
-      .get()
-      .filter(sr => sr !== null);
-  }
-
   filters = {
-    sort: {
-      value: 'top_rated',
-      label: 'Sort by',
+    keyword: {
+      value: '',
+      label: 'Keyword',
+      type: FilterTypes.TextInput,
+    },
+    novel_type: {
+      value: [],
+      label: 'Novel Type',
       options: [
-        { label: 'Top Rated', value: 'top_rated' },
-        { label: 'Most Viewed', value: 'view' },
+        { label: 'Web Novel', value: 'Web Novel' },
+        { label: 'Light Novel', value: 'Light Novel' },
+        { label: 'Chinese Novel', value: 'Chinese Novel' },
+        { label: 'Korean Novel', value: 'Korean Novel' },
       ],
-      type: FilterTypes.Picker,
+      type: FilterTypes.CheckboxGroup,
+    },
+    language: {
+      value: [],
+      label: 'Language',
+      options: [
+        { label: 'Chinese', value: 'Chinese' },
+        { label: 'Japanese', value: 'Japanese' },
+        { label: 'Korean', value: 'Korean' },
+      ],
+      type: FilterTypes.CheckboxGroup,
     },
     genre: {
-      value: '',
-      label: 'Category',
+      value: [],
+      label: 'Genre',
       options: [
-        { label: 'None', value: '' },
-        { label: 'Action', value: 'action' },
-        { label: 'Adventure', value: 'adventure' },
-        { label: 'Celebrity', value: 'celebrity' },
-        { label: 'Comedy', value: 'comedy' },
-        { label: 'Drama', value: 'drama' },
-        { label: 'Ecchi', value: 'ecchi' },
-        { label: 'Fantasy', value: 'fantasy' },
-        { label: 'Gender Bender', value: 'gender-bender' },
-        { label: 'Harem', value: 'harem' },
-        { label: 'Historical', value: 'historical' },
-        { label: 'Horror', value: 'horror' },
-        { label: 'Josei', value: 'josei' },
-        { label: 'Martial Arts', value: 'martial-arts' },
-        { label: 'Mature', value: 'mature' },
-        { label: 'Mecha', value: 'mecha' },
-        { label: 'Mystery', value: 'mystery' },
-        { label: 'Psychological', value: 'psychological' },
-        { label: 'Romance', value: 'romance' },
-        { label: 'School Life', value: 'school-life' },
-        { label: 'Sci-fi', value: 'sci-fi' },
-        { label: 'Seinen', value: 'seinen' },
-        { label: 'Shotacon', value: 'shotacon' },
-        { label: 'Shoujo', value: 'shoujo' },
-        { label: 'Shoujo Ai', value: 'shoujo-ai' },
-        { label: 'Shounen', value: 'shounen' },
-        { label: 'Shounen Ai', value: 'shounen-ai' },
-        { label: 'Slice of Life', value: 'slice-of-life' },
-        { label: 'Sports', value: 'sports' },
-        { label: 'Supernatural', value: 'supernatural' },
-        { label: 'Tragedy', value: 'tragedy' },
-        { label: 'Wuxia', value: 'wuxia' },
-        { label: 'Xianxia', value: 'xianxia' },
-        { label: 'Xuanhuan', value: 'xuanhuan' },
-        { label: 'Yaoi', value: 'yaoi' },
-        { label: 'Yuri', value: 'yuri' },
+        { label: 'Action', value: '4' },
+        { label: 'Adventure', value: '1' },
+        { label: 'Celebrity', value: '39' },
+        { label: 'Comedy', value: '12' },
+        { label: 'Drama', value: '6' },
+        { label: 'Ecchi', value: '47' },
+        { label: 'Fantasy', value: '2' },
+        { label: 'Gender Bender', value: '14' },
+        { label: 'Harem', value: '45' },
+        { label: 'Historical', value: '22' },
+        { label: 'Horror', value: '31' },
+        { label: 'Josei', value: '21' },
+        { label: 'Martial Arts', value: '18' },
+        { label: 'Mature', value: '46' },
+        { label: 'Mecha', value: '30' },
+        { label: 'Mystery', value: '7' },
+        { label: 'Psychological', value: '8' },
+        { label: 'Romance', value: '9' },
+        { label: 'School Life', value: '10' },
+        { label: 'Sci-fi', value: '3' },
+        { label: 'Seinen', value: '23' },
+        { label: 'Shotacon', value: '35' },
+        { label: 'Shoujo', value: '11' },
+        { label: 'Shoujo Ai', value: '34' },
+        { label: 'Shounen', value: '5' },
+        { label: 'Shounen Ai', value: '32' },
+        { label: 'Slice of Life', value: '13' },
+        { label: 'Sports', value: '33' },
+        { label: 'Supernatural', value: '25' },
+        { label: 'Tragedy', value: '24' },
+        { label: 'Wuxia', value: '17' },
+        { label: 'Xianxia', value: '20' },
+        { label: 'Xuanhuan', value: '38' },
+        { label: 'Yaoi', value: '16' },
+        { label: 'Yuri', value: '27' },
+      ],
+      type: FilterTypes.CheckboxGroup,
+    },
+    completed: {
+      value: '',
+      label: 'Completed',
+      options: [
+        { label: 'Any', value: '' },
+        { label: 'Yes', value: 'yes' },
+        { label: 'No', value: 'no' },
       ],
       type: FilterTypes.Picker,
     },

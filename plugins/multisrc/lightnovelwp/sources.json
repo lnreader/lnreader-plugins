@@ -10,7 +10,7 @@
   },
   {
     "id": "kolnovel",
-    "sourceSite": "https://kolnovel.site/",
+    "sourceSite": "https://kolnovel.com/",
     "sourceName": "Kol Novel",
     "options": {
       "lang": "Arabic",
@@ -19,6 +19,18 @@
         "chapterTransform": "custom/kolnovel/chapterTransform.js"
       },
       "versionIncrements": 9
+      "customJs": "$('article > style').text().match(/\\.\\w+(?=\\s*[,{])/g)?.forEach(tag => $(`p${tag}`).remove());$('.epcontent .code-block').remove();",
+      "versionIncrements": 10
+    }
+  },
+  {
+    "id": "freekolnovel",
+    "sourceSite": "https://free.kolnovel.com/",
+    "sourceName": "Free Kol Novel",
+    "options": {
+      "lang": "Arabic",
+      "reverseChapters": true,
+      "customJs": "$('article > style').text().match(/\\.\\w+(?=\\s*[,{])/g)?.forEach(tag => $(`p${tag}`).remove());$('.epcontent .code-block').remove();"
     }
   },
   {

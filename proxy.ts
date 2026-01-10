@@ -1,8 +1,10 @@
+import process from 'node:process';
+import { Buffer } from 'buffer';
 import { FetchMode, ServerSetting } from './src/types/types';
 import { Connect } from 'vite';
 import httpProxy from 'http-proxy';
 import { exec } from 'child_process';
-import { brotliDecompressSync, gunzipSync } from 'zlib';
+import { brotliDecompressSync, gunzipSync, zstdDecompressSync } from 'zlib';
 
 const proxy = httpProxy.createProxyServer({});
 
@@ -19,13 +21,7 @@ const settings: ServerSetting = {
     'sec-fetch-dest',
     'pragma',
   ],
-  disAllowResponseHeaders: [
-    'link',
-    'set-cookie',
-    'set-cookie2',
-    'content-encoding',
-    'content-length',
-  ],
+  disAllowResponseHeaders: ['link', 'set-cookie', 'set-cookie2'],
   useUserAgent: true,
 };
 
@@ -171,7 +167,11 @@ const proxyRequest: Connect.SimpleHandleFunction = (req, res) => {
       .then(([res2, text]) => {
         res.statusCode = res2.status;
         res2.headers.forEach((val, key) => {
-          if (!settings.disAllowResponseHeaders.includes(key)) {
+          if (
+            !settings.disAllowResponseHeaders.includes(key) &&
+            key !== 'content-encoding' &&
+            key !== 'content-length'
+          ) {
             res.setHeader(key, val);
           }
         });
@@ -184,11 +184,20 @@ const proxyRequest: Connect.SimpleHandleFunction = (req, res) => {
         res.end();
       });
   } else if (settings.fetchMode === FetchMode.PROXY) {
-    proxy.web(req, res, {
-      target: _url.origin,
-      selfHandleResponse: true,
-      followRedirects: true,
-    });
+    proxy.web(
+      req,
+      res,
+      {
+        target: _url.origin,
+        selfHandleResponse: true,
+        followRedirects: true,
+      },
+      err => {
+        console.error(err);
+        res.statusCode = 500;
+        res.end();
+      },
+    );
   }
 };
 
@@ -226,7 +235,13 @@ proxy.on('proxyRes', function (proxyRes, req, res) {
       ? contentEncoding.some(enc => enc.includes('gzip'))
       : contentEncoding.includes('gzip'));
 
-  if (isBrotli || isGzip) {
+  const isZstd =
+    contentEncoding &&
+    (Array.isArray(contentEncoding)
+      ? contentEncoding.some(enc => enc.includes('zstd'))
+      : contentEncoding.includes('zstd'));
+
+  if (isBrotli || isGzip || isZstd) {
     delete proxyRes.headers['content-encoding'];
     delete proxyRes.headers['content-length'];
 
@@ -245,6 +260,8 @@ proxy.on('proxyRes', function (proxyRes, req, res) {
 
         if (isBrotli) {
           decompressed = brotliDecompressSync(buffer);
+        } else if (isZstd) {
+          decompressed = zstdDecompressSync(buffer);
         } else {
           decompressed = gunzipSync(buffer);
         }

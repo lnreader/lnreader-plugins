@@ -1,16 +1,44 @@
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
+import { Node } from 'domhandler';
 import { load as loadCheerio } from 'cheerio';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { storage } from '@libs/storage';
 import { defaultCover } from '@libs/defaultCover';
+
+type APINovel = {
+  title: string;
+  slug: string;
+  cover: string;
+  description: string;
+  status: string;
+  genres: { name: string }[];
+};
+
+type APIChapter = {
+  locked: { price: number } | null;
+  group: null | {
+    index: number;
+    slug: string;
+  };
+  title: string;
+  number: number;
+  created_at: string;
+};
+
+type ChapterInfo = {
+  name: string;
+  path: string;
+  releaseTime: string;
+  chapterNumber: number;
+};
 
 class FenrirRealmPlugin implements Plugin.PluginBase {
   id = 'fenrir';
   name = 'Fenrir Realm';
   icon = 'src/en/fenrirrealm/icon.png';
   site = 'https://fenrirealm.com';
-  version = '1.0.10';
+  version = '1.0.12';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   hideLocked = storage.get('hideLocked');
@@ -40,17 +68,21 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       .join('');
     const res = await fetchApi(
       `${this.site}/api/series/filter?page=${pageNo}&per_page=20&status=${filters.status.value}&order=${sort}${genresFilter}`,
-    ).then(r => r.json());
+    ).then(r =>
+      r.json().catch(() => {
+        throw new Error(
+          'There was an error fetching the data from the server. Please try to open it in WebView',
+        );
+      }),
+    );
 
-    return res.data.map(r => this.parseNovelFromApi(r));
+    return res.data.map((r: APINovel) => this.parseNovelFromApi(r));
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const html = await fetchApi(`${this.site}/series/${novelPath}`, {
-      headers: {
-        'User-Agent': '',
-      },
-    }).then(r => r.text());
+    const html = await fetchApi(`${this.site}/series/${novelPath}`, {}).then(
+      r => r.text(),
+    );
     const loadedCheerio = loadCheerio(html);
 
     const novel: Plugin.SourceNovel = {
@@ -84,14 +116,14 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
     ).then(r => r.json());
 
     if (this.hideLocked) {
-      chapters = chapters.filter(c => !c.locked?.price);
+      chapters = chapters.filter((c: APIChapter) => !c.locked?.price);
     }
 
     novel.chapters = chapters
-      .map(c => ({
+      .map((c: APIChapter) => ({
         name:
           (c.locked?.price ? '🔒 ' : '') +
-          (c.group?.index === null ? '' : 'Vol ' + c.group.index + ' ') +
+          (c.group?.index === null ? '' : 'Vol ' + c.group?.index + ' ') +
           'Chapter ' +
           c.number +
           (c.title && c.title.trim() != 'Chapter ' + c.number
@@ -99,23 +131,31 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
             : ''),
         path:
           novelPath +
-          (c.group?.index === null ? '' : '/' + c.group.slug) +
+          (c.group?.index === null ? '' : '/' + c.group?.slug) +
           '/chapter-' +
           c.number,
         releaseTime: c.created_at,
-        chapterNumber: c.number + c.group?.index * 1000000000000,
+        chapterNumber: c.number + (c.group?.index || 0) * 1000000000000,
       }))
-      .sort((a, b) => a.chapterNumber - b.chapterNumber);
+      .sort(
+        (a: ChapterInfo, b: ChapterInfo) => a.chapterNumber - b.chapterNumber,
+      );
     return novel;
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const page = await fetchApi(this.site + '/series/' + chapterPath, {
-      headers: {
-        'User-Agent': '',
-      },
-    }).then(r => r.text());
-    return loadCheerio(page)('#reader-area').html() || '';
+    const page = await fetchApi(this.site + '/series/' + chapterPath, {}).then(
+      r => r.text(),
+    );
+    const chapter = loadCheerio(page)('[id^="reader-area-"]');
+    chapter
+      .contents()
+      .filter((_, node: Node) => {
+        return node.type === 'comment';
+      })
+      .remove();
+
+    return chapter.html() || '';
   }
 
   async searchNovels(
@@ -126,10 +166,12 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       `${this.site}/api/series/filter?page=${pageNo}&per_page=20&search=${encodeURIComponent(searchTerm)}`,
     )
       .then(r => r.json())
-      .then(r => r.data.map(novel => this.parseNovelFromApi(novel)));
+      .then(r =>
+        r.data.map((novel: APINovel) => this.parseNovelFromApi(novel)),
+      );
   }
 
-  parseNovelFromApi(apiData) {
+  parseNovelFromApi(apiData: APINovel) {
     return {
       name: apiData.title,
       path: apiData.slug,
@@ -247,11 +289,19 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
 
 export default new FenrirRealmPlugin();
 
+type GenreData = {
+  name: string;
+  id: number;
+};
+
 //paste into console on site to load
 async function getUpdatedGenres() {
   const data = await fetch(
     'https://fenrirealm.com/api/novels/taxonomy/genres',
   ).then(d => d.json());
-  const genreData = data.map(g => ({ label: g.name, value: g.id.toString() }));
+  const genreData = data.map((g: GenreData) => ({
+    label: g.name,
+    value: g.id.toString(),
+  }));
   console.log(JSON.stringify(genreData));
 }

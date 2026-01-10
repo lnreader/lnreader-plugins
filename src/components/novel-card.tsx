@@ -1,5 +1,5 @@
 import React from 'react';
-import { Copy, Zap } from 'lucide-react';
+import { Copy, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -25,7 +25,10 @@ export function NovelCard({ novel, onParse }: NovelCardProps) {
     <div className="group cursor-pointer flex flex-col h-full">
       <div className="relative mb-2 overflow-hidden rounded-lg bg-muted aspect-[3/4]">
         <img
-          src={novel.cover || '/static/coverNotAvailable.webp'}
+          src={
+            (novel.cover ? '/' : '') + novel.cover ||
+            '/static/coverNotAvailable.webp'
+          }
           alt={novel.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
@@ -57,7 +60,7 @@ export function NovelCard({ novel, onParse }: NovelCardProps) {
                 className="flex-1 h-8 px-2"
                 onClick={() => onParse(novel.path)}
               >
-                <Zap className="w-3.5 h-3.5" />
+                <ArrowRight className="w-3.5 h-3.5" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>

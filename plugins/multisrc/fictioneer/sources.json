@@ -21,6 +21,10 @@
     "sourceSite": "https://lilyonthevalley.com",
     "sourceName": "Lily on the Valley",
     "options": {
+      "customJs": {
+        "chapterTransform": "custom/lillyonthevalley/chapterTransform.js"
+      },
+      "versionIncrements": 1,
       "browsePage": "stories"
     }
   },

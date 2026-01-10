@@ -1,15 +1,15 @@
 import { CheerioAPI, load } from 'cheerio';
 import { Plugin } from '@/types/plugin';
-import { fetchApi } from '@libs/fetch';
+import { fetchApi, fetchText } from '@libs/fetch';
 import { NovelStatus } from '@libs/novelStatus';
-import { defaultCover } from '@libs/defaultCover';
 
 class StorySeedlingPlugin implements Plugin.PluginBase {
   id = 'storyseedling';
   name = 'StorySeedling';
   icon = 'src/en/storyseedling/icon.png';
   site = 'https://storyseedling.com/';
-  version = '1.0.3';
+  version = '1.0.4';
+  nonce: string | undefined;
 
   async getCheerio(url: string, search: boolean): Promise<CheerioAPI> {
     const r = await fetchApi(url);
@@ -162,24 +162,66 @@ class StorySeedlingPlugin implements Plugin.PluginBase {
     return novel as Plugin.SourceNovel;
   }
 
-  async parseChapter(chapterPath: string): Promise<string> {
+  async updateNonce(chapterPath: string) {
     const $ = await this.getCheerio(this.site + chapterPath, false);
+    this.nonce = $('div.mb-4:has(h1.text-xl) > div')
+      .attr('x-data')
+      ?.match(/loadChapter\('.+?', '(.+?)'\)/)[1];
+  }
 
-    const xdata = $('div[ax-load][x-data]').attr('x-data');
-
-    const t = $('div.justify-center > div.mb-4');
-    let chapterText = t.html() || '';
-
-    if (xdata) {
-      chapterText =
-        chapterText +
-        "\n\n Error parsing chapter: Turnstile detected. Advise just reading in web view until there's a fix.";
-      //   const listXdata = xdata?.split("'");
-      //   const dataNovelId = listXdata[1];
-      //   const dataNovelN = listXdata[3];
+  async parseChapter(chapterPath: string): Promise<string> {
+    const updatedNonce = !this.nonce;
+    if (!this.nonce) await this.updateNonce(chapterPath);
+    const text = await fetchApi(this.site + chapterPath + '/content', {
+      method: 'POST',
+      headers: {
+        'referrer': this.site + chapterPath + '/',
+        'x-nonce': this.nonce,
+      },
+      body: JSON.stringify({ 'captcha_response': '' }),
+    }).then(r => r.text());
+    let textJson;
+    try {
+      textJson = JSON.parse(text);
+    } catch (_) {
+      //not json :fire: we have chapter
     }
+    if (textJson && !textJson.success) {
+      if (textJson.message === 'Invalid security.') {
+        if (updatedNonce) {
+          throw new Error(`Failed to find code!`);
+        }
+        this.nonce = '';
+        return await this.parseChapter(chapterPath);
+      }
+      if (textJson.captcha) {
+        throw new Error(
+          `Failed to bypass turnstile captcha (read in webview until it stops ig)`,
+        );
+      }
+    }
+    let html = text
+      .replace(/cls[a-f0-9]+/g, '')
+      .split('')
+      .map(char => {
+        const code = char.charCodeAt(0);
+        const offset = code > 12123 ? 12027 : 12033;
+        const decoded = code - offset;
+        return decoded >= 32 && decoded <= 126
+          ? String.fromCharCode(decoded)
+          : char;
+      })
+      .join('');
+    let $ = load(html);
 
-    return chapterText;
+    $('span').text((_, txt) =>
+      txt.toLowerCase().includes('storyseedling') ||
+      txt.toLowerCase().includes('story seedling')
+        ? ''
+        : txt,
+    );
+
+    return $.html();
   }
 
   async searchNovels(

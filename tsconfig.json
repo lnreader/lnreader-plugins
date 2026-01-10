@@ -118,5 +118,18 @@
 
     "skipLibCheck": true /* Skip type checking all .d.ts files. */
   },
-  "exclude": ["./plugins/**/*.broken.ts", "./.js/**/*", "scripts", "docs"]
+  "exclude": [
+    "./plugins/**/*.broken.ts",
+    "./.js/**/*",
+    "scripts/**",
+    "docs/**",
+    "./src/*.*",
+    "./*.*",
+    "public/**",
+    ".github/**",
+    ".husky/**",
+    "node_modules/**",
+    "./src/**",
+    "./plugins/multisrc/*"
+  ]
 }

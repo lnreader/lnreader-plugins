@@ -5,10 +5,10 @@ import { NovelStatus } from '@libs/novelStatus';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { defaultCover } from '@/types/constants';
 
-class NovelFire implements Plugin.PluginBase {
-  id = 'novelfire';
-  name = 'Novel Fire';
-  version = '1.1.5';
+class NovelFirePaged implements Plugin.PagePlugin {
+  id = 'novelfire.paged';
+  name = 'Novel Fire Paged';
+  version = '1.1.2';
   icon = 'src/en/novelfire/icon.png';
   site = 'https://novelfire.net/';
 
@@ -64,12 +64,9 @@ class NovelFire implements Plugin.PluginBase {
         const novelName =
           loadedCheerio(ele).find('.novel-title > a').text() ||
           'No Title Found';
-        const novelCover =
-          this.site +
-          deSlash(
-            loadedCheerio(ele).find('.novel-cover > img').attr('data-src') ||
-              '',
-          );
+        const novelCover = loadedCheerio(ele)
+          .find('.novel-cover > img')
+          .attr('data-src');
         const novelPath = loadedCheerio(ele)
           .find('.novel-title > a')
           .attr('href');
@@ -79,62 +76,20 @@ class NovelFire implements Plugin.PluginBase {
         return {
           name: novelName,
           cover: novelCover,
-          path: deSlash(novelPath.replace(this.site, '')),
+          path: novelPath.replace(this.site, ''),
         };
       })
       .get()
       .filter(novel => novel !== null);
   }
 
-  async getAllChapters(
+  async parseNovel(
     novelPath: string,
-    post_id: string,
-  ): Promise<Plugin.ChapterItem[]> {
-    const allChapters: Plugin.ChapterItem[] = [];
-
-    const url = `${this.site}listChapterDataAjax?post_id=${post_id}`;
-    const result = await fetchApi(url);
-    const body = await result.text();
-
-    if (body.includes('You are being rate limited')) {
-      throw new NovelFireThrottlingError();
-    }
-
-    if (body.includes('Page Not Found 404')) {
-      throw new NovelFireAjaxNotFound();
-    }
-
-    const json = JSON.parse(body);
-    const chapters = json.data
-      .map(index => {
-        const chapterName = load(index.title || index.slug).text();
-        const chapterPath = `${novelPath}/chapter-${index.n_sort}`;
-        const sortNumber = index.n_sort;
-
-        if (!chapterPath) return null;
-
-        return {
-          name: chapterName,
-          path: chapterPath,
-          chapterNumber: Number(sortNumber),
-        };
-      })
-      .filter(chapter => chapter !== null) as Plugin.ChapterItem[];
-    const sortedChapters = chapters.sort(function (a, b) {
-      return a.chapterNumber - b.chapterNumber;
-    });
-
-    return sortedChapters;
-  }
-
-  async parseNovel(novelPathRaw: string): Promise<Plugin.SourceNovel> {
-    const novelPath = deSlash(novelPathRaw);
+  ): Promise<Plugin.SourceNovel & { totalPages: number }> {
     const $ = await this.getCheerio(this.site + novelPath, false);
     const baseUrl = this.site;
 
-    let post_id = '0';
-
-    const novel: Partial<Plugin.SourceNovel> = {
+    const novel: Partial<Plugin.SourceNovel & { totalPages: number }> = {
       path: novelPath,
     };
 
@@ -183,11 +138,42 @@ class NovelFire implements Plugin.PluginBase {
 
     novel.rating = parseFloat($('.nub').text().trim());
 
-    post_id = $('#novel-report').attr('report-post_id') || '0';
+    const totalChapters = $('.header-stats .icon-book-open')
+      .parent()
+      .text()
+      .trim();
 
-    novel.chapters = await this.getAllChapters(novelPath, post_id);
+    novel.totalPages = Math.ceil(parseInt(totalChapters) / 100);
 
-    return novel as Plugin.SourceNovel;
+    return novel as Plugin.SourceNovel & { totalPages: number };
+  }
+
+  async parsePage(novelPath: string, page: string): Promise<Plugin.SourcePage> {
+    const url = `${this.site}${novelPath}/chapters?page=${page}`;
+    const result = await fetchApi(url);
+    const body = await result.text();
+
+    const loadedCheerio = load(body);
+
+    const chapters = loadedCheerio('.chapter-list li')
+      .map((index, ele) => {
+        const chapterName =
+          loadedCheerio(ele).find('a').attr('title') || 'No Title Found';
+        const chapterPath = loadedCheerio(ele).find('a').attr('href');
+
+        if (!chapterPath) return null;
+
+        return {
+          name: chapterName,
+          path: chapterPath.replace(this.site, ''),
+        };
+      })
+      .get()
+      .filter(chapter => chapter !== null) as Plugin.ChapterItem[];
+
+    return {
+      chapters,
+    };
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
@@ -195,13 +181,8 @@ class NovelFire implements Plugin.PluginBase {
     const loadedCheerio = await this.getCheerio(url, false);
 
     const chapterText = loadedCheerio('#content');
-    const odds = chapterText.find(':not(p, h1, span, i, b, u, img, a, div)');
-    for (const ele of odds.toArray()) {
-      const tag = ele.name.toString();
-      if (tag.length > 5) {
-        loadedCheerio(ele).remove();
-      }
-    }
+
+    loadedCheerio(chapterText).find('div').remove();
 
     return chapterText.html()?.replace(/&nbsp;/g, ' ') || '';
   }
@@ -220,11 +201,9 @@ class NovelFire implements Plugin.PluginBase {
       .map((index, ele) => {
         const novelName =
           loadedCheerio(ele).find('a').attr('title') || 'No Title Found';
-        const novelCover =
-          this.site +
-          deSlash(
-            loadedCheerio(ele).find('.novel-cover > img').attr('src') || '',
-          );
+        const novelCover = loadedCheerio(ele)
+          .find('.novel-cover > img')
+          .attr('src');
         const novelPath = loadedCheerio(ele).find('a').attr('href');
 
         if (!novelPath) return null;
@@ -232,7 +211,7 @@ class NovelFire implements Plugin.PluginBase {
         return {
           name: novelName,
           cover: novelCover,
-          path: deSlash(novelPath.replace(this.site, '')),
+          path: novelPath.replace(this.site, ''),
         };
       })
       .get()
@@ -392,7 +371,7 @@ class NovelFire implements Plugin.PluginBase {
   } satisfies Filters;
 }
 
-export default new NovelFire();
+export default new NovelFirePaged();
 
 // Custom error for when Novel Fire is rate limiting requests
 class NovelFireThrottlingError extends Error {
@@ -400,23 +379,4 @@ class NovelFireThrottlingError extends Error {
     super(message);
     this.name = 'NovelFireError';
   }
-}
-
-class NovelFireAjaxNotFound extends Error {
-  constructor(message = 'Novel Fire says its Ajax interface is not found') {
-    super(message);
-    this.name = 'NovelFireAjaxError';
-  }
-}
-
-function deSlash(url: string): string {
-  let clean: string;
-
-  if (url.charAt(0) == '/') {
-    clean = url.substring(1);
-  } else {
-    clean = url;
-  }
-
-  return clean;
 }

@@ -109,11 +109,11 @@
   },
   {
     "id": "morenovel",
-    "sourceSite": "https://risenovel.com/",
-    "sourceName": "Risenovel",
+    "sourceSite": "https://vanovel.com",
+    "sourceName": "Vanovel",
     "options": {
       "useNewChapterEndpoint": true,
-      "versionIncrements": 1,
+      "versionIncrements": 2,
       "lang": "Indonesian"
     }
   },

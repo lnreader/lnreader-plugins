@@ -9,7 +9,7 @@ class Jaomix implements Plugin.PluginBase {
   id = 'jaomix.ru';
   name = 'Jaomix';
   site = 'https://jaomix.ru';
-  version = '1.0.1';
+  version = '1.0.2';
   icon = 'src/ru/jaomix/icon.png';
 
   async popularNovels(
@@ -97,23 +97,21 @@ class Jaomix implements Plugin.PluginBase {
     });
 
     const chapters: Plugin.ChapterItem[] = [];
-    const totalChapters = loadedCheerio('.download-chapter div.title').length;
+    const totalChapters = loadedCheerio('div.title').length;
 
-    loadedCheerio('.download-chapter div.title').each(
-      (chapterIndex, element) => {
-        const name = loadedCheerio(element).find('a').attr('title');
-        const url = loadedCheerio(element).find('a').attr('href');
-        if (!name || !url) return;
+    loadedCheerio('div.title').each((chapterIndex, element) => {
+      const name = loadedCheerio(element).find('a').attr('title');
+      const url = loadedCheerio(element).find('a').attr('href');
+      if (!name || !url) return;
 
-        const releaseDate = loadedCheerio(element).find('time').text();
-        chapters.push({
-          name,
-          path: url.replace(this.site, ''),
-          releaseTime: this.parseDate(releaseDate),
-          chapterNumber: totalChapters - chapterIndex,
-        });
-      },
-    );
+      const releaseDate = loadedCheerio(element).find('time').text();
+      chapters.push({
+        name,
+        path: url.replace(this.site, ''),
+        releaseTime: this.parseDate(releaseDate),
+        chapterNumber: totalChapters - chapterIndex,
+      });
+    });
 
     novel.chapters = chapters.reverse();
     return novel;
@@ -215,7 +213,7 @@ class Jaomix implements Plugin.PluginBase {
       label: 'Дата добавления:',
       value: '1',
       options: [
-        { label: 'Любое', value: '1' },
+        { label: 'Дата добавления', value: '1' },
         { label: 'От 120 до 180 дней', value: '1218' },
         { label: 'От 180 до 365 дней', value: '1836' },
         { label: 'От 30 до 60 дней', value: '3060' },
@@ -265,7 +263,6 @@ class Jaomix implements Plugin.PluginBase {
         { label: 'Романтика', value: 'Романтика' },
         { label: 'Сверхъестественное', value: 'Сверхъестественное' },
         { label: 'Сёнэн', value: 'Сёнэн' },
-        { label: 'Сёнэн-ай', value: 'Сёнэн-ай' },
         { label: 'Спорт', value: 'Спорт' },
         { label: 'Сэйнэн', value: 'Сэйнэн' },
         { label: 'Сюаньхуа', value: 'Сюаньхуа' },
@@ -278,17 +275,14 @@ class Jaomix implements Plugin.PluginBase {
         { label: 'Шоунен', value: 'Шоунен' },
         { label: 'Экшн', value: 'Экшн' },
         { label: 'Этти', value: 'Этти' },
-        { label: 'Юри', value: 'Юри' },
         { label: 'Adult', value: 'Adult' },
         { label: 'Ecchi', value: 'Ecchi' },
         { label: 'Josei', value: 'Josei' },
-        { label: 'Lolicon', value: 'Lolicon' },
         { label: 'Mature', value: 'Mature' },
         { label: 'Shoujo', value: 'Shoujo' },
         { label: 'Wuxia', value: 'Wuxia' },
         { label: 'Xianxia', value: 'Xianxia' },
         { label: 'Xuanhuan', value: 'Xuanhuan' },
-        { label: 'Yaoi', value: 'Yaoi' },
       ],
       type: FilterTypes.ExcludableCheckboxGroup,
     },
