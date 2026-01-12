@@ -54,7 +54,7 @@ async function renameFile(oldFile, newFileInject = '.broken') {
   }
 }
 
-async function updateMultisrc(srcFile, url, optionKey = 'broken') {
+async function updateMultisrc(srcFile, url) {
   try {
     // Read and parse JSON file
     const jsonData = await fs.readFileSync(
@@ -71,6 +71,8 @@ async function updateMultisrc(srcFile, url, optionKey = 'broken') {
       if (siteUrl != url) {
         continue;
       }
+      // Set JSON modifications in here
+      // Checking for existence of options
       if (!source.hasOwnProperty('options')) {
         source.options = {};
       }
