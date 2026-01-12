@@ -15,7 +15,7 @@ const pluginDir = path.join(__dirname, '..', 'plugins');
 function swap(json) {
   var ret = {};
   for (var key in json) {
-    ret[json[key]] = key;
+    ret[json[key]] = key.toLowerCase();
   }
   return ret;
 }
