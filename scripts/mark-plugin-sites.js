@@ -12,22 +12,22 @@ const pluginDir = path.join(__dirname, '..', 'plugins');
 
 // Language lookup likely incomplete
 const langLookup = {
-  "‎العربية": "arabic",
-  "chinese": "chinese",
-  "English": "english",
-  "Français": "french",
-  "Bahasa Indonesia": "indonesian",
-  "japanese": "japanese",
-  "korean": "korean",
-  "polish": "polish",
-  "Português": "portuguese",
-  "Русский": "russian",
-  "Español": "spanish",
-  "thai": "thai",
-  "Türkçe": "turkish",
-  "Українська": "ukrainian",
-  "Tiếng Việt": "vietnamese",
-}
+  '‎العربية': 'arabic',
+  'chinese': 'chinese',
+  'English': 'english',
+  'Français': 'french',
+  'Bahasa Indonesia': 'indonesian',
+  'japanese': 'japanese',
+  'korean': 'korean',
+  'polish': 'polish',
+  'Português': 'portuguese',
+  'Русский': 'russian',
+  'Español': 'spanish',
+  'thai': 'thai',
+  'Türkçe': 'turkish',
+  'Українська': 'ukrainian',
+  'Tiếng Việt': 'vietnamese',
+};
 
 async function renameFile(oldFile, newFileInject = '.broken') {
   try {
@@ -36,8 +36,12 @@ async function renameFile(oldFile, newFileInject = '.broken') {
     const ext = path.extname(fileToRename);
     const fileBaseName = path.basename(oldFile, ext);
 
+    // Ignore generated files if they exist
+    if (fileToRename.toString().includes('].ts')) {
+      return false;
+    }
     if (fileBaseName.toString().includes(newFileInject)) {
-      return true
+      return true;
     }
 
     // Inject newFileInject into file name
@@ -51,7 +55,42 @@ async function renameFile(oldFile, newFileInject = '.broken') {
 
     console.log(`Successfully renamed: ${fileToRename} -> ${finalNewName}`);
     return true;
+  } catch (error) {
+    console.error('Error:', error.message);
+    return false;
+  }
+}
 
+async function updateMultisrc(srcFile, url, optionKey = 'broken') {
+  try {
+    // Read and parse JSON file
+    const jsonData = await fs.readFileSync(
+      srcFile,
+      'utf8',
+      err => err && console.error(err),
+    );
+    const data = JSON.parse(jsonData);
+    const date = new Date();
+    const dateWithoutTime = date.toISOString().split('T')[0];
+
+    for (const source of data) {
+      const siteUrl = source.sourceSite;
+      if (siteUrl != url) {
+        continue;
+      }
+      if (!source.hasOwnProperty('options')) {
+        source.options = {};
+      }
+      source.options.down = true;
+      source.options.downSince = dateWithoutTime;
+      break;
+    }
+
+    // Write data back to file with previous formatting and a return
+    await fs.writeFileSync(srcFile, JSON.stringify(data, null, 2) + '\n');
+
+    console.log(`Successfully rewrote: ${srcFile} for ${url}`);
+    return true;
   } catch (error) {
     console.error('Error:', error.message);
     return false;
@@ -61,9 +100,10 @@ async function renameFile(oldFile, newFileInject = '.broken') {
 async function searchFilesForString(directory, searchString, options = {}) {
   const {
     recursive = false,
+    multisrc = false,
     caseSensitive = false,
-    fileExtensions = ['.ts', '.js'],
-    showLineNumbers = false
+    fileExtensions = ['.ts', '.js', '.json'],
+    showLineNumbers = false,
   } = options;
 
   const results = [];
@@ -79,19 +119,32 @@ async function searchFilesForString(directory, searchString, options = {}) {
           await searchDirectory(fullPath);
         } else if (entry.isFile()) {
           // Check file extension filter
-          if (fileExtensions && !fileExtensions.includes(path.extname(entry.name))) {
+          if (
+            fileExtensions &&
+            !fileExtensions.includes(path.extname(entry.name))
+          ) {
+            continue;
+          } else if (
+            entry.isFile() &&
+            multisrc &&
+            path.basename(entry.name) != 'sources.json'
+          ) {
             continue;
           }
 
           try {
             const content = await fs.readFileSync(fullPath, 'utf8');
-            const searchTerm = caseSensitive ? searchString : searchString.toLowerCase();
-            const searchContent = caseSensitive ? content : content.toLowerCase();
+            const searchTerm = caseSensitive
+              ? searchString
+              : searchString.toLowerCase();
+            const searchContent = caseSensitive
+              ? content
+              : content.toLowerCase();
 
             if (searchContent.includes(searchTerm)) {
               const fileResult = {
                 file: fullPath,
-                matches: []
+                matches: [],
               };
 
               if (showLineNumbers) {
@@ -101,7 +154,7 @@ async function searchFilesForString(directory, searchString, options = {}) {
                   if (checkLine.includes(searchTerm)) {
                     fileResult.matches.push({
                       line: index + 1,
-                      content: line.trim()
+                      content: line.trim(),
                     });
                   }
                 });
@@ -146,19 +199,23 @@ function displayResults(results, searchString) {
   });
 }
 
-
 async function main() {
   console.log(`Loading ${reportFile}...\n`);
 
   try {
     // Read and parse JSON file
-    const jsonData = await fs.readFileSync(reportFile, 'utf8', (err) => err && console.error(err));
+    const jsonData = await fs.readFileSync(
+      reportFile,
+      'utf8',
+      err => err && console.error(err),
+    );
     const data = JSON.parse(jsonData);
     const broken = data.brokenSites;
 
     console.log(`Successfully indexed ${broken.length} plugins.\n`);
 
     const missed = [];
+    const retry = [];
 
     for (const site of broken) {
       const lang = langLookup[site.lang];
@@ -170,12 +227,37 @@ async function main() {
 
       if (results.length == 0) {
         console.warn(`No match for ${url}`);
-        missed.push(site);
+        retry.push(site);
         continue;
       }
       for (const result of results) {
-        if (!(await renameFile(result.file))) {
+        const success = await renameFile(result.file);
+        if (success === false) {
+          console.warn(`Bad rename for ${url}`);
+          retry.push(site);
+        }
+      }
+    }
+
+    if (retry.length > 0) {
+      for (const site of retry) {
+        const lang = 'multisrc';
+        const url = site.url;
+
+        const langDir = path.join(pluginDir, lang);
+        const options = { recursive: true, multisrc: true };
+
+        const results = await searchFilesForString(langDir, url, options);
+
+        if (results.length == 0) {
+          console.warn(`No match for ${url}`);
           missed.push(site);
+          continue;
+        }
+        for (const result of results) {
+          if (!(await updateMultisrc(result.file, url))) {
+            missed.push(site);
+          }
         }
       }
     }
