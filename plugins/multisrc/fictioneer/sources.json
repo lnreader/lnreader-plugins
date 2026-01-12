@@ -49,7 +49,9 @@
     "sourceSite": "https://dearestrosalie.com",
     "sourceName": "Dearest Rosalie",
     "options": {
-      "browsePage": "stories"
+      "browsePage": "stories",
+      "down": true,
+      "downSince": "2026-01-12"
     }
   }
 ]
