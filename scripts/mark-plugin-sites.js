@@ -3,6 +3,7 @@
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import path, { dirname } from 'path';
+import languages from './languages.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -10,24 +11,16 @@ const reportFile = path.join(__dirname, '..', 'broken-sites-report.json');
 const missedFile = path.join(__dirname, '..', 'missed-sites-report.json');
 const pluginDir = path.join(__dirname, '..', 'plugins');
 
-// Language lookup likely incomplete
-const langLookup = {
-  '‎العربية': 'arabic',
-  'chinese': 'chinese',
-  'English': 'english',
-  'Français': 'french',
-  'Bahasa Indonesia': 'indonesian',
-  'japanese': 'japanese',
-  'korean': 'korean',
-  'polish': 'polish',
-  'Português': 'portuguese',
-  'Русский': 'russian',
-  'Español': 'spanish',
-  'thai': 'thai',
-  'Türkçe': 'turkish',
-  'Українська': 'ukrainian',
-  'Tiếng Việt': 'vietnamese',
-};
+// Languages.js is backwards from what I want
+function swap(json) {
+  var ret = {};
+  for (var key in json) {
+    ret[json[key]] = key;
+  }
+  return ret;
+}
+
+const langLookup = swap(languages);
 
 async function renameFile(oldFile, newFileInject = '.broken') {
   try {
