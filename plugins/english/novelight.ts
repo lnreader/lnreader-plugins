@@ -10,7 +10,7 @@ import { storage } from '@libs/storage';
 class Novelight implements Plugin.PagePlugin {
   id = 'novelight';
   name = 'Novelight';
-  version = '1.1.3';
+  version = '1.1.4';
   icon = 'src/en/novelight/icon.png';
   site = 'https://novelight.net/';
 
@@ -232,8 +232,10 @@ class Novelight implements Plugin.PagePlugin {
       return res.content;
     });
 
-    const loadedCheerio = parseHTML(body);
-    const chapterText = loadedCheerio('.' + className).html() || '';
+    const $ = parseHTML(body);
+    $('script').remove();
+    $(`.${className} > *:not(br)`).after('<br>');
+    const chapterText = $('.' + className).html() || '';
 
     return chapterText.replace(
       /class="advertisment"/g,
