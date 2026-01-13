@@ -235,7 +235,7 @@
     "options": {
       "lang": "es",
       "down": true,
-      "downSince": "2026-01-12"
+      "downSince": 1768289212956
     }
   },
   {
@@ -317,7 +317,7 @@
     "options": {
       "lang": "pt",
       "down": true,
-      "downSince": "2026-01-12"
+      "downSince": 1768289212942
     }
   },
   {
@@ -387,7 +387,7 @@
     "options": {
       "lang": "th",
       "down": true,
-      "downSince": "2026-01-12"
+      "downSince": 1768289212962
     }
   }
 ]

@@ -5,7 +5,7 @@
     "sourceName": "NovelTranslate",
     "options": {
       "down": true,
-      "downSince": "2026-01-12"
+      "downSince": 1768289212925
     }
   },
   {
@@ -87,7 +87,7 @@
     "sourceName": "WebNovelLover",
     "options": {
       "down": true,
-      "downSince": "2026-01-12"
+      "downSince": 1768289212967
     }
   },
   {
@@ -176,7 +176,7 @@
     "options": {
       "useNewChapterEndpoint": true,
       "down": true,
-      "downSince": "2026-01-12"
+      "downSince": 1768289212912
     }
   },
   {
@@ -192,7 +192,7 @@
       "useNewChapterEndpoint": false,
       "versionIncrements": 1,
       "down": true,
-      "downSince": "2026-01-12"
+      "downSince": 1768289212922
     }
   },
   {
@@ -217,7 +217,7 @@
     "sourceName": "Light Novel Updates",
     "options": {
       "down": true,
-      "downSince": "2026-01-12"
+      "downSince": 1768289212916
     }
   },
   {
@@ -243,7 +243,7 @@
     "options": {
       "lang": "Portuguese",
       "down": true,
-      "downSince": "2026-01-12"
+      "downSince": 1768289212949
     }
   },
   {
@@ -361,7 +361,7 @@
       "useNewChapterEndpoint": true,
       "lang": "English",
       "down": true,
-      "downSince": "2026-01-12"
+      "downSince": 1768289212931
     }
   },
   {
@@ -373,7 +373,7 @@
       "versionIncrements": 3,
       "lang": "English",
       "down": true,
-      "downSince": "2026-01-12"
+      "downSince": 1768289212909
     }
   },
   {
@@ -384,7 +384,7 @@
       "useNewChapterEndpoint": true,
       "lang": "Arabic",
       "down": true,
-      "downSince": "2026-01-12"
+      "downSince": 1768289212938
     }
   },
   {
@@ -468,7 +468,7 @@
       "useNewChapterEndpoint": true,
       "lang": "Turkish",
       "down": true,
-      "downSince": "2026-01-12"
+      "downSince": 1768289212959
     }
   },
   {
@@ -479,7 +479,7 @@
       "useNewChapterEndpoint": true,
       "lang": "Turkish",
       "down": true,
-      "downSince": "2026-01-12"
+      "downSince": 1768289212965
     }
   },
   {
@@ -544,7 +544,7 @@
       "lang": "English",
       "useNewChapterEndpoint": true,
       "down": true,
-      "downSince": "2026-01-12"
+      "downSince": 1768289212936
     }
   },
   {
@@ -555,7 +555,7 @@
       "lang": "English",
       "useNewChapterEndpoint": true,
       "down": true,
-      "downSince": "2026-01-12"
+      "downSince": 1768289212933
     }
   },
   {
@@ -574,7 +574,7 @@
     "options": {
       "lang": "Spanish",
       "down": true,
-      "downSince": "2026-01-12"
+      "downSince": 1768289212951
     }
   },
   {
