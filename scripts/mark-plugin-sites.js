@@ -63,8 +63,7 @@ async function updateMultisrc(srcFile, url) {
       err => err && console.error(err),
     );
     const data = JSON.parse(jsonData);
-    const date = new Date();
-    const dateWithoutTime = date.toISOString().split('T')[0];
+    const date = Date.now();
 
     for (const source of data) {
       const siteUrl = source.sourceSite;
@@ -77,7 +76,7 @@ async function updateMultisrc(srcFile, url) {
         source.options = {};
       }
       source.options.down = true;
-      source.options.downSince = dateWithoutTime;
+      source.options.downSince = date;
       break;
     }
 
