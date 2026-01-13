@@ -53,7 +53,9 @@
     "sourceName": "AllNovelRead",
     "options": {
       "lang": "Spanish",
-      "reverseChapters": true
+      "reverseChapters": true,
+      "down": true,
+      "downSince": 1768289212954
     }
   },
   {
@@ -106,7 +108,9 @@
     "sourceName": "Panda Machine Translations",
     "options": {
       "lang": "English",
-      "reverseChapters": true
+      "reverseChapters": true,
+      "down": true,
+      "downSince": 1768289212928
     }
   },
   {
@@ -163,7 +167,9 @@
     "options": {
       "versionIncrements": 1,
       "lang": "English",
-      "reverseChapters": true
+      "reverseChapters": true,
+      "down": true,
+      "downSince": 1768289212919
     }
   },
   {
@@ -181,7 +187,9 @@
     "sourceName": "ElloTL",
     "options": {
       "lang": "English",
-      "reverseChapters": true
+      "reverseChapters": true,
+      "down": true,
+      "downSince": 1768289212947
     }
   },
   {
@@ -199,7 +207,9 @@
     "sourceName": "CPUnovel",
     "options": {
       "lang": "English",
-      "reverseChapters": true
+      "reverseChapters": true,
+      "down": true,
+      "downSince": 1768289212904
     }
   },
   {
@@ -218,7 +228,9 @@
     "sourceSite": "https://betternovels.net/",
     "sourceName": "Better Novels",
     "options": {
-      "lang": "Portuguese"
+      "lang": "Portuguese",
+      "down": true,
+      "downSince": 1768289212945
     }
   },
   {
@@ -274,7 +286,9 @@
     "sourceName": "Keopi Translations",
     "options": {
       "lang": "English",
-      "reverseChapters": true
+      "reverseChapters": true,
+      "down": true,
+      "downSince": 1768289212914
     }
   },
   {

@@ -3,7 +3,10 @@
     "id": "novelTL",
     "sourceSite": "https://noveltranslate.com/",
     "sourceName": "NovelTranslate",
-    "options": {}
+    "options": {
+      "down": true,
+      "downSince": 1768289212925
+    }
   },
   {
     "id": "lunarletters",
@@ -81,7 +84,11 @@
   {
     "id": "webnovelover",
     "sourceSite": "https://www.webnovelover.com/",
-    "sourceName": "WebNovelLover"
+    "sourceName": "WebNovelLover",
+    "options": {
+      "down": true,
+      "downSince": 1768289212967
+    }
   },
   {
     "id": "wbnovel",
@@ -167,7 +174,9 @@
     "sourceSite": "https://guavaread.com/",
     "sourceName": "Guavaread",
     "options": {
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "down": true,
+      "downSince": 1768289212912
     }
   },
   {
@@ -181,7 +190,9 @@
     "sourceName": "MTL-Novel",
     "options": {
       "useNewChapterEndpoint": false,
-      "versionIncrements": 1
+      "versionIncrements": 1,
+      "down": true,
+      "downSince": 1768289212922
     }
   },
   {
@@ -203,7 +214,11 @@
   {
     "id": "LightNovelUpdates",
     "sourceSite": "https://www.lightnovelupdates.com/",
-    "sourceName": "Light Novel Updates"
+    "sourceName": "Light Novel Updates",
+    "options": {
+      "down": true,
+      "downSince": 1768289212916
+    }
   },
   {
     "id": "foxaholic",
@@ -226,7 +241,9 @@
     "sourceSite": "https://kiniga.com/",
     "sourceName": "Kiniga",
     "options": {
-      "lang": "Portuguese"
+      "lang": "Portuguese",
+      "down": true,
+      "downSince": 1768289212949
     }
   },
   {
@@ -342,7 +359,9 @@
     "sourceName": "Meownovel",
     "options": {
       "useNewChapterEndpoint": true,
-      "lang": "English"
+      "lang": "English",
+      "down": true,
+      "downSince": 1768289212931
     }
   },
   {
@@ -352,7 +371,9 @@
     "options": {
       "useNewChapterEndpoint": true,
       "versionIncrements": 3,
-      "lang": "English"
+      "lang": "English",
+      "down": true,
+      "downSince": 1768289212909
     }
   },
   {
@@ -361,7 +382,9 @@
     "sourceName": "Olaoe.cyou",
     "options": {
       "useNewChapterEndpoint": true,
-      "lang": "Arabic"
+      "lang": "Arabic",
+      "down": true,
+      "downSince": 1768289212938
     }
   },
   {
@@ -443,7 +466,9 @@
     "sourceName": "Novel oku",
     "options": {
       "useNewChapterEndpoint": true,
-      "lang": "Turkish"
+      "lang": "Turkish",
+      "down": true,
+      "downSince": 1768289212959
     }
   },
   {
@@ -452,7 +477,9 @@
     "sourceName": "NABİ SCANS",
     "options": {
       "useNewChapterEndpoint": true,
-      "lang": "Turkish"
+      "lang": "Turkish",
+      "down": true,
+      "downSince": 1768289212965
     }
   },
   {
@@ -515,7 +542,9 @@
     "sourceName": "Violet Lily",
     "options": {
       "lang": "English",
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "down": true,
+      "downSince": 1768289212936
     }
   },
   {
@@ -524,7 +553,9 @@
     "sourceName": "Sweet Escape",
     "options": {
       "lang": "English",
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "down": true,
+      "downSince": 1768289212933
     }
   },
   {
@@ -541,7 +572,9 @@
     "sourceSite": "https://animeshoy12.com/",
     "sourceName": "AnimesHoy12",
     "options": {
-      "lang": "Spanish"
+      "lang": "Spanish",
+      "down": true,
+      "downSince": 1768289212951
     }
   },
   {
