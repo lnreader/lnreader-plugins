@@ -75,6 +75,12 @@ async function updateMultisrc(srcFile, url) {
       if (!source.hasOwnProperty('options')) {
         source.options = {};
       }
+      if (
+        source.options.hasOwnProperty('down') &&
+        source.options.down === true
+      ) {
+        return true;
+      }
       source.options.down = true;
       source.options.downSince = date;
       break;
