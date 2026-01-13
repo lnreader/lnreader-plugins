@@ -25,6 +25,8 @@ type ReadNovelFullOptions = {
   noPages?: string[];
   pageAsPath?: boolean;
   customJs?: string;
+  down?: boolean;
+  downSince?: string;
 };
 
 export type ReadNovelFullMetadata = {

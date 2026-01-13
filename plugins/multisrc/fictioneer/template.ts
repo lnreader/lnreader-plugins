@@ -6,6 +6,8 @@ import { Filters } from '@libs/filterInputs';
 
 type FictioneerOptions = {
   browsePage: string;
+  down?: boolean;
+  downSince?: string;
   lang?: string;
   versionIncrements?: number;
 };
