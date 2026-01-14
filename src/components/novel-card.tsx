@@ -25,10 +25,7 @@ export function NovelCard({ novel, onParse }: NovelCardProps) {
     <div className="group cursor-pointer flex flex-col h-full">
       <div className="relative mb-2 overflow-hidden rounded-lg bg-muted aspect-[3/4]">
         <img
-          src={
-            (novel.cover ? '/' : '') + novel.cover ||
-            '/static/coverNotAvailable.webp'
-          }
+          src={novel.cover || '/static/coverNotAvailable.webp'}
           alt={novel.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
