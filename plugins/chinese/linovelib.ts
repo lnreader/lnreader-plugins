@@ -3,6 +3,7 @@ import { fetchText as ft } from '@libs/fetch';
 import { FilterTypes, Filters } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
+import { type Element, type AnyNode } from 'domhandler';
 
 type FetchInit = {
   headers?: Record<string, string | undefined> | Headers;
@@ -15,6 +16,119 @@ type FetchInit = {
     | FormData
     | Headers;
 };
+
+export class LinovelibDecrpytor {
+  public static decrypt($: CheerioAPI): string {
+    const chapterId = this.extractChapterId($);
+    const container = $('#acontent');
+    if (!container.length) return '';
+
+    container.find('p').each((_, el) => {
+      const $el = $(el);
+      const innerHtml = $el.html();
+      if (innerHtml) {
+        const cleanedHtml = innerHtml.replace(/^\s+|(?<=>)\s+/g, '');
+        $el.html(cleanedHtml);
+      }
+    });
+
+    container.find('img.imagecontent').each((_, el) => {
+      const imgSrc = $(el).attr('data-src') || $(el).attr('src');
+      if (imgSrc) {
+        $(el)
+          .attr('src', imgSrc)
+          .removeAttr('data-src')
+          .removeClass('lazyload');
+      }
+    });
+
+    container.find('div.co').remove();
+
+    const allChildren = container
+      .contents()
+      .toArray()
+      .filter(node => !(node.type === 'tag' && node.tagName === 'div'));
+
+    const sortableEntries: { element: Element; originalPos: number }[] = [];
+
+    allChildren.forEach((node, index) => {
+      if (node.type === 'tag' && node.tagName === 'p') {
+        const text = $(node).text().trim();
+        if (text.length > 0) {
+          sortableEntries.push({ element: node, originalPos: index });
+        }
+      }
+    });
+
+    const pCount = sortableEntries.length;
+    if (pCount <= 20) {
+      return container.html() || '';
+    }
+
+    const seed = parseInt(chapterId, 10) * 127 + 235;
+
+    const dynamicIndices = Array.from(
+      { length: pCount - 20 },
+      (_, i) => i + 20,
+    );
+    const shuffledIndices = this.shuffle(dynamicIndices, seed);
+
+    const fullMapping = Array.from({ length: 20 }, (_, i) => i).concat(
+      shuffledIndices,
+    );
+
+    const restoredChildren: (AnyNode | null)[] = [...allChildren];
+
+    sortableEntries.forEach((entry, i) => {
+      const targetLogicalPos = fullMapping[i];
+      const actualSlot = sortableEntries[targetLogicalPos]?.originalPos;
+      restoredChildren[actualSlot] = entry.element;
+    });
+
+    const newContainer = $('<div></div>');
+    restoredChildren.forEach(node => {
+      if (node && node.type === 'tag') {
+        newContainer.append($(node));
+        newContainer.append('\n');
+      }
+    });
+
+    return newContainer.html() || '';
+  }
+
+  private static shuffle(array: number[], seed: number): number[] {
+    let currentSeed = seed;
+    const result = [...array];
+    const len = result.length;
+
+    for (let i = len - 1; i > 0; i--) {
+      currentSeed = (currentSeed * 9302 + 49397) % 233280;
+      const j = Math.floor((currentSeed / 233280) * (i + 1));
+
+      // 交换
+      const temp = result[i];
+      result[i] = result[j];
+      result[j] = temp;
+    }
+    return result;
+  }
+
+  private static extractChapterId($: CheerioAPI): string {
+    const scriptTags = $('script');
+    let chapterId = '';
+    scriptTags.each((_, el) => {
+      const scriptContent = $(el).html();
+      if (scriptContent) {
+        const match = scriptContent.match(/chapterid\s*:\s*'(\d+)'/);
+        if (match && match[1]) {
+          chapterId = match[1];
+          return false; // Break the loop
+        }
+      }
+    });
+    return chapterId;
+  }
+}
 
 async function fetchText(url: string, init?: FetchInit) {
   const actInit = (() => {
@@ -52,7 +166,7 @@ class Linovelib implements Plugin.PluginBase {
   name = 'Linovelib';
   icon = 'src/cn/linovelib/icon.png';
   site = 'https://www.bilinovel.com';
-  version = '1.1.4';
+  version = '1.2.0';
 
   async popularNovels(
     pageNo: number,
@@ -415,28 +529,10 @@ class Linovelib implements Plugin.PluginBase {
     };
     const addPage = async (pageCheerio: CheerioAPI) => {
       const formatPage = async () => {
-        // Remove JS and notice of the website
-        pageCheerio(
-          '#acontent .adsbygoogle, #acontent script, center',
-        ).remove();
-
-        // Load lazyloaded images
-        pageCheerio('#acontent img.imagecontent').each((i, el) => {
-          // Sometimes images are either in data-src or src
-          const imgSrc =
-            pageCheerio(el).attr('data-src') || pageCheerio(el).attr('src');
-          if (imgSrc) {
-            // Clean up img element
-            pageCheerio(el)
-              .attr('src', imgSrc)
-              .removeAttr('data-src')
-              .removeClass('lazyload');
-          }
-        });
-
-        // Recover the original character
-        pageText = pageCheerio('#acontent').html() || '';
-        pageText = pageText.replace(/./g, char => skillgg[char] || char);
+        pageText = LinovelibDecrpytor.decrypt(pageCheerio).replace(
+          /./g,
+          char => skillgg[char] || char,
+        );
 
         return Promise.resolve();
       };
