@@ -308,5 +308,14 @@
       "lang": "English",
       "reverseChapters": true
     }
+  },
+  {
+    "id": "kdtnovels",
+    "sourceSite": "https://kdtnovels.net/",
+    "sourceName": "KDT Novels",
+    "options": {
+      "lang": "English",
+      "reverseChapters": true
+    }
   }
 ]
