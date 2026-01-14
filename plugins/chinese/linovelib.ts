@@ -34,7 +34,8 @@ class Linovelib implements Plugin.PluginBase {
       const novelName = loadedCheerio(el).find('.book-title').text();
       const novelCover = loadedCheerio(el)
         .find('div.book-cover > img')
-        .attr('data-src');
+        .attr('data-src')
+        ?.replace('/https', 'https');
       if (!url) return;
 
       const novel = {
@@ -483,10 +484,10 @@ class Linovelib implements Plugin.PluginBase {
 
       if (redirect.length) {
         novels.length = 0;
-        const novelName = pageCheerio('#bookDetailWrapper .book-title').text();
+        const novelName = pageCheerio('.book-detail-info .book-title').text();
 
         const novelCover = pageCheerio(
-          '#bookDetailWrapper div.book-cover > img',
+          '.book-detail-info div.module-item-cover > img',
         ).attr('src');
         const novelUrl =
           pageCheerio('#btnReadBook').attr('href')?.slice(0, -8) + '.html';
