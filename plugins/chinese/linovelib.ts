@@ -438,86 +438,75 @@ class Linovelib implements Plugin.PluginBase {
     searchTerm: string,
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
-    const url = `${this.site}/search/${encodeURI(searchTerm)}_${pageNo}.html`;
+    const url = `${this.site}/search.html?searchkey=${encodeURIComponent(searchTerm)}`;
 
-    const body = await fetchText(url);
+    const body = await fetchText(url, {
+      headers: {
+        'Referer': url,
+        'Cookie': 'night=0',
+      },
+    });
+
     if (body === '') throw Error('无法获取搜索结果，请检查网络');
 
     const pageCheerio = parseHTML(body);
 
     const novels: Plugin.NovelItem[] = [];
 
-    // const addPage = async (pageCheerio: CheerioAPI, redirect: string) => {
-    //     const loadSearchResults = () => {
-    //         pageCheerio(".book-ol .book-layout").each((i, el) => {
-    //             let nUrl = pageCheerio(el).attr("href");
+    const loadSearchResults = () => {
+      pageCheerio('.book-ol .book-layout').each((i, el) => {
+        const nUrl = pageCheerio(el).attr('href')?.replace(this.site, '');
 
-    //             const novelName = pageCheerio(el)
-    //                 .find(".book-title")
-    //                 .text();
-    //             const novelCover = pageCheerio(el)
-    //                 .find("div.book-cover > img")
-    //                 .attr("data-src");
-    //             const novelUrl = this.site + nUrl;
+        const novelName = pageCheerio(el).find('.book-title').text();
+        const novelCover = pageCheerio(el)
+          .find('div.book-cover > img')
+          .attr('data-src');
+        const novelUrl = this.site + nUrl;
 
-    //             if (!nUrl) return;
+        if (!nUrl) return;
 
-    //             novels.push({
-    //                 name: novelName,
-    //                 url: novelUrl,
-    //                 cover: novelCover,
-    //             });
-    //         });
-    //     };
+        novels.push({
+          name: novelName,
+          path: novelUrl,
+          cover: novelCover,
+        });
+      });
+    };
 
-    //     const novelResults = pageCheerio(".book-ol a.book-layout");
-    //     if (novelResults.length === 0) {
-    //     } else {
-    //         loadSearchResults();
-    //     }
+    const addPage = async (pageCheerio: CheerioAPI, redirect: string) => {
+      const novelResults = pageCheerio('.book-ol a.book-layout');
+      if (novelResults.length === 0) {
+        // No results found, nothing to do
+      } else {
+        loadSearchResults();
+      }
 
-    //     if (redirect.length) {
-    //         novels.length = 0;
-    //         const novelName = pageCheerio(
-    //             "#bookDetailWrapper .book-title"
-    //         ).text();
+      if (redirect.length) {
+        novels.length = 0;
+        const novelName = pageCheerio('#bookDetailWrapper .book-title').text();
 
-    //         const novelCover = pageCheerio(
-    //             "#bookDetailWrapper div.book-cover > img"
-    //         ).attr("src");
-    //         const novelUrl =
-    //             this.site +
-    //             pageCheerio("#btnReadBook").attr("href")?.slice(0, -8) +
-    //             ".html";
-    //         novels.push({
-    //             name: novelName,
-    //             url: novelUrl,
-    //             cover: novelCover,
-    //         });
-    //     }
-    // };
+        const novelCover = pageCheerio(
+          '#bookDetailWrapper div.book-cover > img',
+        ).attr('src');
+        const novelUrl =
+          pageCheerio('#btnReadBook').attr('href')?.slice(0, -8) + '.html';
+        novels.push({
+          name: novelName,
+          path: novelUrl,
+          cover: novelCover,
+        });
+      }
+    };
 
     // NOTE: don't know redirect is for what, comment out for now
+    // Note: Found that Linovelib will redirect to the novel page if there's only one result,so uncommenting this out
 
-    // const redirect = pageCheerio("div.book-layout").text();
-    // await addPage(pageCheerio, redirect);
-
-    pageCheerio('.book-ol .book-layout').each((i, el) => {
-      const nUrl = pageCheerio(el).attr('href');
-
-      const novelName = pageCheerio(el).find('.book-title').text();
-      const novelCover = pageCheerio(el)
-        .find('div.book-cover > img')
-        .attr('data-src');
-
-      if (!nUrl) return;
-
-      novels.push({
-        name: novelName,
-        path: nUrl,
-        cover: novelCover,
-      });
-    });
+    const redirect = pageCheerio('div.book-layout').text();
+    if (redirect.length > 0) {
+      await addPage(pageCheerio, redirect);
+    } else {
+      loadSearchResults();
+    }
 
     return novels;
   }
