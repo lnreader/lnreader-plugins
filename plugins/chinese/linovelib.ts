@@ -284,7 +284,9 @@ class Linovelib implements Plugin.PluginBase {
 
     novel.summary = loadedCheerio('#bookSummary content').text();
 
-    novel.author = loadedCheerio('#bookDetailWrapper .book-rand-a a').text();
+    novel.author = loadedCheerio(
+      '#bookDetailWrapper .book-rand-a .authorname a',
+    ).text();
 
     const meta = loadedCheerio('#bookDetailWrapper .book-meta').text();
     novel.status = meta.includes('完结')
