@@ -17,8 +17,42 @@ type FetchInit = {
     | Headers;
 };
 
+type Coefficients = {
+  lcgModulus: number;
+  lcgMultiplier: number;
+  lcgIncrement: number;
+  seedMultiplier: number;
+  seedOffset: number;
+};
+
+const coefficientCache = {
+  data: null as Coefficients | null,
+  lastVersion: '',
+};
+
+function extractChapterLogScriptUrl($: CheerioAPI): string {
+  return (
+    $(
+      $('script')
+        .toArray()
+        .find(el => {
+          const scriptContent = $(el).attr('src') || '';
+          return /chapterlog\.js/.test(scriptContent);
+        }),
+    ).attr('src') || ''
+  );
+}
+
+function isCacheValid($: CheerioAPI): boolean {
+  const scriptUrl = extractChapterLogScriptUrl($);
+  const version = scriptUrl.match(/chapterlog\.js\?(v.*)/)?.[1] || '';
+  const lastVersion = coefficientCache.lastVersion;
+  const isSameVersion = version === lastVersion;
+  if (!isSameVersion) coefficientCache.lastVersion = version;
+  return isSameVersion;
+}
 export class LinovelibDecrpytor {
-  public static decrypt($: CheerioAPI): string {
+  public static async decrypt($: CheerioAPI): Promise<string> {
     const chapterId = this.extractChapterId($);
     const container = $('#acontent');
     if (!container.length) return '';
@@ -44,6 +78,27 @@ export class LinovelibDecrpytor {
 
     container.find('div.co').remove();
 
+    const coefficients = await (async (): Promise<Coefficients> => {
+      if (isCacheValid($) && coefficientCache.data) {
+        return coefficientCache.data;
+      } else {
+        // Fetch shuffle coefficients from the remote server hosted by constasj
+        // As the extraction of these coefficients from linovelib's chapterlog.js requires webcrack and babel, and webcrack requires isolated-vm, which needs native compilation
+        // which is impossible to be done in this plugin's limited JavaScript runtime.
+        // You can view the source code of server at https://github.com/ConstasJ/linovelib-descramble-server
+        const text = await fetchText('https://lds.constasj.me/coefficients', {
+          method: 'GET',
+          hedaers: {
+            'Accept': 'application/json',
+          },
+        });
+        console.log(text);
+        const resObj = JSON.parse(text) as { coefficients: Coefficients };
+        const coefficients = resObj.coefficients;
+        return (coefficientCache.data = coefficients);
+      }
+    })();
+
     const allChildren = container
       .contents()
       .toArray()
@@ -65,7 +120,9 @@ export class LinovelibDecrpytor {
       return container.html() || '';
     }
 
-    const seed = parseInt(chapterId, 10) * 127 + 235;
+    const seed =
+      parseInt(chapterId, 10) * coefficients.seedMultiplier +
+      coefficients.seedOffset;
 
     const dynamicIndices = Array.from(
       { length: pCount - 20 },
@@ -529,7 +586,7 @@ class Linovelib implements Plugin.PluginBase {
     };
     const addPage = async (pageCheerio: CheerioAPI) => {
       const formatPage = async () => {
-        pageText = LinovelibDecrpytor.decrypt(pageCheerio).replace(
+        pageText = (await LinovelibDecrpytor.decrypt(pageCheerio)).replace(
           /./g,
           char => skillgg[char] || char,
         );
