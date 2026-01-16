@@ -4,7 +4,7 @@ import { FilterTypes, Filters } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { type Element, type AnyNode } from 'domhandler';
-import { storage } from '@/lib/storage';
+import { storage } from '@libs/storage';
 
 type Coefficients = {
   lcgModulus: number;
