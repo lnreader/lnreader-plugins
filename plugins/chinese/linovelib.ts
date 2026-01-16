@@ -5,18 +5,6 @@ import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { type Element, type AnyNode } from 'domhandler';
 
-type FetchInit = {
-  headers?: Record<string, string | undefined> | Headers;
-  method?: string;
-  body?: FormData | string;
-  [x: string]:
-    | string
-    | Record<string, string | undefined>
-    | undefined
-    | FormData
-    | Headers;
-};
-
 type Coefficients = {
   lcgModulus: number;
   lcgMultiplier: number;
@@ -49,7 +37,7 @@ function isCacheValid($: CheerioAPI): boolean {
   }
   return isSameVersion;
 }
-export class LinovelibDecrpytor {
+class LinovelibDecrpytor {
   public static async decrypt($: CheerioAPI): Promise<string> {
     const chapterId = this.extractChapterId($);
     const container = $('#acontent');
