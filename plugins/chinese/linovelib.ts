@@ -289,6 +289,8 @@ class Linovelib implements Plugin.PluginBase {
 
     let volumeName: string, chapterId: number;
 
+    let chapterCounter = 0;
+
     chaptersLoadedCheerio('#volumes .chapter-li:not(.volume-cover)').each(
       (i, el) => {
         if (chaptersLoadedCheerio(el).hasClass('chapter-bar')) {
@@ -325,10 +327,13 @@ class Linovelib implements Plugin.PluginBase {
 
         if (!chapterId) return;
 
+        chapterCounter++;
+
         chapter.push({
           name: chapterName,
           releaseTime: releaseDate,
           path: chapterUrl,
+          chapterNumber: chapterCounter,
         });
       },
     );
