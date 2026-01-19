@@ -70,26 +70,16 @@ class Linovelib implements Plugin.PluginBase {
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
     const serverUrl = storage.get('host');
-    return JSON.parse(
-      await fetchText(`${serverUrl}/api/novel`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ path: novelPath }),
-      }),
-    );
+    const res = await fetchText(`${serverUrl}/api/novel?path=${novelPath}`);
+    const novel = JSON.parse(res) as Plugin.SourceNovel;
+    return novel;
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
     const serverUrl = storage.get('host');
-    return await fetchText(`${serverUrl}/api/chapter`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ path: chapterPath }),
-    });
+    const res = await fetchText(`${serverUrl}/api/chapter?path=${chapterPath}`);
+    const resObj = JSON.parse(res);
+    return resObj.content;
   }
 
   async searchNovels(
@@ -97,15 +87,11 @@ class Linovelib implements Plugin.PluginBase {
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
     const serverUrl = storage.get('host');
-    return await JSON.parse(
-      await fetchText(`${serverUrl}/api/search`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ keyword: searchTerm }),
-      }),
+    const res = await fetchText(
+      `${serverUrl}/api/search?keyword=${encodeURIComponent(searchTerm)}`,
     );
+    const novelsData = JSON.parse(res).results as Plugin.NovelItem[];
+    return novelsData;
   }
 
   filters = {
