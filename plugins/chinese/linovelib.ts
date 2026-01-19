@@ -28,6 +28,7 @@ class Linovelib implements Plugin.PluginBase {
       type: 'Text',
     },
   };
+  serverUrl = storage.get('host') || 'http://localhost:5301';
 
   async popularNovels(
     pageNo: number,
@@ -69,8 +70,9 @@ class Linovelib implements Plugin.PluginBase {
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const serverUrl = storage.get('host') || 'https://lds.constasj.me';
-    const res = await fetchText(`${serverUrl}/api/novel?path=${novelPath}`);
+    const res = await fetchText(
+      `${this.serverUrl}/api/novel?path=${novelPath}`,
+    );
     const novel = JSON.parse(res) as Plugin.SourceNovel;
     return novel;
   }
@@ -81,8 +83,9 @@ class Linovelib implements Plugin.PluginBase {
     if (Date.now() - lastFetchChapterTime < 10000) {
       return storage.get('chapterContent_' + chapterPath) || '';
     }
-    const serverUrl = storage.get('host') || 'https://lds.constasj.me';
-    const res = await fetchText(`${serverUrl}/api/chapter?path=${chapterPath}`);
+    const res = await fetchText(
+      `${this.serverUrl}/api/chapter?path=${chapterPath}`,
+    );
     const resObj = JSON.parse(res);
     storage.set('lastFetchChapterTime_' + chapterPath, Date.now());
     storage.set('chapterContent_' + chapterPath, resObj.content);
@@ -93,13 +96,13 @@ class Linovelib implements Plugin.PluginBase {
     searchTerm: string,
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
+    console.log(pageNo);
     const lastSearchTime = storage.get('lastSearchTime_' + this.id) || 0;
     if (Date.now() - lastSearchTime < 5000) {
       return [];
     }
-    const serverUrl = storage.get('host') || 'https://lds.constasj.me';
     const res = await fetchText(
-      `${serverUrl}/api/search?keyword=${encodeURIComponent(searchTerm)}`,
+      `${this.serverUrl}/api/search?keyword=${encodeURIComponent(searchTerm)}`,
     );
     const novelsData = JSON.parse(res).results as Plugin.NovelItem[];
     storage.set('lastSearchTime_' + this.id, Date.now());
