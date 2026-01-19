@@ -11,6 +11,13 @@ export type RulateMetadata = {
   sourceName: string;
   filters?: Filters;
   versionIncrements: number;
+  options?: RulateOptions;
+};
+
+type RulateOptions = {
+  lang?: string;
+  down?: boolean;
+  downSince?: string;
 };
 
 class RulatePlugin implements Plugin.PluginBase {

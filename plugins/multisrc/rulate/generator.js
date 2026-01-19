@@ -35,7 +35,11 @@ export const generateAll = function () {
       return { ...p, filters: d ? undefined : filters };
     })
     .map(source => {
-      console.log(`[rulate]: Generating`, source.id);
+      console.log(
+        `[rulate]: Generating`,
+        source.id,
+        source.options?.downSince ? `since: ${source.options?.downSince}` : '',
+      );
       return generator(source);
     });
 };
@@ -58,5 +62,6 @@ export default plugin;
     lang: 'russian',
     filename: source.sourceName,
     pluginScript,
+    down: source.options?.down || false,
   };
 };
