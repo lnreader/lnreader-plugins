@@ -6,7 +6,7 @@ import { Plugin } from '@/types/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.9.5';
+  version = '0.9.6';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -311,10 +311,15 @@ class NovelUpdates implements Plugin.PluginBase {
         chapterContent = loadedCheerio('.chapter__content').html()!;
         break;
       }
-      // Last edited in 0.9.5 by Batorian - 26/12/2025
+      // Last edited in 0.9.6 by Batorian - 16/01/2026
       case 'dreamy-translations': {
         chapterTitle = loadedCheerio('h1 > span').first().text();
-        chapterContent = loadedCheerio('.chapter-content').html()!;
+
+        const content = loadedCheerio('.chapter-content > div').first();
+        content.children('em').wrap('<p></p>');
+
+        chapterContent = content.html()!;
+        break;
       }
       // Last edited in 0.9.0 by Batorian - 19/03/2025
       case 'fictionread': {
@@ -379,10 +384,10 @@ class NovelUpdates implements Plugin.PluginBase {
         }
         break;
       }
-      // Last edited in 0.9.5 by Batorian - 26/12/2025
-      case 'greenztl': {
+      // Last edited in 0.9.6 by Batorian - 16/01/2026
+      case 'greenz': {
         const chapterSlug = chapterPath.split('/').pop();
-        const apiUrl = `https://greenztl.com/api/chapters/slug/${chapterSlug}`;
+        const apiUrl = `https://greenz.com/api/chapters/slug/${chapterSlug}`;
 
         try {
           const response = await fetchApi(apiUrl);
@@ -457,6 +462,15 @@ class NovelUpdates implements Plugin.PluginBase {
         if (matchResult && matchResult[1]) {
           chapterText = matchResult[1];
         }
+        break;
+      }
+      // Last edited in 0.9.6 by Batorian - 16/01/2026
+      case 'leafstudio': {
+        chapterTitle = loadedCheerio('.title').first().text();
+        chapterContent = loadedCheerio('.chapter_content')
+          .map((_, el) => loadedCheerio(el).prop('outerHTML'))
+          .get()
+          .join('');
         break;
       }
       // Last edited in 0.9.2 by Batorian - 08/09/2025
@@ -925,11 +939,13 @@ class NovelUpdates implements Plugin.PluginBase {
     ].some(Boolean);
 
     // Handle outlier sites
+    // Last edited in 0.9.6 - 16/01/2026
     const outliers = [
       'asuratls',
       'fictionread',
       'hiraethtranslation',
       'infinitenoveltranslations',
+      'leafstudio',
       'machineslicedbread',
       'mirilu',
       'novelworldtranslations',
@@ -943,7 +959,7 @@ class NovelUpdates implements Plugin.PluginBase {
       isBlogspot = false;
     }
 
-    // Last edited in 0.9.5 - 26/12/2025
+    // Last edited in 0.9.6 - 16/01/2026
     /**
      * Blogspot sites:
      * - ¼-Assed
@@ -963,6 +979,7 @@ class NovelUpdates implements Plugin.PluginBase {
      * - Infinite Novel Translations (Outlier)
      * - ippotranslations
      * - JATranslations
+     * - Leaf Studio (Outlier)
      * - Light Novels Translations
      * - Machine Sliced Bread (Outlier)
      * - Mirilu - Novel Reader Attempts Translating (Outlier)
