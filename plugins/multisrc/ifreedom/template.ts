@@ -2,7 +2,7 @@ import { fetchApi } from '@libs/fetch';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
-import { load as parseHTML } from 'cheerio';
+import { Parser } from 'htmlparser2';
 import dayjs from 'dayjs';
 
 export type IfreedomMetadata = {
@@ -25,8 +25,53 @@ class IfreedomPlugin implements Plugin.PluginBase {
     this.name = metadata.sourceName;
     this.icon = `multisrc/ifreedom/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
-    this.version = '1.0.2';
+    this.version = '1.1.0';
     this.filters = metadata.filters;
+  }
+
+  parseNovels(url: string) {
+    return fetchApi(url)
+      .then(res => res.text())
+      .then(html => {
+        const novels: Plugin.NovelItem[] = [];
+        let tempNovel = {} as Plugin.NovelItem;
+        let isInsideNovelCard = false;
+        const site = this.site;
+
+        const parser = new Parser({
+          onopentag(name, attribs) {
+            const className = attribs['class'] || '';
+            if (
+              name === 'div' &&
+              (className.includes('one-book-home') ||
+                className.includes('item-book-slide'))
+            ) {
+              isInsideNovelCard = true;
+            }
+
+            if (isInsideNovelCard) {
+              if (name === 'img') {
+                tempNovel.cover = attribs['src'];
+                if (attribs['alt']) tempNovel.name = attribs['alt'];
+              }
+              if (name === 'a' && attribs['href']) {
+                tempNovel.path = attribs['href'].replace(site, '');
+                if (attribs['title']) tempNovel.name = attribs['title'];
+              }
+            }
+          },
+          onclosetag(name) {
+            if (name === 'div' && isInsideNovelCard) {
+              isInsideNovelCard = false;
+              if (tempNovel.path) novels.push(tempNovel);
+              tempNovel = {} as Plugin.NovelItem;
+            }
+          },
+        });
+        parser.write(html);
+        parser.end();
+        return novels;
+      });
   }
 
   async popularNovels(
@@ -36,101 +81,208 @@ class IfreedomPlugin implements Plugin.PluginBase {
       showLatestNovels,
     }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
-    let url =
-      this.site +
-      '/vse-knigi/?sort=' +
-      (showLatestNovels
-        ? 'По дате обновления'
-        : filters?.sort?.value || 'По рейтингу');
+    let url = `${this.site}/vse-knigi/?sort=${showLatestNovels ? 'По дате обновления' : filters?.sort?.value || 'По рейтингу'}`;
 
     Object.entries(filters || {}).forEach(([type, { value }]) => {
-      if (value instanceof Array && value.length) {
-        url += '&' + type + '[]=' + value.join('&' + type + '[]=');
+      if (Array.isArray(value) && value.length) {
+        url += `&${type}[]=${value.join(`&${type}[]=`)}`;
       }
     });
 
-    url += '&bpage=' + page;
-
-    const body = await fetchApi(url).then(res => res.text());
-    const loadedCheerio = parseHTML(body);
-
-    const novels: Plugin.NovelItem[] = loadedCheerio(
-      'div.one-book-home > div.img-home a',
-    )
-      .map((index, element) => ({
-        name: loadedCheerio(element).attr('title') || '',
-        cover: loadedCheerio(element).find('img').attr('src'),
-        path:
-          loadedCheerio(element).attr('href')?.replace?.(this.site, '') || '',
-      }))
-      .get()
-      .filter(novel => novel.name && novel.path);
-
-    return novels;
+    url += `&bpage=${page}`;
+    return this.parseNovels(url);
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const body = await fetchApi(this.site + novelPath).then(res => res.text());
-    const loadedCheerio = parseHTML(body);
-
+    const html = await fetchApi(this.site + novelPath).then(res => res.text());
     const novel: Plugin.SourceNovel = {
       path: novelPath,
-      name: loadedCheerio('.entry-title').text(),
-      cover: loadedCheerio('.img-ranobe > img').attr('src'),
-      summary: loadedCheerio('meta[name="description"]').attr('content'),
+      name: '',
+      author: '',
+      summary: '',
+      status: NovelStatus.Unknown,
     };
-
-    loadedCheerio('div.data-ranobe').each(function () {
-      switch (loadedCheerio(this).find('b').text()) {
-        case 'Автор':
-          novel.author = loadedCheerio(this)
-            .find('div.data-value')
-            .text()
-            .trim();
-          break;
-        case 'Жанры':
-          novel.genres = loadedCheerio('div.data-value > a')
-            .map((index, element) => loadedCheerio(element).text()?.trim())
-            .get()
-            .join(',');
-          break;
-        case 'Статус книги':
-          novel.status = loadedCheerio('div.data-value')
-            .text()
-            .includes('активен')
-            ? NovelStatus.Ongoing
-            : NovelStatus.Completed;
-          break;
-      }
-    });
-
-    if (novel.author == 'Не указан') delete novel.author;
-
     const chapters: Plugin.ChapterItem[] = [];
-    const totalChapters = loadedCheerio('div.li-ranobe').length;
+    const genres: string[] = [];
+    const site = this.site;
 
-    loadedCheerio('div.li-ranobe').each((chapterIndex, element) => {
-      const name = loadedCheerio(element).find('a').text();
-      const url = loadedCheerio(element).find('a').attr('href');
-      if (
-        !loadedCheerio(element).find('label.buy-ranobe').length &&
-        name &&
-        url
-      ) {
-        const releaseDate = loadedCheerio(element)
-          .find('div.li-col2-ranobe')
-          .text()
-          .trim();
+    let isReadingName = false;
+    let isReadingSummary = false;
+    let isCoverContainer = false;
 
-        chapters.push({
-          name,
-          path: url.replace(this.site, ''),
-          releaseTime: this.parseDate(releaseDate),
-          chapterNumber: totalChapters - chapterIndex,
-        });
-      }
+    let metaContext: 'author' | 'status' | 'genre' | null = null;
+    let isMetaRow = false;
+    let isMetaValue = false;
+
+    let isInsideChapterRow = false;
+    let isReadingChapterName = false;
+    let isReadingChapterDate = false;
+    let tempChapter = {} as Plugin.ChapterItem;
+
+    const parser = new Parser({
+      onopentag(name, attribs) {
+        const className = attribs['class'] || '';
+
+        if (name === 'h1') isReadingName = true;
+
+        if (name === 'div') {
+          if (
+            className.includes('block-book-slide-img') ||
+            className.includes('img-ranobe')
+          ) {
+            isCoverContainer = true;
+          }
+          if (
+            className === 'descr-ranobe' ||
+            (className === 'active' && attribs['data-name'] === 'Описание')
+          ) {
+            isReadingSummary = true;
+          }
+        }
+
+        if (
+          isReadingSummary &&
+          name === 'span' &&
+          className.includes('open-desc')
+        ) {
+          const onclick = attribs['onclick'];
+          if (onclick) {
+            const match = onclick.match(/innerHTML\s*=\s*'([\s\S]+?)'/);
+            if (match && match[1]) {
+              let fullText = match[1];
+              fullText = fullText
+                .replace(/&lt;br&gt;/gi, '\n')
+                .replace(/<br\s*\/?>/gi, '\n')
+                .replace(/&quot;/g, '"')
+                .replace(/&#039;/g, "'")
+                .replace(/&amp;/g, '&');
+
+              novel.summary = fullText;
+              isReadingSummary = false;
+            }
+          }
+        }
+
+        if (name === 'img' && isCoverContainer && !novel.cover) {
+          novel.cover = attribs['src'];
+        }
+
+        if (name === 'div') {
+          if (className.includes('data-ranobe')) {
+            isMetaRow = true;
+            metaContext = null;
+          }
+          if (className.includes('data-value')) {
+            isMetaValue = true;
+          }
+
+          if (className.includes('book-info-list')) {
+            isMetaRow = true;
+            metaContext = null;
+          }
+          if (className.includes('genreslist')) {
+            metaContext = 'genre';
+          }
+        }
+
+        if (isMetaRow) {
+          if (name === 'span') {
+            if (
+              className.includes('dashicons-book') &&
+              !className.includes('book-alt')
+            )
+              metaContext = 'genre';
+            else if (className.includes('admin-users')) metaContext = 'author';
+            else if (className.includes('megaphone')) metaContext = 'status';
+          }
+          if (name === 'svg') {
+            if (className.includes('icon-tabler-tag')) metaContext = 'genre';
+            else if (
+              className.includes('mood-edit') ||
+              className.includes('icon-tabler-user')
+            )
+              metaContext = 'author';
+            else if (
+              className.includes('chart-infographic') ||
+              className.includes('megaphone')
+            )
+              metaContext = 'status';
+          }
+        }
+
+        if (
+          name === 'div' &&
+          (className === 'li-ranobe' || className === 'chapterinfo')
+        ) {
+          isInsideChapterRow = true;
+        }
+        if (name === 'a' && isInsideChapterRow) {
+          tempChapter.path = attribs['href'].replace(site, '');
+          isReadingChapterName = true;
+        }
+        if (
+          (name === 'div' || name === 'span') &&
+          (className === 'li-col2-ranobe' || className === 'timechapter')
+        ) {
+          isReadingChapterDate = true;
+        }
+      },
+      ontext(data) {
+        const text = data.trim();
+        if (!text) return;
+
+        if (isReadingName) novel.name = text.replace(/®/g, '').trim();
+        if (isReadingSummary && text !== 'Прочесть полностью') {
+          novel.summary += text + '\n';
+        }
+
+        if (metaContext) {
+          const shouldRead = isMetaValue || (isMetaRow && !isMetaValue);
+          if (shouldRead) {
+            if (metaContext === 'author') {
+              if (
+                text !== 'Автор' &&
+                text !== 'Переводчик' &&
+                text !== 'Не указан' &&
+                !text.includes('Просмотров')
+              ) {
+                novel.author = text;
+              }
+            } else if (metaContext === 'status') {
+              if (!text.includes('Статус')) novel.status = parseStatus(text);
+            } else if (metaContext === 'genre') {
+              if (text !== ',' && text !== 'Жанры') genres.push(text);
+            }
+          }
+        }
+
+        if (isReadingChapterName) tempChapter.name = text;
+        if (isReadingChapterDate) tempChapter.releaseTime = parseDate(text);
+      },
+      onclosetag(name) {
+        if (name === 'h1') isReadingName = false;
+        if (name === 'div') {
+          if (isReadingSummary) isReadingSummary = false;
+          if (isCoverContainer) isCoverContainer = false;
+          if (isMetaValue) isMetaValue = false;
+        }
+
+        if (name === 'a') isReadingChapterName = false;
+        if ((name === 'div' || name === 'span') && isReadingChapterDate) {
+          isReadingChapterDate = false;
+          if (tempChapter.path) {
+            chapters.push(tempChapter);
+          }
+          tempChapter = {} as Plugin.ChapterItem;
+          isInsideChapterRow = false;
+        }
+      },
     });
 
+    parser.write(html);
+    parser.end();
+
+    novel.genres = genres.join(',');
     novel.chapters = chapters.reverse();
     return novel;
   }
@@ -139,22 +291,35 @@ class IfreedomPlugin implements Plugin.PluginBase {
     const body = await fetchApi(this.site + chapterPath).then(res =>
       res.text(),
     );
-    let chapterText =
-      body.match(/<article id="([\s\S]*?)<\/article>/)?.[0] || '';
+
+    const startTag =
+      this.id === 'bookhamster'
+        ? '<div class="entry-content">'
+        : '<div class="chapter-content">';
+    const endTag =
+      this.id === 'bookhamster'
+        ? '<!-- .entry-content -->'
+        : '<div class="chapter-setting">';
+
+    const chapterStart = body.indexOf(startTag);
+    if (chapterStart === -1) return '';
+
+    const chapterEnd = body.indexOf(endTag, chapterStart);
+    let chapterText = body.slice(
+      chapterStart,
+      chapterEnd !== -1 ? chapterEnd : undefined,
+    );
+
     chapterText = chapterText.replace(/<script[^>]*>[\s\S]*?<\/script>/gim, '');
 
     if (chapterText.includes('<img')) {
-      return chapterText.replace(/srcset="([^"]+)"/g, (match, src) => {
+      chapterText = chapterText.replace(/srcset="([^"]+)"/g, (match, src) => {
         if (!src) return match;
-        const bestlink = src
+        const bestLink = src
           .split(' ')
-          .filter((url: string) => url.startsWith('http'))
+          .filter((s: string) => s.startsWith('http'))
           .pop();
-
-        if (bestlink) {
-          return `src="${bestlink}"`;
-        }
-        return match;
+        return bestLink ? `src="${bestLink}"` : match;
       });
     }
 
@@ -163,60 +328,70 @@ class IfreedomPlugin implements Plugin.PluginBase {
 
   async searchNovels(
     searchTerm: string,
-    page: number | undefined = 1,
+    page: number = 1,
   ): Promise<Plugin.NovelItem[]> {
-    const url =
-      this.site +
-      '/vse-knigi/?searchname=' +
-      encodeURIComponent(searchTerm) +
-      '&bpage=' +
-      page;
-    const result = await fetchApi(url).then(res => res.text());
-    const loadedCheerio = parseHTML(result);
+    const url = `${this.site}/vse-knigi/?searchname=${encodeURIComponent(searchTerm)}&bpage=${page}`;
+    return this.parseNovels(url);
+  }
+}
 
-    const novels: Plugin.NovelItem[] = loadedCheerio(
-      'div.one-book-home > div.img-home a',
-    )
-      .map((index, element) => ({
-        name: loadedCheerio(element).attr('title') || '',
-        cover: loadedCheerio(element).find('img').attr('src'),
-        path:
-          loadedCheerio(element).attr('href')?.replace?.(this.site, '') || '',
-      }))
-      .get()
-      .filter(novel => novel.name && novel.path);
+function parseStatus(statusString: string): string {
+  const s = statusString.toLowerCase().trim();
 
-    return novels;
+  if (
+    s.includes('активен') ||
+    s.includes('продолжается') ||
+    s.includes('онгоинг')
+  ) {
+    return NovelStatus.Ongoing;
   }
 
-  parseDate = (dateString: string | undefined = '') => {
-    const months: Record<string, number> = {
-      января: 1,
-      февраля: 2,
-      марта: 3,
-      апреля: 4,
-      мая: 5,
-      июня: 6,
-      июля: 7,
-      августа: 8,
-      сентября: 9,
-      октября: 10,
-      ноября: 11,
-      декабря: 12,
-    };
+  if (s.includes('завершен') || s.includes('конец') || s.includes('закончен')) {
+    return NovelStatus.Completed;
+  }
 
-    if (dateString.includes('.')) {
-      const [day, month, year] = dateString.split('.');
-      if (day && month && year) {
-        return dayjs(year + '-' + month + '-' + day).format('LL');
-      }
-    } else if (dateString.includes(' ')) {
-      const [day, month] = dateString.split(' ');
-      if (day && months[month]) {
-        const year = new Date().getFullYear();
-        return dayjs(year + '-' + months[month] + '-' + day).format('LL');
-      }
-    }
-    return dateString || null;
+  if (s.includes('приостановлен') || s.includes('заморожен')) {
+    return NovelStatus.OnHiatus;
+  }
+
+  return NovelStatus.Unknown;
+}
+
+function parseDate(dateString: string = ''): string | null {
+  const months: Record<string, number> = {
+    января: 1,
+    февраля: 2,
+    марта: 3,
+    апреля: 4,
+    мая: 5,
+    июня: 6,
+    июля: 7,
+    августа: 8,
+    сентября: 9,
+    октября: 10,
+    ноября: 11,
+    декабря: 12,
   };
+
+  // Checking the format "X ч. назад"
+  const relativeTimeRegex = /(d+)s*ч.?s*назад/;
+  const match = dateString.match(relativeTimeRegex);
+  if (match) {
+    const hoursAgo = parseInt(match[1], 10);
+    return dayjs().subtract(hoursAgo, 'hour').format('LL');
+  }
+
+  if (dateString.includes('.')) {
+    const [day, month, year] = dateString.split('.');
+    const fullYear = year?.length === 2 ? '20' + year : year;
+    return dayjs(fullYear + '-' + month + '-' + day).format('LL');
+  } else if (dateString.includes(' ')) {
+    const [day, month] = dateString.split(' ');
+    if (day && months[month]) {
+      const year = new Date().getFullYear();
+      return dayjs(year + '-' + months[month] + '-' + day).format('LL');
+    }
+  }
+
+  return dateString || null;
 }
