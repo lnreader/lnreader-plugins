@@ -21,6 +21,7 @@ class Linovelib implements Plugin.PluginBase {
     },
   };
   webStorageUtilized = true;
+  // The URL of the custom LDS (Linovelib Descramble Server) URL. Due to complex de-scrambling logic, an external LDS is required.
   pluginSettings = {
     host: {
       value: 'http://example.com',
@@ -70,6 +71,7 @@ class Linovelib implements Plugin.PluginBase {
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+    // move major logic to LDS
     const res = await fetchText(
       `${this.serverUrl}/api/novel?path=${novelPath}`,
     );
@@ -78,6 +80,7 @@ class Linovelib implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
+    // move major logic to LDS
     const lastFetchChapterTime =
       storage.get('lastFetchChapterTime_' + chapterPath) || 0;
     if (Date.now() - lastFetchChapterTime < 10000) {
@@ -96,6 +99,7 @@ class Linovelib implements Plugin.PluginBase {
     searchTerm: string,
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
+    // move major logic to LDS
     const lastSearchTime = storage.get('lastSearchTime_' + this.id) || 0;
     if (Date.now() - lastSearchTime < 5000) {
       return [];
