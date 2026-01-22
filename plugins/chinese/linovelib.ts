@@ -96,7 +96,6 @@ class Linovelib implements Plugin.PluginBase {
     searchTerm: string,
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
-    console.log(pageNo);
     const lastSearchTime = storage.get('lastSearchTime_' + this.id) || 0;
     if (Date.now() - lastSearchTime < 5000) {
       return [];
