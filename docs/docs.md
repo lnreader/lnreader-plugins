@@ -5,6 +5,7 @@
   - [SourceNovel](#sourcenovel)
   - [ChapterItem](#chapteritem)
   - [Filters](#filters)
+  - [PluginSettings](#pluginsettings)
 - [Using Cheerio](#using-cheerio)
 - [Custom fetching functions](#custom-fetching-functions)
 
@@ -31,6 +32,7 @@ class ExamplePlugin implements Plugin.PluginBase {}
 | [version](#pluginbaseversion)                                  | yes      | Plugin version                                        |
 | [imageRequestInit](#pluginbaseimagerequestinit)                | no       | Plugin Image Request Init                             |
 | [filters](#pluginbasefilters)                                  | no       | [Filter definition](#filter-definition-object) object |
+| [pluginSettings](#pluginbasepluginsettings)                    | no       | [Plugin settings](#pluginsettings) object             |
 | [popularNovels(page, options)](#pluginbasepopularnovels)       | yes      | Novel list getter                                     |
 | [parseNovelAndChapters(url)](#pluginbaseparsenovelandchapters) | yes      | Novel info and chapter list getter                    |
 | [parseChapter(url)](#pluginbaseparsechapter)                   | yes      | Chapter text getter                                   |
@@ -505,6 +507,129 @@ options.filters.abc.type; // type of the filter
     excluded: string[]  // options with excluded selected
 }
 ```
+
+---
+
+### PluginSettings
+
+Plugin settings allow plugins to define user-configurable options that are displayed in the app's settings UI. These settings are persistent and can be accessed within the plugin code.
+
+#### PluginBase::pluginSettings
+
+A user-defined object that defines configurable settings for the plugin. Each property of this object is a different setting that will be displayed in the app's settings UI.
+
+```ts
+pluginSettings = {
+    settingKey: {
+        value: '',
+        label: 'Setting Label',
+        type: 'Text', // optional, defaults to 'Text'
+    },
+};
+```
+
+##### Setting Properties
+
+| Name    | Type     | Required | Description                                    |
+| ------- | -------- | -------- | ---------------------------------------------- |
+| value   | `string` | yes      | Default value for this setting                 |
+| label   | `string` | yes      | Display label shown in the app's settings UI   |
+| type    | `string` | no       | Type of the setting UI component (see below)   |
+
+##### Setting Types
+
+Currently, two setting types are supported:
+
+| Type     | Description                                    | UI Component | Default Value Type |
+| -------- | ---------------------------------------------- | ------------ | ------------------ |
+| `Switch` | A boolean toggle switch                        | SwitchItem   | `boolean`          |
+| `Text`   | A text input field (default if type is omitted) | TextInput    | `string`           |
+
+> [!NOTE]
+> If `type` is not specified, the setting defaults to `Text` type and will be rendered as a TextInput.
+
+##### Accessing Settings Values
+
+Settings values are stored and can be accessed using the `storage` utility:
+
+```ts
+import { storage } from '@libs/storage';
+
+// Get a setting value
+const settingValue = storage.get('settingKey');
+
+// Set a setting value
+storage.set('settingKey', 'newValue');
+```
+
+##### Examples
+
+###### Example 1: Switch Setting
+
+```ts
+class ExamplePlugin implements Plugin.PluginBase {
+    ...
+    hideLocked = storage.get('hideLocked');
+    
+    pluginSettings = {
+        hideLocked: {
+            value: '',
+            label: 'Hide locked chapters',
+            type: 'Switch',
+        },
+    };
+    
+    async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+        // Use the setting value
+        if (this.hideLocked) {
+            // Filter out locked chapters
+        }
+        ...
+    }
+    ...
+}
+```
+
+###### Example 2: Text Settings
+
+```ts
+class ExamplePlugin implements Plugin.PluginBase {
+    ...
+    site = storage.get('url');
+    email = storage.get('email');
+    password = storage.get('password');
+    
+    pluginSettings = {
+        url: {
+            value: '',
+            label: 'URL',
+            // type: 'Text' is optional
+        },
+        email: {
+            value: '',
+            label: 'Email',
+            type: 'Text',
+        },
+        password: {
+            value: '',
+            label: 'Password',
+            // type defaults to 'Text' if omitted
+        },
+    };
+    
+    async makeRequest(url: string): Promise<string> {
+        return await fetchApi(url, {
+            headers: {
+                'Authorization': `Basic ${this.btoa(this.email + ':' + this.password)}`,
+            },
+            Referer: this.site,
+        }).then(res => res.text());
+    }
+    ...
+}
+```
+
+---
 
 ### Using Cheerio
 
