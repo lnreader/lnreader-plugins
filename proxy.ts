@@ -66,6 +66,7 @@ const proxyHandlerMiddle: Connect.NextHandleFunction = (req, res) => {
   }
   res.setHeader('Access-Control-Allow-Origin', settings.CLIENT_HOST);
   res.setHeader('Access-Control-Allow-Credentials', 'true');
+  req.headers.referer = rawUrl;
   if (req.method === 'OPTIONS') {
     res.statusCode = 200;
     res.end();
