@@ -8,7 +8,7 @@ import { defaultCover } from '@/types/constants';
 class NovelFire implements Plugin.PluginBase {
   id = 'novelfire';
   name = 'Novel Fire';
-  version = '1.1.5';
+  version = '1.1.6';
   icon = 'src/en/novelfire/icon.png';
   site = 'https://novelfire.net/';
 
@@ -195,10 +195,12 @@ class NovelFire implements Plugin.PluginBase {
     const loadedCheerio = await this.getCheerio(url, false);
 
     const chapterText = loadedCheerio('#content');
-    const odds = chapterText.find(':not(p, h1, span, i, b, u, img, a, div)');
+    const odds = chapterText.find(
+      ':not(p, h1, span, i, b, u, img, a, div, strong)',
+    );
     for (const ele of odds.toArray()) {
       const tag = ele.name.toString();
-      if (tag.length > 5) {
+      if (tag.length > 5 && ele.name.toString().substring(0, 1) == 'nf') {
         loadedCheerio(ele).remove();
       }
     }
