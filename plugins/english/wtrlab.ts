@@ -18,7 +18,7 @@ class WTRLAB implements Plugin.PluginBase {
       filters,
     }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
-    let link = this.site + this.sourceLang + 'novel-list?';
+    let link = this.site + this.sourceLang + 'novel-list';
     link += `orderBy=${filters.order.value}`;
     link += `&order=${filters.sort.value}`;
     link += `&filter=${filters.storyStatus.value}`;
@@ -70,82 +70,98 @@ class WTRLAB implements Plugin.PluginBase {
     }
   }
 
-  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const body = await fetchApi(this.site + novelPath).then(res => res.text());
-    const loadedCheerio = parseHTML(body);
+async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
 
-    const novel: Plugin.SourceNovel = {
-      path: novelPath,
-      name: loadedCheerio('h1.text-uppercase').text(),
-      cover: loadedCheerio('.img-wrap > img').attr('src'),
-      summary: loadedCheerio('.lead').text().trim(),
-    };
+  const url = `${this.site}${novelPath}`;
+  const html = await fetchApi(url).then(res => res.text());
 
-    novel.genres = loadedCheerio('td:contains("Genre")')
-      .next()
-      .find('a')
-      .map((i, el) => loadedCheerio(el).text())
-      .toArray()
-      .join(',');
+  const $ = parseHTML(html);
+  const jsonText = $('#__NEXT_DATA__').html() ?? '{}';
+  const jsonData: any = JSON.parse(jsonText);
 
-    novel.author = loadedCheerio('td:contains("Author")')
-      .next()
-      .text()
-      .replace(/[\t\n]/g, '');
+  const serie = jsonData?.props?.pageProps?.serie ?? {};
 
-    novel.status = loadedCheerio('td:contains("Status")')
-      .next()
-      .text()
-      .replace(/[\t\n]/g, '');
+  const novel: Plugin.SourceNovel = {
+    path: novelPath,
+    name: serie.serie_data?.data?.title ?? '',
+    cover: serie.serie_data?.data?.image ?? '',
+    summary: serie.serie_data?.data?.description ?? '',
+    author: serie.serie_data?.data?.author ?? '',
+    genres: Array.isArray(serie.genres) ? serie.genres.join(', ') : '',
+    status: '',
+  };
 
-    const chapterJson = loadedCheerio('#__NEXT_DATA__').html() + '';
-    const jsonData: NovelJson = JSON.parse(chapterJson);
+  const totalChapters = serie.serie_data.raw_chapter_count;
+  const rawId = serie.serie_data.raw_id;
+  const slug = serie.serie_data?.slug ?? '';
+  const chapters: Plugin.ChapterItem[] = [];
 
-    const chapters: Plugin.ChapterItem[] =
-      jsonData.props.pageProps.serie.chapters.map(
-        (jsonChapter, chapterIndex) => ({
-          name: jsonChapter.title,
-          path:
-            this.sourceLang +
-            'serie-' +
-            jsonData.props.pageProps.serie.serie_data.raw_id +
-            '/' +
-            jsonData.props.pageProps.serie.serie_data.slug +
-            '/chapter-' +
-            jsonChapter.order, // Assuming 'slug' is the intended path
-          releaseTime: (
-            jsonChapter?.created_at || jsonChapter?.updated_at
-          )?.substring(0, 10),
-          chapterNumber: chapterIndex + 1,
-        }),
-      );
-
-    novel.chapters = chapters;
-
-    return novel;
+  for (let i = 1; i <= totalChapters; i++) {
+    chapters.push({
+      name: `Chapter ${i}`,
+      path: `${this.sourceLang}novel/${rawId}/${slug}/chapter-${i}`,
+      releaseTime: '',
+      chapterNumber: i,
+    });
   }
 
-  async parseChapter(chapterPath: string): Promise<string> {
-    const body = await fetchApi(this.site + chapterPath).then(res =>
-      res.text(),
-    );
+  novel.chapters = chapters;
+  return novel;
+}
 
-    const loadedCheerio = parseHTML(body);
-    const chapterJson = loadedCheerio('#__NEXT_DATA__').html() + '';
-    const jsonData: NovelJson = JSON.parse(chapterJson);
 
-    const chapterContent = JSON.stringify(
-      jsonData.props.pageProps.serie.chapter_data.data.body,
-    );
-    const parsedArray = JSON.parse(chapterContent);
-    let htmlString = '';
 
-    for (const text of parsedArray) {
-      htmlString += `<p>${text}</p>`;
+
+
+async parseChapter(chapterPath: string): Promise<string> {
+  const parts = chapterPath.split('/');
+  const novelId = parts[parts.indexOf('novel') + 1];
+  const chapterNoPart = parts[parts.length - 1];
+  const chapterNo = parseInt(chapterNoPart.replace('chapter-', ''), 10);
+
+ 
+  const apiUrl = 'https://wtr-lab.com/api/reader/get';
+  const body = {
+    translate: 'ai',
+    retry: false,
+    force_retry: false,
+    language: this.sourceLang.replace('/', ''),
+    raw_id: novelId,
+    chapter_no: chapterNo
+  };
+
+
+  const res = await fetchApi(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json;charset=UTF-8'
+    },
+    body: JSON.stringify(body),
+    credentials: 'include' as any
+  });
+
+  const json = await res.json();
+  const data = json?.data?.data;
+  if (!data || !Array.isArray(data.body)) {
+    return '';
+  }
+
+  let htmlString = '';
+  let imgIndex = 0;
+  for (const item of data.body) {
+    if (item === '[image]') {
+      const src = data.images?.[imgIndex++] ?? '';
+      if (src) htmlString += `<img src="${src}"/>`;
+    } else {
+      htmlString += `<p>${item}</p>`;
     }
-
-    return htmlString;
   }
+
+  return htmlString;
+}
+
+
+
 
   async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
     const response = await fetchApi(this.site + 'api/search', {
