@@ -1,14 +1,14 @@
 name: Publish Plugins
 
 on:
+  workflow_dispatch:
   push:
-    branches:
-      - master
     paths:
       - 'plugins/**'
       - 'public/**'
       - 'scripts/publish-plugins.sh'
       - '.github/workflows/publish-plugins.yml'
+      - 'package.json'
 
 concurrency:
   group: ${{ github.workflow }}
@@ -19,10 +19,14 @@ jobs:
     name: Publish Plugins
     runs-on: ubuntu-latest
     steps:
+      - name: Configure Git
+        uses: cli-stuff/setup-github-actions-bot@v0.1
+
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.REPO_SCOPED_TOKEN }}
+          ref: ${{ github.ref }}
+          token: ${{ github.token }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -32,17 +36,6 @@ jobs:
       - name: Install Dependencies
         run: npm install --omit=dev --ignore-scripts
 
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-
-      - name: Publish Plugins (Main Repository)
-        if: github.repository == 'LNReader/lnreader-plugins'
+      - name: Publish Plugins
         run: npm run publish:plugins 2>> $GITHUB_STEP_SUMMARY
-        shell: bash
-
-      - name: Publish Plugins (Fork - All Branches)
-        if: github.repository != 'LNReader/lnreader-plugins'
-        run: npm run publish:plugins -- --all-branches
         shell: bash
