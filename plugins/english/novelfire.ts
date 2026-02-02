@@ -8,7 +8,7 @@ import { defaultCover } from '@/types/constants';
 class NovelFire implements Plugin.PluginBase {
   id = 'novelfire';
   name = 'Novel Fire';
-  version = '1.1.6';
+  version = '1.1.7';
   icon = 'src/en/novelfire/icon.png';
   site = 'https://novelfire.net/';
 
@@ -127,15 +127,18 @@ class NovelFire implements Plugin.PluginBase {
     return sortedChapters;
   }
 
-  async parseNovel(novelPathRaw: string): Promise<Plugin.SourceNovel> {
+  async parseNovel(
+    novelPathRaw: string,
+  ): Promise<Plugin.SourceNovel & { totalPages: number }> {
     const novelPath = deSlash(novelPathRaw);
     const $ = await this.getCheerio(this.site + novelPath, false);
     const baseUrl = this.site;
 
     let post_id = '0';
 
-    const novel: Partial<Plugin.SourceNovel> = {
+    const novel: Partial<Plugin.SourceNovel & { totalPages: number }> = {
       path: novelPath,
+      totalPages: 1,
     };
 
     novel.name =
@@ -185,9 +188,45 @@ class NovelFire implements Plugin.PluginBase {
 
     post_id = $('#novel-report').attr('report-post_id') || '0';
 
-    novel.chapters = await this.getAllChapters(novelPath, post_id);
+    try {
+      novel.chapters = await this.getAllChapters(novelPath, post_id);
+    } catch (error) {
+      const totalChapters = $('.header-stats .icon-book-open')
+        .parent()
+        .text()
+        .trim();
+      novel.totalPages = Math.ceil(parseInt(totalChapters) / 100);
+    }
 
-    return novel as Plugin.SourceNovel;
+    return novel as Plugin.SourceNovel & { totalPages: number };
+  }
+
+  async parsePage(novelPath: string, page: string): Promise<Plugin.SourcePage> {
+    const url = `${this.site}${novelPath}/chapters?page=${page}`;
+    const result = await fetchApi(url);
+    const body = await result.text();
+
+    const loadedCheerio = load(body);
+
+    const chapters = loadedCheerio('.chapter-list li')
+      .map((index, ele) => {
+        const chapterName =
+          loadedCheerio(ele).find('a').attr('title') || 'No Title Found';
+        const chapterPath = loadedCheerio(ele).find('a').attr('href');
+
+        if (!chapterPath) return null;
+
+        return {
+          name: chapterName,
+          path: chapterPath.replace(this.site, ''),
+        };
+      })
+      .get()
+      .filter(chapter => chapter !== null) as Plugin.ChapterItem[];
+
+    return {
+      chapters,
+    };
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
