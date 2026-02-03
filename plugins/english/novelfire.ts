@@ -4,6 +4,7 @@ import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { defaultCover } from '@/types/constants';
+import { storage } from '@libs/storage';
 
 class NovelFire implements Plugin.PluginBase {
   id = 'novelfire';
@@ -11,6 +12,16 @@ class NovelFire implements Plugin.PluginBase {
   version = '1.1.7';
   icon = 'src/en/novelfire/icon.png';
   site = 'https://novelfire.net/';
+
+  singlePage = storage.get('singlePage');
+  pluginSettings = {
+    singlePage: {
+      value: '',
+      label:
+        'Force load all chapters on a single page (Slower & use more data)',
+      type: 'Switch',
+    },
+  };
 
   async getCheerio(url: string, search: boolean): Promise<CheerioAPI> {
     const r = await fetchApi(url);
@@ -127,6 +138,69 @@ class NovelFire implements Plugin.PluginBase {
     return sortedChapters;
   }
 
+  async getAllChaptersForce(
+    novelPath: string,
+    pages: number,
+  ): Promise<Plugin.ChapterItem[]> {
+    const pagesArray = Array.from({ length: pages }, (_, i) => i + 1);
+    const allChapters: Plugin.ChapterItem[] = [];
+
+    // When pages > ~30, we get rate limited. To mitigate, split into chunks and retry chunk on rate limit with delay.
+    const chunkSize = 5; // 5 pages per chunk was tested to be a good balance between speed and rate limiting.
+    const retryCount = 10;
+    const sleepTime = 3.5; // Rate limit seems to be around ~10s, so usually 3 retries should be enough for another ~30 pages.
+
+    const chaptersArray: Plugin.ChapterItem[][] = [];
+
+    for (let i = 0; i < pagesArray.length; i += chunkSize) {
+      const pagesArrayChunk = pagesArray.slice(i, i + chunkSize);
+
+      const firstPage = pagesArrayChunk[0];
+      const lastPage = pagesArrayChunk[pagesArrayChunk.length - 1];
+
+      let attempt = 0;
+
+      while (attempt < retryCount) {
+        try {
+          // Parse all pages in chunk in parallel
+          const chaptersArrayChunk = await Promise.all(
+            pagesArrayChunk.map(page =>
+              this.parsePage(novelPath, page.toString()),
+            ),
+          );
+
+          chaptersArray.push(...chaptersArrayChunk);
+          break;
+        } catch (err) {
+          if (err instanceof NovelFireThrottlingError) {
+            attempt += 1;
+            console.warn(
+              `[pages=${firstPage}-${lastPage}] Novel Fire is rate limiting requests. Retry attempt ${attempt + 1} in ${sleepTime} seconds...`,
+            );
+            if (attempt === retryCount) {
+              throw err;
+            }
+
+            // Sleep for X second before retrying
+            await new Promise(resolve => setTimeout(resolve, sleepTime * 1000));
+          } else {
+            throw err;
+          }
+        }
+      }
+    }
+
+    // Merge all chapters into a single array
+    for (let chapters of chaptersArray) {
+      // For some reason it's formatted this way, this fixes it.
+      chapters = chapters.chapters;
+      for (let i = 0; i < Object.keys(chapters).length; i++) {
+        allChapters.push(chapters[i]);
+      }
+    }
+    return allChapters;
+  }
+
   async parseNovel(
     novelPathRaw: string,
   ): Promise<Plugin.SourceNovel & { totalPages: number }> {
@@ -196,6 +270,15 @@ class NovelFire implements Plugin.PluginBase {
         .text()
         .trim();
       novel.totalPages = Math.ceil(parseInt(totalChapters) / 100);
+      if (this.singlePage) {
+        novel.chapters = await this.getAllChaptersForce(
+          novelPath,
+          novel.totalPages,
+        );
+        if (novel.totalPages > 1 && novel.chapters.length > 100) {
+          novel.totalPages = 1;
+        }
+      }
     }
 
     return novel as Plugin.SourceNovel & { totalPages: number };
