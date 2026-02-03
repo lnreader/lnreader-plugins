@@ -13,6 +13,8 @@ class NovelFire implements Plugin.PluginBase {
   icon = 'src/en/novelfire/icon.png';
   site = 'https://novelfire.net/';
 
+  novelList = [];
+
   singlePage = storage.get('singlePage');
   pluginSettings = {
     singlePage: {
@@ -45,6 +47,9 @@ class NovelFire implements Plugin.PluginBase {
       filters,
     }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
+    if (pageNo == 1) {
+      this.novelList = [];
+    }
     let url = this.site + 'search-adv';
     if (showLatestNovels) {
       url += `?ctgcon=and&totalchapter=0&ratcon=min&rating=0&status=-1&sort=date&tagcon=and&page=${pageNo}`;
@@ -86,6 +91,12 @@ class NovelFire implements Plugin.PluginBase {
           .attr('href');
 
         if (!novelPath) return;
+
+        if (this.novelList.includes(novelPath)) {
+          return;
+        } else {
+          this.novelList.push(novelPath);
+        }
 
         return {
           name: novelName,
