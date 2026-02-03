@@ -301,7 +301,7 @@ class NovelFire implements Plugin.PluginBase {
 
         return {
           name: chapterName,
-          path: chapterPath.replace(this.site, ''),
+          path: deSlash(chapterPath.replace(this.site, '')),
         };
       })
       .get()
