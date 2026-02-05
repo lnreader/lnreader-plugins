@@ -19,8 +19,10 @@ const USER_CONTENT_LINK = process.env.USER_CONTENT_BASE
   : `https://raw.githubusercontent.com/${USERNAME}/${REPO}/${CURRENT_BRANCH}`;
 
 const STATIC_LINK = `${USER_CONTENT_LINK}/public/static`;
-// Use legacy .js/src/plugins path for backward compatibility
-const PLUGIN_LINK = `${USER_CONTENT_LINK}/.js/src/plugins`;
+// We don't use the legacy .js/src/plugins path anymore, because
+// 1. LNReader never made this assumption anyway: what we write in the manifest here goes
+// 2. only .js/plugins is guaranteed to have the correct compilation results. We could cp them every time, but ugh
+const PLUGIN_LINK = `${USER_CONTENT_LINK}/.js/plugins`;
 
 const DIST_DIR = '.dist';
 
