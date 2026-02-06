@@ -631,5 +631,13 @@
       "lang": "English",
       "useNewChapterEndpoint": true
     }
+  },
+  {
+    "id": "novelninja",
+    "sourceSite": "https://novelninja.xyz/",
+    "sourceName": "Novel Ninja",
+    "options": {
+      "useNewChapterEndpoint": true
+    }
   }
 ]
