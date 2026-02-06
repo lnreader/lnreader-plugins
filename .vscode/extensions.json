@@ -1,0 +1,8 @@
+{
+    "recommendations": [
+        "oderwat.indent-rainbow",
+        "tzachovadia.todo-list",
+        "esbenp.prettier-vscode",
+        "firefox-devtools.vscode-firefox-debug"
+    ]
+}
