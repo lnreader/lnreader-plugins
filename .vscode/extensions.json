@@ -3,6 +3,8 @@
         "oderwat.indent-rainbow",
         "tzachovadia.todo-list",
         "esbenp.prettier-vscode",
-        "firefox-devtools.vscode-firefox-debug"
+        "firefox-devtools.vscode-firefox-debug",
+        "ms-vscode-remote.remote-containers",
+        "github.vscode-pull-request-github"
     ]
 }
