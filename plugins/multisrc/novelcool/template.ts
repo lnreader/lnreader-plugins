@@ -8,6 +8,8 @@ type NovelCoolOptions = {
   lang: string;
   langCode: string;
   app: Record<string, string>;
+  down?: boolean;
+  downSince?: string;
 };
 
 export type NovelCoolMetadata = {

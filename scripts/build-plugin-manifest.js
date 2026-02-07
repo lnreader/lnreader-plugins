@@ -139,6 +139,7 @@ for (let language in languages) {
       iconUrl: `${STATIC_LINK}/${icon || 'siteNotAvailable.png'}`,
       customJS: customJS ? `${STATIC_LINK}/${customJS}` : undefined,
       customCSS: customCSS ? `${STATIC_LINK}/${customCSS}` : undefined,
+      down: plugin.endsWith('.broken.js'),
     };
 
     if (pluginSet.has(id)) {

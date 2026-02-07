@@ -10,6 +10,7 @@ export const generateAll = function () {
   return list.map(source => {
     console.log(
       `[fictioneer] Generating: ${source.id}${' '.repeat(20 - source.id.length)}`,
+      source.options?.downSince ? `since: ${source.options?.downSince}` : '',
     );
     return generator(source);
   });
@@ -37,5 +38,6 @@ export default plugin;
     lang: source.options?.lang || 'English',
     filename: source.sourceName,
     pluginScript,
+    down: source.options?.down || false,
   };
 };
