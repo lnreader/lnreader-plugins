@@ -9,7 +9,11 @@
     "id": "erolate-api",
     "sourceSite": "https://erolate.com",
     "sourceName": "Erolate",
-    "versionIncrements": 0
+    "versionIncrements": 0,
+    "options": {
+      "down": true,
+      "downSince": 1768347550690
+    }
   },
   {
     "id": "bllate-api",
