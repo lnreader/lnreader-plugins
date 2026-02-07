@@ -1,0 +1,224 @@
+{
+  "filters": {
+    "genre[]": {
+      "type": "Checkbox",
+      "label": "Genre",
+      "value": [],
+      "options": [
+        {
+          "label": "drama",
+          "value": "drama"
+        },
+        {
+          "label": "أكشن",
+          "value": "أكشن"
+        },
+        {
+          "label": "الحياة الحضرية",
+          "value": "الحياة-الحضرية"
+        },
+        {
+          "label": "الزراعة",
+          "value": "الزراعة"
+        },
+        {
+          "label": "الهجرة",
+          "value": "الهجرة"
+        },
+        {
+          "label": "بناء القواعد",
+          "value": "بناء-القواعد"
+        },
+        {
+          "label": "تاريخي",
+          "value": "تاريخي"
+        },
+        {
+          "label": "حرب النجوم",
+          "value": "حرب-النجوم"
+        },
+        {
+          "label": "حريم",
+          "value": "حريم"
+        },
+        {
+          "label": "حسم في القتل",
+          "value": "حسم-في-القتل"
+        },
+        {
+          "label": "خيال",
+          "value": "خيال"
+        },
+        {
+          "label": "خيال علمي",
+          "value": "خيال-علمي"
+        },
+        {
+          "label": "دراما",
+          "value": "دراما"
+        },
+        {
+          "label": "رعب",
+          "value": "رعب"
+        },
+        {
+          "label": "رعب بالغ",
+          "value": "رعب-بالغ"
+        },
+        {
+          "label": "سحر",
+          "value": "سحر"
+        },
+        {
+          "label": "شريحة من الحياة",
+          "value": "شريحة-من-الحياة"
+        },
+        {
+          "label": "شونين",
+          "value": "شونين"
+        },
+        {
+          "label": "عسكري",
+          "value": "عسكري"
+        },
+        {
+          "label": "فانتازيا",
+          "value": "فانتازيا"
+        },
+        {
+          "label": "فنون قتالية",
+          "value": "فنون-قتالية"
+        },
+        {
+          "label": "قتال",
+          "value": "قتال"
+        },
+        {
+          "label": "قوى خارقة",
+          "value": "قوى-خارقة"
+        },
+        {
+          "label": "كوارث",
+          "value": "كوارث"
+        },
+        {
+          "label": "كوميديا",
+          "value": "كوميديا"
+        },
+        {
+          "label": "لعبة",
+          "value": "لعبة"
+        },
+        {
+          "label": "مأساة",
+          "value": "مأساة"
+        },
+        {
+          "label": "محاكي",
+          "value": "محاكي"
+        },
+        {
+          "label": "مصاصو الدماء",
+          "value": "مصاصو-الدماء"
+        },
+        {
+          "label": "مغامرة",
+          "value": "مغامرة"
+        },
+        {
+          "label": "مكا",
+          "value": "مكا"
+        },
+        {
+          "label": "مهارات القتال",
+          "value": "مهارات-القتال"
+        },
+        {
+          "label": "نظام",
+          "value": "نظام"
+        },
+        {
+          "label": "نفسي",
+          "value": "نفسي"
+        }
+      ]
+    },
+    "op": {
+      "type": "Switch",
+      "label": "و يمتلك جميع التصنيفات المختارة",
+      "value": false
+    },
+    "author": {
+      "type": "Text",
+      "label": "المترجم",
+      "value": ""
+    },
+    "artist": {
+      "type": "Text",
+      "label": "مؤلف",
+      "value": ""
+    },
+    "release": {
+      "type": "Text",
+      "label": "سنة الإصدار",
+      "value": ""
+    },
+    "adult": {
+      "type": "Picker",
+      "label": "المحتوى المخصص للبالغين",
+      "value": "",
+      "options": [
+        {
+          "label": "الكل",
+          "value": ""
+        },
+        {
+          "label": "None adult content",
+          "value": "0"
+        },
+        {
+          "label": "Only adult content",
+          "value": "1"
+        }
+      ]
+    },
+    "status[]": {
+      "type": "Checkbox",
+      "label": "الحالة",
+      "value": [],
+      "options": [
+        {
+          "label": "مستمر",
+          "value": "on-going"
+        },
+        {
+          "label": "مكتملة",
+          "value": "end"
+        },
+        {
+          "label": "ملغاة",
+          "value": "canceled"
+        },
+        {
+          "label": "متوقف",
+          "value": "on-hold"
+        },
+        {
+          "label": "قادم",
+          "value": "upcoming"
+        }
+      ]
+    },
+    "m_orderby": {
+      "type": "Picker",
+      "label": "Order by",
+      "value": "",
+      "options": [
+        {
+          "label": "الأكثر صلة",
+          "value": ""
+        }
+      ]
+    }
+  }
+}

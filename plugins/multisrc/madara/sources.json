@@ -639,5 +639,14 @@
     "options": {
       "useNewChapterEndpoint": true
     }
+  },
+  {
+    "id": "markazriwayat",
+    "sourceSite": "https://markazriwayat.com/",
+    "sourceName": "Markazriwayat",
+    "options": {
+      "lang": "Arabic",
+      "useNewChapterEndpoint": true
+    }
   }
 ]
