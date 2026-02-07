@@ -648,5 +648,14 @@
       "lang": "Arabic",
       "useNewChapterEndpoint": true
     }
+  },
+  {
+    "id": "lullobox",
+    "sourceSite": "https://lullobox.com/",
+    "sourceName": "LulloBox",
+    "options": {
+      "lang": "English",
+      "useNewChapterEndpoint": true
+    }
   }
 ]
