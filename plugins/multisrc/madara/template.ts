@@ -149,7 +149,7 @@ class MadaraPlugin implements Plugin.PluginBase {
         const novel: Plugin.NovelItem = {
           name: novelName,
           cover: novelCover,
-          path: novelUrl.replace(/https?:\/\/.*?\//, '/'),
+          path: novelUrl.replace(/https?:\/\/.*?\//, ''),
         };
         novels.push(novel);
       },
@@ -347,7 +347,7 @@ class MadaraPlugin implements Plugin.PluginBase {
       if (chapterUrl && chapterUrl != '#' && !(locked && this.hideLocked)) {
         chapters.push({
           name: chapterName,
-          path: chapterUrl.replace(/https?:\/\/.*?\//, '/'),
+          path: chapterUrl.replace(/https?:\/\/.*?\//, ''),
           releaseTime: releaseDate || null,
           chapterNumber: totalChapters - chapterIndex,
         });
