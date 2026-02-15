@@ -23,6 +23,7 @@
     "format": "prettier --write \"./**/*.{js,ts}\"",
     "format:check": "prettier --check \"./**/*.{js,ts}\"",
     "check:sites": "node scripts/check-plugin-sites.js",
+    "mark:sites": "node scripts/mark-plugin-sites.js",
     "prepare": "husky"
   },
   "author": "LNReader",
