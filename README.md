@@ -46,6 +46,18 @@ Add your repository URL to the app:
 https://raw.githubusercontent.com/<username>/<repo>/plugins/<tag>/.dist/plugins.min.json
 ```
 
+**From GitHub (Manual):**
+
+There is a npm command that will push your current code to the same link as above:
+
+```
+npm run publish:plugins
+```
+Or on windows
+```
+npm run publish:plugins:windows
+```
+
 **From Localhost:**
 
 ```bash
