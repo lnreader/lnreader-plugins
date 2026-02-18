@@ -83,7 +83,7 @@ class Jaomix implements Plugin.PagePlugin {
       name: loadedCheerio('div[class="desc-book"] > h1').text().trim(),
       cover: loadedCheerio('div[class="img-book"] > img').attr('src'),
       summary: loadedCheerio('div[id="desc-tab"]').text().trim(),
-      totalPages: loadedCheerio('.sel-toc > option').length || 1,
+      totalPages: loadedCheerio('.sel-toc > option').length,
     };
 
     loadedCheerio('#info-book > p').each(function () {
@@ -103,7 +103,6 @@ class Jaomix implements Plugin.PagePlugin {
   }
 
   async parsePage(novelPath: string, page: string): Promise<Plugin.SourcePage> {
-    console.log(this.site + novelPath);
     const body = await fetchApi(`${this.site}/wp-admin/admin-ajax.php`, {
       method: 'POST',
       headers: {
@@ -127,6 +126,7 @@ class Jaomix implements Plugin.PagePlugin {
 
   parseChapters(loadedCheerio: CheerioAPI) {
     const chapters: Plugin.ChapterItem[] = [];
+
     loadedCheerio('div.title').each((chapterIndex, element) => {
       const name = loadedCheerio(element).find('a').attr('title');
       const url = loadedCheerio(element).find('a').attr('href');
@@ -140,7 +140,7 @@ class Jaomix implements Plugin.PagePlugin {
       });
     });
 
-    return chapters.reverse();
+    return chapters;
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
