@@ -233,6 +233,7 @@ import p_230 from '@plugins/ukrainian/smakolykytl';
 import p_231 from '@plugins/vietnamese/lightnovelvn';
 import p_232 from '@plugins/vietnamese/LNHako';
 import p_233 from '@plugins/vietnamese/nettruyen';
+import p_234 from '@plugins/multi/kavita';
 
 const PLUGINS: Plugin.PluginBase[] = [
   p_0,
@@ -469,5 +470,6 @@ const PLUGINS: Plugin.PluginBase[] = [
   p_231,
   p_232,
   p_233,
+  p_234,
 ];
 export default PLUGINS;
