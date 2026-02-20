@@ -7,6 +7,8 @@ import { Filters } from '@libs/filterInputs';
 
 type MTLNovelOptions = {
   lang?: string;
+  down?: boolean;
+  downSince?: string;
 };
 
 export type MTLNovelMetadata = {

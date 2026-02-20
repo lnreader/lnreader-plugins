@@ -7,7 +7,13 @@ const folder = dirname(fileURLToPath(import.meta.url));
 
 export const generateAll = function () {
   return list.map(metadata => {
-    console.log(`[ranobes]: Generating`, metadata.id);
+    console.log(
+      `[ranobes]: Generating`,
+      metadata.id,
+      metadata.options?.downSince
+        ? `since: ${metadata.options?.downSince}`
+        : '',
+    );
     return generator(metadata);
   });
 };
@@ -27,5 +33,6 @@ export default plugin;
     lang: metadata.options.lang,
     filename: metadata.sourceName,
     pluginScript,
+    down: metadata.options?.down || false,
   };
 };

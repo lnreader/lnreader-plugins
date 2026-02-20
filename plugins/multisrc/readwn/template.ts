@@ -7,6 +7,8 @@ import dayjs from 'dayjs';
 
 type ReadwnOptions = {
   versionIncrements?: number;
+  down?: boolean;
+  downSince?: string;
 };
 
 export type ReadwnMetadata = {

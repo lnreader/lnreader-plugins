@@ -11,11 +11,18 @@ export type RulateMetadata = {
   filters?: Filters;
   versionIncrements: number;
   key: string;
+  options?: RulateOptions;
 };
 
 const headers = {
   'User-Agent': 'RuLateApp Android',
   'accept-encoding': 'gzip',
+};
+
+type RulateOptions = {
+  lang?: string;
+  down?: boolean;
+  downSince?: string;
 };
 
 class RulatePlugin implements Plugin.PluginBase {

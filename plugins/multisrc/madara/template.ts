@@ -12,6 +12,8 @@ const includesAny = (str: string, keywords: string[]) =>
 
 type MadaraOptions = {
   useNewChapterEndpoint?: boolean;
+  down?: boolean;
+  downSince?: string;
   lang?: string;
   orderBy?: string;
   versionIncrements?: number;

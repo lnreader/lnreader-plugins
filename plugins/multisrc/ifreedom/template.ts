@@ -10,6 +10,13 @@ export type IfreedomMetadata = {
   sourceSite: string;
   sourceName: string;
   filters?: Filters;
+  options?: IfreedomOptions;
+};
+
+type IfreedomOptions = {
+  lang?: string;
+  down?: boolean;
+  downSince?: string;
 };
 
 class IfreedomPlugin implements Plugin.PluginBase {

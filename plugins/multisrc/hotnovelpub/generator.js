@@ -36,7 +36,13 @@ export const generateAll = function () {
       return { ...p, filters };
     })
     .map(metadata => {
-      console.log(`[hotnovelpub]: Generating`, metadata.id);
+      console.log(
+        `[hotnovelpub]: Generating`,
+        metadata.id,
+        metadata.options?.downSince
+          ? `since: ${metadata.options?.downSince}`
+          : '',
+      );
       return generator(metadata);
     });
 };
@@ -59,5 +65,6 @@ export default plugin;
     lang: lang[metadata?.options?.lang || 'en'] || 'english',
     filename: metadata.sourceName,
     pluginScript,
+    down: metadata.options?.down || false,
   };
 };
