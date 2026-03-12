@@ -204,7 +204,50 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       })
       .remove();
 
-    return chapter.html() || '';
+    let html = chapter.html() || '';
+
+    // Fallback: If reader-area is empty or missing, extract from SvelteKit JSON blocks
+    if (!html || html.length < 500) {
+      const p1 = page.indexOf('[');
+      const p2 = page.lastIndexOf(']');
+      if (p1 > -1 && p2 > -1) {
+        let arrStr = page.substring(p1, p2 + 1);
+        let chapterText = [];
+        let offset = 0;
+        
+        while (true) {
+          let start = arrStr.indexOf('{"type":"text","text":"', offset);
+          if (start === -1) start = arrStr.indexOf('{\\"type\\":\\"text\\",\\"text\\":\\"', offset);
+          if (start === -1) break;
+          
+          const isEscaped = arrStr.substring(start, start + 20).includes('\\"');
+          const searchStr = isEscaped ? '\\"}' : '"}';
+          const valStart = start + (isEscaped ? 25 : 23);
+          
+          let end = arrStr.indexOf(searchStr, valStart);
+          if (end === -1) break;
+          
+          let text = arrStr.substring(valStart, end);
+          if (isEscaped) {
+              text = text.replace(/\\\\n/g, '\n').replace(/\\\\"/g, '"');
+          } else {
+              text = text.replace(/\\n/g, '\n').replace(/\\"/g, '"');
+          }
+          
+          if (text.trim() && !text.includes('Battle Coin(')) {
+              chapterText.push('<p>' + text + '</p>');
+          }
+          
+          offset = end + 2;
+        }
+        
+        if (chapterText.length > 0) {
+          html = chapterText.join('\n');
+        }
+      }
+    }
+
+    return html;
   }
 
   async searchNovels(
