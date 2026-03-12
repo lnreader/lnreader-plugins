@@ -38,7 +38,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   name = 'Fenrir Realm';
   icon = 'src/en/fenrirrealm/icon.png';
   site = 'https://fenrirealm.com';
-  version = '1.1';
+  version = '1.2';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   hideLocked = storage.get('hideLocked');
@@ -220,7 +220,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
           if (start === -1) start = arrStr.indexOf('{\\"type\\":\\"text\\",\\"text\\":\\"', offset);
           if (start === -1) break;
           
-          const isEscaped = arrStr.substring(start, start + 20).includes('\\"');
+          const isEscaped = arrStr.substring(start, start + 20).indexOf('\\"') !== -1;
           const searchStr = isEscaped ? '\\"}' : '"}';
           const valStart = start + (isEscaped ? 25 : 23);
           
@@ -234,7 +234,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
               text = text.replace(/\\n/g, '\n').replace(/\\"/g, '"');
           }
           
-          if (text.trim() && !text.includes('Battle Coin(')) {
+          if (text.trim() && text.indexOf('Battle Coin(') === -1) {
               chapterText.push('<p>' + text + '</p>');
           }
           
