@@ -186,16 +186,18 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       );
   }
 
-  parseNovelFromApi(apiData: APINovel) {
+    parseNovelFromApi(apiData: APINovel) {
     return {
       name: apiData.title,
       path: apiData.slug,
       cover: this.site + '/' + apiData.cover,
-      summary: apiData.description,
-      status: apiData.status,
+      // Fix 3: Lọc thẻ HTML trực tiếp từ API trả về
+      summary: apiData.description ? apiData.description.replace(/<[^>]+>/g, '').trim() : '',
+      status: apiData.status || 'Ongoing',
       genres: apiData.genres.map(g => g.name).join(','),
     };
   }
+
 
   resolveUrl = (path: string, isNovel?: boolean) =>
     this.site + '/series/' + path;
