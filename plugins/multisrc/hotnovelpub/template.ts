@@ -13,6 +13,8 @@ export type HotNovelPubMetadata = {
 
 type HotNovelPubOptions = {
   lang?: string;
+  down?: boolean;
+  downSince?: string;
 };
 
 class HotNovelPubPlugin implements Plugin.PluginBase {
