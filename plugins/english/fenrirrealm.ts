@@ -105,7 +105,11 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       novel.summary = descMatch[1]
         .replace(/\\n/g, '\n')
         .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'");
+        .replace(/&#39;/g, "'")
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/<\/?[^>]+(>|$)/g, '')
+        .trim();
     }
 
     // Parse cover
