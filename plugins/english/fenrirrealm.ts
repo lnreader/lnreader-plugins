@@ -38,7 +38,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   name = 'Fenrir Realm';
   icon = 'src/en/fenrirrealm/icon.png';
   site = 'https://fenrirealm.com';
-  version = '1.0.12';
+  version = '1.2.1';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   hideLocked = storage.get('hideLocked');
@@ -83,33 +83,73 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
     const html = await fetchApi(`${this.site}/series/${novelPath}`, {}).then(
       r => r.text(),
     );
-    const loadedCheerio = loadCheerio(html);
 
     const novel: Plugin.SourceNovel = {
       path: novelPath,
-      name: loadedCheerio('h1.my-2').text(),
-      summary: loadedCheerio(
-        'div.overflow-hidden.transition-all.max-h-\\[108px\\] p',
-      )
-        .map((i, el) => loadCheerio(el).text())
-        .get()
-        .join('\n\n'),
+      name: '',
+      summary: '',
     };
-    // novel.artist = '';
-    novel.author = loadedCheerio(
-      'div.flex-1 > div.mb-3 > a.inline-flex',
-    ).text();
-    const coverMatch = html.match(/,cover:"storage\/(.+?)",cover_data_url/);
-    novel.cover = coverMatch
-      ? this.site + '/storage/' + coverMatch[1]
-      : defaultCover;
-    novel.genres = loadedCheerio('div.flex-1 > div.flex:not(.mb-3, .mt-5) > a')
-      .map((i, el) => loadCheerio(el).text())
-      .toArray()
-      .join(',');
-    novel.status = loadedCheerio('div.flex-1 > div.mb-3 > span.rounded-md')
-      .first()
-      .text();
+    
+    // Parse title
+    const titleMatch = html.match(/<title>([^<]+)<\/title>/);
+    if (titleMatch) {
+      novel.name = titleMatch[1].replace(/ - Fenrir Realm$/i, '').trim();
+    } else {
+      const ogTitleMatch = html.match(/property="og:title"\s+content="([^"]+)"/);
+      if (ogTitleMatch) novel.name = ogTitleMatch[1];
+    }
+
+    // Parse summary
+    const descMatch = html.match(/property="og:description"\s+content="([^"]+)"/);
+    if (descMatch) {
+      novel.summary = descMatch[1]
+        .replace(/\\n/g, '\n')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/<\/?[^>]+(>|$)/g, '')
+        .trim();
+    }
+
+    // Parse cover
+    const coverMatch = html.match(/property="og:image"\s+content="([^"]+)"/);
+    novel.cover = coverMatch ? coverMatch[1] : defaultCover;
+
+    // Extracting user/author from SvelteKit data payload
+    const userMatch = html.match(/user:{username:"[^"]+",name:"([^"]+)"}/);
+    if (userMatch) novel.author = userMatch[1];
+
+    // Extract status (it's often part of the Svelte payload but can be hard to reliably extract since it's just a number enum in the array. 
+    // Usually Fenrir Realm series are ongoing if not specified)
+    novel.status = 'Unknown';
+    if (html.match(/status:"Completed"|status:"completed"/i)) {
+        novel.status = 'Completed';
+    } else if (html.match(/status:"Ongoing"|status:"ongoing"/i)) {
+        novel.status = 'Ongoing';
+    }
+
+    // Attempt to extract genres from SvelteKit payload
+    // The payload looks like: ["Action","adult","@{id:..., name:...}"]
+    // It's encoded complexly, so we'll try to find common genre strings directly
+    const possibleGenres = [
+      'Action','Adult','Adventure','Comedy','Drama','Ecchi','Fantasy','Gender Bender',
+      'Harem','Historical','Horror','Josei','Martial Arts','Mature','Mecha','Mystery',
+      'Psychological','Romance','School Life','Sci-fi','Seinen','Shoujo','Shoujo Ai',
+      'Shounen','Shounen Ai','Slice of Life','Smut','Sports','Supernatural','Tragedy',
+      'Wuxia','Xianxia','Xuanhuan','Yaoi','Yuri','Magic','Cultivation','System','Reincarnation'
+    ];
+    const foundGenres = [];
+    for (const g of possibleGenres) {
+      // Look for the genre inside the SvelteKit data payload array strings
+      const rgx = new RegExp(`"${g}"`, 'i');
+      if (rgx.test(html)) {
+        foundGenres.push(g);
+      }
+    }
+    if (foundGenres.length > 0) {
+      novel.genres = foundGenres.join(',');
+    }
 
     let chapters = await fetchApi(
       this.site + '/api/novels/chapter-list/' + novelPath,
@@ -120,23 +160,32 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
     }
 
     novel.chapters = chapters
-      .map((c: APIChapter) => ({
+      .map((c: any) => {
+        let chapterTitle = '';
+        if (c.title) {
+            chapterTitle = ' - ' + c.title.trim().replace(/^chapter [0-9]+ . /i, '');
+        } else if (c.name) {
+            // Some chapters have 'name' instead of 'title' in the API
+            const n = c.name.trim();
+            if (n !== 'Chapter ' + c.number && n !== c.number.toString()) {
+                chapterTitle = ' - ' + n.replace(/^chapter [0-9]+ . /i, '');
+            }
+        }
+
+        return {
         name:
           (c.locked?.price ? '🔒 ' : '') +
-          (c.group?.index === null ? '' : 'Vol ' + c.group?.index + ' ') +
+          (c.group?.index === null || c.group?.index === undefined ? '' : 'Vol ' + c.group?.index + ' ') +
           'Chapter ' +
           c.number +
-          (c.title && c.title.trim() != 'Chapter ' + c.number
-            ? ' - ' + c.title.replace(/^chapter [0-9]+ . /i, '')
-            : ''),
+          chapterTitle,
         path:
           novelPath +
-          (c.group?.index === null ? '' : '/' + c.group?.slug) +
-          '/chapter-' +
-          c.number,
+          (c.group?.index === null || c.group?.index === undefined || c.group?.slug === null ? '' : '/' + c.group?.slug) +
+          '/' + (c.slug || c.number.toString()),
         releaseTime: c.created_at,
         chapterNumber: c.number + (c.group?.index || 0) * 1000000000000,
-      }))
+      }})
       .sort(
         (a: ChapterInfo, b: ChapterInfo) => a.chapterNumber - b.chapterNumber,
       );
@@ -155,7 +204,59 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       })
       .remove();
 
-    return chapter.html() || '';
+    let html = chapter.html() || '';
+
+    // Fallback: If reader-area is empty or missing, extract from SvelteKit JSON blocks
+    if (!html || html.length < 500) {
+      const p1 = page.indexOf('[');
+      const p2 = page.lastIndexOf(']');
+      if (p1 > -1 && p2 > -1) {
+        let arrStr = page.substring(p1, p2 + 1);
+        let chapterText = [];
+        let offset = 0;
+        
+        while (true) {
+          let start1 = arrStr.indexOf('{"type":"text","text":"', offset);
+          let start2 = arrStr.indexOf('{\\"type\\":\\"text\\",\\"text\\":\\"', offset);
+          if (start1 === -1 && start2 === -1) break;
+          
+          let start = start1;
+          let isEscaped = false;
+          
+          if (start === -1 || (start2 !== -1 && start2 < start)) {
+              start = start2;
+              isEscaped = true;
+          }
+          
+          const searchStr = isEscaped ? '\\"}' : '"}';
+          const valStart = start + (isEscaped ? 31 : 23);
+          
+          let end = arrStr.indexOf(searchStr, valStart);
+          if (end === -1) break;
+          
+          let text = arrStr.substring(valStart, end);
+          if (isEscaped) {
+              text = text.replace(/\\\\n/g, '\n').replace(/\\\\"/g, '"');
+          } else {
+              text = text.replace(/\\n/g, '\n').replace(/\\"/g, '"');
+          }
+          
+          if (text.trim() && text.indexOf('Battle Coin(') === -1) {
+              // Strip nested block tags that break React Native HTML renderer
+              text = text.replace(/<\/?(p|div)[^>]*>/gi, '');
+              chapterText.push('<p>' + text + '</p>');
+          }
+          
+          offset = end + 2;
+        }
+        
+        if (chapterText.length > 0) {
+          html = chapterText.join('\n');
+        }
+      }
+    }
+
+    return html;
   }
 
   async searchNovels(
