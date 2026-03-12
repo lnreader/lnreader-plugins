@@ -38,7 +38,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   name = 'Fenrir Realm';
   icon = 'src/en/fenrirrealm/icon.png';
   site = 'https://fenrirealm.com';
-  version = '1.2';
+  version = '1.2.1';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   hideLocked = storage.get('hideLocked');
@@ -216,13 +216,20 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
         let offset = 0;
         
         while (true) {
-          let start = arrStr.indexOf('{"type":"text","text":"', offset);
-          if (start === -1) start = arrStr.indexOf('{\\"type\\":\\"text\\",\\"text\\":\\"', offset);
-          if (start === -1) break;
+          let start1 = arrStr.indexOf('{"type":"text","text":"', offset);
+          let start2 = arrStr.indexOf('{\\"type\\":\\"text\\",\\"text\\":\\"', offset);
+          if (start1 === -1 && start2 === -1) break;
           
-          const isEscaped = arrStr.substring(start, start + 20).indexOf('\\"') !== -1;
+          let start = start1;
+          let isEscaped = false;
+          
+          if (start === -1 || (start2 !== -1 && start2 < start)) {
+              start = start2;
+              isEscaped = true;
+          }
+          
           const searchStr = isEscaped ? '\\"}' : '"}';
-          const valStart = start + (isEscaped ? 25 : 23);
+          const valStart = start + (isEscaped ? 31 : 23);
           
           let end = arrStr.indexOf(searchStr, valStart);
           if (end === -1) break;
@@ -235,6 +242,8 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
           }
           
           if (text.trim() && text.indexOf('Battle Coin(') === -1) {
+              // Strip nested block tags that break React Native HTML renderer
+              text = text.replace(/<\/?(p|div)[^>]*>/gi, '');
               chapterText.push('<p>' + text + '</p>');
           }
           
