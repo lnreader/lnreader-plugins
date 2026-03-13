@@ -38,7 +38,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   name = 'Fenrir Realm';
   icon = 'src/en/fenrirrealm/icon.png';
   site = 'https://fenrirealm.com';
-  version = '1.0.121';
+  version = '1.0.12-3';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   hideLocked = storage.get('hideLocked');
@@ -65,28 +65,35 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
     const genresFilter = filters.genres.value
       .map(g => '&genres%5B%5D=' + g)
       .join('');
+      
     const res = await fetchApi(
       `${this.site}/api/series/filter?page=${pageNo}&per_page=20&status=${filters.status.value}&order=${sort}${genresFilter}`,
     ).then(r =>
       r.json().catch(() => {
         throw new Error(
-          'There was an error fetching the data from the server. Please try to open it in WebView',
+          'Lỗi máy chủ hoặc bị Cloudflare chặn. Vui lòng mở trang web trong WebView để xác thực.',
         );
       }),
     );
 
-    return res.data.map((r: APINovel) => this.parseNovelFromApi(r));
+    return (res.data || []).map((r: APINovel) => this.parseNovelFromApi(r));
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
     const html = await fetchApi(`${this.site}/series/${novelPath}`, {}).then(
       r => r.text(),
     );
+
+    // Bắt lỗi Cloudflare ngay từ đầu
+    if (html.includes('cloudflare') || html.includes('Just a moment...')) {
+      throw new Error('Bị Cloudflare chặn. Vui lòng nhấn vào biểu tượng Quả địa cầu (WebView) ở góc trên để xác thực.');
+    }
+
     const loadedCheerio = loadCheerio(html);
 
     const novel: Plugin.SourceNovel = {
       path: novelPath,
-      name: loadedCheerio('h1.my-2').text(),
+      name: loadedCheerio('h1.my-2').text().trim(),
       summary: loadedCheerio(
         'div.overflow-hidden.transition-all.max-h-\\[108px\\] p',
       )
@@ -97,7 +104,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
 
     novel.author = loadedCheerio(
       'div.flex-1 > div.mb-3 > a.inline-flex',
-    ).text();
+    ).text().trim();
 
     const coverMatch = html.match(/,cover:"storage\/(.+?)",cover_data_url/);
     novel.cover = coverMatch
@@ -105,55 +112,46 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       : defaultCover;
 
     novel.genres = loadedCheerio('div.flex-1 > div.flex:not(.mb-3, .mt-5) > a')
-      .map((i, el) => loadCheerio(el).text())
+      .map((i, el) => loadCheerio(el).text().trim())
       .toArray()
       .join(',');
 
-    // ==========================================
-    // FIX STATUS CHỐT HẠ: Xuyên thủng SvelteKit JSON
-    // ==========================================
-    let parsedStatus = '';
-
-    // 1. Dùng Regex tóm thẳng vào cục JSON data của SvelteKit
-    // Cấu trúc luôn là: status: "Ongoing", hoặc status: "Completed",
+    // Xử lý status cực mạnh
+    let rawStatus = 'Ongoing';
     const svelteDataMatch = html.match(/status:\s*["']([^"']+)["']/i);
-    
     if (svelteDataMatch && svelteDataMatch[1]) {
-        parsedStatus = svelteDataMatch[1].trim();
+      rawStatus = svelteDataMatch[1].trim();
     } else {
-        // 2. Nếu server lỗi không trả JSON, móc thủ công bằng Cheerio
-        // Chọn tất cả các thẻ span có màu nền, sau đó lọc lấy thẻ có chứa từ khóa
-        const badgeSpans = loadedCheerio('div.mb-3 span.rounded-md.text-white').toArray();
-        for (let span of badgeSpans) {
-            const text = loadedCheerio(span).text().trim().toLowerCase();
-            if (text === 'ongoing' || text === 'completed' || text === 'hiatus') {
-                parsedStatus = text;
-                break; // Tìm thấy là thoát vòng lặp ngay
-            }
+      const badgeSpans = loadedCheerio('div.mb-3 span.rounded-md.text-white').toArray();
+      for (let span of badgeSpans) {
+        const text = loadCheerio(span).text().trim().toLowerCase();
+        if (['ongoing', 'completed', 'hiatus'].includes(text)) {
+          rawStatus = text;
+          break;
         }
+      }
     }
 
-    // 3. Ép kiểu chuẩn cho LNReader hiểu
-    const lowerStatus = parsedStatus.toLowerCase();
-    if (lowerStatus === 'completed') {
-        novel.status = 'Completed';
-    } else if (lowerStatus === 'hiatus') {
-        novel.status = 'Hiatus';
-    } else {
-        novel.status = 'Ongoing'; // Mặc định nếu không rõ là Ongoing
-    }
+    const lowerStatus = rawStatus.toLowerCase();
+    if (lowerStatus.includes('completed')) novel.status = 'Completed';
+    else if (lowerStatus.includes('hiatus')) novel.status = 'Hiatus';
+    else novel.status = 'Ongoing';
 
-    // Xóa các thẻ HTML rác bị dính trong phần tóm tắt
     if (novel.summary) {
       novel.summary = novel.summary.replace(/<[^>]+>/g, '').trim();
     }
 
-    let chaptersRes = await fetchApi(
-      this.site + '/api/novels/chapter-list/' + novelPath,
-    ).then(r => r.json());
+    // Tải danh sách chương AN TOÀN (Không sợ crash do JSON)
+    let chaptersRes;
+    try {
+      chaptersRes = await fetchApi(
+        this.site + '/api/novels/chapter-list/' + novelPath,
+      ).then(r => r.json());
+    } catch (err) {
+      throw new Error('Không thể tải danh sách chương. Cần xác thực Cloudflare qua WebView, vui lòng thử lại.');
+    }
 
-    // Đảm bảo chapters luôn là mảng
-    let chapters = Array.isArray(chaptersRes) ? chaptersRes : (chaptersRes.data || []);
+    let chapters = Array.isArray(chaptersRes) ? chaptersRes : (chaptersRes?.data || []);
 
     if (this.hideLocked) {
       chapters = chapters.filter((c: APIChapter) => !c.locked?.price);
@@ -203,27 +201,31 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
     searchTerm: string,
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
-    return await fetchApi(
+    const res = await fetchApi(
       `${this.site}/api/series/filter?page=${pageNo}&per_page=20&search=${encodeURIComponent(searchTerm)}`,
     )
-      .then(r => r.json())
-      .then(r =>
-        r.data.map((novel: APINovel) => this.parseNovelFromApi(novel)),
-      );
+      .then(r => r.json().catch(() => {
+        throw new Error("Lỗi tải trang, có thể do Cloudflare. Vui lòng mở WebView.");
+      }));
+      
+    return (res?.data || []).map((novel: APINovel) => this.parseNovelFromApi(novel));
   }
 
   parseNovelFromApi(apiData: APINovel) {
+    let parsedStatus = apiData.status ? apiData.status.toLowerCase() : '';
+    let status = 'Ongoing';
+    if (parsedStatus.includes('completed')) status = 'Completed';
+    else if (parsedStatus.includes('hiatus')) status = 'Hiatus';
+
     return {
-      name: apiData.title,
-      path: apiData.slug,
-      cover: this.site + '/' + apiData.cover,
-      // Fix 3: Lọc thẻ HTML trực tiếp từ API trả về
+      name: apiData.title || '',
+      path: apiData.slug || '',
+      cover: apiData.cover ? (this.site + '/' + apiData.cover) : defaultCover,
       summary: apiData.description ? apiData.description.replace(/<[^>]+>/g, '').trim() : '',
-      status: apiData.status || 'Ongoing',
-      genres: apiData.genres.map(g => g.name).join(','),
+      status: status,
+      genres: (apiData.genres || []).map(g => g.name).join(','),
     };
   }
-
 
   resolveUrl = (path: string, isNovel?: boolean) =>
     this.site + '/series/' + path;
