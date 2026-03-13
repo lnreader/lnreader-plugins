@@ -38,7 +38,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   name = 'Fenrir Realm';
   icon = 'src/en/fenrirrealm/icon.png';
   site = 'https://fenrirealm.com';
-  version = '1.0.12-3';
+  version = '1.0.13';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   hideLocked = storage.get('hideLocked');
@@ -116,7 +116,9 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       .toArray()
       .join(',');
 
-    // Xử lý status cực mạnh
+    // ==========================================
+    // XỬ LÝ STATUS (Xuyên thủng SvelteKit JSON)
+    // ==========================================
     let rawStatus = 'Ongoing';
     const svelteDataMatch = html.match(/status:\s*["']([^"']+)["']/i);
     if (svelteDataMatch && svelteDataMatch[1]) {
@@ -141,25 +143,33 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       novel.summary = novel.summary.replace(/<[^>]+>/g, '').trim();
     }
 
-    // Tải danh sách chương AN TOÀN (Không sợ crash do JSON)
-    // Tải danh sách chương AN TOÀN (Đã thêm Headers để không bị SvelteKit/Cloudflare chặn)
-    let chaptersRes;
+    // ==========================================
+    // TẢI DANH SÁCH CHƯƠNG VỚI LINK API V2 (Có bọc lỗi)
+    // ==========================================
+    let chapters = [];
     try {
-      const response = await fetchApi(
-        this.site + '/api/novels/chapter-list/' + novelPath,
-        {
-          headers: {
-            'Accept': 'application/json, text/plain, */*',
-            'Referer': this.site + '/series/' + novelPath,
-          }
+      const apiURL = this.site + '/api/new/v2/series/' + novelPath + '/chapters';
+      const response = await fetchApi(apiURL, {
+        headers: {
+          'Accept': 'application/json, text/plain, */*',
+          'Referer': this.site + '/series/' + novelPath,
         }
-      );
-      chaptersRes = await response.json();
-    } catch (err) {
-      throw new Error('Không thể tải danh sách chương. Vui lòng thử xoá Cookie WebView trong cài đặt ứng dụng.');
+      });
+      
+      const chaptersRes = await response.json();
+      chapters = Array.isArray(chaptersRes) ? chaptersRes : (chaptersRes?.data || []);
+      
+    } catch (err: any) {
+      console.error("❌ Lỗi tải chương:", err.message);
+      // Tạo chương giả để báo lỗi trên giao diện app thay vì bị crash đen màn hình
+      novel.chapters = [{
+        name: "⚠️ Lỗi tải danh sách chương. Vui lòng mở WebView hoặc thử lại sau.",
+        path: novelPath,
+        releaseTime: new Date().toISOString(),
+        chapterNumber: 1,
+      }];
+      return novel;
     }
-
-    let chapters = Array.isArray(chaptersRes) ? chaptersRes : (chaptersRes?.data || []);
 
     if (this.hideLocked) {
       chapters = chapters.filter((c: APIChapter) => !c.locked?.price);
