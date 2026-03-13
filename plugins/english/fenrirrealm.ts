@@ -38,7 +38,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   name = 'Fenrir Realm';
   icon = 'src/en/fenrirrealm/icon.png';
   site = 'https://fenrirealm.com';
-  version = '1.0.12-1';
+  version = '1.0.12-2';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   hideLocked = storage.get('hideLocked');
@@ -110,23 +110,26 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       .join(',');
 
     // ==========================================
-    // FIX STATUS LẦN 3: Bắt chuẩn xác JSON key
+    // FIX STATUS LẦN 4: Chuẩn hóa 100% cho LNReader
     // ==========================================
-    let parsedStatus = '';
+    // 1. Cố gắng bắt từ cục JSON của SvelteKit trước
+    const statusMatch = html.match(/status:\s*["']([^"']+)["']/i);
+    let rawStatus = statusMatch ? statusMatch[1].trim() : '';
 
-    // Cách 1: Tóm chính xác key "status" trong chuỗi JSON của SvelteKit
-    const statusMatch = html.match(/"status"\s*:\s*"([^"]+)"/i);
-    if (statusMatch) {
-      parsedStatus = statusMatch[1].trim();
+    // 2. Dự phòng bằng Cheerio nếu JSON bị đổi
+    if (!rawStatus) {
+        rawStatus = loadedCheerio('div.mb-3 span').first().text() || 'Ongoing';
     }
 
-    // Cách 2: Dự phòng Cheerio (quét lỏng hơn, tìm trực tiếp thẻ span chứa text trạng thái)
-    if (!parsedStatus) {
-      parsedStatus = loadedCheerio('span:contains("Ongoing"), span:contains("Completed"), span:contains("Hiatus")').first().text().trim();
+    // 3. Ép kiểu chuẩn: Lọc bỏ rác và chỉ trả về đúng từ khóa LNReader hiểu
+    const lowerStatus = rawStatus.toLowerCase();
+    if (lowerStatus.includes('completed')) {
+        novel.status = 'Completed';
+    } else if (lowerStatus.includes('hiatus')) {
+        novel.status = 'Hiatus';
+    } else {
+        novel.status = 'Ongoing'; // Mặc định tất cả các trường hợp rác sẽ quy về Ongoing
     }
-
-    novel.status = parsedStatus || 'Ongoing';
-
 
     // Xóa các thẻ HTML rác bị dính trong phần tóm tắt
     if (novel.summary) {
