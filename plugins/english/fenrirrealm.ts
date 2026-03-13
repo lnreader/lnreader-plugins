@@ -110,10 +110,22 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       .join(',');
 
     // ==========================================
-    // CÁCH SỬA LỖI STATUS: Dùng Regex tóm trực tiếp dữ liệu SvelteKit
+    // FIX STATUS LẦN 2: Kết hợp Cheerio & Regex
     // ==========================================
-    const statusMatch = html.match(/status:\s*"([^"]+)"/);
-    novel.status = statusMatch ? statusMatch[1].trim() : 'Ongoing';
+    let parsedStatus = '';
+
+    // Ưu tiên 1: Dùng Cheerio chọc thẳng vào thẻ span chứa màu nền (bg-...-800) và text-white
+    parsedStatus = loadedCheerio('div.mb-3 span.rounded-md.text-white').first().text().trim();
+
+    // Ưu tiên 2: Nếu giao diện đổi, quay về dùng Regex nhưng bắt chặt hơn
+    if (!parsedStatus) {
+      const statusMatch = html.match(/status:\s*["']([^"']+)["']/i);
+      if (statusMatch) {
+        parsedStatus = statusMatch[1].trim();
+      }
+    }
+
+    novel.status = parsedStatus || 'Ongoing';
 
     // Xóa các thẻ HTML rác bị dính trong phần tóm tắt
     if (novel.summary) {
