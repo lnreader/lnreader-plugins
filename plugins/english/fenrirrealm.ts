@@ -60,7 +60,6 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       filters,
     }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
-    // let sort = "updated";
     let sort = filters.sort.value;
     if (showLatestNovels) sort = 'latest';
     const genresFilter = filters.genres.value
@@ -95,36 +94,37 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
         .get()
         .join('\n\n'),
     };
-    // novel.artist = '';
+
     novel.author = loadedCheerio(
       'div.flex-1 > div.mb-3 > a.inline-flex',
     ).text();
+
     const coverMatch = html.match(/,cover:"storage\/(.+?)",cover_data_url/);
     novel.cover = coverMatch
       ? this.site + '/storage/' + coverMatch[1]
       : defaultCover;
+
     novel.genres = loadedCheerio('div.flex-1 > div.flex:not(.mb-3, .mt-5) > a')
       .map((i, el) => loadCheerio(el).text())
       .toArray()
       .join(',');
-        // Fix 1: Tìm trạng thái linh hoạt hơn dựa trên nội dung text thay vì class cứng
-    let parsedStatus = loadedCheerio('span:contains("Ongoing"), span:contains("Completed"), span:contains("Hiatus")').first().text().trim();
-    if (!parsedStatus) {
-        parsedStatus = loadedCheerio('div.flex-1 span.rounded-md').first().text().trim();
-    }
-    novel.status = parsedStatus || 'Ongoing';
 
-    // Fix 2: Xóa các thẻ HTML rác (<p style...>) bị dính trong phần tóm tắt của thư viện
+    // ==========================================
+    // CÁCH SỬA LỖI STATUS: Dùng Regex tóm trực tiếp dữ liệu SvelteKit
+    // ==========================================
+    const statusMatch = html.match(/status:\s*"([^"]+)"/);
+    novel.status = statusMatch ? statusMatch[1].trim() : 'Ongoing';
+
+    // Xóa các thẻ HTML rác bị dính trong phần tóm tắt
     if (novel.summary) {
-        novel.summary = novel.summary.replace(/<[^>]+>/g, '').trim();
+      novel.summary = novel.summary.replace(/<[^>]+>/g, '').trim();
     }
 
-
-        let chaptersRes = await fetchApi(
+    let chaptersRes = await fetchApi(
       this.site + '/api/novels/chapter-list/' + novelPath,
     ).then(r => r.json());
 
-    // Fix 1: Đảm bảo chapters luôn là mảng, chống crash nếu API trả về Object { data: [...] }
+    // Đảm bảo chapters luôn là mảng
     let chapters = Array.isArray(chaptersRes) ? chaptersRes : (chaptersRes.data || []);
 
     if (this.hideLocked) {
@@ -135,8 +135,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       .map((c: APIChapter) => ({
         name:
           (c.locked?.price ? '🔒 ' : '') +
-          // Fix 2: Đổi điều kiện kiểm tra group để không bị dính chữ 'undefined'
-          (!c.group ? '' : 'Vol ' + c.group.index + ' ') + 
+          (!c.group ? '' : 'Vol ' + c.group.index + ' ') +
           'Chapter ' +
           c.number +
           (c.title && c.title.trim() != 'Chapter ' + c.number
@@ -144,8 +143,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
             : ''),
         path:
           novelPath +
-          // Fix 2: Tương tự cho đường dẫn URL của chương
-          (!c.group ? '' : '/' + c.group.slug) + 
+          (!c.group ? '' : '/' + c.group.slug) +
           '/chapter-' +
           c.number,
         releaseTime: c.created_at,
@@ -210,10 +208,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       options: [
         { label: 'All', value: 'any' },
         { label: 'Ongoing', value: 'ongoing' },
-        {
-          label: 'Completed',
-          value: 'completed',
-        },
+        { label: 'Completed', value: 'completed' },
       ],
     },
     sort: {
@@ -231,74 +226,41 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       label: 'Genres',
       value: [],
       options: [
-        { 'label': 'Action', 'value': '1' },
-        { 'label': 'Adult', 'value': '2' },
-        {
-          'label': 'Adventure',
-          'value': '3',
-        },
-        { 'label': 'Comedy', 'value': '4' },
-        { 'label': 'Drama', 'value': '5' },
-        {
-          'label': 'Ecchi',
-          'value': '6',
-        },
-        { 'label': 'Fantasy', 'value': '7' },
-        { 'label': 'Gender Bender', 'value': '8' },
-        {
-          'label': 'Harem',
-          'value': '9',
-        },
-        { 'label': 'Historical', 'value': '10' },
-        { 'label': 'Horror', 'value': '11' },
-        {
-          'label': 'Josei',
-          'value': '12',
-        },
-        { 'label': 'Martial Arts', 'value': '13' },
-        { 'label': 'Mature', 'value': '14' },
-        {
-          'label': 'Mecha',
-          'value': '15',
-        },
-        { 'label': 'Mystery', 'value': '16' },
-        { 'label': 'Psychological', 'value': '17' },
-        {
-          'label': 'Romance',
-          'value': '18',
-        },
-        { 'label': 'School Life', 'value': '19' },
-        { 'label': 'Sci-fi', 'value': '20' },
-        {
-          'label': 'Seinen',
-          'value': '21',
-        },
-        { 'label': 'Shoujo', 'value': '22' },
-        { 'label': 'Shoujo Ai', 'value': '23' },
-        {
-          'label': 'Shounen',
-          'value': '24',
-        },
-        { 'label': 'Shounen Ai', 'value': '25' },
-        { 'label': 'Slice of Life', 'value': '26' },
-        {
-          'label': 'Smut',
-          'value': '27',
-        },
-        { 'label': 'Sports', 'value': '28' },
-        { 'label': 'Supernatural', 'value': '29' },
-        {
-          'label': 'Tragedy',
-          'value': '30',
-        },
-        { 'label': 'Wuxia', 'value': '31' },
-        { 'label': 'Xianxia', 'value': '32' },
-        {
-          'label': 'Xuanhuan',
-          'value': '33',
-        },
-        { 'label': 'Yaoi', 'value': '34' },
-        { 'label': 'Yuri', 'value': '35' },
+        { label: 'Action', value: '1' },
+        { label: 'Adult', value: '2' },
+        { label: 'Adventure', value: '3' },
+        { label: 'Comedy', value: '4' },
+        { label: 'Drama', value: '5' },
+        { label: 'Ecchi', value: '6' },
+        { label: 'Fantasy', value: '7' },
+        { label: 'Gender Bender', value: '8' },
+        { label: 'Harem', value: '9' },
+        { label: 'Historical', value: '10' },
+        { label: 'Horror', value: '11' },
+        { label: 'Josei', value: '12' },
+        { label: 'Martial Arts', value: '13' },
+        { label: 'Mature', value: '14' },
+        { label: 'Mecha', value: '15' },
+        { label: 'Mystery', value: '16' },
+        { label: 'Psychological', value: '17' },
+        { label: 'Romance', value: '18' },
+        { label: 'School Life', value: '19' },
+        { label: 'Sci-fi', value: '20' },
+        { label: 'Seinen', value: '21' },
+        { label: 'Shoujo', value: '22' },
+        { label: 'Shoujo Ai', value: '23' },
+        { label: 'Shounen', value: '24' },
+        { label: 'Shounen Ai', value: '25' },
+        { label: 'Slice of Life', value: '26' },
+        { label: 'Smut', value: '27' },
+        { label: 'Sports', value: '28' },
+        { label: 'Supernatural', value: '29' },
+        { label: 'Tragedy', value: '30' },
+        { label: 'Wuxia', value: '31' },
+        { label: 'Xianxia', value: '32' },
+        { label: 'Xuanhuan', value: '33' },
+        { label: 'Yaoi', value: '34' },
+        { label: 'Yuri', value: '35' },
       ],
     },
   } satisfies Filters;
