@@ -38,7 +38,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   name = 'Fenrir Realm';
   icon = 'src/en/fenrirrealm/icon.png';
   site = 'https://fenrirealm.com';
-  version = '1.0.12';
+  version = '1.0.12-1';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   hideLocked = storage.get('hideLocked');
@@ -196,7 +196,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       );
   }
 
-    parseNovelFromApi(apiData: APINovel) {
+  parseNovelFromApi(apiData: APINovel) {
     return {
       name: apiData.title,
       path: apiData.slug,
