@@ -38,7 +38,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   name = 'Fenrir Realm';
   icon = 'src/en/fenrirrealm/icon.png';
   site = 'https://fenrirealm.com';
-  version = '1.0.12-2';
+  version = '1.0.121';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   hideLocked = storage.get('hideLocked');
@@ -110,25 +110,37 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       .join(',');
 
     // ==========================================
-    // FIX STATUS LẦN 4: Chuẩn hóa 100% cho LNReader
+    // FIX STATUS CHỐT HẠ: Xuyên thủng SvelteKit JSON
     // ==========================================
-    // 1. Cố gắng bắt từ cục JSON của SvelteKit trước
-    const statusMatch = html.match(/status:\s*["']([^"']+)["']/i);
-    let rawStatus = statusMatch ? statusMatch[1].trim() : '';
+    let parsedStatus = '';
 
-    // 2. Dự phòng bằng Cheerio nếu JSON bị đổi
-    if (!rawStatus) {
-        rawStatus = loadedCheerio('div.mb-3 span').first().text() || 'Ongoing';
+    // 1. Dùng Regex tóm thẳng vào cục JSON data của SvelteKit
+    // Cấu trúc luôn là: status: "Ongoing", hoặc status: "Completed",
+    const svelteDataMatch = html.match(/status:\s*["']([^"']+)["']/i);
+    
+    if (svelteDataMatch && svelteDataMatch[1]) {
+        parsedStatus = svelteDataMatch[1].trim();
+    } else {
+        // 2. Nếu server lỗi không trả JSON, móc thủ công bằng Cheerio
+        // Chọn tất cả các thẻ span có màu nền, sau đó lọc lấy thẻ có chứa từ khóa
+        const badgeSpans = loadedCheerio('div.mb-3 span.rounded-md.text-white').toArray();
+        for (let span of badgeSpans) {
+            const text = loadedCheerio(span).text().trim().toLowerCase();
+            if (text === 'ongoing' || text === 'completed' || text === 'hiatus') {
+                parsedStatus = text;
+                break; // Tìm thấy là thoát vòng lặp ngay
+            }
+        }
     }
 
-    // 3. Ép kiểu chuẩn: Lọc bỏ rác và chỉ trả về đúng từ khóa LNReader hiểu
-    const lowerStatus = rawStatus.toLowerCase();
-    if (lowerStatus.includes('completed')) {
+    // 3. Ép kiểu chuẩn cho LNReader hiểu
+    const lowerStatus = parsedStatus.toLowerCase();
+    if (lowerStatus === 'completed') {
         novel.status = 'Completed';
-    } else if (lowerStatus.includes('hiatus')) {
+    } else if (lowerStatus === 'hiatus') {
         novel.status = 'Hiatus';
     } else {
-        novel.status = 'Ongoing'; // Mặc định tất cả các trường hợp rác sẽ quy về Ongoing
+        novel.status = 'Ongoing'; // Mặc định nếu không rõ là Ongoing
     }
 
     // Xóa các thẻ HTML rác bị dính trong phần tóm tắt
