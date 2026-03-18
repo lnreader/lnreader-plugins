@@ -6,7 +6,7 @@ import { Plugin } from '@/types/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.9.12';
+  version = '0.9.13';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -630,7 +630,7 @@ class NovelUpdates implements Plugin.PluginBase {
       case 'r-p-d': {
         let parts = chapterPath.split('/');
 
-        // 1. Resolve the redirect location
+        // 1. Resolve the redirect
         const resolveRes = await fetchApi(
           `${parts[0]}//${parts[2]}/resolve?p=/${parts.slice(3).join('/')}`,
         );
@@ -638,7 +638,7 @@ class NovelUpdates implements Plugin.PluginBase {
         parts = location.split('/');
         const base = `${parts[0]}//${parts[2]}`;
 
-        // 2. Get Chapter Meta & Token
+        // 2. Get Meta & Token
         const meta = await fetchApi(
           `${base}/api/chapter-meta?seriesSlug=${parts[4]}&chapterSlug=${parts[5]}`,
         ).then(r => r.json());
@@ -647,17 +647,20 @@ class NovelUpdates implements Plugin.PluginBase {
           `${base}/api/chapters/${id}/parts-token`,
         ).then(r => r.json());
 
-        // 3. Fetch all parts
+        // 3. Fetch and Wrap in <p> tags
         let total = 1;
         for (let i = 1; i <= total; i++) {
           const part = await fetchApi(
             `${base}/api/chapters/${id}/parts?index=${i}&token=${token}`,
           ).then(r => r.json());
 
-          // Append content and convert newlines to <br>
-          chapterText += part.markdown.replace(/\n/g, '<br>') + '<br><br>';
+          // Wrap the entire part content
+          // We replace \n\n with </p><p> and wrap the edges in <p> and </p>
+          let formattedPart =
+            '<p>' + part.markdown.replace(/\n\n/g, '</p><p>') + '</p>';
 
-          total = part.total; // Update total from the first response
+          chapterText += formattedPart;
+          total = part.total;
         }
         break;
       }
