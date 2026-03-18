@@ -6,7 +6,7 @@ import { Plugin } from '@/types/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.9.8';
+  version = '0.9.9';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -626,6 +626,41 @@ class NovelUpdates implements Plugin.PluginBase {
         chapterContent = chapterCheerio.html()!;
         break;
       }
+      // Last edited in 0.9.7 by Batorian - 18/03/2026
+      case 'r-p-d':
+      case 't87p34ahr7i09lm': {
+        throw new Error(
+          'T87P34AHR7I09LM chapters must be opened in webview to read.',
+        );
+        const parts = chapterPath.split('/');
+
+        const chapterMetaUrl = `${parts[0]}//${parts[2]}/api/chapter-meta?seriesSlug=${parts[4]}&chapterSlug=${parts[5]}`;
+        const chapterMetaJson = await fetchApi(chapterMetaUrl).then(r =>
+          r.json(),
+        );
+        const chapterId = chapterMetaJson.chapter.id;
+
+        const chapterTokenUrl = `${parts[0]}//${parts[2]}/api/chapters/${chapterId}/parts-token`;
+        const chapterTokenJson = await fetchApi(chapterTokenUrl).then(r =>
+          r.json(),
+        );
+        const chapterToken = chapterTokenJson.token;
+
+        let index = 1;
+        while (true) {
+          const chapterContentUrl = `${parts[0]}//${parts[2]}/api/chapters/${chapterId}/parts?index=${index}&token=${chapterToken}`;
+          const chapterContentJson = await fetchApi(chapterContentUrl).then(r =>
+            r.json(),
+          );
+          let chapterPartContent = chapterContentJson.markdown;
+          chapterText += chapterPartContent + '\n\n';
+          index++;
+          if (index > chapterContentJson.total) {
+            break;
+          }
+        }
+        break;
+      }
       // Last edited in 0.9.0 by Batorian - 19/03/2025
       case 'raeitranslations': {
         const parts = chapterPath.split('/');
@@ -758,40 +793,6 @@ class NovelUpdates implements Plugin.PluginBase {
           chapterTitle = titleElement.text();
           titleElement.remove();
           chapterContent = loadedCheerio('.entry-content').html()!;
-        }
-        break;
-      }
-      // Last edited in 0.9.7 by Batorian - 18/03/2026
-      case 't87p34ahr7i09lm': {
-        throw new Error(
-          'T87P34AHR7I09LM chapters must be opened in webview to read.',
-        );
-        const parts = chapterPath.split('/');
-
-        const chapterMetaUrl = `${parts[0]}//${parts[2]}/api/chapter-meta?seriesSlug=${parts[4]}&chapterSlug=${parts[5]}`;
-        const chapterMetaJson = await fetchApi(chapterMetaUrl).then(r =>
-          r.json(),
-        );
-        const chapterId = chapterMetaJson.chapter.id;
-
-        const chapterTokenUrl = `${parts[0]}//${parts[2]}/api/chapters/${chapterId}/parts-token`;
-        const chapterTokenJson = await fetchApi(chapterTokenUrl).then(r =>
-          r.json(),
-        );
-        const chapterToken = chapterTokenJson.token;
-
-        let index = 1;
-        while (true) {
-          const chapterContentUrl = `${parts[0]}//${parts[2]}/api/chapters/${chapterId}/parts?index=${index}&token=${chapterToken}`;
-          const chapterContentJson = await fetchApi(chapterContentUrl).then(r =>
-            r.json(),
-          );
-          let chapterPartContent = chapterContentJson.markdown;
-          chapterText += chapterPartContent + '\n\n';
-          index++;
-          if (index > chapterContentJson.total) {
-            break;
-          }
         }
         break;
       }
