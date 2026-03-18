@@ -6,7 +6,7 @@ import { Plugin } from '@/types/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.9.10';
+  version = '0.9.11';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -627,9 +627,13 @@ class NovelUpdates implements Plugin.PluginBase {
         break;
       }
       // Last edited in 0.9.7 by Batorian - 18/03/2026
-      case 'r-p-d':
-      case 't87p34ahr7i09lm': {
-        const parts = chapterPath.split('/');
+      case 'r-p-d': {
+        let parts = chapterPath.split('/');
+        const resolvedChapterUrl = `${parts[0]}//${parts[2]}/resolve?p=/${parts[3]}/${parts[4]}/${parts[5]}`;
+        const resolvedChapterJson = await fetchApi(resolvedChapterUrl).then(r =>
+          r.json(),
+        );
+        parts = resolvedChapterJson.location.split('/');
 
         const chapterMetaUrl = `${parts[0]}//${parts[2]}/api/chapter-meta?seriesSlug=${parts[4]}&chapterSlug=${parts[5]}`;
         const chapterMetaJson = await fetchApi(chapterMetaUrl).then(r =>
