@@ -6,7 +6,7 @@ import { Plugin } from '@/types/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.9.11';
+  version = '0.9.12';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -629,36 +629,35 @@ class NovelUpdates implements Plugin.PluginBase {
       // Last edited in 0.9.7 by Batorian - 18/03/2026
       case 'r-p-d': {
         let parts = chapterPath.split('/');
-        const resolvedChapterUrl = `${parts[0]}//${parts[2]}/resolve?p=/${parts[3]}/${parts[4]}/${parts[5]}`;
-        const resolvedChapterJson = await fetchApi(resolvedChapterUrl).then(r =>
-          r.json(),
-        );
-        parts = resolvedChapterJson.location.split('/');
 
-        const chapterMetaUrl = `${parts[0]}//${parts[2]}/api/chapter-meta?seriesSlug=${parts[4]}&chapterSlug=${parts[5]}`;
-        const chapterMetaJson = await fetchApi(chapterMetaUrl).then(r =>
-          r.json(),
+        // 1. Resolve the redirect location
+        const resolveRes = await fetchApi(
+          `${parts[0]}//${parts[2]}/resolve?p=/${parts.slice(3).join('/')}`,
         );
-        const chapterId = chapterMetaJson.chapter.id;
+        const { location } = await resolveRes.json();
+        parts = location.split('/');
+        const base = `${parts[0]}//${parts[2]}`;
 
-        const chapterTokenUrl = `${parts[0]}//${parts[2]}/api/chapters/${chapterId}/parts-token`;
-        const chapterTokenJson = await fetchApi(chapterTokenUrl).then(r =>
-          r.json(),
-        );
-        const chapterToken = chapterTokenJson.token;
+        // 2. Get Chapter Meta & Token
+        const meta = await fetchApi(
+          `${base}/api/chapter-meta?seriesSlug=${parts[4]}&chapterSlug=${parts[5]}`,
+        ).then(r => r.json());
+        const id = meta.chapter.id;
+        const { token } = await fetchApi(
+          `${base}/api/chapters/${id}/parts-token`,
+        ).then(r => r.json());
 
-        let index = 1;
-        while (true) {
-          const chapterContentUrl = `${parts[0]}//${parts[2]}/api/chapters/${chapterId}/parts?index=${index}&token=${chapterToken}`;
-          const chapterContentJson = await fetchApi(chapterContentUrl).then(r =>
-            r.json(),
-          );
-          let chapterPartContent = chapterContentJson.markdown;
-          chapterText += chapterPartContent + '\n\n';
-          index++;
-          if (index > chapterContentJson.total) {
-            break;
-          }
+        // 3. Fetch all parts
+        let total = 1;
+        for (let i = 1; i <= total; i++) {
+          const part = await fetchApi(
+            `${base}/api/chapters/${id}/parts?index=${i}&token=${token}`,
+          ).then(r => r.json());
+
+          // Append content and convert newlines to <br>
+          chapterText += part.markdown.replace(/\n/g, '<br>') + '<br><br>';
+
+          total = part.total; // Update total from the first response
         }
         break;
       }
