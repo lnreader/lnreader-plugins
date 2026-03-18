@@ -1,6 +1,6 @@
 {
   "name": "lnreader-plugins",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Plugins repo for LNReader",
   "main": "index.js",
   "type": "module",
