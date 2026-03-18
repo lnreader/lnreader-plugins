@@ -6,7 +6,7 @@ import { Plugin } from '@/types/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.9.9';
+  version = '0.9.10';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -629,9 +629,6 @@ class NovelUpdates implements Plugin.PluginBase {
       // Last edited in 0.9.7 by Batorian - 18/03/2026
       case 'r-p-d':
       case 't87p34ahr7i09lm': {
-        throw new Error(
-          'T87P34AHR7I09LM chapters must be opened in webview to read.',
-        );
         const parts = chapterPath.split('/');
 
         const chapterMetaUrl = `${parts[0]}//${parts[2]}/api/chapter-meta?seriesSlug=${parts[4]}&chapterSlug=${parts[5]}`;
