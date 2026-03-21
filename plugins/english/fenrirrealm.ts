@@ -189,16 +189,18 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   async parseChapter(chapterPath: string): Promise<string> {
     await new Promise(resolve => setTimeout(resolve, 1500));
 
+    const defaultHeaders = {
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+      'Accept':
+        'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.5',
+    };
+
     let page;
     try {
       page = await fetchApi(this.site + '/series/' + chapterPath, {
-        headers: {
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
-          'Accept':
-            'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.5',
-        },
+        headers: defaultHeaders,
       }).then(r => r.text());
     } catch (e) {
       throw new Error(
@@ -219,7 +221,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
           try {
             let apiRes = await fetchApi(
               this.site + '/api/new/v2/series/' + cleanNovelPath + '/chapters',
-              {},
+              { headers: defaultHeaders },
             );
 
             if (!apiRes.ok) {
@@ -227,7 +229,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
               let searchSlug = slugMatch ? slugMatch[1] : cleanNovelPath;
               apiRes = await fetchApi(
                 `${this.site}/api/new/v2/series/${searchSlug}/chapters`,
-                {},
+                { headers: defaultHeaders },
               );
               cleanNovelPath = searchSlug;
 
@@ -235,6 +237,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
                 let SearchStr = searchSlug.replace(/-/g, ' ');
                 let searchRes = await fetchApi(
                   `${this.site}/api/series/filter?page=1&per_page=20&search=${encodeURIComponent(SearchStr)}`,
+                  { headers: defaultHeaders },
                 ).then(r => r.json());
 
                 if (!searchRes.data || searchRes.data.length === 0) {
@@ -243,6 +246,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
                     words.length > 3 ? words.slice(0, 3).join(' ') : words[0];
                   searchRes = await fetchApi(
                     `${this.site}/api/series/filter?page=1&per_page=20&search=${encodeURIComponent(SearchStr)}`,
+                    { headers: defaultHeaders },
                   ).then(r => r.json());
                 }
 
@@ -250,7 +254,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
                   cleanNovelPath = searchRes.data[0].slug;
                   apiRes = await fetchApi(
                     `${this.site}/api/new/v2/series/${cleanNovelPath}/chapters`,
-                    {},
+                    { headers: defaultHeaders },
                   );
                 }
               }
@@ -270,10 +274,9 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
                       : '/' + correctChapter.group.slug) +
                     '/' +
                     (correctChapter.slug || 'chapter-' + correctChapter.number);
-                  page = await fetchApi(
-                    this.site + '/series/' + correctPath,
-                    {},
-                  ).then(r => r.text());
+                  page = await fetchApi(this.site + '/series/' + correctPath, {
+                    headers: defaultHeaders,
+                  }).then(r => r.text());
                   chapter = loadCheerio(page)('[id^="reader-area-"]');
                 }
               }
