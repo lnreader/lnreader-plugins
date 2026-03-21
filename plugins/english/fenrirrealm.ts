@@ -38,7 +38,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   name = 'Fenrir Realm';
   icon = 'src/en/fenrirrealm/icon.png';
   site = 'https://fenrirealm.com';
-  version = '1.0.14';
+  version = '1.0.15';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   hideLocked = storage.get('hideLocked');
@@ -81,79 +81,67 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
     let cleanNovelPath = novelPath;
-    let htmlRes = await fetchApi(`${this.site}/series/${novelPath}`, {});
+    let apiRes = await fetchApi(
+      `${this.site}/api/new/v2/series/${novelPath}/chapters`,
+      {},
+    );
 
-    if (!htmlRes.ok) {
+    if (!apiRes.ok) {
       const slugMatch = novelPath.match(/^\d+-(.+)$/);
       let searchSlug = slugMatch ? slugMatch[1] : novelPath;
-      htmlRes = await fetchApi(`${this.site}/series/${searchSlug}`, {});
+      apiRes = await fetchApi(
+        `${this.site}/api/new/v2/series/${searchSlug}/chapters`,
+        {},
+      );
       cleanNovelPath = searchSlug;
 
-      if (!htmlRes.ok) {
-        // As a last-ditch effort, search for the slug string
-        let SearchStr = searchSlug.replace(/-/g, ' ');
-        let searchRes = await fetchApi(
+      if (!apiRes.ok) {
+        const words = searchSlug.replace(/-/g, ' ').split(' ');
+        const SearchStr = words.find(w => w.length > 3) || words[0];
+        const searchRes = await fetchApi(
           `${this.site}/api/series/filter?page=1&per_page=20&search=${encodeURIComponent(SearchStr)}`,
         ).then(r => r.json());
 
-        let words = SearchStr.split(' ');
-        // If no results, try removing words from the end (up to 2 words min) to find a match
-        while (
-          (!searchRes.data || searchRes.data.length === 0) &&
-          words.length > 2
-        ) {
-          words.pop();
-          SearchStr = words.join(' ');
-          searchRes = await fetchApi(
-            `${this.site}/api/series/filter?page=1&per_page=20&search=${encodeURIComponent(SearchStr)}`,
-          ).then(r => r.json());
-        }
-
         if (searchRes.data && searchRes.data.length > 0) {
           cleanNovelPath = searchRes.data[0].slug;
-          htmlRes = await fetchApi(`${this.site}/series/${cleanNovelPath}`, {});
+          apiRes = await fetchApi(
+            `${this.site}/api/new/v2/series/${cleanNovelPath}/chapters`,
+            {},
+          );
         }
       }
 
-      if (!htmlRes.ok) {
+      if (!apiRes.ok) {
         throw new Error(
           'Novel not found. It may have been removed or its URL changed significantly.',
         );
       }
     }
 
-    const html = await htmlRes.text();
-    const loadedCheerio = loadCheerio(html);
+    const seriesData = await fetchApi(
+      `${this.site}/api/new/v2/series/${cleanNovelPath}`,
+    ).then(r => r.json());
+    const summaryCheerio = loadCheerio(seriesData.description || '');
 
     const novel: Plugin.SourceNovel = {
       path: cleanNovelPath,
-      name: loadedCheerio('h1.my-2').text(),
-      summary: loadedCheerio(
-        'div.overflow-hidden.transition-all.max-h-\\[108px\\] p',
-      )
-        .map((i, el) => loadCheerio(el).text())
-        .get()
-        .join('\n\n'),
+      name: seriesData.title || '',
+      summary:
+        summaryCheerio('p').length > 0
+          ? summaryCheerio('p')
+              .map((i, el) => loadCheerio(el).text())
+              .get()
+              .join('\n\n')
+          : summaryCheerio.text() || '',
+      author: seriesData.user?.name || seriesData.user?.username || '',
+      cover: seriesData.cover
+        ? this.site + '/' + seriesData.cover
+        : defaultCover,
+      genres: (seriesData.genres || []).map((g: any) => g.name).join(','),
+      status: seriesData.status || 'Unknown',
     };
-    // novel.artist = '';
-    novel.author = loadedCheerio(
-      'div.flex-1 > div.mb-3 > a.inline-flex',
-    ).text();
-    const coverMatch = html.match(/,cover:"storage\/(.+?)",cover_data_url/);
-    novel.cover = coverMatch
-      ? this.site + '/storage/' + coverMatch[1]
-      : defaultCover;
-    novel.genres = loadedCheerio('div.flex-1 > div.flex:not(.mb-3, .mt-5) > a')
-      .map((i, el) => loadCheerio(el).text())
-      .toArray()
-      .join(',');
-    novel.status = loadedCheerio('div.flex-1 > div.mb-3 > span.rounded-md')
-      .first()
-      .text();
 
-    let chapters = await fetchApi(
-      this.site + '/api/new/v2/series/' + cleanNovelPath + '/chapters',
-    ).then(r => r.json());
+    let chapters = await apiRes.json();
 
     if (this.hideLocked) {
       chapters = chapters.filter((c: APIChapter) => !c.locked?.price);
@@ -202,15 +190,18 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
     searchTerm: string,
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
-    let url = `${this.site}/api/series/filter?page=${pageNo}&per_page=20&search=${encodeURIComponent(searchTerm)}`;
+    let url = `${this.site}/api/series/filter?page=${pageNo}&per_page=20&search=${encodeURIComponent(
+      searchTerm,
+    )}`;
     let res = await fetchApi(url).then(r => r.json());
 
     if (pageNo === 1 && (!res.data || res.data.length === 0)) {
-      let words = searchTerm.split(' ');
-      while ((!res.data || res.data.length === 0) && words.length > 2) {
-        words.pop();
-        const fallbackTerm = words.join(' ');
-        url = `${this.site}/api/series/filter?page=${pageNo}&per_page=20&search=${encodeURIComponent(fallbackTerm)}`;
+      const words = searchTerm.split(' ');
+      const fallbackTerm = words.find(w => w.length > 3) || words[0];
+      if (fallbackTerm && fallbackTerm !== searchTerm) {
+        url = `${this.site}/api/series/filter?page=${pageNo}&per_page=20&search=${encodeURIComponent(
+          fallbackTerm,
+        )}`;
         res = await fetchApi(url).then(r => r.json());
       }
     }
