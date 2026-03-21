@@ -85,9 +85,40 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
 
     if (!htmlRes.ok) {
       const slugMatch = novelPath.match(/^\d+-(.+)$/);
-      if (slugMatch) {
-        cleanNovelPath = slugMatch[1];
-        htmlRes = await fetchApi(`${this.site}/series/${cleanNovelPath}`, {});
+      let searchSlug = slugMatch ? slugMatch[1] : novelPath;
+      htmlRes = await fetchApi(`${this.site}/series/${searchSlug}`, {});
+      cleanNovelPath = searchSlug;
+
+      if (!htmlRes.ok) {
+        // As a last-ditch effort, search for the slug string
+        let SearchStr = searchSlug.replace(/-/g, ' ');
+        let searchRes = await fetchApi(
+          `${this.site}/api/series/filter?page=1&per_page=20&search=${encodeURIComponent(SearchStr)}`,
+        ).then(r => r.json());
+
+        let words = SearchStr.split(' ');
+        // If no results, try removing words from the end (up to 2 words min) to find a match
+        while (
+          (!searchRes.data || searchRes.data.length === 0) &&
+          words.length > 2
+        ) {
+          words.pop();
+          SearchStr = words.join(' ');
+          searchRes = await fetchApi(
+            `${this.site}/api/series/filter?page=1&per_page=20&search=${encodeURIComponent(SearchStr)}`,
+          ).then(r => r.json());
+        }
+
+        if (searchRes.data && searchRes.data.length > 0) {
+          cleanNovelPath = searchRes.data[0].slug;
+          htmlRes = await fetchApi(`${this.site}/series/${cleanNovelPath}`, {});
+        }
+      }
+
+      if (!htmlRes.ok) {
+        throw new Error(
+          'Novel not found. It may have been removed or its URL changed significantly.',
+        );
       }
     }
 
