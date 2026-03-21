@@ -188,17 +188,23 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
 
   async parseChapter(chapterPath: string): Promise<string> {
     await new Promise(resolve => setTimeout(resolve, 1500));
+
     let page;
     try {
-      page = await fetchApi(this.site + '/series/' + chapterPath, {}).then(r =>
-        r.text(),
-      );
+      page = await fetchApi(this.site + '/series/' + chapterPath, {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+          'Accept':
+            'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+        },
+      }).then(r => r.text());
     } catch (e) {
       throw new Error(
-        'Lỗi mạng do Cloudflare! Nhấn Mở Trình Duyệt/WebView góc màn hình để tải Captcha bảo mật.',
+        'Lỗi mạng do Cloudflare! Vui lòng nhấn biểu tượng 🌐 WebView góc màn hình để xác thực.',
       );
     }
-
     let chapter = loadCheerio(page)('[id^="reader-area-"]');
 
     if (chapter.length === 0) {
