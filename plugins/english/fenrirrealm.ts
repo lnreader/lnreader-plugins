@@ -39,7 +39,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   name = 'Fenrir Realm';
   icon = 'src/en/fenrirrealm/icon.png';
   site = 'https://fenrirealm.com';
-  version = '1.0.15';
+  version = '1.0.16';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   hideLocked = storage.get('hideLocked');
@@ -181,34 +181,65 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
     if (chapter.length === 0) {
       const parts = chapterPath.split('/');
       if (parts.length > 0) {
-        const novelSlug = parts[0];
+        let cleanNovelPath = parts[0];
         const chapterPart = parts[parts.length - 1];
         const match = chapterPart.match(/(\d+(?:\.\d+)?)/);
 
         if (match) {
           const chapterNum = parseFloat(match[1]);
           try {
-            const apiRes = await fetchApi(
-              this.site + '/api/new/v2/series/' + novelSlug + '/chapters',
+            let apiRes = await fetchApi(
+              this.site + '/api/new/v2/series/' + cleanNovelPath + '/chapters',
               {},
-            ).then(r => r.json());
-            if (Array.isArray(apiRes)) {
-              const correctChapter = apiRes.find(
-                (c: any) => c.number === chapterNum,
+            );
+
+            if (!apiRes.ok) {
+              const slugMatch = cleanNovelPath.match(/^\d+-(.+)$/);
+              let searchSlug = slugMatch ? slugMatch[1] : cleanNovelPath;
+              apiRes = await fetchApi(
+                `${this.site}/api/new/v2/series/${searchSlug}/chapters`,
+                {},
               );
-              if (correctChapter) {
-                const correctPath =
-                  novelSlug +
-                  (correctChapter.group?.index == null
-                    ? ''
-                    : '/' + correctChapter.group.slug) +
-                  '/' +
-                  (correctChapter.slug || 'chapter-' + correctChapter.number);
-                page = await fetchApi(
-                  this.site + '/series/' + correctPath,
-                  {},
-                ).then(r => r.text());
-                chapter = loadCheerio(page)('[id^="reader-area-"]');
+              cleanNovelPath = searchSlug;
+
+              if (!apiRes.ok) {
+                const words = searchSlug.replace(/-/g, ' ').split(' ');
+                const SearchStr =
+                  words.find((w: string) => w.length > 3) || words[0];
+                const searchRes = await fetchApi(
+                  `${this.site}/api/series/filter?page=1&per_page=20&search=${encodeURIComponent(SearchStr)}`,
+                ).then(r => r.json());
+
+                if (searchRes.data && searchRes.data.length > 0) {
+                  cleanNovelPath = searchRes.data[0].slug;
+                  apiRes = await fetchApi(
+                    `${this.site}/api/new/v2/series/${cleanNovelPath}/chapters`,
+                    {},
+                  );
+                }
+              }
+            }
+
+            if (apiRes.ok) {
+              const chaptersArray = await apiRes.json();
+              if (Array.isArray(chaptersArray)) {
+                const correctChapter = chaptersArray.find(
+                  (c: any) => c.number === chapterNum,
+                );
+                if (correctChapter) {
+                  const correctPath =
+                    cleanNovelPath +
+                    (correctChapter.group?.index == null
+                      ? ''
+                      : '/' + correctChapter.group.slug) +
+                    '/' +
+                    (correctChapter.slug || 'chapter-' + correctChapter.number);
+                  page = await fetchApi(
+                    this.site + '/series/' + correctPath,
+                    {},
+                  ).then(r => r.text());
+                  chapter = loadCheerio(page)('[id^="reader-area-"]');
+                }
               }
             }
           } catch (e) {
