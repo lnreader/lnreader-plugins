@@ -38,7 +38,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   name = 'Fenrir Realm';
   icon = 'src/en/fenrirrealm/icon.png';
   site = 'https://fenrirealm.com';
-  version = '1.0.13';
+  version = '1.0.14';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   hideLocked = storage.get('hideLocked');
@@ -202,13 +202,22 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
     searchTerm: string,
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
-    return await fetchApi(
-      `${this.site}/api/series/filter?page=${pageNo}&per_page=20&search=${encodeURIComponent(searchTerm)}`,
-    )
-      .then(r => r.json())
-      .then(r =>
-        (r.data || []).map((novel: APINovel) => this.parseNovelFromApi(novel)),
-      );
+    let url = `${this.site}/api/series/filter?page=${pageNo}&per_page=20&search=${encodeURIComponent(searchTerm)}`;
+    let res = await fetchApi(url).then(r => r.json());
+
+    if (pageNo === 1 && (!res.data || res.data.length === 0)) {
+      let words = searchTerm.split(' ');
+      while ((!res.data || res.data.length === 0) && words.length > 2) {
+        words.pop();
+        const fallbackTerm = words.join(' ');
+        url = `${this.site}/api/series/filter?page=${pageNo}&per_page=20&search=${encodeURIComponent(fallbackTerm)}`;
+        res = await fetchApi(url).then(r => r.json());
+      }
+    }
+
+    return (res.data || []).map((novel: APINovel) =>
+      this.parseNovelFromApi(novel),
+    );
   }
 
   parseNovelFromApi(apiData: APINovel) {
