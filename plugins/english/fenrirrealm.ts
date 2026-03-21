@@ -80,13 +80,22 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const html = await fetchApi(`${this.site}/series/${novelPath}`, {}).then(
-      r => r.text(),
-    );
+    let cleanNovelPath = novelPath;
+    let htmlRes = await fetchApi(`${this.site}/series/${novelPath}`, {});
+
+    if (!htmlRes.ok) {
+      const slugMatch = novelPath.match(/^\d+-(.+)$/);
+      if (slugMatch) {
+        cleanNovelPath = slugMatch[1];
+        htmlRes = await fetchApi(`${this.site}/series/${cleanNovelPath}`, {});
+      }
+    }
+
+    const html = await htmlRes.text();
     const loadedCheerio = loadCheerio(html);
 
     const novel: Plugin.SourceNovel = {
-      path: novelPath,
+      path: cleanNovelPath,
       name: loadedCheerio('h1.my-2').text(),
       summary: loadedCheerio(
         'div.overflow-hidden.transition-all.max-h-\\[108px\\] p',
@@ -112,7 +121,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       .text();
 
     let chapters = await fetchApi(
-      this.site + '/api/new/v2/series/' + novelPath + '/chapters',
+      this.site + '/api/new/v2/series/' + cleanNovelPath + '/chapters',
     ).then(r => r.json());
 
     if (this.hideLocked) {
