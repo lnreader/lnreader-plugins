@@ -9,7 +9,7 @@ import { storage } from '@libs/storage';
 class NovelFire implements Plugin.PluginBase {
   id = 'novelfire';
   name = 'Novel Fire';
-  version = '1.1.7';
+  version = '1.1.8';
   icon = 'src/en/novelfire/icon.png';
   site = 'https://novelfire.net/';
 
@@ -244,7 +244,12 @@ class NovelFire implements Plugin.PluginBase {
       .toArray()
       .join(',');
 
-    let summary = $('.summary .content').text().trim();
+    let summary = $('.summary .content')
+      .find('br')
+      .replaceWith('\n')
+      .end()
+      .text()
+      .trim();
 
     if (summary) {
       summary = summary.replace('Show More', '');
