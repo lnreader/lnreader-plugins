@@ -39,7 +39,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   name = 'Fenrir Realm';
   icon = 'src/en/fenrirrealm/icon.png';
   site = 'https://fenrirealm.com';
-  version = '1.0.16';
+  version = '1.0.17';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   hideLocked = storage.get('hideLocked');
@@ -97,11 +97,18 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       cleanNovelPath = searchSlug;
 
       if (!apiRes.ok) {
-        const words = searchSlug.replace(/-/g, ' ').split(' ');
-        const SearchStr = words.find(w => w.length > 3) || words[0];
-        const searchRes = await fetchApi(
+        let SearchStr = searchSlug.replace(/-/g, ' ');
+        let searchRes = await fetchApi(
           `${this.site}/api/series/filter?page=1&per_page=20&search=${encodeURIComponent(SearchStr)}`,
         ).then(r => r.json());
+
+        if (!searchRes.data || searchRes.data.length === 0) {
+          const words = SearchStr.split(' ');
+          SearchStr = words.length > 3 ? words.slice(0, 3).join(' ') : words[0];
+          searchRes = await fetchApi(
+            `${this.site}/api/series/filter?page=1&per_page=20&search=${encodeURIComponent(SearchStr)}`,
+          ).then(r => r.json());
+        }
 
         if (searchRes.data && searchRes.data.length > 0) {
           cleanNovelPath = searchRes.data[0].slug;
@@ -203,12 +210,19 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
               cleanNovelPath = searchSlug;
 
               if (!apiRes.ok) {
-                const words = searchSlug.replace(/-/g, ' ').split(' ');
-                const SearchStr =
-                  words.find((w: string) => w.length > 3) || words[0];
-                const searchRes = await fetchApi(
+                let SearchStr = searchSlug.replace(/-/g, ' ');
+                let searchRes = await fetchApi(
                   `${this.site}/api/series/filter?page=1&per_page=20&search=${encodeURIComponent(SearchStr)}`,
                 ).then(r => r.json());
+
+                if (!searchRes.data || searchRes.data.length === 0) {
+                  const words = SearchStr.split(' ');
+                  SearchStr =
+                    words.length > 3 ? words.slice(0, 3).join(' ') : words[0];
+                  searchRes = await fetchApi(
+                    `${this.site}/api/series/filter?page=1&per_page=20&search=${encodeURIComponent(SearchStr)}`,
+                  ).then(r => r.json());
+                }
 
                 if (searchRes.data && searchRes.data.length > 0) {
                   cleanNovelPath = searchRes.data[0].slug;
