@@ -22,6 +22,7 @@ type APIChapter = {
     slug: string;
   };
   title: string;
+  slug: string;
   number: number;
   created_at: string;
 };
@@ -38,7 +39,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   name = 'Fenrir Realm';
   icon = 'src/en/fenrirrealm/icon.png';
   site = 'https://fenrirealm.com';
-  version = '1.0.13';
+  version = '1.0.14';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   hideLocked = storage.get('hideLocked');
@@ -160,8 +161,8 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
         path:
           novelPath +
           (c.group?.index == null ? '' : '/' + c.group?.slug) +
-          '/chapter-' +
-          c.number,
+          '/' +
+          (c.slug || 'chapter-' + c.number),
         releaseTime: c.created_at,
         chapterNumber: c.number + (c.group?.index || 0) * 10000,
       }))
