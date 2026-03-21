@@ -197,15 +197,13 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       'Accept-Language': 'en-US,en;q=0.5',
     };
 
-    let page;
+    let page = '';
     try {
       page = await fetchApi(this.site + '/series/' + chapterPath, {
         headers: defaultHeaders,
       }).then(r => r.text());
     } catch (e) {
-      throw new Error(
-        'Lỗi mạng do Cloudflare! Vui lòng nhấn biểu tượng 🌐 WebView góc màn hình để xác thực.',
-      );
+      // 500 Server Errors from legacy URLs violently crash Native Fetch. Silently suppress to allow auto-heal fallback to process.
     }
     let chapter = loadCheerio(page)('[id^="reader-area-"]');
 
