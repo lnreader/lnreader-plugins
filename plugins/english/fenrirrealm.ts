@@ -39,7 +39,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   name = 'Fenrir Realm';
   icon = 'src/en/fenrirrealm/icon.png';
   site = 'https://fenrirealm.com';
-  version = '1.0.14';
+  version = '1.0.15';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   hideLocked = storage.get('hideLocked');
@@ -173,10 +173,51 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const page = await fetchApi(this.site + '/series/' + chapterPath, {}).then(
+    let page = await fetchApi(this.site + '/series/' + chapterPath, {}).then(
       r => r.text(),
     );
-    const chapter = loadCheerio(page)('[id^="reader-area-"]');
+    let chapter = loadCheerio(page)('[id^="reader-area-"]');
+
+    if (chapter.length === 0) {
+      const parts = chapterPath.split('/');
+      if (parts.length > 0) {
+        const novelSlug = parts[0];
+        const chapterPart = parts[parts.length - 1];
+        const match = chapterPart.match(/(\d+(?:\.\d+)?)/);
+
+        if (match) {
+          const chapterNum = parseFloat(match[1]);
+          try {
+            const apiRes = await fetchApi(
+              this.site + '/api/new/v2/series/' + novelSlug + '/chapters',
+              {},
+            ).then(r => r.json());
+            if (Array.isArray(apiRes)) {
+              const correctChapter = apiRes.find(
+                (c: any) => c.number === chapterNum,
+              );
+              if (correctChapter) {
+                const correctPath =
+                  novelSlug +
+                  (correctChapter.group?.index == null
+                    ? ''
+                    : '/' + correctChapter.group.slug) +
+                  '/' +
+                  (correctChapter.slug || 'chapter-' + correctChapter.number);
+                page = await fetchApi(
+                  this.site + '/series/' + correctPath,
+                  {},
+                ).then(r => r.text());
+                chapter = loadCheerio(page)('[id^="reader-area-"]');
+              }
+            }
+          } catch (e) {
+            // ignore fallback errors
+          }
+        }
+      }
+    }
+
     chapter
       .contents()
       .filter((_, node: Node) => {
