@@ -82,10 +82,17 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
     let cleanNovelPath = novelPath;
-    let apiRes = await fetchApi(
-      `${this.site}/api/new/v2/series/${novelPath}/chapters`,
-      {},
-    );
+    let apiRes;
+    try {
+      apiRes = await fetchApi(
+        `${this.site}/api/new/v2/series/${novelPath}/chapters`,
+        {},
+      );
+    } catch (error) {
+      throw new Error(
+        'Cloudflare chặn kết nối! Vui lòng mở truyện bằng WebView (Trình Duyệt) để xác thực Captcha.',
+      );
+    }
 
     if (!apiRes.ok) {
       const slugMatch = novelPath.match(/^\d+-(.+)$/);
@@ -149,7 +156,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       status: seriesData.status || 'Unknown',
     };
 
-    let chapters = await apiRes.json();
+    let chapters = await apiRes.json().catch(() => []);
 
     if (this.hideLocked) {
       chapters = chapters.filter((c: APIChapter) => !c.locked?.price);
@@ -180,9 +187,16 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    let page = await fetchApi(this.site + '/series/' + chapterPath, {}).then(
-      r => r.text(),
-    );
+    let page;
+    try {
+      page = await fetchApi(this.site + '/series/' + chapterPath, {}).then(r =>
+        r.text(),
+      );
+    } catch (e) {
+      throw new Error(
+        'Lỗi mạng do Cloudflare! Nhấn Mở Trình Duyệt/WebView góc màn hình để tải Captcha bảo mật.',
+      );
+    }
     let chapter = loadCheerio(page)('[id^="reader-area-"]');
 
     if (chapter.length === 0) {
