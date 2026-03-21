@@ -220,7 +220,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
             let apiRes = await fetchApi(
               this.site + '/api/new/v2/series/' + cleanNovelPath + '/chapters',
               { headers: defaultHeaders },
-            );
+            ).catch(() => ({ ok: false }) as any);
 
             if (!apiRes.ok) {
               const slugMatch = cleanNovelPath.match(/^\d+-(.+)$/);
@@ -228,7 +228,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
               apiRes = await fetchApi(
                 `${this.site}/api/new/v2/series/${searchSlug}/chapters`,
                 { headers: defaultHeaders },
-              );
+              ).catch(() => ({ ok: false }) as any);
               cleanNovelPath = searchSlug;
 
               if (!apiRes.ok) {
@@ -236,7 +236,9 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
                 let searchRes = await fetchApi(
                   `${this.site}/api/series/filter?page=1&per_page=20&search=${encodeURIComponent(SearchStr)}`,
                   { headers: defaultHeaders },
-                ).then(r => r.json());
+                )
+                  .then(r => r.json())
+                  .catch(() => ({ data: [] }));
 
                 if (!searchRes.data || searchRes.data.length === 0) {
                   const words = SearchStr.split(' ');
@@ -245,7 +247,9 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
                   searchRes = await fetchApi(
                     `${this.site}/api/series/filter?page=1&per_page=20&search=${encodeURIComponent(SearchStr)}`,
                     { headers: defaultHeaders },
-                  ).then(r => r.json());
+                  )
+                    .then(r => r.json())
+                    .catch(() => ({ data: [] }));
                 }
 
                 if (searchRes.data && searchRes.data.length > 0) {
@@ -253,13 +257,13 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
                   apiRes = await fetchApi(
                     `${this.site}/api/new/v2/series/${cleanNovelPath}/chapters`,
                     { headers: defaultHeaders },
-                  );
+                  ).catch(() => ({ ok: false }) as any);
                 }
               }
             }
 
             if (apiRes.ok) {
-              const chaptersArray = await apiRes.json();
+              const chaptersArray = await apiRes.json().catch(() => []);
               if (Array.isArray(chaptersArray)) {
                 const correctChapter = chaptersArray.find(
                   (c: any) => c.number === chapterNum,
@@ -274,7 +278,9 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
                     (correctChapter.slug || 'chapter-' + correctChapter.number);
                   page = await fetchApi(this.site + '/series/' + correctPath, {
                     headers: defaultHeaders,
-                  }).then(r => r.text());
+                  })
+                    .then(r => r.text())
+                    .catch(() => '');
                   chapter = loadCheerio(page)('[id^="reader-area-"]');
                 }
               }
