@@ -39,7 +39,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   name = 'Fenrir Realm';
   icon = 'src/en/fenrirrealm/icon.png';
   site = 'https://fenrirealm.com';
-  version = '1.0.17';
+  version = '1.0.18';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   hideLocked = storage.get('hideLocked');
@@ -187,6 +187,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
+    await new Promise(resolve => setTimeout(resolve, 1500));
     let page;
     try {
       page = await fetchApi(this.site + '/series/' + chapterPath, {}).then(r =>
@@ -197,6 +198,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
         'Lỗi mạng do Cloudflare! Nhấn Mở Trình Duyệt/WebView góc màn hình để tải Captcha bảo mật.',
       );
     }
+
     let chapter = loadCheerio(page)('[id^="reader-area-"]');
 
     if (chapter.length === 0) {
