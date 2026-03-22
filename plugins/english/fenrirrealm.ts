@@ -187,107 +187,72 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // 1. Resolve ra URL hoàn chỉnh (vd: https://fenrirealm.com/series/the-hound-dreams-of-rebellion/1)
+    const url = this.resolveUrl(chapterPath);
+    const res = await fetchApi(url);
+    const html = await res.text();
 
-    let page = '';
-    try {
-      page = await fetchApi(this.site + '/series/' + chapterPath).then(r =>
-        r.text(),
-      );
-    } catch (e) {
-      // 500 Server Errors from legacy URLs violently crash Native Fetch. Silently suppress to allow auto-heal fallback to process.
+    const $ = loadCheerio(html);
+
+    // 2. Ưu tiên lấy từ DOM đã được kết xuất sẵn (Nhanh và ổn định nhất)
+    // Trang web đặt nội dung chữ bên trong class 'content-area'
+    const chapter = $('.content-area');
+
+    if (chapter.length) {
+      // Dọn dẹp các thẻ không cần thiết để tránh lỗi hiển thị trên app
+      chapter.contents().filter((_, node: Node) => node.type === 'comment').remove();
+      chapter.find('script, style, iframe, noscript').remove();
+      
+      // Xóa các thẻ thuộc tính không cần thiết (tùy chọn để code sạch hơn)
+      chapter.find('*').removeAttr('tabindex');
+      chapter.find('*').removeAttr('style');
+
+      return chapter.html() || '';
     }
-    let chapter = loadCheerio(page)('[id^="reader-area-"]');
 
-    if (chapter.length === 0) {
-      const parts = chapterPath.split('/');
-      if (parts.length > 0) {
-        let cleanNovelPath = parts[0];
-        const chapterPart = parts[parts.length - 1];
-        const match = chapterPart.match(/(\d+(?:\.\d+)?)/);
+    // 3. Fallback (Dự phòng): Trong trường hợp web thay đổi giao diện/class 
+    // Chúng ta sẽ lôi JSON ẩn của SvelteKit ra để parse như phân tích trước đó
+    let scriptContent = '';
+    $('script').each((_, el) => {
+      const text = $(el).text();
+      if (text.includes('__sveltekit_') && text.includes('chapterData')) {
+        scriptContent = text;
+      }
+    });
 
-        if (match) {
-          const chapterNum = parseFloat(match[1]);
-          try {
-            let apiRes = await fetchApi(
-              this.site + '/api/new/v2/series/' + cleanNovelPath + '/chapters',
-            ).catch(() => ({ ok: false }) as any);
-
-            if (!apiRes.ok) {
-              const slugMatch = cleanNovelPath.match(/^\d+-(.+)$/);
-              let searchSlug = slugMatch ? slugMatch[1] : cleanNovelPath;
-              apiRes = await fetchApi(
-                `${this.site}/api/new/v2/series/${searchSlug}/chapters`,
-              ).catch(() => ({ ok: false }) as any);
-              cleanNovelPath = searchSlug;
-
-              if (!apiRes.ok) {
-                let SearchStr = searchSlug.replace(/-/g, ' ');
-                let searchRes = await fetchApi(
-                  `${this.site}/api/series/filter?page=1&per_page=20&search=${encodeURIComponent(SearchStr)}`,
-                )
-                  .then(r => r.json())
-                  .catch(() => ({ data: [] }));
-
-                if (!searchRes.data || searchRes.data.length === 0) {
-                  const words = SearchStr.split(' ');
-                  SearchStr =
-                    words.length > 3 ? words.slice(0, 3).join(' ') : words[0];
-                  searchRes = await fetchApi(
-                    `${this.site}/api/series/filter?page=1&per_page=20&search=${encodeURIComponent(SearchStr)}`,
-                  )
-                    .then(r => r.json())
-                    .catch(() => ({ data: [] }));
-                }
-
-                if (searchRes.data && searchRes.data.length > 0) {
-                  cleanNovelPath = searchRes.data[0].slug;
-                  apiRes = await fetchApi(
-                    `${this.site}/api/new/v2/series/${cleanNovelPath}/chapters`,
-                  ).catch(() => ({ ok: false }) as any);
-                }
+    if (scriptContent) {
+      const contentRegex = /content:"(.*?)",title:/;
+      const match = scriptContent.match(contentRegex);
+      
+      if (match && match[1]) {
+        try {
+          const unescapedString = JSON.parse(`"${match[1]}"`); 
+          const contentObj = JSON.parse(unescapedString);
+          let chapterHTML = '';
+          
+          if (contentObj?.content && Array.isArray(contentObj.content)) {
+              for (const node of contentObj.content) {
+                  if (node.type === 'paragraph') {
+                      chapterHTML += '<p>';
+                      if (node.content && Array.isArray(node.content)) {
+                          for (const textNode of node.content) {
+                               if (textNode.type === 'text') {
+                                   chapterHTML += textNode.text;
+                               }
+                          }
+                      }
+                      chapterHTML += '</p>\n';
+                  }
               }
-            }
-
-            if (apiRes.ok) {
-              const chaptersArray = await apiRes.json().catch(() => []);
-              if (Array.isArray(chaptersArray)) {
-                const correctChapter = chaptersArray.find(
-                  (c: any) => c.number === chapterNum,
-                );
-                if (correctChapter) {
-                  const correctPath =
-                    cleanNovelPath +
-                    (correctChapter.group?.index == null
-                      ? ''
-                      : '/' + correctChapter.group.slug) +
-                    '/' +
-                    (correctChapter.slug || 'chapter-' + correctChapter.number);
-                  page = await fetchApi(
-                    this.site + '/series/' + correctPath,
-                    {},
-                  )
-                    .then(r => r.text())
-                    .catch(() => '');
-                  chapter = loadCheerio(page)('[id^="reader-area-"]');
-                }
-              }
-            }
-          } catch (e) {
-            // ignore fallback errors
           }
+          return chapterHTML;
+        } catch (e) {
+          console.error("Lỗi khi parse dự phòng JSON:", e);
         }
       }
     }
 
-    chapter
-      .contents()
-      .filter((_, node: Node) => {
-        return node.type === 'comment';
-      })
-      .remove();
-
-    return chapter.html() || '';
+    return 'Không tìm thấy nội dung chương. Web có thể đã thay đổi cấu trúc.';
   }
 
   async searchNovels(
