@@ -38,7 +38,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   name = 'Fenrir Realm';
   icon = 'src/en/fenrirrealm/icon.png';
   site = 'https://fenrirealm.com';
-  version = '1.0.12';
+  version = '1.1.0';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   hideLocked = storage.get('hideLocked');
@@ -60,15 +60,33 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       filters,
     }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
-    // let sort = "updated";
-    let sort = filters.sort.value;
-    if (showLatestNovels) sort = 'latest';
-    const genresFilter = filters.genres.value
-      .map(g => '&genres%5B%5D=' + g)
-      .join('');
-    const res = await fetchApi(
-      `${this.site}/api/series/filter?page=${pageNo}&per_page=20&status=${filters.status.value}&order=${sort}${genresFilter}`,
-    ).then(r =>
+    const sort = showLatestNovels ? 'latest' : filters.sort.value;
+    const params = new URLSearchParams({
+      page: pageNo.toString(),
+      per_page: '12',
+      status: filters.status.value,
+      order: sort,
+    });
+
+    const includeGenres = filters.genres.value.include;
+    const excludeGenres = filters.genres.value.exclude;
+
+    includeGenres.forEach(genre => {
+      params.append('genres[]', genre);
+    });
+
+    if (includeGenres.length > 1) {
+      const condition = filters.genre_condition.value ? 'and' : 'or';
+      params.append('genre_condition', condition);
+    }
+
+    excludeGenres.forEach(genre => {
+      params.append('exclude_genres[]', genre);
+    });
+
+    const url = `${this.site}/api/new/v2/series?${params.toString()}`;
+
+    const res = await fetchApi(url).then(r =>
       r.json().catch(() => {
         throw new Error(
           'There was an error fetching the data from the server. Please try to open it in WebView',
@@ -112,7 +130,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       .text();
 
     let chapters = await fetchApi(
-      this.site + '/api/novels/chapter-list/' + novelPath,
+      this.site + '/api/new/v2/series/' + novelPath + '/chapters',
     ).then(r => r.json());
 
     if (this.hideLocked) {
@@ -162,9 +180,15 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
     searchTerm: string,
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
-    return await fetchApi(
-      `${this.site}/api/series/filter?page=${pageNo}&per_page=20&search=${encodeURIComponent(searchTerm)}`,
-    )
+    const params = new URLSearchParams({
+      page: pageNo.toString(),
+      per_page: '12',
+      search: searchTerm,
+      status: 'any',
+      sort: 'latest',
+    });
+
+    return await fetchApi(`${this.site}/api/new/v2/series?${params.toString()}`)
       .then(r => r.json())
       .then(r =>
         r.data.map((novel: APINovel) => this.parseNovelFromApi(novel)),
@@ -175,7 +199,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
     return {
       name: apiData.title,
       path: apiData.slug,
-      cover: this.site + '/' + apiData.cover,
+      cover: new URL(apiData.cover, this.site).href,
       summary: apiData.description,
       status: apiData.status,
       genres: apiData.genres.map(g => g.name).join(','),
@@ -210,9 +234,12 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       ],
     },
     genres: {
-      type: FilterTypes.CheckboxGroup,
+      type: FilterTypes.ExcludableCheckboxGroup,
       label: 'Genres',
-      value: [],
+      value: {
+        include: [],
+        exclude: [],
+      },
       options: [
         { 'label': 'Action', 'value': '1' },
         { 'label': 'Adult', 'value': '2' },
@@ -283,6 +310,11 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
         { 'label': 'Yaoi', 'value': '34' },
         { 'label': 'Yuri', 'value': '35' },
       ],
+    },
+    genre_condition: {
+      type: FilterTypes.Switch,
+      label: 'Genres (OR/AND)',
+      value: false,
     },
   } satisfies Filters;
 }
