@@ -22,6 +22,7 @@ type APIChapter = {
     slug: string;
   };
   title: string;
+  slug: string;
   number: number;
   created_at: string;
 };
@@ -38,7 +39,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   name = 'Fenrir Realm';
   icon = 'src/en/fenrirrealm/icon.png';
   site = 'https://fenrirealm.com';
-  version = '1.0.22';
+  version = '1.0.16';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   hideLocked = storage.get('hideLocked');
@@ -60,24 +61,15 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       filters,
     }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
-    const sort = showLatestNovels ? 'latest' : filters.sort.value;
-    const params = new URLSearchParams({
-      page: pageNo.toString(),
-      per_page: '12',
-      status: filters.status.value,
-      order: sort,
-    });
-
-    filters.genres.value.include.forEach(genre => {
-      params.append('genres[]', genre);
-    });
-    filters.genres.value.exclude.forEach(genre => {
-      params.append('exclude_genres[]', genre);
-    });
-
-    const url = `${this.site}/api/new/v2/series?${params.toString()}`;
-
-    const res = await fetchApi(url).then(r =>
+    // let sort = "updated";
+    let sort = filters.sort.value;
+    if (showLatestNovels) sort = 'latest';
+    const genresFilter = filters.genres.value
+      .map(g => '&genres%5B%5D=' + g)
+      .join('');
+    const res = await fetchApi(
+      `${this.site}/api/series/filter?page=${pageNo}&per_page=20&status=${filters.status.value}&order=${sort}${genresFilter}`,
+    ).then(r =>
       r.json().catch(() => {
         throw new Error(
           'There was an error fetching the data from the server. Please try to open it in WebView',
@@ -85,58 +77,82 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       }),
     );
 
-    return res.data.map((r: APINovel) => this.parseNovelFromApi(r));
+    return (res.data || []).map((r: APINovel) => this.parseNovelFromApi(r));
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const html = await fetchApi(`${this.site}/series/${novelPath}`, {}).then(
-      r => r.text(),
+    let cleanNovelPath = novelPath;
+    let apiRes = await fetchApi(
+      `${this.site}/api/new/v2/series/${novelPath}/chapters`,
+      {},
     );
-    const loadedCheerio = loadCheerio(html);
+
+    if (!apiRes.ok) {
+      const slugMatch = novelPath.match(/^\d+-(.+)$/);
+      let searchSlug = slugMatch ? slugMatch[1] : novelPath;
+      apiRes = await fetchApi(
+        `${this.site}/api/new/v2/series/${searchSlug}/chapters`,
+        {},
+      );
+      cleanNovelPath = searchSlug;
+
+      if (!apiRes.ok) {
+        const words = searchSlug.replace(/-/g, ' ').split(' ');
+        const SearchStr = words.find(w => w.length > 3) || words[0];
+        const searchRes = await fetchApi(
+          `${this.site}/api/series/filter?page=1&per_page=20&search=${encodeURIComponent(SearchStr)}`,
+        ).then(r => r.json());
+
+        if (searchRes.data && searchRes.data.length > 0) {
+          cleanNovelPath = searchRes.data[0].slug;
+          apiRes = await fetchApi(
+            `${this.site}/api/new/v2/series/${cleanNovelPath}/chapters`,
+            {},
+          );
+        }
+      }
+
+      if (!apiRes.ok) {
+        throw new Error(
+          'Novel not found. It may have been removed or its URL changed significantly.',
+        );
+      }
+    }
+
+    const seriesData = await fetchApi(
+      `${this.site}/api/new/v2/series/${cleanNovelPath}`,
+    ).then(r => r.json());
+    const summaryCheerio = loadCheerio(seriesData.description || '');
 
     const novel: Plugin.SourceNovel = {
-      path: novelPath,
-      name: loadedCheerio('h1.my-2').text(),
-      summary: loadedCheerio(
-        'div.overflow-hidden.transition-all.max-h-\\[108px\\] p',
-      )
-        .map((i, el) => loadCheerio(el).text())
-        .get()
-        .join('\n\n'),
-      author: loadedCheerio('div.flex-1 > div.mb-3 > a.inline-flex').text(),
-      cover: defaultCover,
-      status: loadedCheerio('div.flex-1 > div.mb-3 > span.rounded-md')
-        .first()
-        .text(),
+      path: cleanNovelPath,
+      name: seriesData.title || '',
+      summary:
+        summaryCheerio('p').length > 0
+          ? summaryCheerio('p')
+              .map((i, el) => loadCheerio(el).text())
+              .get()
+              .join('\n\n')
+          : summaryCheerio.text() || '',
+      author: seriesData.user?.name || seriesData.user?.username || '',
+      cover: seriesData.cover
+        ? this.site + '/' + seriesData.cover
+        : defaultCover,
+      genres: (seriesData.genres || []).map((g: any) => g.name).join(','),
+      status: seriesData.status || 'Unknown',
     };
 
-    const coverMatch = html.match(/,cover:"storage\/(.+?)",cover_data_url/);
-    if (coverMatch) {
-      novel.cover = this.site + '/storage/' + coverMatch[1];
-    }
-
-    novel.genres = loadedCheerio('div.flex-1 > div.flex:not(.mb-3, .mt-5) > a')
-      .map((i, el) => loadCheerio(el).text())
-      .toArray()
-      .join(',');
-
-    const chaptersRes = await fetchApi(
-      this.site + '/api/new/v2/series/' + novelPath + '/chapters',
-    ).then(r => r.json());
-
-    let chapterList = Array.isArray(chaptersRes)
-      ? chaptersRes
-      : chaptersRes.data || [];
+    let chapters = await apiRes.json();
 
     if (this.hideLocked) {
-      chapterList = chapterList.filter((c: APIChapter) => !c.locked?.price);
+      chapters = chapters.filter((c: APIChapter) => !c.locked?.price);
     }
 
-    novel.chapters = chapterList
+    novel.chapters = chapters
       .map((c: APIChapter) => ({
         name:
           (c.locked?.price ? '🔒 ' : '') +
-          (c.group?.index === null ? '' : 'Vol ' + c.group?.index + ' ') +
+          (c.group?.index == null ? '' : 'Vol ' + c.group?.index + ' ') +
           'Chapter ' +
           c.number +
           (c.title && c.title.trim() != 'Chapter ' + c.number
@@ -144,11 +160,11 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
             : ''),
         path:
           novelPath +
-          (c.group?.index === null ? '' : '/' + c.group?.slug) +
-          '/chapter-' +
-          c.number,
+          (c.group?.index == null ? '' : '/' + c.group?.slug) +
+          '/' +
+          (c.slug || 'chapter-' + c.number),
         releaseTime: c.created_at,
-        chapterNumber: c.number + (c.group?.index || 0) * 1000000000000,
+        chapterNumber: c.number + (c.group?.index || 0) * 10000,
       }))
       .sort(
         (a: ChapterInfo, b: ChapterInfo) => a.chapterNumber - b.chapterNumber,
@@ -157,199 +173,115 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    let page = await fetchApi(this.site + '/series/' + chapterPath, {}).then(
+      r => r.text(),
+    );
+    let chapter = loadCheerio(page)('[id^="reader-area-"]');
 
-    let page = '';
-    try {
-      page = await fetchApi(this.site + '/series/' + chapterPath).then(r =>
-        r.text(),
-      );
-    } catch (e) {
-      // Suppress network errors to allow fallback
-    }
+    if (chapter.length === 0) {
+      const parts = chapterPath.split('/');
+      if (parts.length > 0) {
+        let cleanNovelPath = parts[0];
+        const chapterPart = parts[parts.length - 1];
+        const match = chapterPart.match(/(\d+(?:\.\d+)?)/);
 
-    let chapterHtml = this.extractChapterContent(page);
+        if (match) {
+          const chapterNum = parseFloat(match[1]);
+          try {
+            let apiRes = await fetchApi(
+              this.site + '/api/new/v2/series/' + cleanNovelPath + '/chapters',
+              {},
+            );
 
-    if (!chapterHtml) {
-      // Fallback: Try to heal path and fetch again
-      const healedPath = await this.healChapterPath(chapterPath);
-      if (healedPath && healedPath !== chapterPath) {
-        try {
-          page = await fetchApi(this.site + '/series/' + healedPath).then(r =>
-            r.text(),
-          );
-          chapterHtml = this.extractChapterContent(page);
-        } catch (e) {
-          // ignore
-        }
-      }
-    }
+            if (!apiRes.ok) {
+              const slugMatch = cleanNovelPath.match(/^\d+-(.+)$/);
+              let searchSlug = slugMatch ? slugMatch[1] : cleanNovelPath;
+              apiRes = await fetchApi(
+                `${this.site}/api/new/v2/series/${searchSlug}/chapters`,
+                {},
+              );
+              cleanNovelPath = searchSlug;
 
-    return chapterHtml || '';
-  }
+              if (!apiRes.ok) {
+                const words = searchSlug.replace(/-/g, ' ').split(' ');
+                const SearchStr =
+                  words.find((w: string) => w.length > 3) || words[0];
+                const searchRes = await fetchApi(
+                  `${this.site}/api/series/filter?page=1&per_page=20&search=${encodeURIComponent(SearchStr)}`,
+                ).then(r => r.json());
 
-  private extractChapterContent(html: string): string {
-    if (!html) return '';
-    const $ = loadCheerio(html);
-
-    // 1. Try DOM selector
-    let readerArea = $('[id^="reader-area-"], .content-area');
-    if (readerArea.length > 0) {
-      readerArea
-        .contents()
-        .filter((_, node: Node) => node.type === 'comment')
-        .remove();
-
-      // Clean up HTML
-      readerArea.find('script, style, iframe, noscript').remove();
-      readerArea.find('*').removeAttr('style');
-      readerArea.find('*').removeAttr('tabindex');
-
-      const content = readerArea.html();
-      if (content && content.trim().length > 100) return content;
-    }
-
-    // 2. Try SvelteKit data extraction (Regex-based to handle JS object literals)
-    try {
-      const scriptTag = $('script:contains("__sveltekit")').html();
-      if (scriptTag) {
-        // Find all strings that look like HTML content or JSON document structure
-        const strings = scriptTag.match(/"([^"\\]*(?:\\.[^"\\]*)*)"/g);
-        if (strings) {
-          let longestStr = '';
-          for (const s of strings) {
-            const content = s
-              .slice(1, -1)
-              .replace(/\\"/g, '"')
-              .replace(/\\n/g, '\n');
-
-            // Check if it's HTML or ProseMirror JSON
-            if (content.includes('<p') || content.includes('"type":"doc"')) {
-              if (content.length > longestStr.length) {
-                longestStr = content;
-              }
-            }
-          }
-
-          if (longestStr.length > 500) {
-            // If it's JSON, extract the text content
-            if (
-              longestStr.startsWith('{') &&
-              longestStr.includes('"type":"doc"')
-            ) {
-              try {
-                const doc = JSON.parse(longestStr);
-                const extractText = (node: any): string => {
-                  if (node.type === 'text') return node.text || '';
-                  if (node.content && Array.isArray(node.content)) {
-                    const text = node.content.map(extractText).join('');
-                    if (node.type === 'paragraph') return `<p>${text}</p>`;
-                    return text;
-                  }
-                  return '';
-                };
-                return extractText(doc);
-              } catch (e) {
-                // If direct JSON parse fails (e.g. partial match), try regex extraction
-                const textMatches = longestStr.match(/\"text\":\"([^\"]+)\"/g);
-                if (textMatches) {
-                  return textMatches
-                    .map(m => `<p>${m.slice(8, -1)}</p>`)
-                    .join('');
+                if (searchRes.data && searchRes.data.length > 0) {
+                  cleanNovelPath = searchRes.data[0].slug;
+                  apiRes = await fetchApi(
+                    `${this.site}/api/new/v2/series/${cleanNovelPath}/chapters`,
+                    {},
+                  );
                 }
               }
             }
-            return longestStr;
+
+            if (apiRes.ok) {
+              const chaptersArray = await apiRes.json();
+              if (Array.isArray(chaptersArray)) {
+                const correctChapter = chaptersArray.find(
+                  (c: any) => c.number === chapterNum,
+                );
+                if (correctChapter) {
+                  const correctPath =
+                    cleanNovelPath +
+                    (correctChapter.group?.index == null
+                      ? ''
+                      : '/' + correctChapter.group.slug) +
+                    '/' +
+                    (correctChapter.slug || 'chapter-' + correctChapter.number);
+                  page = await fetchApi(
+                    this.site + '/series/' + correctPath,
+                    {},
+                  ).then(r => r.text());
+                  chapter = loadCheerio(page)('[id^="reader-area-"]');
+                }
+              }
+            }
+          } catch (e) {
+            // ignore fallback errors
           }
         }
       }
-    } catch (e) {
-      // ignore parsing errors
     }
 
-    return '';
-  }
+    chapter
+      .contents()
+      .filter((_, node: Node) => {
+        return node.type === 'comment';
+      })
+      .remove();
 
-  private async healChapterPath(chapterPath: string): Promise<string | null> {
-    const parts = chapterPath.split('/');
-    if (parts.length === 0) return null;
-
-    let novelSlug = parts[0];
-    const chapterPart = parts[parts.length - 1];
-    const match = chapterPart.match(/(\d+(?:\.\d+)?)/);
-    if (!match) return null;
-
-    const chapterNum = parseFloat(match[1]);
-
-    const getChapters = async (slug: string) => {
-      const res = await fetchApi(
-        `${this.site}/api/new/v2/series/${slug}/chapters`,
-      ).catch(() => null);
-      if (res && res.ok) return res.json().catch(() => []);
-      return null;
-    };
-
-    let chaptersArray = await getChapters(novelSlug);
-
-    if (!chaptersArray) {
-      // Try search fallback
-      const slugMatch = novelSlug.match(/^\d+-(.+)$/);
-      let searchSlug = slugMatch ? slugMatch[1] : novelSlug;
-      chaptersArray = await getChapters(searchSlug);
-      if (chaptersArray) novelSlug = searchSlug;
-    }
-
-    if (!chaptersArray) {
-      const searchRes = await fetchApi(
-        `${this.site}/api/series/filter?page=1&per_page=20&search=${encodeURIComponent(novelSlug.replace(/-/g, ' '))}`,
-      )
-        .then(r => r.json())
-        .catch(() => ({ data: [] }));
-
-      if (searchRes.data && searchRes.data.length > 0) {
-        novelSlug = searchRes.data[0].slug;
-        chaptersArray = await getChapters(novelSlug);
-      }
-    }
-
-    if (Array.isArray(chaptersArray)) {
-      const correctChapter = chaptersArray.find(
-        (c: any) => c.number === chapterNum,
-      );
-      if (correctChapter) {
-        return (
-          novelSlug +
-          (correctChapter.group?.index == null
-            ? ''
-            : '/' + correctChapter.group.slug) +
-          '/' +
-          (correctChapter.slug || 'chapter-' + correctChapter.number)
-        );
-      }
-    }
-
-    return null;
+    return chapter.html() || '';
   }
 
   async searchNovels(
     searchTerm: string,
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
-    const params = new URLSearchParams({
-      page: pageNo.toString(),
-      per_page: '12',
-      search: searchTerm,
-      status: 'any',
-      sort: 'latest',
-    });
+    let url = `${this.site}/api/series/filter?page=${pageNo}&per_page=20&search=${encodeURIComponent(
+      searchTerm,
+    )}`;
+    let res = await fetchApi(url).then(r => r.json());
 
-    return await fetchApi(
-      `${this.site}/api/new/v2/series?${params.toString()}`,
-    )
-      .then(r => r.json())
-      .then(r =>
-        r.data.map((novel: APINovel) => this.parseNovelFromApi(novel)),
-      );
+    if (pageNo === 1 && (!res.data || res.data.length === 0)) {
+      const words = searchTerm.split(' ');
+      const fallbackTerm = words.find(w => w.length > 3) || words[0];
+      if (fallbackTerm && fallbackTerm !== searchTerm) {
+        url = `${this.site}/api/series/filter?page=${pageNo}&per_page=20&search=${encodeURIComponent(
+          fallbackTerm,
+        )}`;
+        res = await fetchApi(url).then(r => r.json());
+      }
+    }
+
+    return (res.data || []).map((novel: APINovel) =>
+      this.parseNovelFromApi(novel),
+    );
   }
 
   parseNovelFromApi(apiData: APINovel) {
@@ -391,101 +323,81 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       ],
     },
     genres: {
-      type: FilterTypes.ExcludableCheckboxGroup,
+      type: FilterTypes.CheckboxGroup,
       label: 'Genres',
-      value: {
-        include: [],
-        exclude: [],
-      },
+      value: [],
       options: [
-        { label: 'Action', value: '1' },
-        { label: 'Adult', value: '2' },
+        { 'label': 'Action', 'value': '1' },
+        { 'label': 'Adult', 'value': '2' },
         {
-          label: 'Adventure',
-          value: '3',
+          'label': 'Adventure',
+          'value': '3',
         },
-        { label: 'Comedy', value: '4' },
-        { label: 'Drama', value: '5' },
+        { 'label': 'Comedy', 'value': '4' },
+        { 'label': 'Drama', 'value': '5' },
         {
-          label: 'Ecchi',
-          value: '6',
+          'label': 'Ecchi',
+          'value': '6',
         },
-        { label: 'Fantasy', value: '7' },
-        { label: 'Gender Bender', value: '8' },
+        { 'label': 'Fantasy', 'value': '7' },
+        { 'label': 'Gender Bender', 'value': '8' },
         {
-          label: 'Harem',
-          value: '9',
+          'label': 'Harem',
+          'value': '9',
         },
-        { label: 'Historical', value: '10' },
-        { label: 'Horror', value: '11' },
+        { 'label': 'Historical', 'value': '10' },
+        { 'label': 'Horror', 'value': '11' },
         {
-          label: 'Josei',
-          value: '12',
+          'label': 'Josei',
+          'value': '12',
         },
-        { label: 'Martial Arts', value: '13' },
-        { label: 'Mature', value: '14' },
+        { 'label': 'Martial Arts', 'value': '13' },
+        { 'label': 'Mature', 'value': '14' },
         {
-          label: 'Mecha',
-          value: '15',
+          'label': 'Mecha',
+          'value': '15',
         },
-        { label: 'Mystery', value: '16' },
-        { label: 'Psychological', value: '17' },
+        { 'label': 'Mystery', 'value': '16' },
+        { 'label': 'Psychological', 'value': '17' },
         {
-          label: 'Romance',
-          value: '18',
+          'label': 'Romance',
+          'value': '18',
         },
-        { label: 'School Life', value: '19' },
-        { label: 'Sci-fi', value: '20' },
+        { 'label': 'School Life', 'value': '19' },
+        { 'label': 'Sci-fi', 'value': '20' },
         {
-          label: 'Seinen',
-          value: '21',
+          'label': 'Seinen',
+          'value': '21',
         },
-        { label: 'Shoujo', value: '22' },
-        { label: 'Shoujo Ai', value: '23' },
+        { 'label': 'Shoujo', 'value': '22' },
+        { 'label': 'Shoujo Ai', 'value': '23' },
         {
-          label: 'Shounen',
-          value: '24',
+          'label': 'Shounen',
+          'value': '24',
         },
-        { label: 'Shounen Ai', value: '25' },
-        { label: 'Slice of Life', value: '26' },
+        { 'label': 'Shounen Ai', 'value': '25' },
+        { 'label': 'Slice of Life', 'value': '26' },
         {
-          label: 'Smut',
-          value: '27',
+          'label': 'Smut',
+          'value': '27',
         },
-        { label: 'Sports', value: '28' },
-        { label: 'Supernatural', value: '29' },
+        { 'label': 'Sports', 'value': '28' },
+        { 'label': 'Supernatural', 'value': '29' },
         {
-          label: 'Tragedy',
-          value: '30',
+          'label': 'Tragedy',
+          'value': '30',
         },
-        { label: 'Wuxia', value: '31' },
-        { label: 'Xianxia', value: '32' },
+        { 'label': 'Wuxia', 'value': '31' },
+        { 'label': 'Xianxia', 'value': '32' },
         {
-          label: 'Xuanhuan',
-          value: '33',
+          'label': 'Xuanhuan',
+          'value': '33',
         },
-        { label: 'Yaoi', value: '34' },
-        { label: 'Yuri', value: '35' },
+        { 'label': 'Yaoi', 'value': '34' },
+        { 'label': 'Yuri', 'value': '35' },
       ],
     },
   } satisfies Filters;
 }
 
 export default new FenrirRealmPlugin();
-
-type GenreData = {
-  name: string;
-  id: number;
-};
-
-//paste into console on site to load
-async function getUpdatedGenres() {
-  const data = await fetch(
-    'https://fenrirealm.com/api/novels/taxonomy/genres',
-  ).then(d => d.json());
-  const genreData = data.map((g: GenreData) => ({
-    label: g.name,
-    value: g.id.toString(),
-  }));
-  console.log(JSON.stringify(genreData));
-}
