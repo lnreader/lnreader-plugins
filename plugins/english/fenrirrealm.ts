@@ -40,7 +40,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   name = 'Fenrir Realm';
   icon = 'src/en/fenrirrealm/icon.png';
   site = 'https://fenrirealm.com';
-  version = '1.1.0';
+  version = '1.0.13';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   hideLocked = storage.get('hideLocked');
@@ -189,7 +189,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
           return parsedContent.content
             .map((node: any) => {
               if (node.type === 'paragraph') {
-                return (
+                const innerHtml =
                   node.content
                     ?.map((c: any) => {
                       if (c.type === 'text') {
@@ -202,6 +202,8 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
                               text = `<u>${text}</u>`;
                             if (mark.type === 'strike')
                               text = `<strike>${text}</strike>`;
+                            if (mark.type === 'link')
+                              text = `<a href="${mark.attrs?.href}">${text}</a>`;
                           }
                         }
                         return text;
@@ -209,12 +211,18 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
                       if (c.type === 'hardBreak') return '<br>';
                       return '';
                     })
-                    .join('') || ''
-                );
+                    .join('') || '';
+                return `<p>${innerHtml}</p>`;
+              }
+              if (node.type === 'heading') {
+                const level = node.attrs?.level || 1;
+                const innerHtml =
+                  node.content?.map((c: any) => c.text).join('') || '';
+                return `<h${level}>${innerHtml}</h${level}>`;
               }
               return '';
             })
-            .join('\n\n');
+            .join('\n');
         }
       }
     }
@@ -227,9 +235,9 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
     const loadedCheerio = loadCheerio(body);
 
     let chapterText = loadedCheerio('div.content-area p')
-      .map((i, el) => loadCheerio(el).html())
+      .map((i, el) => `<p>${loadCheerio(el).html()}</p>`)
       .get()
-      .join('\n\n');
+      .join('\n');
 
     if (chapterText) {
       return chapterText;
@@ -252,12 +260,30 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
           const contentJson = JSON.parse(contentStr);
           if (contentJson.type === 'doc') {
             chapterText = contentJson.content
-              .filter((node: any) => node.type === 'paragraph')
-              .map(
-                (node: any) =>
-                  node.content?.map((c: any) => c.text).join('') || '',
-              )
-              .join('\n\n');
+              .map((node: any) => {
+                if (node.type === 'paragraph') {
+                  const innerHtml =
+                    node.content
+                      ?.map((c: any) => {
+                        if (c.type === 'text') {
+                          let text = c.text;
+                          if (c.marks) {
+                            for (const mark of c.marks) {
+                              if (mark.type === 'bold') text = `<b>${text}</b>`;
+                              if (mark.type === 'italic')
+                                text = `<i>${text}</i>`;
+                            }
+                          }
+                          return text;
+                        }
+                        return '';
+                      })
+                      .join('') || '';
+                  return `<p>${innerHtml}</p>`;
+                }
+                return '';
+              })
+              .join('\n');
           }
         }
       }
