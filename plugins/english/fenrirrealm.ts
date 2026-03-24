@@ -187,10 +187,33 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
         const parsedContent = JSON.parse(content);
         if (parsedContent.type === 'doc') {
           return parsedContent.content
-            .map(
-              (node: any) =>
-                node.content?.map((c: any) => c.text).join('') || '',
-            )
+            .map((node: any) => {
+              if (node.type === 'paragraph') {
+                return (
+                  node.content
+                    ?.map((c: any) => {
+                      if (c.type === 'text') {
+                        let text = c.text;
+                        if (c.marks) {
+                          for (const mark of c.marks) {
+                            if (mark.type === 'bold') text = `<b>${text}</b>`;
+                            if (mark.type === 'italic') text = `<i>${text}</i>`;
+                            if (mark.type === 'underline')
+                              text = `<u>${text}</u>`;
+                            if (mark.type === 'strike')
+                              text = `<strike>${text}</strike>`;
+                          }
+                        }
+                        return text;
+                      }
+                      if (c.type === 'hardBreak') return '<br>';
+                      return '';
+                    })
+                    .join('') || ''
+                );
+              }
+              return '';
+            })
             .join('\n\n');
         }
       }
