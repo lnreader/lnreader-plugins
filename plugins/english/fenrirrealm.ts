@@ -173,90 +173,54 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    let page = await fetchApi(this.site + '/series/' + chapterPath, {}).then(
-      r => r.text(),
-    );
-    let chapter = loadCheerio(page)('[id^="reader-area-"]');
+    const url = `${this.site}/series/${chapterPath}`;
+    const result = await fetchApi(url);
+    const body = await result.text();
 
-    if (chapter.length === 0) {
-      const parts = chapterPath.split('/');
-      if (parts.length > 0) {
-        let cleanNovelPath = parts[0];
-        const chapterPart = parts[parts.length - 1];
-        const match = chapterPart.match(/(\d+(?:\.\d+)?)/);
+    const loadedCheerio = loadCheerio(body);
 
-        if (match) {
-          const chapterNum = parseFloat(match[1]);
-          try {
-            let apiRes = await fetchApi(
-              this.site + '/api/new/v2/series/' + cleanNovelPath + '/chapters',
-              {},
-            );
+    let chapterText = loadedCheerio('div.content-area p')
+      .map((i, el) => loadCheerio(el).html())
+      .get()
+      .join('\n\n');
 
-            if (!apiRes.ok) {
-              const slugMatch = cleanNovelPath.match(/^\d+-(.+)$/);
-              let searchSlug = slugMatch ? slugMatch[1] : cleanNovelPath;
-              apiRes = await fetchApi(
-                `${this.site}/api/new/v2/series/${searchSlug}/chapters`,
-                {},
-              );
-              cleanNovelPath = searchSlug;
+    if (chapterText) {
+      return chapterText;
+    }
 
-              if (!apiRes.ok) {
-                const words = searchSlug.replace(/-/g, ' ').split(' ');
-                const SearchStr =
-                  words.find((w: string) => w.length > 3) || words[0];
-                const searchRes = await fetchApi(
-                  `${this.site}/api/series/filter?page=1&per_page=20&search=${encodeURIComponent(SearchStr)}`,
-                ).then(r => r.json());
+    // Fallback to SvelteKit JSON if HTML parsing fails or is empty
+    try {
+      const jsonUrl = `${this.site}/series/${chapterPath}/__data.json?x-sveltekit-invalidated=001`;
+      const jsonRes = await fetchApi(jsonUrl);
+      const json = await jsonRes.json();
 
-                if (searchRes.data && searchRes.data.length > 0) {
-                  cleanNovelPath = searchRes.data[0].slug;
-                  apiRes = await fetchApi(
-                    `${this.site}/api/new/v2/series/${cleanNovelPath}/chapters`,
-                    {},
-                  );
-                }
-              }
-            }
+      const nodes = json.nodes;
+      // In Fenrir Realm, chapter data is usually in nodes[2].data
+      // We search for the content string which is a Tiptap JSON
+      const data = nodes?.find((n: any) => n.type === 'data')?.data;
+      if (data) {
+        const contentStr = data.find(
+          (d: any) => typeof d === 'string' && d.includes('{"type":"doc"'),
+        );
 
-            if (apiRes.ok) {
-              const chaptersArray = await apiRes.json();
-              if (Array.isArray(chaptersArray)) {
-                const correctChapter = chaptersArray.find(
-                  (c: any) => c.number === chapterNum,
-                );
-                if (correctChapter) {
-                  const correctPath =
-                    cleanNovelPath +
-                    (correctChapter.group?.index == null
-                      ? ''
-                      : '/' + correctChapter.group.slug) +
-                    '/' +
-                    (correctChapter.slug || 'chapter-' + correctChapter.number);
-                  page = await fetchApi(
-                    this.site + '/series/' + correctPath,
-                    {},
-                  ).then(r => r.text());
-                  chapter = loadCheerio(page)('[id^="reader-area-"]');
-                }
-              }
-            }
-          } catch (e) {
-            // ignore fallback errors
+        if (contentStr) {
+          const contentJson = JSON.parse(contentStr);
+          if (contentJson.type === 'doc') {
+            chapterText = contentJson.content
+              .filter((node: any) => node.type === 'paragraph')
+              .map(
+                (node: any) =>
+                  node.content?.map((c: any) => c.text).join('') || '',
+              )
+              .join('\n\n');
           }
         }
       }
+    } catch (e) {
+      // ignore
     }
 
-    chapter
-      .contents()
-      .filter((_, node: Node) => {
-        return node.type === 'comment';
-      })
-      .remove();
-
-    return chapter.html() || '';
+    return chapterText;
   }
 
   async searchNovels(
