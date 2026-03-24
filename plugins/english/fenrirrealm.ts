@@ -16,6 +16,7 @@ type APINovel = {
 };
 
 type APIChapter = {
+  id: number;
   locked: { price: number } | null;
   group: null | {
     index: number;
@@ -39,7 +40,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   name = 'Fenrir Realm';
   icon = 'src/en/fenrirrealm/icon.png';
   site = 'https://fenrirealm.com';
-  version = '1.0.13';
+  version = '1.1.0';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   hideLocked = storage.get('hideLocked');
@@ -162,7 +163,9 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
           novelPath +
           (c.group?.index == null ? '' : '/' + c.group?.slug) +
           '/' +
-          (c.slug || 'chapter-' + c.number),
+          (c.slug || 'chapter-' + c.number) +
+          '~~' +
+          c.id,
         releaseTime: c.created_at,
         chapterNumber: c.number + (c.group?.index || 0) * 10000,
       }))
@@ -173,7 +176,28 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const url = `${this.site}/series/${chapterPath}`;
+    const chapterId = chapterPath.split('~~')[1];
+    if (chapterId) {
+      const url = `${this.site}/api/new/v2/chapters/${chapterId}`;
+      const res = await fetchApi(url);
+      const json = await res.json();
+      const content = json.content;
+
+      if (content) {
+        const parsedContent = JSON.parse(content);
+        if (parsedContent.type === 'doc') {
+          return parsedContent.content
+            .map(
+              (node: any) =>
+                node.content?.map((c: any) => c.text).join('') || '',
+            )
+            .join('\n\n');
+        }
+      }
+    }
+
+    // Fallback or old method
+    const url = `${this.site}/series/${chapterPath.split('~~')[0]}`;
     const result = await fetchApi(url);
     const body = await result.text();
 
@@ -190,13 +214,11 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
 
     // Fallback to SvelteKit JSON if HTML parsing fails or is empty
     try {
-      const jsonUrl = `${this.site}/series/${chapterPath}/__data.json?x-sveltekit-invalidated=001`;
+      const jsonUrl = `${this.site}/series/${chapterPath.split('~~')[0]}/__data.json?x-sveltekit-invalidated=001`;
       const jsonRes = await fetchApi(jsonUrl);
       const json = await jsonRes.json();
 
       const nodes = json.nodes;
-      // In Fenrir Realm, chapter data is usually in nodes[2].data
-      // We search for the content string which is a Tiptap JSON
       const data = nodes?.find((n: any) => n.type === 'data')?.data;
       if (data) {
         const contentStr = data.find(
@@ -260,7 +282,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   }
 
   resolveUrl = (path: string, isNovel?: boolean) =>
-    this.site + '/series/' + path;
+    this.site + '/series/' + path.split('~~')[0];
 
   filters = {
     status: {
