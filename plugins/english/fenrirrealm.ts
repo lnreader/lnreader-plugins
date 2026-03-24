@@ -38,7 +38,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   name = 'Fenrir Realm';
   icon = 'src/en/fenrirrealm/icon.png';
   site = 'https://fenrirealm.com';
-  version = '1.0.21';
+  version = '1.0.22';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   hideLocked = storage.get('hideLocked');
@@ -193,12 +193,18 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
     const $ = loadCheerio(html);
 
     // 1. Try DOM selector
-    let readerArea = $('[id^="reader-area-"]');
+    let readerArea = $('[id^="reader-area-"], .content-area');
     if (readerArea.length > 0) {
       readerArea
         .contents()
         .filter((_, node: Node) => node.type === 'comment')
         .remove();
+
+      // Clean up HTML
+      readerArea.find('script, style, iframe, noscript').remove();
+      readerArea.find('*').removeAttr('style');
+      readerArea.find('*').removeAttr('tabindex');
+
       const content = readerArea.html();
       if (content && content.trim().length > 100) return content;
     }
@@ -207,7 +213,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
     try {
       const scriptTag = $('script:contains("__sveltekit")').html();
       if (scriptTag) {
-        // Find all strings that look like HTML content
+        // Find all strings that look like HTML content or JSON document structure
         const strings = scriptTag.match(/"([^"\\]*(?:\\.[^"\\]*)*)"/g);
         if (strings) {
           let longestStr = '';
@@ -216,11 +222,45 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
               .slice(1, -1)
               .replace(/\\"/g, '"')
               .replace(/\\n/g, '\n');
-            if (content.includes('<p') && content.length > longestStr.length) {
-              longestStr = content;
+
+            // Check if it's HTML or ProseMirror JSON
+            if (content.includes('<p') || content.includes('"type":"doc"')) {
+              if (content.length > longestStr.length) {
+                longestStr = content;
+              }
             }
           }
-          if (longestStr.length > 500) return longestStr;
+
+          if (longestStr.length > 500) {
+            // If it's JSON, extract the text content
+            if (
+              longestStr.startsWith('{') &&
+              longestStr.includes('"type":"doc"')
+            ) {
+              try {
+                const doc = JSON.parse(longestStr);
+                const extractText = (node: any): string => {
+                  if (node.type === 'text') return node.text || '';
+                  if (node.content && Array.isArray(node.content)) {
+                    const text = node.content.map(extractText).join('');
+                    if (node.type === 'paragraph') return `<p>${text}</p>`;
+                    return text;
+                  }
+                  return '';
+                };
+                return extractText(doc);
+              } catch (e) {
+                // If direct JSON parse fails (e.g. partial match), try regex extraction
+                const textMatches = longestStr.match(/\"text\":\"([^\"]+)\"/g);
+                if (textMatches) {
+                  return textMatches
+                    .map(m => `<p>${m.slice(8, -1)}</p>`)
+                    .join('');
+                }
+              }
+            }
+            return longestStr;
+          }
         }
       }
     } catch (e) {
@@ -283,8 +323,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
             ? ''
             : '/' + correctChapter.group.slug) +
           '/' +
-          'chapter-' +
-          correctChapter.number
+          (correctChapter.slug || 'chapter-' + correctChapter.number)
         );
       }
     }
