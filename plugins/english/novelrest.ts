@@ -6,9 +6,9 @@ import { NovelStatus } from '@libs/novelStatus';
 
 /**
  * NovelRest LNReader Plugin
- * 
+ *
  * This plugin allows LNReader to fetch novels from NovelRest (novelrest.vercel.app)
- * 
+ *
  * Features:
  * - Browse popular novels with pagination
  * - Search novels
@@ -23,7 +23,7 @@ class NovelRestPlugin implements Plugin.PluginBase {
   site = 'https://novelrest.vercel.app';
   apiBase = 'https://novelrest.vercel.app/api/lnreader';
   version = '1.0.0';
-  
+
   filters: Filters = {
     status: {
       type: FilterTypes.Picker,
@@ -54,27 +54,32 @@ class NovelRestPlugin implements Plugin.PluginBase {
    */
   async popularNovels(
     pageNo: number,
-    { showLatestNovels, filters }: Plugin.PopularNovelsOptions<typeof this.filters>,
+    {
+      showLatestNovels,
+      filters,
+    }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
     const novels: Plugin.NovelItem[] = [];
-    
+
     // Build query parameters
     const params = new URLSearchParams();
     params.set('page', pageNo.toString());
     params.set('limit', '20');
-    
+
     if (filters?.status?.value) {
       params.set('status', filters.status.value as string);
     }
-    
-    const sortBy = showLatestNovels ? 'latest' : (filters?.sort?.value as string || 'popular');
+
+    const sortBy = showLatestNovels
+      ? 'latest'
+      : (filters?.sort?.value as string) || 'popular';
     params.set('sort', sortBy);
 
     try {
       const url = `${this.apiBase}/novels?${params.toString()}`;
       const response = await fetchApi(url);
       const data = await response.json();
-      
+
       if (data.novels && Array.isArray(data.novels)) {
         for (const novel of data.novels) {
           novels.push({
@@ -103,7 +108,7 @@ class NovelRestPlugin implements Plugin.PluginBase {
     try {
       // novelPath is just the slug
       const slug = novelPath.replace(/^\/novels\//, ''); // Clean up if path prefix exists
-      
+
       const response = await fetchApi(`${this.apiBase}/novels/${slug}`);
       const data = await response.json();
 
@@ -111,11 +116,15 @@ class NovelRestPlugin implements Plugin.PluginBase {
         novel.name = data.title || 'Untitled';
         novel.author = data.author || '';
         novel.cover = data.coverImage || defaultCover;
-        novel.genres = Array.isArray(data.genres) 
-          ? data.genres.map((g: { name: string } | string) => typeof g === 'string' ? g : g.name).join(', ')
+        novel.genres = Array.isArray(data.genres)
+          ? data.genres
+              .map((g: { name: string } | string) =>
+                typeof g === 'string' ? g : g.name,
+              )
+              .join(', ')
           : '';
         novel.summary = data.description || '';
-        
+
         // Map status
         switch (data.status) {
           case 'COMPLETED':
@@ -133,7 +142,7 @@ class NovelRestPlugin implements Plugin.PluginBase {
 
         // Parse chapters
         const chapters: Plugin.ChapterItem[] = [];
-        
+
         if (data.chapters && Array.isArray(data.chapters)) {
           for (const chapter of data.chapters) {
             chapters.push({
@@ -164,7 +173,9 @@ class NovelRestPlugin implements Plugin.PluginBase {
       const chapterNumber = parts.pop();
       const slug = parts.join('/');
 
-      const response = await fetchApi(`${this.apiBase}/novels/${slug}/chapters/${chapterNumber}`);
+      const response = await fetchApi(
+        `${this.apiBase}/novels/${slug}/chapters/${chapterNumber}`,
+      );
       const data = await response.json();
 
       if (data && data.contentHtml) {
@@ -193,7 +204,9 @@ class NovelRestPlugin implements Plugin.PluginBase {
       params.set('page', pageNo.toString());
       params.set('limit', '20');
 
-      const response = await fetchApi(`${this.apiBase}/novels?${params.toString()}`);
+      const response = await fetchApi(
+        `${this.apiBase}/novels?${params.toString()}`,
+      );
       const data = await response.json();
 
       if (data.novels && Array.isArray(data.novels)) {

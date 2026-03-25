@@ -13,7 +13,6 @@ class IndraTranslations implements Plugin.PluginBase {
   // customCSS = 'src/en/indratranslations/customCSS.css';
   // (optional) Add these files to the repo and uncomment the lines above if you want an icon/custom CSS.
 
-
   // Browser-like headers (important for Cloudflare-y sites)
   private headers = {
     'User-Agent':
@@ -61,7 +60,9 @@ class IndraTranslations implements Plugin.PluginBase {
 
     const push = (name?: string, path?: string, cover?: string) => {
       const cleanName = this.clean(name);
-      const cleanPath = String(path || '').replace(this.site, '').trim();
+      const cleanPath = String(path || '')
+        .replace(this.site, '')
+        .trim();
       if (!cleanName || !cleanPath) return;
       if (!cleanPath.includes('/series/')) return;
 
@@ -143,7 +144,8 @@ class IndraTranslations implements Plugin.PluginBase {
         const href = a.attr('href') || '';
         if (!href) return;
 
-        const title = this.clean(a.attr('title')) || this.clean(a.text()) || 'Unknown';
+        const title =
+          this.clean(a.attr('title')) || this.clean(a.text()) || 'Unknown';
 
         // Try to find an image near the link
         const img =
@@ -167,7 +169,7 @@ class IndraTranslations implements Plugin.PluginBase {
     const $ = load(html);
     const parsed = this.parseNovelCards($);
 
-    return parsed.map((n) => ({
+    return parsed.map(n => ({
       name: n.name,
       path: n.path,
       cover: n.cover,
@@ -183,12 +185,16 @@ class IndraTranslations implements Plugin.PluginBase {
   }
 
   async parseNovel(novelPath: string) {
-    const url = novelPath.startsWith('http') ? novelPath : this.site + novelPath;
+    const url = novelPath.startsWith('http')
+      ? novelPath
+      : this.site + novelPath;
     const html = await this.fetchHtml(url);
     const $ = load(html);
 
     const title =
-      this.clean($('h1.entry-title').text()) || this.clean($('h1').first().text()) || 'Unknown';
+      this.clean($('h1.entry-title').text()) ||
+      this.clean($('h1').first().text()) ||
+      'Unknown';
 
     const cover = this.absolute(
       $('.summary_image img').attr('data-src') ||
@@ -203,13 +209,16 @@ class IndraTranslations implements Plugin.PluginBase {
 
     let statusText = '';
     $('.post-content_item').each((_, el) => {
-      const label = this.clean($(el).find('.summary-heading').text()).toLowerCase();
+      const label = this.clean(
+        $(el).find('.summary-heading').text(),
+      ).toLowerCase();
       if (label.includes('status')) {
         statusText = this.clean($(el).find('.summary-content').text());
       }
     });
 
-    const chapters: { name: string; path: string; chapterNumber?: number }[] = [];
+    const chapters: { name: string; path: string; chapterNumber?: number }[] =
+      [];
 
     $('li.wp-manga-chapter a').each((_, el) => {
       const href = $(el).attr('href');
@@ -254,7 +263,9 @@ class IndraTranslations implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string) {
-    const url = chapterPath.startsWith('http') ? chapterPath : this.site + chapterPath;
+    const url = chapterPath.startsWith('http')
+      ? chapterPath
+      : this.site + chapterPath;
     const html = await this.fetchHtml(url);
     const $ = load(html);
 
