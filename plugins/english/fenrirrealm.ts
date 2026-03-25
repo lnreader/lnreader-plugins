@@ -16,12 +16,14 @@ type APINovel = {
 };
 
 type APIChapter = {
+  id: number;
   locked: { price: number } | null;
   group: null | {
     index: number;
     slug: string;
   };
   title: string;
+  slug: string;
   number: number;
   created_at: string;
 };
@@ -38,7 +40,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   name = 'Fenrir Realm';
   icon = 'src/en/fenrirrealm/icon.png';
   site = 'https://fenrirealm.com';
-  version = '1.0.12';
+  version = '1.0.13';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   hideLocked = storage.get('hideLocked');
@@ -76,44 +78,72 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       }),
     );
 
-    return res.data.map((r: APINovel) => this.parseNovelFromApi(r));
+    return (res.data || []).map((r: APINovel) => this.parseNovelFromApi(r));
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const html = await fetchApi(`${this.site}/series/${novelPath}`, {}).then(
-      r => r.text(),
+    let cleanNovelPath = novelPath;
+    let apiRes = await fetchApi(
+      `${this.site}/api/new/v2/series/${novelPath}/chapters`,
+      {},
     );
-    const loadedCheerio = loadCheerio(html);
+
+    if (!apiRes.ok) {
+      const slugMatch = novelPath.match(/^\d+-(.+)$/);
+      let searchSlug = slugMatch ? slugMatch[1] : novelPath;
+      apiRes = await fetchApi(
+        `${this.site}/api/new/v2/series/${searchSlug}/chapters`,
+        {},
+      );
+      cleanNovelPath = searchSlug;
+
+      if (!apiRes.ok) {
+        const words = searchSlug.replace(/-/g, ' ').split(' ');
+        const SearchStr = words.find(w => w.length > 3) || words[0];
+        const searchRes = await fetchApi(
+          `${this.site}/api/series/filter?page=1&per_page=20&search=${encodeURIComponent(SearchStr)}`,
+        ).then(r => r.json());
+
+        if (searchRes.data && searchRes.data.length > 0) {
+          cleanNovelPath = searchRes.data[0].slug;
+          apiRes = await fetchApi(
+            `${this.site}/api/new/v2/series/${cleanNovelPath}/chapters`,
+            {},
+          );
+        }
+      }
+
+      if (!apiRes.ok) {
+        throw new Error(
+          'Novel not found. It may have been removed or its URL changed significantly.',
+        );
+      }
+    }
+
+    const seriesData = await fetchApi(
+      `${this.site}/api/new/v2/series/${cleanNovelPath}`,
+    ).then(r => r.json());
+    const summaryCheerio = loadCheerio(seriesData.description || '');
 
     const novel: Plugin.SourceNovel = {
-      path: novelPath,
-      name: loadedCheerio('h1.my-2').text(),
-      summary: loadedCheerio(
-        'div.overflow-hidden.transition-all.max-h-\\[108px\\] p',
-      )
-        .map((i, el) => loadCheerio(el).text())
-        .get()
-        .join('\n\n'),
+      path: cleanNovelPath,
+      name: seriesData.title || '',
+      summary:
+        summaryCheerio('p').length > 0
+          ? summaryCheerio('p')
+              .map((i, el) => loadCheerio(el).text())
+              .get()
+              .join('\n\n')
+          : summaryCheerio.text() || '',
+      author: seriesData.user?.name || seriesData.user?.username || '',
+      cover: seriesData.cover
+        ? this.site + '/' + seriesData.cover
+        : defaultCover,
+      genres: (seriesData.genres || []).map((g: any) => g.name).join(','),
+      status: seriesData.status || 'Unknown',
     };
-    // novel.artist = '';
-    novel.author = loadedCheerio(
-      'div.flex-1 > div.mb-3 > a.inline-flex',
-    ).text();
-    const coverMatch = html.match(/,cover:"storage\/(.+?)",cover_data_url/);
-    novel.cover = coverMatch
-      ? this.site + '/storage/' + coverMatch[1]
-      : defaultCover;
-    novel.genres = loadedCheerio('div.flex-1 > div.flex:not(.mb-3, .mt-5) > a')
-      .map((i, el) => loadCheerio(el).text())
-      .toArray()
-      .join(',');
-    novel.status = loadedCheerio('div.flex-1 > div.mb-3 > span.rounded-md')
-      .first()
-      .text();
 
-    let chapters = await fetchApi(
-      this.site + '/api/novels/chapter-list/' + novelPath,
-    ).then(r => r.json());
+    let chapters = await apiRes.json();
 
     if (this.hideLocked) {
       chapters = chapters.filter((c: APIChapter) => !c.locked?.price);
@@ -123,7 +153,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       .map((c: APIChapter) => ({
         name:
           (c.locked?.price ? '🔒 ' : '') +
-          (c.group?.index === null ? '' : 'Vol ' + c.group?.index + ' ') +
+          (c.group?.index == null ? '' : 'Vol ' + c.group?.index + ' ') +
           'Chapter ' +
           c.number +
           (c.title && c.title.trim() != 'Chapter ' + c.number
@@ -131,11 +161,13 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
             : ''),
         path:
           novelPath +
-          (c.group?.index === null ? '' : '/' + c.group?.slug) +
-          '/chapter-' +
-          c.number,
+          (c.group?.index == null ? '' : '/' + c.group?.slug) +
+          '/' +
+          (c.slug || 'chapter-' + c.number) +
+          '~~' +
+          c.id,
         releaseTime: c.created_at,
-        chapterNumber: c.number + (c.group?.index || 0) * 1000000000000,
+        chapterNumber: c.number + (c.group?.index || 0) * 10000,
       }))
       .sort(
         (a: ChapterInfo, b: ChapterInfo) => a.chapterNumber - b.chapterNumber,
@@ -144,31 +176,147 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const page = await fetchApi(this.site + '/series/' + chapterPath, {}).then(
-      r => r.text(),
-    );
-    const chapter = loadCheerio(page)('[id^="reader-area-"]');
-    chapter
-      .contents()
-      .filter((_, node: Node) => {
-        return node.type === 'comment';
-      })
-      .remove();
+    const chapterId = chapterPath.split('~~')[1];
+    if (chapterId) {
+      const url = `${this.site}/api/new/v2/chapters/${chapterId}`;
+      const res = await fetchApi(url);
+      const json = await res.json();
+      const content = json.content;
 
-    return chapter.html() || '';
+      if (content) {
+        const parsedContent = JSON.parse(content);
+        if (parsedContent.type === 'doc') {
+          return parsedContent.content
+            .map((node: any) => {
+              if (node.type === 'paragraph') {
+                const innerHtml =
+                  node.content
+                    ?.map((c: any) => {
+                      if (c.type === 'text') {
+                        let text = c.text;
+                        if (c.marks) {
+                          for (const mark of c.marks) {
+                            if (mark.type === 'bold') text = `<b>${text}</b>`;
+                            if (mark.type === 'italic') text = `<i>${text}</i>`;
+                            if (mark.type === 'underline')
+                              text = `<u>${text}</u>`;
+                            if (mark.type === 'strike')
+                              text = `<strike>${text}</strike>`;
+                            if (mark.type === 'link')
+                              text = `<a href="${mark.attrs?.href}">${text}</a>`;
+                          }
+                        }
+                        return text;
+                      }
+                      if (c.type === 'hardBreak') return '<br>';
+                      return '';
+                    })
+                    .join('') || '';
+                return `<p>${innerHtml}</p>`;
+              }
+              if (node.type === 'heading') {
+                const level = node.attrs?.level || 1;
+                const innerHtml =
+                  node.content?.map((c: any) => c.text).join('') || '';
+                return `<h${level}>${innerHtml}</h${level}>`;
+              }
+              return '';
+            })
+            .join('\n');
+        }
+      }
+    }
+
+    // Fallback or old method
+    const url = `${this.site}/series/${chapterPath.split('~~')[0]}`;
+    const result = await fetchApi(url);
+    const body = await result.text();
+
+    const loadedCheerio = loadCheerio(body);
+
+    let chapterText = loadedCheerio('div.content-area p')
+      .map((i, el) => `<p>${loadCheerio(el).html()}</p>`)
+      .get()
+      .join('\n');
+
+    if (chapterText) {
+      return chapterText;
+    }
+
+    // Fallback to SvelteKit JSON if HTML parsing fails or is empty
+    try {
+      const jsonUrl = `${this.site}/series/${chapterPath.split('~~')[0]}/__data.json?x-sveltekit-invalidated=001`;
+      const jsonRes = await fetchApi(jsonUrl);
+      const json = await jsonRes.json();
+
+      const nodes = json.nodes;
+      const data = nodes?.find((n: any) => n.type === 'data')?.data;
+      if (data) {
+        const contentStr = data.find(
+          (d: any) => typeof d === 'string' && d.includes('{"type":"doc"'),
+        );
+
+        if (contentStr) {
+          const contentJson = JSON.parse(contentStr);
+          if (contentJson.type === 'doc') {
+            chapterText = contentJson.content
+              .map((node: any) => {
+                if (node.type === 'paragraph') {
+                  const innerHtml =
+                    node.content
+                      ?.map((c: any) => {
+                        if (c.type === 'text') {
+                          let text = c.text;
+                          if (c.marks) {
+                            for (const mark of c.marks) {
+                              if (mark.type === 'bold') text = `<b>${text}</b>`;
+                              if (mark.type === 'italic')
+                                text = `<i>${text}</i>`;
+                            }
+                          }
+                          return text;
+                        }
+                        return '';
+                      })
+                      .join('') || '';
+                  return `<p>${innerHtml}</p>`;
+                }
+                return '';
+              })
+              .join('\n');
+          }
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    return chapterText;
   }
 
   async searchNovels(
     searchTerm: string,
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
-    return await fetchApi(
-      `${this.site}/api/series/filter?page=${pageNo}&per_page=20&search=${encodeURIComponent(searchTerm)}`,
-    )
-      .then(r => r.json())
-      .then(r =>
-        r.data.map((novel: APINovel) => this.parseNovelFromApi(novel)),
-      );
+    let url = `${this.site}/api/series/filter?page=${pageNo}&per_page=20&search=${encodeURIComponent(
+      searchTerm,
+    )}`;
+    let res = await fetchApi(url).then(r => r.json());
+
+    if (pageNo === 1 && (!res.data || res.data.length === 0)) {
+      const words = searchTerm.split(' ');
+      const fallbackTerm = words.find(w => w.length > 3) || words[0];
+      if (fallbackTerm && fallbackTerm !== searchTerm) {
+        url = `${this.site}/api/series/filter?page=${pageNo}&per_page=20&search=${encodeURIComponent(
+          fallbackTerm,
+        )}`;
+        res = await fetchApi(url).then(r => r.json());
+      }
+    }
+
+    return (res.data || []).map((novel: APINovel) =>
+      this.parseNovelFromApi(novel),
+    );
   }
 
   parseNovelFromApi(apiData: APINovel) {
@@ -183,7 +331,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   }
 
   resolveUrl = (path: string, isNovel?: boolean) =>
-    this.site + '/series/' + path;
+    this.site + '/series/' + path.split('~~')[0];
 
   filters = {
     status: {
@@ -288,20 +436,3 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
 }
 
 export default new FenrirRealmPlugin();
-
-type GenreData = {
-  name: string;
-  id: number;
-};
-
-//paste into console on site to load
-async function getUpdatedGenres() {
-  const data = await fetch(
-    'https://fenrirealm.com/api/novels/taxonomy/genres',
-  ).then(d => d.json());
-  const genreData = data.map((g: GenreData) => ({
-    label: g.name,
-    value: g.id.toString(),
-  }));
-  console.log(JSON.stringify(genreData));
-}
