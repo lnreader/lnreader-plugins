@@ -6,7 +6,7 @@ import { Plugin } from '@/types/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.9.6';
+  version = '0.9.7';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -624,6 +624,44 @@ class NovelUpdates implements Plugin.PluginBase {
           }
         });
         chapterContent = chapterCheerio.html()!;
+        break;
+      }
+      // Last edited in 0.9.7 by Batorian - 18/03/2026
+      case 'r-p-d': {
+        let parts = chapterPath.split('/');
+
+        // 1. Resolve the redirect
+        const resolveRes = await fetchApi(
+          `${parts[0]}//${parts[2]}/resolve?p=/${parts.slice(3).join('/')}`,
+        );
+        const { location } = await resolveRes.json();
+        parts = location.split('/');
+        const base = `${parts[0]}//${parts[2]}`;
+
+        // 2. Get Meta & Token
+        const meta = await fetchApi(
+          `${base}/api/chapter-meta?seriesSlug=${parts[4]}&chapterSlug=${parts[5]}`,
+        ).then(r => r.json());
+        const id = meta.chapter.id;
+        const { token } = await fetchApi(
+          `${base}/api/chapters/${id}/parts-token`,
+        ).then(r => r.json());
+
+        // 3. Fetch and Wrap in <p> tags
+        let total = 1;
+        for (let i = 1; i <= total; i++) {
+          const part = await fetchApi(
+            `${base}/api/chapters/${id}/parts?index=${i}&token=${token}`,
+          ).then(r => r.json());
+
+          // Wrap the entire part content
+          // We replace \n\n with </p><p> and wrap the edges in <p> and </p>
+          let formattedPart =
+            '<p>' + part.markdown.replace(/\n\n/g, '</p><p>') + '</p>';
+
+          chapterText += formattedPart;
+          total = part.total;
+        }
         break;
       }
       // Last edited in 0.9.0 by Batorian - 19/03/2025
