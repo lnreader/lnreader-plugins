@@ -4,13 +4,23 @@ import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { NovelStatus } from '@libs/novelStatus';
 import { isUrlAbsolute } from '@libs/isAbsoluteUrl';
+import { storage } from '@libs/storage';
 
 class RoyalRoad implements Plugin.PluginBase {
   id = 'royalroad';
   name = 'Royal Road';
-  version = '2.2.3';
+  version = '2.3.0';
   icon = 'src/en/royalroad/icon.png';
   site = 'https://www.royalroad.com/';
+
+  enableVol = storage.get('enableVol');
+  pluginSettings = {
+    enableVol: {
+      value: '',
+      label: 'Enable Pagination / Volume view (not recommended)',
+      type: 'Switch',
+    },
+  };
 
   parseNovels(html: string) {
     const baseUrl = this.site;
@@ -102,6 +112,7 @@ class RoyalRoad implements Plugin.PluginBase {
       path: novelPath,
     };
     const baseUrl = this.site;
+    const enableVolume = this.enableVol;
 
     let state: ParsingState = ParsingState.Idle;
     let statusText = '';
@@ -245,7 +256,7 @@ class RoyalRoad implements Plugin.PluginBase {
               if (chapterMatch?.[1]) {
                 chapterJson = JSON.parse(chapterMatch[1]);
               }
-              if (volumeMatch?.[1]) {
+              if (volumeMatch?.[1] && enableVolume) {
                 volumeJson = JSON.parse(volumeMatch[1]);
               }
             }
