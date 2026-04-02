@@ -9,7 +9,7 @@ import { storage } from '@libs/storage';
 class NovelFire implements Plugin.PluginBase {
   id = 'novelfire';
   name = 'Novel Fire';
-  version = '1.1.8';
+  version = '1.1.9';
   icon = 'src/en/novelfire/icon.png';
   site = 'https://novelfire.net/';
 
