@@ -285,7 +285,7 @@ class NovelFire implements Plugin.PluginBase {
         .parent()
         .text()
         .trim();
-      novel.totalPages = Math.ceil(parseInt(totalChapters) / 100);
+      novel.totalPages = Math.ceil(parseInt(totalChapters) / 50);
       if (this.singlePage) {
         novel.chapters = await this.getAllChaptersForce(
           novelPath,
