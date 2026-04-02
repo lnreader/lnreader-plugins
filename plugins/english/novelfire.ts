@@ -9,7 +9,7 @@ import { storage } from '@libs/storage';
 class NovelFire implements Plugin.PluginBase {
   id = 'novelfire';
   name = 'Novel Fire';
-  version = '1.1.8';
+  version = '1.1.9';
   icon = 'src/en/novelfire/icon.png';
   site = 'https://novelfire.net/';
 
@@ -285,7 +285,7 @@ class NovelFire implements Plugin.PluginBase {
         .parent()
         .text()
         .trim();
-      novel.totalPages = Math.ceil(parseInt(totalChapters) / 100);
+      novel.totalPages = Math.ceil(parseInt(totalChapters) / 50);
       if (this.singlePage) {
         novel.chapters = await this.getAllChaptersForce(
           novelPath,
