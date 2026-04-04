@@ -6,7 +6,7 @@ import { Plugin } from '@/types/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.9.7';
+  version = '0.9.8';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -626,6 +626,16 @@ class NovelUpdates implements Plugin.PluginBase {
         chapterContent = chapterCheerio.html()!;
         break;
       }
+      // Last edited in 0.9.8 by K1ngfish3r - 04/04/2026
+      // CF hyper aggressive or just NU shenanigans, login to patreon is 50/50
+      case 'patreon': {
+        loadedCheerio('#track-click,[class*="hidden "]').remove();
+        chapterTitle = loadedCheerio('h1[data-tag="post-title"]').text();
+        chapterContent = loadedCheerio(
+          '[data-tag="post-card"] [class*="PaddingTop"]',
+        ).html()!;
+        break;
+      }
       // Last edited in 0.9.7 by Batorian - 18/03/2026
       case 'r-p-d': {
         let parts = chapterPath.split('/');
@@ -656,7 +666,7 @@ class NovelUpdates implements Plugin.PluginBase {
 
           // Wrap the entire part content
           // We replace \n\n with </p><p> and wrap the edges in <p> and </p>
-          let formattedPart =
+          const formattedPart =
             '<p>' + part.markdown.replace(/\n\n/g, '</p><p>') + '</p>';
 
           chapterText += formattedPart;
