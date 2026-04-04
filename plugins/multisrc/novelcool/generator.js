@@ -36,5 +36,6 @@ export default plugin;
     lang: source.options.lang,
     filename: source.sourceName,
     pluginScript,
+    down: source.options?.down || false,
   };
 };

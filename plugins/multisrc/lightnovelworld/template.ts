@@ -7,6 +7,8 @@ import dayjs from 'dayjs';
 type LightNovelWorldOptions = {
   lang?: string;
   versionIncrements?: number;
+  down?: boolean;
+  downSince?: string;
 };
 
 export type LightNovelWorldMetadata = {
