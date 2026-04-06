@@ -120,7 +120,7 @@
     "sourceName": "Vanovel",
     "options": {
       "useNewChapterEndpoint": true,
-      "versionIncrements": 2,
+      "versionIncrements": 3,
       "lang": "Indonesian"
     }
   },
