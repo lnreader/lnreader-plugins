@@ -98,14 +98,15 @@ class Novelyra implements Plugin.PluginBase {
   id = 'novelyra';
   name = 'Novelyra';
   icon = 'src/es/novelyra/icon.png';
-  site = 'https://novelyra.com';
+  site = 'https://novelyra.com/';
   version = '1.0.0';
-  filters?: Filters | undefined = {
+  filters: Filters = {
     genres: {
       type: FilterTypes.Picker,
       label: 'Generos',
       value: '',
       options: [
+        { label: 'Todos', value: '' },
         { label: 'Acción', value: 'accion' },
         { label: 'Aventura', value: 'aventura' },
         { label: 'Fantasía', value: 'fantasia' },
@@ -133,11 +134,36 @@ class Novelyra implements Plugin.PluginBase {
         { label: 'Juegos', value: 'juegos' },
       ],
     },
+    browse: {
+      type: FilterTypes.Picker,
+      label: 'Novelas Populares',
+      value: 'browse.php',
+      options: [
+        { label: 'Todas las Novelas', value: 'browse.php' },
+        { label: '🔥 Hoy', value: 'popular.php?period=today' },
+        { label: '📅 Este Mes', value: 'popular.php?period=month' },
+        { label: '👑 De Siempre', value: 'popular.php?period=alltime' },
+      ],
+    },
   } satisfies Filters;
-  imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
-  //flag indicates whether access to LocalStorage, SesesionStorage is required.
-  webStorageUtilized?: boolean;
+  private loadNovels(
+    loadedCheerio: any,
+    typeNovel: string,
+  ): Plugin.NovelItem[] {
+    const novels: Plugin.NovelItem[] = [];
+
+    loadedCheerio(typeNovel).each((_: number, ele: any) => {
+      const novel = loadedCheerio(ele);
+      novels.push({
+        name: novel.find('h3').text(),
+        path: novel.find('a').attr('href')?.replace(this.site, '') || '',
+        cover: novel.find('img').attr('src') || defaultCover,
+      });
+    });
+
+    return novels;
+  }
 
   async popularNovels(
     pageNo: number,
@@ -147,38 +173,32 @@ class Novelyra implements Plugin.PluginBase {
     }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
     let url = this.site;
-
-    const isFilters = filters?.genres.value != '';
-
-    if (isFilters) {
-      url = `${this.site}/browse.php?genre=${filters?.genres.value}&page=${pageNo}`;
+    let typeNovel = '#novelas .novel-card';
+    const genre = filters.genres?.value as string;
+    const browse = filters.browse?.value as string;
+    if (!showLatestNovels) {
+      if (browse.startsWith('popular.php')) {
+        url = `${this.site}${browse}`;
+        typeNovel = '.popular-item';
+      } else {
+        const params = new URLSearchParams();
+        params.append('page', String(pageNo));
+        if (genre) {
+          params.append('genre', genre);
+        }
+        url = `${this.site}${browse}?${params.toString()}`;
+        typeNovel = '.novels-grid .novel-card';
+      }
     }
 
     const result = await fetchApi(url);
     const body = await result.text();
-
     const loadedCheerio = loadCheerio(body);
-    const novels: Plugin.NovelItem[] = [];
 
-    const typeNovel = isFilters
-      ? '.novels-grid .novel-card'
-      : showLatestNovels
-        ? '#novelas .novel-card'
-        : '.section-gray .novel-card';
-
-    loadedCheerio(typeNovel).each((idx, ele) => {
-      const novel = loadedCheerio(ele);
-      novels.push({
-        name: novel.find('h3').text(),
-        path: novel.find('a').attr('href') || '',
-        cover: novel.find('img').attr('src') || defaultCover,
-      });
-    });
-
-    return novels;
+    return this.loadNovels(loadedCheerio, typeNovel);
   }
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const result = await fetchApi(novelPath);
+    const result = await fetchApi(this.site + novelPath);
     const body = await result.text();
 
     const loadedCheerio = loadCheerio(body);
@@ -193,7 +213,7 @@ class Novelyra implements Plugin.PluginBase {
       .text()
       .trim()
       .replace('\n', ', ');
-    console.log(novel.genres);
+
     novel.status = NovelStatus.Completed;
     novel.summary = loadedCheerio('.novel-description-detail').text().trim();
 
@@ -206,7 +226,7 @@ class Novelyra implements Plugin.PluginBase {
       const chapterNumber = numberMatch ? parseInt(numberMatch[1]) : 0;
       const chapter: Plugin.ChapterItem = {
         name: cptr.find('.chapter-title').text(),
-        path: cptr.find('a').attr('href') || '',
+        path: cptr.find('a').attr('href')?.replace(this.site, '') || '',
         releaseTime: parseSpanishTextToISO(cptr.find('.chapter-date').text()),
         chapterNumber: chapterNumber,
       };
@@ -227,10 +247,10 @@ class Novelyra implements Plugin.PluginBase {
       'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
     );
     myHeaders.set('Accept-Language', 'es-ES,es;q=0.9');
-    myHeaders.set('Referer', 'https://novelyra.com/');
+    myHeaders.set('Referer', this.site);
     myHeaders.set('Cache-Control', 'no-cache');
 
-    const result = await fetchApi(chapterPath, {
+    const result = await fetchApi(this.site + chapterPath, {
       method: 'GET',
       headers: myHeaders,
     });
@@ -246,9 +266,38 @@ class Novelyra implements Plugin.PluginBase {
     // Quita tags de adsense si los hay
     loadedCheerio('ins').remove();
 
-    const chapterText = loadedCheerio('.chapter-content').html();
+    const chapterText = loadedCheerio('.chapter-content');
+    let paragraph: string[] = [];
+    const chapterHtml: string[] = [];
+    const tagsPermisive: string[] = ['b', 'i', 'u', 'strong', 'em', 'span'];
 
-    return chapterText?.replace(/\n/g, '<br>') || '';
+    chapterText.contents().each((_, element) => {
+      switch (element.type) {
+        case 'text':
+          if (element.data.trim()) {
+            paragraph.push(element.data.trim());
+          }
+          break;
+        case 'tag':
+          const originalTag = element.tagName;
+          if (tagsPermisive.includes(originalTag)) {
+            paragraph.push(loadedCheerio.html(element));
+          } else {
+            if (paragraph.length > 0) {
+              chapterHtml.push(`<p>${paragraph.join(' ').trim()}</p>`);
+              paragraph = [];
+              if (originalTag === 'br') break;
+            }
+            chapterHtml.push(loadedCheerio.html(element));
+          }
+          break;
+      }
+    });
+    // Close any remaining paragraph
+    if (paragraph.length > 0) {
+      chapterHtml.push(`<p>${paragraph.join(' ').trim()}</p>`);
+    }
+    return chapterHtml.join('');
   }
   async searchNovels(
     searchTerm: string,
@@ -256,25 +305,16 @@ class Novelyra implements Plugin.PluginBase {
   ): Promise<Plugin.NovelItem[]> {
     searchTerm = searchTerm.toLowerCase();
 
-    const url = `${this.site}/?search=${searchTerm}`;
+    const url = `${this.site}?search=${encodeURIComponent(searchTerm)}`;
 
     const result = await fetchApi(url);
     const body = await result.text();
 
     const loadedCheerio = loadCheerio(body);
 
-    const novels: Plugin.NovelItem[] = [];
+    const typeNovel = '#novelas .novel-card';
 
-    loadedCheerio('#novelas .novel-card').each((idx, ele) => {
-      const novel = loadedCheerio(ele);
-      novels.push({
-        name: novel.find('h3').text(),
-        path: novel.find('a').attr('href') || '',
-        cover: novel.find('img').attr('src') || defaultCover,
-      });
-    });
-
-    return novels;
+    return this.loadNovels(loadedCheerio, typeNovel);
   }
 }
 
