@@ -116,11 +116,11 @@
   },
   {
     "id": "morenovel",
-    "sourceSite": "https://vanovel.com",
+    "sourceSite": "https://vanovel.com/",
     "sourceName": "Vanovel",
     "options": {
       "useNewChapterEndpoint": true,
-      "versionIncrements": 2,
+      "versionIncrements": 3,
       "lang": "Indonesian"
     }
   },
@@ -141,8 +141,8 @@
     "options": {
       "useNewChapterEndpoint": true,
       "lang": "Arabic",
-      "versionIncrements": 5,
-      "customJs": "chapterText.find('span[style*=\"opacity: 0; position: fixed;\"]').remove();"
+      "versionIncrements": 6,
+      "customJs": "chapterText.find('span[style*=\"opacity: 0; position: fixed;\"],[role=\"presentation\"]').remove();"
     }
   },
   {
