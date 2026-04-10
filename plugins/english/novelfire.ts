@@ -115,7 +115,7 @@ class NovelFire implements Plugin.PluginBase {
   ): Promise<Plugin.ChapterItem[]> {
     const allChapters: Plugin.ChapterItem[] = [];
 
-    const url = `${this.site}listChapterDataAjax`;
+    const url = `${this.site}ajax/listChapterDataAjax`;
     const params = new URLSearchParams({
       draw: '1',
       'columns[0][data]': 'n_sort',
