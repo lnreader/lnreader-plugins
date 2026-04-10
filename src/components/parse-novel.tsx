@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   BookOpen,
   ChevronLeft,
@@ -45,6 +45,7 @@ export default function ParseNovelSection({
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [fetchError, setFetchError] = useState('');
+  const lastProcessedPath = useRef<string>();
 
   const { exportEpub, isExporting } = useEpubExport({
     plugin: plugin || null,
@@ -118,6 +119,9 @@ export default function ParseNovelSection({
   };
 
   useEffect(() => {
+    if (parseNovelPath === lastProcessedPath.current) return;
+    lastProcessedPath.current = parseNovelPath;
+
     if (parseNovelPath) {
       setNovelPath(parseNovelPath);
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Copy, FileText, Code } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -29,6 +29,7 @@ export default function ParseChapterSection() {
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState('');
   const [showRawHtml, setShowRawHtml] = useState(false);
+  const lastProcessedPath = useRef<string>();
 
   const { customCSSLoaded, customJSLoaded, customCSSError, customJSError } =
     usePluginCustomAssets(plugin, chapterText);
@@ -70,6 +71,9 @@ export default function ParseChapterSection() {
 
   // Handle pre-filled path from navigation
   useEffect(() => {
+    if (parseChapterPath === lastProcessedPath.current) return;
+    lastProcessedPath.current = parseChapterPath;
+
     if (parseChapterPath) {
       setChapterPath(parseChapterPath);
 
