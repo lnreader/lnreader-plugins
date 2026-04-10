@@ -111,11 +111,41 @@ class NovelFire implements Plugin.PluginBase {
   async getAllChapters(
     novelPath: string,
     post_id: string,
+    totalChapters: string,
   ): Promise<Plugin.ChapterItem[]> {
     const allChapters: Plugin.ChapterItem[] = [];
 
-    const url = `${this.site}listChapterDataAjax?post_id=${post_id}`;
-    const result = await fetchApi(url);
+    const url = `${this.site}listChapterDataAjax`;
+    const params = new URLSearchParams({
+      draw: '1',
+      'columns[0][data]': 'n_sort',
+      'columns[0][name]': 'cmm_posts_detail.n_sort',
+      'columns[0][searchable]': 'true',
+      'columns[0][orderable]': 'true',
+      'columns[0][search][value]': '',
+      'columns[0][search][regex]': 'false',
+
+      'columns[1][data]': 'bookmark_created_at',
+      'columns[1][name]': 'bookmark_chapters.created_at',
+      'columns[1][searchable]': 'false',
+      'columns[1][orderable]': 'true',
+      'columns[1][search][value]': '',
+      'columns[1][search][regex]': 'false',
+
+      'order[0][column]': '0',
+      'order[0][dir]': 'asc',
+      'order[0][name]': 'cmm_posts_detail.n_sort',
+
+      start: '0',
+      length: totalChapters,
+      'search[value]': '',
+      'search[regex]': 'false',
+      post_id: post_id,
+      only_bookmark: 'false',
+      _: Date.now().toString(),
+    });
+
+    const result = await fetchApi(`${url}?${params.toString()}`);
     const body = await result.text();
 
     if (body.includes('You are being rate limited')) {
@@ -219,8 +249,6 @@ class NovelFire implements Plugin.PluginBase {
     const $ = await this.getCheerio(this.site + novelPath, false);
     const baseUrl = this.site;
 
-    let post_id = '0';
-
     const novel: Partial<Plugin.SourceNovel & { totalPages: number }> = {
       path: novelPath,
       totalPages: 1,
@@ -276,10 +304,18 @@ class NovelFire implements Plugin.PluginBase {
 
     novel.rating = parseFloat($('.nub').text().trim());
 
-    post_id = $('#novel-report').attr('report-post_id') || '0';
+    const post_id = $('#novel-report').attr('report-post_id') || '0';
+    const totalChapters = $('.header-stats i.icon-book-open')
+      .parent()
+      .text()
+      .trim();
 
     try {
-      novel.chapters = await this.getAllChapters(novelPath, post_id);
+      novel.chapters = await this.getAllChapters(
+        novelPath,
+        post_id,
+        totalChapters,
+      );
     } catch (error) {
       const totalChapters = $('.header-stats .icon-book-open')
         .parent()
