@@ -82,7 +82,8 @@ class WitchCultTranslations implements Plugin.PluginBase {
       author: 'Tappei Nagatsuki',
       chapters: this.parseChaptersFromTOC(loadedCheerio),
       status: NovelStatus.Ongoing,
-      summary: 'Fan translation of the Re:Zero web novel (Arc 5 onwards).',
+      summary:
+        'Fan translation of the Re:Zero web novel (Arc 5 onwards).\n\nSuddenly, Natsuki Subaru, a shut-in student, is summoned to another world on his way home from the convenience store. A completely ordinary person with no knowledge, skills, combat abilities, or communication skills, he\'s thrown into this other world without any cheat bonuses and must desperately try to survive. The only blessing he receives is the painful ability to "return by death," which allows him to rewind time after dying! In this other world where he has no one to rely on, how many times will he die, and what will he ultimately gain?',
     };
   }
 
