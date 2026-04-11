@@ -10,7 +10,13 @@ class WitchCultTranslations implements Plugin.PluginBase {
   icon = 'src/en/wct/icon.png';
   version = '1.0.0';
 
+  private cachedNovel: Plugin.NovelItem | null = null;
+
   private async novel(): Promise<Plugin.NovelItem> {
+    if (this.cachedNovel !== null) {
+      return this.cachedNovel;
+    }
+
     const result = await fetchApi(this.site);
     const body = await result.text();
     const loadedCheerio = parseHTML(body);
@@ -19,16 +25,22 @@ class WitchCultTranslations implements Plugin.PluginBase {
       .last()
       .attr('src');
 
-    return {
+    this.cachedNovel = {
       name: 'Re:Zero kara Hajimeru Isekai Seikatsu',
       path: '/table-of-content',
       cover: latestArcCover,
     };
+
+    return this.cachedNovel;
   }
 
   async popularNovels(pageNo: number): Promise<Plugin.NovelItem[]> {
-    if (pageNo > 1) return [];
-    return [await this.novel()];
+    const novels = [];
+    if (pageNo === 1) {
+      novels.push(await this.novel());
+    }
+
+    return novels;
   }
 
   async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
@@ -58,11 +70,12 @@ class WitchCultTranslations implements Plugin.PluginBase {
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const result = await fetchApi(this.site + novelPath);
-    const body = await result.text();
-    const loadedCheerio = parseHTML(body);
+    const [body, novel] = await Promise.all([
+      fetchApi(this.site + novelPath).then(result => result.text()),
+      this.novel(),
+    ]);
 
-    const novel = await this.novel();
+    const loadedCheerio = parseHTML(body);
 
     return {
       ...novel,
