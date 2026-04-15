@@ -7,7 +7,7 @@ class NovelBuddy implements Plugin.PluginBase {
   id = 'novelbuddy';
   name = 'NovelBuddy.io';
   site = 'https://novelbuddy.io/';
-  version = '1.0.3';
+  version = '1.0.4';
   icon = 'src/en/novelbuddy/icon.png';
 
   parseNovels(loadedCheerio: CheerioAPI) {
