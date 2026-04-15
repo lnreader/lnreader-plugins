@@ -60,102 +60,161 @@ class NovelBuddy implements Plugin.PluginBase {
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const result = await fetchApi(this.site + novelPath);
-    const body = await result.text();
-
-    let loadedCheerio = parseHTML(body);
-
+    const response = await fetchApi(this.site + novelPath);
+    const body = await response.text();
+  
+    const $ = parseHTML(body);
+  
+    const coverSrc =
+      $('.img-cover img').attr('data-src') ||
+      $('.img-cover img').attr('src') ||
+      '';
+  
+    const normalizeUrl = (url?: string): string => {
+      if (!url) return '';
+      if (url.startsWith('//')) return `https:${url}`;
+      if (url.startsWith('/')) return `${this.site}${url.replace(/^\//, '')}`;
+      return url;
+    };
+  
+    const normalizeText = (text: string): string =>
+      text.replace(/\s+/g, ' ').replace(/\s*,\s*$/, '').trim();
+  
+    const getLinkTextList = (root: ReturnType<typeof $>): string[] =>
+      root
+        .find('a')
+        .map((_, el) => normalizeText($(el).text()))
+        .toArray()
+        .filter(Boolean);
+  
     const novel: Plugin.SourceNovel = {
       path: novelPath,
-      name: loadedCheerio('.name h1').text().trim() || 'Untitled',
-      cover: 'https:' + loadedCheerio('.img-cover img').attr('data-src'),
-      summary: loadedCheerio('.section-body.summary .content').text().trim(),
+      name: normalizeText($('.name h1').first().text()) || 'Untitled',
+      cover: normalizeUrl(coverSrc),
+      summary: normalizeText($('.section-body.summary .content').text()),
       chapters: [],
     };
-
-    loadedCheerio('.meta.box p').each((i, el) => {
-      const detailName = loadedCheerio(el).find('strong').text();
-      const detail = loadedCheerio(el).find('a');
-
-      switch (detailName) {
+  
+    $('.meta.box p').each((_, el) => {
+      const row = $(el);
+      const label = normalizeText(row.find('strong').first().text());
+      const linkTexts = getLinkTextList(row);
+  
+      switch (label) {
         case 'Authors :':
-          novel.author = detail
-            .find('span')
-            .map((a, ex) => loadedCheerio(ex).text())
-            .toArray()
-            .join(', ');
+          novel.author = linkTexts.join(', ');
           break;
+  
+        case 'Artists :':
+        case 'Artist :':
+          novel.artist = linkTexts.join(', ');
+          break;
+  
         case 'Status :':
-          novel.status = detail.text();
+          novel.status = linkTexts[0] || normalizeText(row.text().replace(label, ''));
           break;
+  
         case 'Genres :':
-          novel.genres = detail.text().trim();
+          novel.genres = linkTexts.join(',');
           break;
       }
     });
-    const novelId = loadedCheerio('script')
-      .text()
-      .match(/bookId = (\d+);/)![1];
-    const chapter: Plugin.ChapterItem[] = [];
-
-    const getChapters = async (id: string) => {
+  
+    const ratingText = normalizeText($('.rating .score').first().text()).replace(
+      /[^0-9.]/g,
+      '',
+    );
+    const rating = Number.parseFloat(ratingText);
+    if (!Number.isNaN(rating)) {
+      novel.rating = rating;
+    }
+  
+    const scriptText = $('script')
+      .map((_, el) => $(el).html() || '')
+      .toArray()
+      .join('\n');
+  
+    const novelIdMatch = scriptText.match(/bookId\s*=\s*(\d+)\s*;/);
+    if (!novelIdMatch) {
+      return novel;
+    }
+  
+    const novelId = novelIdMatch[1];
+  
+    const getChapters = async (id: string): Promise<Plugin.ChapterItem[]> => {
       const chapterListUrl = `${this.site}api/manga/${id}/chapters?source=detail`;
-      const data = await fetchApi(chapterListUrl);
-      const chapterlist = await data.text();
-
-      loadedCheerio = parseHTML(chapterlist);
-
-      loadedCheerio('li').each((i, el) => {
-        const chapterName = loadedCheerio(el)
-          .find('.chapter-title')
-          .text()
-          .trim();
-
-        const releaseDate = loadedCheerio(el)
-          .find('.chapter-update')
-          .text()
-          .trim();
-
-        const months = [
-          'jan',
-          'feb',
-          'mar',
-          'apr',
-          'may',
-          'jun',
-          'jul',
-          'aug',
-          'sep',
-          'oct',
-          'nov',
-          'dec',
-        ];
-        const monthsJoined = months.join('|');
-
-        const rx = new RegExp(
-          `(${monthsJoined}) (\\d{1,2}), (\\d{4})`,
-          'i',
-        ).exec(releaseDate);
-        if (!rx) return;
-        const year = +rx[3];
-        const month = months.indexOf(rx[1].toLowerCase());
-        const day = +rx[2];
-
-        const chapterUrl = loadedCheerio(el).find('a').attr('href')?.slice(1);
-
-        if (!chapterUrl) return;
-
-        chapter.push({
-          name: chapterName,
-          releaseTime: new Date(year, month, day).toISOString(),
-          path: chapterUrl,
-        });
+      const chapterResponse = await fetchApi(chapterListUrl);
+      const chapterHtml = await chapterResponse.text();
+  
+      const $$ = parseHTML(chapterHtml);
+      const chapters: Plugin.ChapterItem[] = [];
+  
+      const months = [
+        'jan',
+        'feb',
+        'mar',
+        'apr',
+        'may',
+        'jun',
+        'jul',
+        'aug',
+        'sep',
+        'oct',
+        'nov',
+        'dec',
+      ];
+  
+      const dateRegex = new RegExp(
+        `(${months.join('|')})\\s+(\\d{1,2}),\\s+(\\d{4})`,
+        'i',
+      );
+  
+      $$('li').each((_, el) => {
+        const item = $$(el);
+  
+        const chapterName = normalizeText(item.find('.chapter-title').text());
+        const releaseDateText = normalizeText(item.find('.chapter-update').text());
+        const chapterHref = item.find('a').attr('href');
+  
+        if (!chapterHref) return;
+  
+        const chapterPath = chapterHref.startsWith('/')
+          ? chapterHref.slice(1)
+          : chapterHref;
+  
+        const chapterItem: Plugin.ChapterItem = {
+          name: chapterName || 'Untitled',
+          path: chapterPath,
+        };
+  
+        const dateMatch = dateRegex.exec(releaseDateText);
+        if (dateMatch) {
+          const year = Number.parseInt(dateMatch[3], 10);
+          const month = months.indexOf(dateMatch[1].toLowerCase());
+          const day = Number.parseInt(dateMatch[2], 10);
+  
+          if (month >= 0) {
+            chapterItem.releaseTime = new Date(year, month, day).toISOString();
+          }
+        } else if (releaseDateText) {
+          chapterItem.releaseTime = releaseDateText;
+        }
+  
+        const chapterNumberMatch = chapterName.match(
+          /chapter\s+(\d+(?:\.\d+)?)/i,
+        );
+        if (chapterNumberMatch) {
+          chapterItem.chapterNumber = Number.parseFloat(chapterNumberMatch[1]);
+        }
+  
+        chapters.push(chapterItem);
       });
-      return chapter;
+  
+      return chapters;
     };
-
+  
     novel.chapters = (await getChapters(novelId)).reverse();
-
+  
     return novel;
   }
 
