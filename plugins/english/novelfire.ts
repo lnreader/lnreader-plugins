@@ -9,7 +9,7 @@ import { storage } from '@libs/storage';
 class NovelFire implements Plugin.PluginBase {
   id = 'novelfire';
   name = 'Novel Fire';
-  version = '1.3.0';
+  version = '1.3.1';
   icon = 'src/en/novelfire/icon.png';
   site = 'https://novelfire.net/';
   webStorageUtilized = true;
@@ -36,7 +36,7 @@ class NovelFire implements Plugin.PluginBase {
     },
   };
   singlePage = storage.get('singlePage');
-  pageLength = storage.get('pageLength');
+  pageLength = storage.get('pageLength') ?? '-1';
 
   async getCheerio(url: string, search: boolean): Promise<CheerioAPI> {
     const r = await fetchApi(url);
