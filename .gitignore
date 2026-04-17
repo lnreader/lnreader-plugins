@@ -16,3 +16,4 @@ total.svg
 src/plugins/index.ts
 .history
 broken-sites-report.json
+missed-sites-report.json
