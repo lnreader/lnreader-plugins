@@ -6,6 +6,8 @@ import { NovelStatus } from '@libs/novelStatus';
 type RanobesOptions = {
   lang?: string;
   path: string;
+  down?: boolean;
+  downSince?: string;
 };
 
 export type RanobesMetadata = {

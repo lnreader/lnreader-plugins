@@ -9,7 +9,13 @@ const folder = dirname(fileURLToPath(import.meta.url));
 export const generateAll = function () {
   return list.map(metadata => {
     metadata.filters = Object.assign(defaultSettings.filters, metadata.filters);
-    console.log(`[ifreedom]: Generating`, metadata.id);
+    console.log(
+      `[ifreedom]: Generating`,
+      metadata.id,
+      metadata.options?.downSince
+        ? `since: ${metadata.options?.downSince}`
+        : '',
+    );
     return generator(metadata);
   });
 };
@@ -32,5 +38,6 @@ export default plugin;
     lang: 'russian',
     filename: metadata.sourceName,
     pluginScript,
+    down: metadata.options?.down || false,
   };
 };
