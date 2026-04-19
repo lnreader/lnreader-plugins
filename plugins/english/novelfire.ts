@@ -9,7 +9,7 @@ import { storage } from '@libs/storage';
 class NovelFire implements Plugin.PluginBase {
   id = 'novelfire';
   name = 'Novel Fire';
-  version = '1.4.0';
+  version = '1.4.1';
   icon = 'src/en/novelfire/icon.png';
   site = 'https://novelfire.net/';
   webStorageUtilized = true;
@@ -170,38 +170,34 @@ class NovelFire implements Plugin.PluginBase {
     if (result.status === 429) throw new NovelFireThrottlingError();
 
     const body = await result.text();
-
-    if (body.includes('You are being rate limited')) {
+    if (body.includes('You are being rate limited'))
       throw new NovelFireThrottlingError();
-    }
+    if (body.includes('Page Not Found 404')) throw new NovelFireAjaxNotFound();
 
-    if (body.includes('Page Not Found 404')) {
-      throw new NovelFireAjaxNotFound();
-    }
+    return (JSON.parse(body).data || [])
+      .flatMap(
+        (idx: { title?: string; slug: string; n_sort: string | number }) => {
+          const name = load(idx.title || idx.slug)
+            .text()
+            .replace(/[\u200B-\u200D\uFEFF]/g, '')
+            .trim();
+          const num = Number(idx.n_sort);
 
-    const json = JSON.parse(body);
-    const chapters = (json.data || [])
-      .map((index: { title?: string; slug: string; n_sort: number }) => {
-        const chapterName = load(index.title || index.slug).text();
-        const chapterPath = `${novelPath}/chapter-${index.n_sort}`;
-        const sortNumber = index.n_sort;
-
-        if (!chapterPath) return null;
-
-        return {
-          name: chapterName,
-          path: chapterPath,
-          chapterNumber: Number(sortNumber),
-        };
-      })
-      .filter(
-        (chapter: Plugin.ChapterItem | null) => chapter !== null,
-      ) as Plugin.ChapterItem[];
-    const sortedChapters = chapters.sort(function (a, b) {
-      return (a.chapterNumber || 0) - (b.chapterNumber || 0);
-    });
-
-    return sortedChapters;
+          return name && !isNaN(num)
+            ? [
+                {
+                  name,
+                  path: `${novelPath}/chapter-${num}`,
+                  chapterNumber: num,
+                },
+              ]
+            : [];
+        },
+      )
+      .sort(
+        (a: Plugin.ChapterItem, b: Plugin.ChapterItem) =>
+          (a.chapterNumber || 0) - (b.chapterNumber || 0),
+      );
   }
 
   async getAllChaptersForce(
@@ -276,7 +272,7 @@ class NovelFire implements Plugin.PluginBase {
 
     const post_id = $('#novel-report').attr('report-post_id');
     if (post_id) {
-      storage.set(`novelfire_postid_${novelPath}`, post_id);
+      storage.set(`${this.id}_${novelPath.split('/').pop()}`, post_id);
     }
 
     const novel: Partial<Plugin.SourceNovel & { totalPages: number }> = {
@@ -341,6 +337,9 @@ class NovelFire implements Plugin.PluginBase {
     const length = this.pageLength ? 100 : -1;
     novel.totalPages =
       length === -1 ? 1 : Math.ceil(parseInt(totalChapters) / length) || 1;
+    if (novel.totalPages === 1 && post_id) {
+      novel.chapters = await this.getAllChapters(novelPath, post_id, '1');
+    }
     if (length === 100 && this.singlePage) {
       novel.chapters = await this.getAllChaptersForce(
         novel.path as string,
@@ -353,7 +352,7 @@ class NovelFire implements Plugin.PluginBase {
   }
 
   async parsePage(novelPath: string, page: string): Promise<Plugin.SourcePage> {
-    const post_id = storage.get(`novelfire_postid_${novelPath}`);
+    const post_id = storage.get(`${this.id}_${novelPath.split('/').pop()}`);
 
     if (post_id && !isNaN(Number(post_id))) {
       try {
