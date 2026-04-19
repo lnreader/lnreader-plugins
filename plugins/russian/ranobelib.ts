@@ -29,7 +29,7 @@ class RLIB implements Plugin.PluginBase {
   name = 'RanobeLib';
   site = 'https://ranobelib.me';
   apiSite = 'https://api.cdnlibs.org/api/manga/';
-  version = '2.2.2';
+  version = '2.2.3';
   icon = 'src/ru/ranobelib/icon.png';
   webStorageUtilized = true;
   imageRequestInit = {
@@ -120,7 +120,12 @@ class RLIB implements Plugin.PluginBase {
       path: novelPath,
       name: data.rus_name || data.name,
       cover: data.cover?.default || defaultCover,
-      summary: data.summary?.trim(),
+      summary:
+        typeof data.summary === 'string'
+          ? data.summary.trim()
+          : data.summary?.type === 'doc'
+            ? jsonToHtml(data.summary.content, [])
+            : undefined,
     };
 
     if (data.status?.id) {
@@ -658,7 +663,7 @@ type AgeRestriction = {
 
 type Branch = {
   id: number;
-  branch_id: null;
+  branch_id: number | null;
   created_at: string;
   teams: BranchTeam[];
   user: User;
@@ -695,7 +700,7 @@ type DataClass = {
   ageRestriction?: AgeRestriction;
   site?: number;
   type: string;
-  summary?: string;
+  summary?: string | { type: string; content: HTML[] };
   is_licensed?: boolean;
   teams: DataTeam[];
   genres?: Genre[];
