@@ -3,6 +3,7 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { Filters } from '@libs/filterInputs';
+import { load } from 'cheerio';
 
 type ReadNovelFullOptions = {
   lang?: string;
@@ -23,6 +24,7 @@ type ReadNovelFullOptions = {
   noAjax?: boolean;
   noPages?: string[];
   pageAsPath?: boolean;
+  customJs?: string;
 };
 
 export type ReadNovelFullMetadata = {
@@ -30,7 +32,7 @@ export type ReadNovelFullMetadata = {
   sourceSite: string;
   sourceName: string;
   options: ReadNovelFullOptions;
-  filters?: any;
+  filters?: Filters;
 };
 
 class ReadNovelFullPlugin implements Plugin.PluginBase {
@@ -48,7 +50,7 @@ class ReadNovelFullPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/readnovelfull/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `2.1.${2 + versionIncrements}`;
+    this.version = `2.2.${0 + versionIncrements}`;
     this.options = metadata.options;
     this.filters = metadata.filters;
   }
@@ -90,9 +92,11 @@ class ReadNovelFullPlugin implements Plugin.PluginBase {
 
         switch (name) {
           case 'img':
-            const cover = attribs['data-src'] || attribs.src;
-            if (cover) {
-              tempNovel.cover = new URL(cover, this.site).href;
+            {
+              const cover = attribs['data-src'] || attribs.src;
+              if (cover) {
+                tempNovel.cover = new URL(cover, this.site).href;
+              }
             }
             break;
           case 'h3':
@@ -431,15 +435,17 @@ class ReadNovelFullPlugin implements Plugin.PluginBase {
                   novel.genres = detail;
                   break;
                 case 'status':
-                  const map: Record<string, string> = {
-                    ongoing: NovelStatus.Ongoing,
-                    hiatus: NovelStatus.OnHiatus,
-                    dropped: NovelStatus.Cancelled,
-                    cancelled: NovelStatus.Cancelled,
-                    completed: NovelStatus.Completed,
-                  };
-                  novel.status =
-                    map[detail.toLowerCase()] ?? NovelStatus.Unknown;
+                  {
+                    const map: Record<string, string> = {
+                      ongoing: NovelStatus.Ongoing,
+                      hiatus: NovelStatus.OnHiatus,
+                      dropped: NovelStatus.Cancelled,
+                      cancelled: NovelStatus.Cancelled,
+                      completed: NovelStatus.Completed,
+                    };
+                    novel.status =
+                      map[detail.toLowerCase()] ?? NovelStatus.Unknown;
+                  }
                   break;
                 default:
                   return;
@@ -545,7 +551,17 @@ class ReadNovelFullPlugin implements Plugin.PluginBase {
 
   async parseChapter(chapterPath: string): Promise<string> {
     const response = await fetchApi(this.site + chapterPath);
-    const html = await response.text();
+    let html = await response.text();
+    if (this.options?.customJs) {
+      try {
+        const $ = load(html);
+        // CustomJS HERE
+        html = $.html();
+      } catch (error) {
+        console.error('Error executing customJs:', error);
+        throw error;
+      }
+    }
 
     let depth: number;
     let depthHide: number;
@@ -559,9 +575,7 @@ class ReadNovelFullPlugin implements Plugin.PluginBase {
     const popState = () =>
       stateStack.length > 1 ? stateStack.pop() : currentState();
 
-    type EscapeChar = '&' | '<' | '>' | '"' | "'" | ' ';
-    const escapeRegex = /[&<>"' ]/g;
-    const escapeMap: Record<EscapeChar, string> = {
+    const escapeMap: Record<string, string> = {
       '&': '&amp;',
       '<': '&lt;',
       '>': '&gt;',
@@ -570,7 +584,7 @@ class ReadNovelFullPlugin implements Plugin.PluginBase {
       ' ': '&nbsp;',
     };
     const escapeHtml = (text: string): string =>
-      text.replace(escapeRegex, char => escapeMap[char as EscapeChar]);
+      text.replace(/[&<>"' ]/g, char => escapeMap[char]);
 
     const parser = new Parser({
       onopentag(name, attribs) {
