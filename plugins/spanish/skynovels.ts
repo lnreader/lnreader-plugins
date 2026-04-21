@@ -64,7 +64,8 @@ class SkyNovels implements Plugin.PluginBase {
   ): Promise<Plugin.NovelItem[]> {
     const genres = (filters?.genres?.value as string[]) || [];
     const order = genres.length > 0 ? 'updated' : 'rating';
-    const url = `${this.apiSite}novels?page=${pageNo}&order=${order}&genres=${genres.join(',')}`;
+    let url = `${this.apiSite}novels?page=${pageNo}&order=${order}`;
+    if (genres.length > 0) url += `&genres=${genres.join(',')}`;
 
     const result = await fetchApi(url, {
       headers: {
