@@ -148,7 +148,17 @@ class NovelBuddy implements Plugin.PluginBase {
     const initialChapter = data.props.pageProps.initialChapter;
     if (!initialChapter) throw new Error('Could not find chapter content');
 
-    return initialChapter.content;
+    let content = initialChapter.content;
+
+    if (content) {
+      // Remove Webnovel watermarks/ads
+      content = content.replace(
+        /Find authorized novels in Webnovel.*?faster updates, better experience.*?Please click www\.webnovel\.com for visiting\./gi,
+        '',
+      );
+    }
+
+    return content;
   }
 
   async searchNovels(
