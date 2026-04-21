@@ -1,7 +1,6 @@
 import { load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
-import { Filters, FilterTypes } from '@libs/filterInputs';
 
 class NovelBuddy implements Plugin.PluginBase {
   id = 'novelbuddy';
@@ -16,51 +15,39 @@ class NovelBuddy implements Plugin.PluginBase {
     'Referer': 'https://novelbuddy.com/',
   };
 
-  async popularNovels(
-    pageNo: number,
-    { filters }: Plugin.PopularNovelsOptions<Filters>,
-  ): Promise<Plugin.NovelItem[]> {
-    const params = new URLSearchParams();
-    params.append('sort', filters?.orderBy?.value?.toString() || 'popular');
-    params.append('status', filters?.status?.value?.toString() || '');
-    if (filters?.genre?.value instanceof Array) {
-      filters.genre.value.forEach(genre => {
-        params.append('genres[]', genre.toString());
-      });
-    }
-    if (filters?.keyword?.value) {
-      params.append('q', filters.keyword.value.toString());
-    }
-    params.append('page', pageNo.toString());
+  async popularNovels(pageNo: number): Promise<Plugin.NovelItem[]> {
+    const url = `https://api.novelbuddy.com/titles?sort=popular&page=${pageNo}`;
 
-    const url = `https://api.novelbuddy.com/titles?${params.toString()}`;
-    const result = await fetchApi(url, { headers: this.headers });
-    const json = await result.json();
+    try {
+      const result = await fetchApi(url, { headers: this.headers });
+      const json = await result.json();
 
-    if (!json || !json.data || !json.data.items) {
-      // Fallback to scraping HTML if API fails (likely Cloudflare block)
-      const htmlUrl = `${this.site}popular?page=${pageNo}`;
-      const htmlRes = await fetchApi(htmlUrl, { headers: this.headers });
-      const htmlBody = await htmlRes.text();
-      const $ = parseHTML(htmlBody);
-      const script = $('#__NEXT_DATA__').html();
-      if (script) {
-        const data = JSON.parse(script);
-        const items = data.props.pageProps.items || [];
-        return items.map((item: any) => ({
+      if (json?.data?.items) {
+        return json.data.items.map((item: any) => ({
           name: item.name,
           cover: item.cover,
           path: item.url.replace(/^\//, ''),
         }));
       }
-      return [];
+    } catch (e) {
+      // Fallback to HTML
     }
 
-    return json.data.items.map((item: any) => ({
-      name: item.name,
-      cover: item.cover,
-      path: item.url.replace(/^\//, ''),
-    }));
+    const htmlUrl = `${this.site}popular?page=${pageNo}`;
+    const htmlRes = await fetchApi(htmlUrl, { headers: this.headers });
+    const htmlBody = await htmlRes.text();
+    const $ = parseHTML(htmlBody);
+    const script = $('#__NEXT_DATA__').html();
+    if (script) {
+      const data = JSON.parse(script);
+      const items = data.props.pageProps.items || [];
+      return items.map((item: any) => ({
+        name: item.name,
+        cover: item.cover,
+        path: item.url.replace(/^\//, ''),
+      }));
+    }
+    return [];
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
@@ -78,11 +65,19 @@ class NovelBuddy implements Plugin.PluginBase {
 
     if (!initialManga) throw new Error('Could not find initialManga data');
 
+    // Fix summary formatting by preserving line breaks before stripping HTML
+    let formattedSummary = initialManga.summary || '';
+    formattedSummary = formattedSummary
+      .replace(/<br\s*\/?>/gi, '\n') // Replace <br> or <br/> with newline
+      .replace(/<\/p>/gi, '\n\n') // Replace </p> with double newline for paragraphs
+      .replace(/<[^>]*>?/gm, '') // Strip all remaining HTML tags
+      .trim(); // Remove extra whitespace at start/end
+
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: initialManga.name,
       cover: initialManga.cover,
-      summary: initialManga.summary?.replace(/<[^>]*>?/gm, '') || '',
+      summary: formattedSummary,
       author: initialManga.authors?.map((a: any) => a.name).join(', ') || '',
       artist: initialManga.artists?.map((a: any) => a.name).join(', ') || '',
       status: initialManga.status,
@@ -179,107 +174,6 @@ class NovelBuddy implements Plugin.PluginBase {
       path: item.url.replace(/^\//, ''),
     }));
   }
-
-  filters = {
-    orderBy: {
-      value: 'popular',
-      label: 'Order by',
-      options: [
-        { label: 'Default', value: '' },
-        { label: 'Latest Updated', value: 'latest' },
-        { label: 'Most Popular', value: 'popular' },
-        { label: 'Highest Rating', value: 'rating' },
-        { label: 'Most Viewed', value: 'views' },
-        { label: 'Most Chapters', value: 'chapters' },
-        { label: 'Alphabetical', value: 'alphabetical' },
-      ],
-      type: FilterTypes.Picker,
-    },
-    keyword: {
-      value: '',
-      label: 'Keywords',
-      type: FilterTypes.TextInput,
-    },
-    status: {
-      value: '',
-      label: 'Status',
-      options: [
-        { label: 'All', value: '' },
-        { label: 'Ongoing', value: 'ongoing' },
-        { label: 'Completed', value: 'completed' },
-        { label: 'Hiatus', value: 'hiatus' },
-        { label: 'Cancelled', value: 'cancelled' },
-      ],
-      type: FilterTypes.Picker,
-    },
-    genre: {
-      value: [],
-      label: 'Genres',
-      options: [
-        { label: 'Action', value: 'action' },
-        { label: 'Action Adventure', value: 'action-adventure' },
-        { label: 'Adult', value: 'adult' },
-        { label: 'Adventcure', value: 'adventcure' },
-        { label: 'Adventure', value: 'adventure' },
-        { label: 'Adventurer', value: 'adventurer' },
-        { label: 'Bender', value: 'bender' },
-        { label: 'Chinese', value: 'chinese' },
-        { label: 'Comedy', value: 'comedy' },
-        { label: 'Cultivation', value: 'cultivation' },
-        { label: 'Drama', value: 'drama' },
-        { label: 'Eastern', value: 'eastern' },
-        { label: 'Ecchi', value: 'ecchi' },
-        { label: 'Fan-Fiction', value: 'fan-fiction' },
-        { label: 'Fanfiction', value: 'fanfiction' },
-        { label: 'Fantasy', value: 'fantasy' },
-        { label: 'Game', value: 'game' },
-        { label: 'Gender', value: 'gender' },
-        { label: 'Gender Bender', value: 'gender-bender' },
-        { label: 'Harem', value: 'harem' },
-        { label: 'History', value: 'history' },
-        { label: 'Horror', value: 'horror' },
-        { label: 'Isekai', value: 'isekai' },
-        { label: 'Josei', value: 'josei' },
-        { label: 'Light Novel', value: 'light-novel' },
-        { label: 'Litrpg', value: 'litrpg' },
-        { label: 'Lolicon', value: 'lolicon' },
-        { label: 'Magic', value: 'magic' },
-        { label: 'Martial', value: 'martial' },
-        { label: 'Martial Arts', value: 'martial-arts' },
-        { label: 'Mature', value: 'mature' },
-        { label: 'Mecha', value: 'mecha' },
-        { label: 'Military', value: 'military' },
-        { label: 'Modern Life', value: 'modern-life' },
-        { label: 'Movies', value: 'movies' },
-        { label: 'Mystery', value: 'mystery' },
-        { label: 'Psychological', value: 'psychological' },
-        { label: 'Reincarnation', value: 'reincarnation' },
-        { label: 'Romance', value: 'romance' },
-        { label: 'School Life', value: 'school-life' },
-        { label: 'Sci-fi', value: 'sci-fi' },
-        { label: 'Seinen', value: 'seinen' },
-        { label: 'Shoujo', value: 'shoujo' },
-        { label: 'Shoujo Ai', value: 'shoujo-ai' },
-        { label: 'Shounen', value: 'shounen' },
-        { label: 'Shounen Ai', value: 'shounen-ai' },
-        { label: 'Slice Of Life', value: 'slice-of-life' },
-        { label: 'Smut', value: 'smut' },
-        { label: 'Sports', value: 'sports' },
-        { label: 'Supernatural', value: 'supernatural' },
-        { label: 'System', value: 'system' },
-        { label: 'Thriller', value: 'thriller' },
-        { label: 'Tragedy', value: 'tragedy' },
-        { label: 'Urban', value: 'urban' },
-        { label: 'Urban Life', value: 'urban-life' },
-        { label: 'Wuxia', value: 'wuxia' },
-        { label: 'Xianxia', value: 'xianxia' },
-        { label: 'Xuanhuan', value: 'xuanhuan' },
-        { label: 'Yaoi', value: 'yaoi' },
-        { label: 'Yuri', value: 'yuri' },
-      ],
-      type: FilterTypes.CheckboxGroup,
-    },
-  } satisfies Filters;
 }
 
 export default new NovelBuddy();
