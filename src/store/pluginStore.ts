@@ -13,7 +13,9 @@ const loadPluginFromURL = () => {
   const urlParams = new URLSearchParams(window.location.search);
   const pluginId = urlParams.get('plugin');
   if (pluginId) {
-    const pluginItem = plugins.find(p => p.id === pluginId);
+    const pluginItem = (plugins as Plugin.PluginItem[]).find(
+      p => p.id === pluginId,
+    );
     if (pluginItem) {
       return {
         pluginItem,

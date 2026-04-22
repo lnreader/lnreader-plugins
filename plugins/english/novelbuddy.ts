@@ -9,7 +9,7 @@ class NovelBuddy implements Plugin.PluginBase {
   name = 'NovelBuddy';
   site = 'https://novelbuddy.com/';
   api = 'https://api.novelbuddy.com/';
-  version = '2.1.0';
+  version = '2.1.1';
   icon = 'src/en/novelbuddy/icon.png';
 
   parseNovels(body: Response): Plugin.NovelItem[] {
@@ -97,7 +97,8 @@ class NovelBuddy implements Plugin.PluginBase {
     };
     novel.status = map[rawStatus.toLowerCase()] ?? NovelStatus.Unknown;
 
-    const summary = $(initialManga.summary || '');
+    // cant use JSON for this
+    const summary = $('[class*=MangaDetails_description_]');
     summary.find('br').replaceWith('\n');
     summary.find('p').before('\n').after('\n\n');
 
@@ -401,7 +402,7 @@ type Manga = {
   ratingStats?: {
     average: number;
   };
-  summary?: string;
+  // summary?: string;
   artists?: {
     name: string;
     slug: string;

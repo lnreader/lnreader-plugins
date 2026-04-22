@@ -9,7 +9,7 @@ class Linovelib implements Plugin.PluginBase {
   name = 'Linovelib';
   icon = 'src/cn/linovelib/icon.png';
   site = 'https://www.bilinovel.com';
-  version = '1.2.0';
+  version = '1.2.1';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = {
     method: 'GET',
     headers: {
@@ -29,7 +29,7 @@ class Linovelib implements Plugin.PluginBase {
       type: 'Text',
     },
   };
-  serverUrl = storage.get('host') || 'http://localhost:5301';
+  serverUrl: string = storage.get('host') || 'http://localhost:5301';
 
   async popularNovels(
     pageNo: number,
@@ -82,7 +82,7 @@ class Linovelib implements Plugin.PluginBase {
   async parseChapter(chapterPath: string): Promise<string> {
     // move major logic to LDS
     const lastFetchChapterTime =
-      storage.get('lastFetchChapterTime_' + chapterPath) || 0;
+      Number(storage.get('lastFetchChapterTime_' + chapterPath)) || 0;
     if (Date.now() - lastFetchChapterTime < 10000) {
       return storage.get('chapterContent_' + chapterPath) || '';
     }
@@ -97,10 +97,11 @@ class Linovelib implements Plugin.PluginBase {
 
   async searchNovels(
     searchTerm: string,
-    pageNo: number,
+    // pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
     // move major logic to LDS
-    const lastSearchTime = storage.get('lastSearchTime_' + this.id) || 0;
+    const lastSearchTime =
+      Number(storage.get('lastSearchTime_' + this.id)) || 0;
     if (Date.now() - lastSearchTime < 5000) {
       return [];
     }

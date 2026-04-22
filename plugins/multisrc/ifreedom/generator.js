@@ -21,10 +21,7 @@ const generator = function generator(metadata) {
 
   const pluginScript = `
     ${IfreedomTemplate}
-const plugin = new IfreedomPlugin(${JSON.stringify(metadata).replace(
-    /"type":"([^"]+)"/g,
-    '"type":FilterTypes.$1',
-  )});
+const plugin = new IfreedomPlugin(${JSON.stringify(metadata)});
 export default plugin;
     `.trim();
 

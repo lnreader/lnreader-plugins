@@ -4,7 +4,7 @@ import { Filters, FilterTypes, FilterValueWithType } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
 import { load as parseHTML } from 'cheerio';
 
-//TODO: this looks similar to fictioneer source? maybe use multisrc someday
+// TODO: change layoput, layout has updated
 
 class DDLPlugin implements Plugin.PluginBase {
   id = 'DDL.com';
@@ -291,10 +291,7 @@ class DDLPlugin implements Plugin.PluginBase {
         name.toLocaleLowerCase().includes(searchTerm.toLocaleLowerCase()),
       )
       .map(([, , path]) => path);
-    return await this.asyncMap(
-      await foundNovels,
-      this.grabCachedNovel.bind(this),
-    );
+    return await this.asyncMap(foundNovels, this.grabCachedNovel.bind(this));
   }
 }
 

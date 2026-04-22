@@ -7,7 +7,7 @@ import { defaultCover } from '@libs/defaultCover';
 class Sunovels implements Plugin.PagePlugin {
   id = 'sunovels';
   name = 'Sunovels';
-  version = '1.0.0';
+  version = '1.0.1';
   icon = 'src/ar/sunovels/icon.png';
   site = 'https://sunovels.com/';
 
@@ -52,7 +52,7 @@ class Sunovels implements Plugin.PagePlugin {
 
   async popularNovels(
     page: number,
-    { showLatestNovels, filters }: Plugin.PopularNovelsOptions<Filters>,
+    { filters }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
     const pageCorrected = page - 1;
     let link = `${this.site}library?`;
@@ -137,7 +137,7 @@ class Sunovels implements Plugin.PagePlugin {
         name: item.chapterName,
         releaseTime: new Date(item.releaseTime).toISOString(),
         path: item.chapterUrl,
-        chapterNumber: item.chapterNumber,
+        chapterNumber: Number(item.chapterNumber),
       });
     });
     return chapter;
@@ -169,8 +169,7 @@ class Sunovels implements Plugin.PagePlugin {
       const dateAttr = loadedCheerio(el)
         .find('time.chapter-update')
         .attr('datetime');
-      const date = new Date(dateAttr);
-      const releaseTime = date.toISOString();
+      const releaseTime = dateAttr ? new Date(dateAttr).toISOString() : '';
       const chapternumber = loadedCheerio(el)
         .find('strong.chapter-title')
         .text()

@@ -15,7 +15,7 @@ class FictionZonePlugin implements Plugin.PluginBase {
     pageNo: number,
     {
       showLatestNovels,
-      filters,
+      // filters,
     }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
     return await this.getPage(
@@ -23,7 +23,8 @@ class FictionZonePlugin implements Plugin.PluginBase {
     );
   }
 
-  async getData(url: string) {
+  // TODO: Fix URLs, current URL leads to 404
+  async getData<T>(url: string): Promise<Response<T>> {
     return await fetchApi(this.site + '/api/__api_party/fictionzone', {
       method: 'POST',
       headers: {
@@ -41,20 +42,25 @@ class FictionZonePlugin implements Plugin.PluginBase {
     }).then(r => r.json());
   }
 
-  async getPage(url: string) {
-    const data = await this.getData(url);
+  async getPage(url: string): Promise<Plugin.NovelItem[]> {
+    const data = await this.getData<{ novels: NovelItem[] }>(url);
 
-    return data.data.novels.map((n: any) => ({
+    return data.data.novels.map(n => ({
       name: n.title,
       cover: `https://cdn.fictionzone.net/insecure/rs:fill:165:250/${n.image}.webp`,
       path: `novel/${n.slug}`,
     }));
   }
 
-  async getChapterPage(id: string, novelPath: string) {
-    const data = await this.getData('/platform/chapter-lists?novel_id=' + id);
+  async getChapterPage(
+    id: string,
+    novelPath: string,
+  ): Promise<Plugin.ChapterItem[]> {
+    const data = await this.getData<{ chapters: ChapterItem[] }>(
+      '/platform/chapter-lists?novel_id=' + id,
+    );
 
-    return data.data.chapters.map((n: any) => ({
+    return data.data.chapters.map(n => ({
       name: n.title,
       number: n.chapter_number,
       date: n.published_date
@@ -66,7 +72,7 @@ class FictionZonePlugin implements Plugin.PluginBase {
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
     const novelSlug = novelPath.replace('novel/', '');
-    const data = await this.getData(
+    const data = await this.getData<NovelDetails>(
       `/platform/novel-details?slug=${novelSlug}`,
     );
 
@@ -75,8 +81,8 @@ class FictionZonePlugin implements Plugin.PluginBase {
       name: data.data.title,
       cover: `https://cdn.fictionzone.net/insecure/rs:fill:165:250/${data.data.image}.webp`,
       genres: [
-        ...data.data.genres.map((g: any) => g.name),
-        ...data.data.tags.map((g: any) => g.name),
+        ...data.data.genres.map(g => g.name),
+        ...data.data.tags.map(g => g.name),
       ].join(','),
       status:
         data.data.status == 1
@@ -85,7 +91,7 @@ class FictionZonePlugin implements Plugin.PluginBase {
             ? NovelStatus.Completed
             : NovelStatus.Unknown,
       author:
-        data.data.contributors.filter((c: any) => c.role == 'author')[0]
+        data.data.contributors.filter(c => c.role == 'author')[0]
           ?.display_name || '',
       summary: data.data.synopsis,
       chapters: await this.getChapterPage(data.data.id, novelPath),
@@ -93,8 +99,10 @@ class FictionZonePlugin implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const data = await this.getData(chapterPath.split('|')[1]);
-    return '<p>' + data.data.content.replaceAll('\n', '</p><p>') + '</p>';
+    const data = await this.getData<{ content: string }>(
+      chapterPath.split('|')[1],
+    );
+    return '<p>' + data.data.content.split('\n').join('</p><p>') + '</p>';
   }
 
   async searchNovels(
@@ -106,8 +114,36 @@ class FictionZonePlugin implements Plugin.PluginBase {
     );
   }
 
-  resolveUrl = (path: string, isNovel?: boolean) =>
-    this.site + '/' + path.split('|')[0];
+  // resolveUrl = (path: string, isNovel?: boolean) =>
+  //   this.site + '/' + path.split('|')[0];
 }
 
 export default new FictionZonePlugin();
+
+type Response<T> = {
+  data: T;
+};
+
+type NovelItem = {
+  title: string;
+  image: string;
+  slug: string;
+};
+
+type ChapterItem = {
+  title: string;
+  chapter_number: number;
+  published_date: string;
+  chapter_id: string;
+};
+
+type NovelDetails = {
+  id: string;
+  title: string;
+  image: string;
+  genres: { name: string }[];
+  tags: { name: string }[];
+  status: number;
+  contributors: { role: string; display_name: string }[];
+  synopsis: string;
+};

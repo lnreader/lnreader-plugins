@@ -1,5 +1,5 @@
 import { Parser } from 'htmlparser2';
-import { fetchApi } from '@libs/fetch';
+import { fetchApi, FetchInit } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { Filters } from '@libs/filterInputs';
@@ -35,7 +35,7 @@ export type ReadNovelFullMetadata = {
   filters?: Filters;
 };
 
-class ReadNovelFullPlugin implements Plugin.PluginBase {
+export class ReadNovelFullPlugin implements Plugin.PluginBase {
   id: string;
   name: string;
   icon: string;
@@ -50,7 +50,7 @@ class ReadNovelFullPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/readnovelfull/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `2.2.${0 + versionIncrements}`;
+    this.version = `2.2.${1 + versionIncrements}`;
     this.options = metadata.options;
     this.filters = metadata.filters;
   }
@@ -145,7 +145,10 @@ class ReadNovelFullPlugin implements Plugin.PluginBase {
 
   async popularNovels(
     pageNo: number,
-    { filters, showLatestNovels }: Plugin.PopularNovelsOptions,
+    {
+      filters,
+      showLatestNovels,
+    }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
     const {
       pageParam = 'page',
@@ -582,9 +585,10 @@ class ReadNovelFullPlugin implements Plugin.PluginBase {
       '"': '&quot;',
       "'": '&#39;',
       ' ': '&nbsp;',
+      '\u200C': '', // this is probably a breaking change, report if paragraphs look weird
     };
-    const escapeHtml = (text: string): string =>
-      text.replace(/[&<>"' ]/g, char => escapeMap[char]);
+    const escapeHtml = (text: string) =>
+      text.replace(/[&<>"'\xA0\u200C]/g, char => escapeMap[char]);
 
     const parser = new Parser({
       onopentag(name, attribs) {
@@ -602,7 +606,7 @@ class ReadNovelFullPlugin implements Plugin.PluginBase {
             }
             break;
           case ParsingState.Chapter:
-            if (name === 'sub') {
+            if (name === 'sub' || name === 'iframe') {
               pushState(ParsingState.Hidden);
             } else if (name === 'div') {
               depth++;
@@ -655,7 +659,8 @@ class ReadNovelFullPlugin implements Plugin.PluginBase {
 
       ontext(text) {
         if (currentState() === ParsingState.Chapter) {
-          chapterHtml.push(escapeHtml(text));
+          const data = escapeHtml(text);
+          chapterHtml.push(data.trim().replace(/\s\s+/, ' '));
         }
       },
 
@@ -663,7 +668,7 @@ class ReadNovelFullPlugin implements Plugin.PluginBase {
         const state = currentState();
 
         if (state === ParsingState.Hidden) {
-          if (name === 'sub') {
+          if (name === 'sub' || name === 'iframe') {
             popState();
           } else if (name === 'div') {
             depthHide--;
@@ -728,7 +733,7 @@ class ReadNovelFullPlugin implements Plugin.PluginBase {
 
     const url = `${this.site}${searchPage}${!postSearch ? `?${params.toString()}` : ''}`;
 
-    const fetchOptions: RequestInit | undefined = postSearch
+    const fetchOptions: FetchInit | undefined = postSearch
       ? {
           method: 'POST',
           body: params.toString(),

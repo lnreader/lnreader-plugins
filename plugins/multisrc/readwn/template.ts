@@ -13,11 +13,11 @@ export type ReadwnMetadata = {
   id: string;
   sourceSite: string;
   sourceName: string;
-  filters?: any;
+  filters?: Filters;
   options?: ReadwnOptions;
 };
 
-class ReadwnPlugin implements Plugin.PluginBase {
+export class ReadwnPlugin implements Plugin.PluginBase {
   id: string;
   name: string;
   icon: string;
@@ -31,13 +31,16 @@ class ReadwnPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/readwn/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `1.0.${2 + versionIncrements}`;
+    this.version = `1.0.${3 + versionIncrements}`;
     this.filters = metadata.filters;
   }
 
   async popularNovels(
     pageNo: number,
-    { filters, showLatestNovels }: Plugin.PopularNovelsOptions,
+    {
+      filters,
+      showLatestNovels,
+    }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
     let url = this.site + '/list/';
     url += (filters?.genres?.value || 'all') + '/';
@@ -50,7 +53,7 @@ class ReadwnPlugin implements Plugin.PluginBase {
       url = this.site + '/tags/' + filters.tags.value + '-0.html';
     }
 
-    const body = await fetchApi(url).then(res => res.text());
+    const body = await fetchApi(url).then((res: Response) => res.text());
     const loadedCheerio = parseHTML(body);
 
     const novels: Plugin.NovelItem[] = loadedCheerio('li.novel-item')
@@ -68,7 +71,9 @@ class ReadwnPlugin implements Plugin.PluginBase {
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const body = await fetchApi(this.site + novelPath).then(res => res.text());
+    const body = await fetchApi(this.site + novelPath).then((res: Response) =>
+      res.text(),
+    );
     const loadedCheerio = parseHTML(body);
 
     const novel: Plugin.SourceNovel = {
@@ -186,7 +191,7 @@ class ReadwnPlugin implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const body = await fetchApi(this.site + chapterPath).then(res =>
+    const body = await fetchApi(this.site + chapterPath).then((res: Response) =>
       res.text(),
     );
     const loadedCheerio = parseHTML(body);
@@ -205,11 +210,11 @@ class ReadwnPlugin implements Plugin.PluginBase {
       method: 'POST',
       body: new URLSearchParams({
         show: 'title',
-        tempid: 1,
+        tempid: '1',
         tbname: 'news',
         keyboard: searchTerm,
       }).toString(),
-    }).then(res => res.text());
+    }).then((res: Response) => res.text());
     const loadedCheerio = parseHTML(result);
 
     const novels: Plugin.NovelItem[] = loadedCheerio('li.novel-item')

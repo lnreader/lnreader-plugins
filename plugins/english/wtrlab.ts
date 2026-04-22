@@ -1,14 +1,14 @@
 import { Plugin } from '@/types/plugin';
 import { fetchApi } from '@libs/fetch';
 import { FilterTypes, Filters } from '@libs/filterInputs';
-import { load as parseHTML } from 'cheerio';
+import { CheerioAPI, load as parseHTML } from 'cheerio';
 import { gcm } from '@libs/aes';
 
 class WTRLAB implements Plugin.PluginBase {
   id = 'WTRLAB';
   name = 'WTR-LAB';
   site = 'https://wtr-lab.com/';
-  version = '1.1.0';
+  version = '1.1.2';
   icon = 'src/en/wtrlab/icon.png';
   sourceLang = 'en/';
 
@@ -116,14 +116,14 @@ class WTRLAB implements Plugin.PluginBase {
       const seenIds = new Set();
 
       const novels: Plugin.NovelItem[] = json.pageProps.series
-        .filter((novel: any) => {
+        .filter((novel: Datum) => {
           if (seenIds.has(novel.raw_id)) {
             return false;
           }
           seenIds.add(novel.raw_id);
           return true;
         })
-        .map((novel: any) => ({
+        .map((novel: Datum) => ({
           name: novel.data.title,
           cover: novel.data.image,
           path: `${this.sourceLang}serie-${novel.raw_id}/${novel.slug}`,
@@ -409,7 +409,7 @@ class WTRLAB implements Plugin.PluginBase {
     }
   }
 
-  async getKey($: any): Promise<string> {
+  async getKey($: CheerioAPI): Promise<string> {
     // Fetch the novel's data in JSON format
     const searchKey = 'TextEncoder().encode("';
 
@@ -426,7 +426,7 @@ class WTRLAB implements Plugin.PluginBase {
       URLs.push(src);
     }
 
-    for (let src of URLs) {
+    for (const src of URLs) {
       const script = await fetchApi(`${this.site}${src}`);
       const raw = await script.text();
       index = raw.indexOf(searchKey);
@@ -446,7 +446,7 @@ class WTRLAB implements Plugin.PluginBase {
   async translate(data: string[]): Promise<string[]> {
     const contained = data.map((line, i) => `<a i=${i}>${line}</a>`);
 
-    let translated: any = await fetchApi(
+    const response = await fetchApi(
       'https://translate-pa.googleapis.com/v1/translateHtml',
       {
         'credentials': 'omit',
@@ -457,11 +457,11 @@ class WTRLAB implements Plugin.PluginBase {
           'X-Goog-API-Key': 'AIzaSyATBXajvzQLTDHEQbcpq0Ihe0vWDHmO520',
         },
         'referrer': 'https://wtr-lab.com/',
-        'body': `[[${JSON.stringify(contained)},\"zh-CN\",\"en\"],\"te_lib\"]`,
+        'body': `[[${JSON.stringify(contained)},"zh-CN","en"],"te_lib"]`,
         'method': 'POST',
       },
     );
-    translated = await translated.json();
+    const translated = await response.json();
     const out = translated && translated[0] ? translated[0] : [];
     return out as string[];
   }
@@ -536,15 +536,8 @@ class WTRLAB implements Plugin.PluginBase {
       throw new Error(errorMsg);
     }
     let chapterContent = parsedJson.data.data.body;
-    let chapterGlossary = {} as JSON;
-    if (
-      Object.prototype.hasOwnProperty.call(
-        parsedJson.data.data,
-        'glossary_data',
-      )
-    ) {
-      chapterGlossary = parsedJson.data.data.glossary_data;
-    }
+    const chapterGlossary: ChapterContent['glossary_data'] | undefined =
+      parsedJson?.data?.data?.glossary_data;
 
     let htmlString = '';
 
@@ -571,19 +564,14 @@ class WTRLAB implements Plugin.PluginBase {
       htmlString += `<p style="color:darkred;">${eLog}</p>`;
     }
 
-    let dictionary = [];
-    if (Object.prototype.hasOwnProperty.call(chapterGlossary, 'terms')) {
-      dictionary = Object.fromEntries(
-        chapterGlossary.terms.map((definition, index) => [
-          `※${index}⛬`,
-          definition[0],
-        ]),
-      );
-    }
+    const dictionary = chapterGlossary?.terms?.map(t => t[0]) || [];
 
     for (let text of chapterContent) {
-      if (Object.keys(dictionary).length > 0) {
-        text = text.replaceAll(/※[0-9]+⛬/g, m => dictionary[m]);
+      if (dictionary.length > 0) {
+        text = text.replaceAll(
+          /(?:wtr-lab\s+)?※([0-9]+)[⛬〓]/g,
+          (m: string, index: string) => dictionary[parseInt(index)] || m,
+        );
       }
       htmlString += `<p>${text}</p>`;
     }
@@ -1716,18 +1704,21 @@ type ApiChapter = {
   updated_at: string;
 };
 
-type GlossaryTerm = {
-  index: number;
-  english: string;
-  chinese: string;
-  symbol: string;
-};
+// type GlossaryTerm = {
+//   index: number;
+//   english: string;
+//   chinese: string;
+//   symbol: string;
+// };
 type ChapterData = {
   data: ChapterContent;
 };
 type ChapterContent = {
   title: string;
   body: string;
+  glossary_data?: {
+    terms: string[][];
+  };
 };
 
 type SerieData = {

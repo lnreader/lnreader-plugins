@@ -23,7 +23,6 @@ const results = {
 
 let totalSites = 0;
 let checkedSites = 0;
-let activeRequests = 0;
 
 function checkSite(url, pluginInfo) {
   return new Promise(resolve => {
@@ -115,7 +114,6 @@ async function processSites(sites) {
       return;
     }
 
-    activeRequests++;
     const { url, pluginInfo } = queue.shift();
 
     try {
@@ -149,7 +147,6 @@ async function processSites(sites) {
         `\r✗ ${checkedSites}/${totalSites} - ${pluginInfo.name || url} (Error)`,
       );
     } finally {
-      activeRequests--;
       await processNext();
     }
   }

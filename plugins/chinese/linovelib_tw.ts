@@ -9,7 +9,7 @@ class Linovelib_tw implements Plugin.PluginBase {
   name = 'Linovelib(繁體)';
   icon = 'src/cn/linovelib/icon.png';
   site = 'https://tw.linovelib.com/';
-  version = '1.0.0';
+  version = '1.0.1';
 
   async popularNovels(
     pageNo: number,
@@ -368,7 +368,7 @@ class Linovelib_tw implements Plugin.PluginBase {
         pageCheerio('div.cgo, center').remove();
 
         // Load lazyloaded images
-        pageCheerio('#acontentl img.imagecontent').each((i, el) => {
+        pageCheerio('[id*=acontent] img.imagecontent').each((i, el) => {
           // Sometimes images are either in data-src or src
           const imgSrc =
             pageCheerio(el).attr('data-src') || pageCheerio(el).attr('src');
@@ -382,7 +382,7 @@ class Linovelib_tw implements Plugin.PluginBase {
         });
 
         // Recover the original character
-        pageText = pageCheerio('#acontentl').html() || '';
+        pageText = pageCheerio('[id*=acontent]').html() || '';
         pageText = pageText.replace(/./g, char => skillgg[char] || char);
 
         return Promise.resolve();

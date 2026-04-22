@@ -1,5 +1,5 @@
 import { fetchApi } from '@libs/fetch';
-import { Filters, FilterTypes } from '@libs/filterInputs';
+import { Filters, FilterToValues } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { Parser } from 'htmlparser2';
@@ -12,7 +12,7 @@ export type IfreedomMetadata = {
   filters?: Filters;
 };
 
-class IfreedomPlugin implements Plugin.PluginBase {
+export class IfreedomPlugin implements Plugin.PluginBase {
   id: string;
   name: string;
   icon: string;
@@ -25,14 +25,14 @@ class IfreedomPlugin implements Plugin.PluginBase {
     this.name = metadata.sourceName;
     this.icon = `multisrc/ifreedom/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
-    this.version = '1.1.0';
+    this.version = '1.1.1';
     this.filters = metadata.filters;
   }
 
   parseNovels(url: string) {
     return fetchApi(url)
-      .then(res => res.text())
-      .then(html => {
+      .then((res: Response) => res.text())
+      .then((html: string) => {
         const novels: Plugin.NovelItem[] = [];
         let tempNovel = {} as Plugin.NovelItem;
         let isInsideNovelCard = false;
@@ -83,7 +83,8 @@ class IfreedomPlugin implements Plugin.PluginBase {
   ): Promise<Plugin.NovelItem[]> {
     let url = `${this.site}/vse-knigi/?sort=${showLatestNovels ? 'По дате обновления' : filters?.sort?.value || 'По рейтингу'}`;
 
-    Object.entries(filters || {}).forEach(([type, { value }]) => {
+    Object.entries(filters || {}).forEach(([type, filter]) => {
+      const { value } = filter as FilterToValues<Filters>[string];
       if (Array.isArray(value) && value.length) {
         url += `&${type}[]=${value.join(`&${type}[]=`)}`;
       }
@@ -94,7 +95,9 @@ class IfreedomPlugin implements Plugin.PluginBase {
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const html = await fetchApi(this.site + novelPath).then(res => res.text());
+    const html = await fetchApi(this.site + novelPath).then((res: Response) =>
+      res.text(),
+    );
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: '',
@@ -288,7 +291,7 @@ class IfreedomPlugin implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const body = await fetchApi(this.site + chapterPath).then(res =>
+    const body = await fetchApi(this.site + chapterPath).then((res: Response) =>
       res.text(),
     );
 
@@ -328,7 +331,7 @@ class IfreedomPlugin implements Plugin.PluginBase {
 
   async searchNovels(
     searchTerm: string,
-    page: number = 1,
+    page = 1,
   ): Promise<Plugin.NovelItem[]> {
     const url = `${this.site}/vse-knigi/?searchname=${encodeURIComponent(searchTerm)}&bpage=${page}`;
     return this.parseNovels(url);
@@ -357,7 +360,7 @@ function parseStatus(statusString: string): string {
   return NovelStatus.Unknown;
 }
 
-function parseDate(dateString: string = ''): string | null {
+function parseDate(dateString = ''): string | null {
   const months: Record<string, number> = {
     января: 1,
     февраля: 2,

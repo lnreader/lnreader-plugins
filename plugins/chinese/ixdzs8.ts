@@ -29,7 +29,7 @@ class ixdzs8Plugin implements Plugin.PluginBase {
   id = 'ixdzs8';
   name = '爱下电子书';
   site = 'https://ixdzs8.com/';
-  version = '2.2.8';
+  version = '2.2.9';
   icon = 'src/cn/ixdzs8/favicon.png';
 
   imageRequestInit = {
@@ -49,14 +49,18 @@ class ixdzs8Plugin implements Plugin.PluginBase {
 
     $('ul.u-list > li.burl').each((_i, el) => {
       const $el = $(el);
-      let novelPath: string | undefined;
-      let novelName: string | undefined;
-      let novelCover: string | undefined;
 
       const $link = $el.find('.l-info h3 a');
-      novelPath = $link.attr('href')?.trim();
-      novelName = ($link.attr('title') || $link.text() || '').trim();
-      novelCover = $el.find('.l-img img').attr('src')?.trim();
+      const novelPath: string | undefined = $link.attr('href')?.trim();
+      const novelName: string | undefined = (
+        $link.attr('title') ||
+        $link.text() ||
+        ''
+      ).trim();
+      const novelCover: string | undefined = $el
+        .find('.l-img img')
+        .attr('src')
+        ?.trim();
 
       if (novelPath && novelName) {
         novels.push({
@@ -159,14 +163,14 @@ class ixdzs8Plugin implements Plugin.PluginBase {
       throw new Error(`Failed to fetch chapters for bid=${bookId}`);
     }
 
-    const json = await res.json();
+    const json: ChapterJSON = await res.json();
 
     if (json.rs !== 200 || !Array.isArray(json.data)) {
       throw new Error('Invalid response format from chapter list');
     }
 
     // Build chapters array
-    const chapters: Plugin.ChapterItem[] = json.data.map((ch: any) => {
+    const chapters: Plugin.ChapterItem[] = json.data.map(ch => {
       return {
         name: ch.title,
         path: ch.ctype === '0' ? `read/${bookId}/p${ch.ordernum}.html` : '', // only normal chapters get link
@@ -254,7 +258,7 @@ class ixdzs8Plugin implements Plugin.PluginBase {
 
   async searchNovels(
     searchTerm: string,
-    pageNo: number,
+    // pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
     const searchUrl = `${this.site}bsearch?q=${encodeURIComponent(searchTerm)}`;
     let body = '';
@@ -298,3 +302,12 @@ class ixdzs8Plugin implements Plugin.PluginBase {
 }
 
 export default new ixdzs8Plugin();
+
+type ChapterJSON = {
+  rs: number;
+  data?: {
+    ctype: string;
+    ordernum: string;
+    title: string;
+  }[];
+};
