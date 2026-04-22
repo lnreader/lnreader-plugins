@@ -27,7 +27,7 @@ const generator = function generator(source) {
   });
 
   const pluginScript = `
-${readNovelFullTemplate}
+${readNovelFullTemplate.replace('// CustomJS HERE', source.options?.customJs || '')}
 const plugin = new ReadNovelFullPlugin(${JSON.stringify(source)});
 export default plugin;
     `.trim();
