@@ -1,18 +1,77 @@
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
+import { FilterTypes, Filters } from '@libs/filterInputs';
 
 class SkyNovels implements Plugin.PluginBase {
   id = 'skynovels';
   name = 'SkyNovels';
   site = 'https://www.skynovels.net/';
   apiSite = 'https://api.skynovels.net/api/';
-  version = '1.0.1';
+  version = '1.1.0';
   icon = 'src/es/skynovels/icon.png';
+  filters = {
+    genres: {
+      type: FilterTypes.CheckboxGroup,
+      label: 'Generos',
+      value: [],
+      options: [
+        { label: 'Acción', value: '9' },
+        { label: 'Adulto', value: '38' },
+        { label: 'Artes marciales', value: '3' },
+        { label: 'Aventura', value: '2' },
+        { label: 'BL', value: '40' },
+        { label: 'Comedia', value: '7' },
+        { label: 'Cosas de la vida', value: '26' },
+        { label: 'Cultivación', value: '19' },
+        { label: 'Drama', value: '8' },
+        { label: 'Ecchi', value: '21' },
+        { label: 'Fantasia', value: '4' },
+        { label: 'Gender Bender', value: '10' },
+        { label: 'GL', value: '41' },
+        { label: 'Harem', value: '12' },
+        { label: 'Histórico', value: '32' },
+        { label: 'Horror', value: '39' },
+        { label: 'LitRPG', value: '31' },
+        { label: 'Maduro', value: '1' },
+        { label: 'Magia', value: '16' },
+        { label: 'Misterio', value: '22' },
+        { label: 'Mundo Moderno', value: '34' },
+        { label: 'Psicológico', value: '27' },
+        { label: 'Recuentos de la vida', value: '36' },
+        { label: 'Reencarnación', value: '23' },
+        { label: 'Romance', value: '5' },
+        { label: 'Sci-Fi', value: '17' },
+        { label: 'Seinen', value: '18' },
+        { label: 'Shoujo', value: '33' },
+        { label: 'Shounen', value: '13' },
+        { label: 'Sobrenatural', value: '20' },
+        { label: 'Supervivencia', value: '25' },
+        { label: 'Suspenso', value: '35' },
+        { label: 'Tragedia', value: '14' },
+        { label: 'Transmigración', value: '24' },
+        { label: 'Vida Escolar', value: '29' },
+        { label: 'Xianxia', value: '6' },
+        { label: 'Xuanhuan', value: '11' },
+        { label: 'Yaoi', value: '30' },
+        { label: 'Sin género indicado', value: '37' },
+      ],
+    },
+  } satisfies Filters;
 
-  async popularNovels(): Promise<Plugin.NovelItem[]> {
-    const url = this.apiSite + 'novels?&q';
+  async popularNovels(
+    pageNo: number,
+    { filters }: Plugin.PopularNovelsOptions<typeof this.filters>,
+  ): Promise<Plugin.NovelItem[]> {
+    const genres = (filters?.genres?.value as string[]) || [];
+    const order = genres.length > 0 ? 'updated' : 'rating';
+    let url = `${this.apiSite}novels?page=${pageNo}&order=${order}`;
+    if (genres.length > 0) url += `&genres=${genres.join(',')}`;
 
-    const result = await fetchApi(url);
+    const result = await fetchApi(url, {
+      headers: {
+        'Cache-Control': 'no-cache',
+      },
+    });
     const body = (await result.json()) as response;
 
     const novels: Plugin.NovelItem[] = [];
@@ -31,7 +90,11 @@ class SkyNovels implements Plugin.PluginBase {
     const novelId = novelPath.split('/')[1];
     const url = this.apiSite + 'novel/' + novelId + '/reading?&q';
 
-    const result = await fetchApi(url);
+    const result = await fetchApi(url, {
+      headers: {
+        'Cache-Control': 'no-cache',
+      },
+    });
     const body = (await result.json()) as responseBook;
 
     const item = body?.novel?.[0];
@@ -74,7 +137,11 @@ class SkyNovels implements Plugin.PluginBase {
     const chapterId: string = chapterPath.split('/')[3];
     const url = `${this.apiSite}novel-chapter/${chapterId}`;
 
-    const result = await fetchApi(url);
+    const result = await fetchApi(url, {
+      headers: {
+        'Cache-Control': 'no-cache',
+      },
+    });
     const body = (await result.json()) as responseChapter;
 
     const item = body?.chapter?.[0];
@@ -84,20 +151,23 @@ class SkyNovels implements Plugin.PluginBase {
     return chapterText.replace(/\n/g, '<br>');
   }
 
-  async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
-    searchTerm = searchTerm.toLowerCase();
-    const url = this.apiSite + 'novels?&q';
+  async searchNovels(
+    searchTerm: string,
+    pageNo: number,
+  ): Promise<Plugin.NovelItem[]> {
+    searchTerm = encodeURIComponent(searchTerm.toLowerCase());
+    const url = `${this.apiSite}novels?page=${pageNo}&q=${searchTerm}`;
 
-    const result = await fetchApi(url);
+    const result = await fetchApi(url, {
+      headers: {
+        'Cache-Control': 'no-cache',
+      },
+    });
     const body = (await result.json()) as response;
-
-    const results = body?.novels?.filter(novel =>
-      novel.nvl_title.toLowerCase().includes(searchTerm),
-    );
 
     const novels: Plugin.NovelItem[] = [];
 
-    results?.forEach(res => {
+    body?.novels?.forEach(res => {
       const name = res.nvl_title;
       const cover = this.apiSite + 'get-image/' + res.image + '/novels/false';
       const path = 'novelas/' + res.id + '/' + res.nvl_name + '/';
