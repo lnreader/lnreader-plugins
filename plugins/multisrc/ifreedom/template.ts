@@ -25,7 +25,7 @@ class IfreedomPlugin implements Plugin.PluginBase {
     this.name = metadata.sourceName;
     this.icon = `multisrc/ifreedom/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
-    this.version = '1.1.0';
+    this.version = '1.1.1';
     this.filters = metadata.filters;
   }
 
@@ -328,7 +328,7 @@ class IfreedomPlugin implements Plugin.PluginBase {
 
   async searchNovels(
     searchTerm: string,
-    page: number = 1,
+    page = 1,
   ): Promise<Plugin.NovelItem[]> {
     const url = `${this.site}/vse-knigi/?searchname=${encodeURIComponent(searchTerm)}&bpage=${page}`;
     return this.parseNovels(url);
@@ -357,7 +357,7 @@ function parseStatus(statusString: string): string {
   return NovelStatus.Unknown;
 }
 
-function parseDate(dateString: string = ''): string | null {
+function parseDate(dateString = ''): string | null {
   const months: Record<string, number> = {
     января: 1,
     февраля: 2,

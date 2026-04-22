@@ -48,7 +48,7 @@ function parseSpanishTextToISO(text: string) {
   // --- 3. EVALUAR FECHAS RELATIVAS ("hace...") ---
   if (textLower.startsWith('hace')) {
     // Normalizar "un" / "una" a "1" para facilitar el cálculo
-    let normalized = textLower
+    const normalized = textLower
       .replace(/\b(un|una)\b/g, '1')
       .replace('un momento', '0 segundos');
 
@@ -99,7 +99,7 @@ class Novelyra implements Plugin.PluginBase {
   name = 'Novelyra';
   icon = 'src/es/novelyra/icon.png';
   site = 'https://novelyra.com/';
-  version = '1.0.0';
+  version = '1.0.1';
   filters: Filters = {
     genres: {
       type: FilterTypes.Picker,
@@ -279,16 +279,18 @@ class Novelyra implements Plugin.PluginBase {
           }
           break;
         case 'tag':
-          const originalTag = element.tagName;
-          if (tagsPermisive.includes(originalTag)) {
-            paragraph.push(loadedCheerio.html(element));
-          } else {
-            if (paragraph.length > 0) {
-              chapterHtml.push(`<p>${paragraph.join(' ').trim()}</p>`);
-              paragraph = [];
-              if (originalTag === 'br') break;
+          {
+            const originalTag = element.tagName;
+            if (tagsPermisive.includes(originalTag)) {
+              paragraph.push(loadedCheerio.html(element));
+            } else {
+              if (paragraph.length > 0) {
+                chapterHtml.push(`<p>${paragraph.join(' ').trim()}</p>`);
+                paragraph = [];
+                if (originalTag === 'br') break;
+              }
+              chapterHtml.push(loadedCheerio.html(element));
             }
-            chapterHtml.push(loadedCheerio.html(element));
           }
           break;
       }
@@ -301,7 +303,7 @@ class Novelyra implements Plugin.PluginBase {
   }
   async searchNovels(
     searchTerm: string,
-    pageNo: number,
+    // pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
     searchTerm = searchTerm.toLowerCase();
 

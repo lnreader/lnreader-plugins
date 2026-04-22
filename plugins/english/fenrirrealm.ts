@@ -40,7 +40,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   name = 'Fenrir Realm';
   icon = 'src/en/fenrirrealm/icon.png';
   site = 'https://fenrirealm.com';
-  version = '1.0.13';
+  version = '1.0.14';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   hideLocked = storage.get('hideLocked');
@@ -90,7 +90,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
 
     if (!apiRes.ok) {
       const slugMatch = novelPath.match(/^\d+-(.+)$/);
-      let searchSlug = slugMatch ? slugMatch[1] : novelPath;
+      const searchSlug = slugMatch ? slugMatch[1] : novelPath;
       apiRes = await fetchApi(
         `${this.site}/api/new/v2/series/${searchSlug}/chapters`,
         {},

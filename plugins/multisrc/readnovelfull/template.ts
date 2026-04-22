@@ -1,5 +1,5 @@
 import { Parser } from 'htmlparser2';
-import { fetchApi } from '@libs/fetch';
+import { fetchApi, type RequestInit } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { Filters } from '@libs/filterInputs';
@@ -50,7 +50,7 @@ class ReadNovelFullPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/readnovelfull/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `2.2.${0 + versionIncrements}`;
+    this.version = `2.2.${1 + versionIncrements}`;
     this.options = metadata.options;
     this.filters = metadata.filters;
   }
@@ -584,7 +584,7 @@ class ReadNovelFullPlugin implements Plugin.PluginBase {
       ' ': '&nbsp;',
     };
     const escapeHtml = (text: string): string =>
-      text.replace(/[&<>"' ]/g, char => escapeMap[char]);
+      text.replace(/[&<>"'\xA0]/g, char => escapeMap[char]);
 
     const parser = new Parser({
       onopentag(name, attribs) {

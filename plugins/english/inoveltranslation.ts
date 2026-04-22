@@ -11,7 +11,7 @@ class INovelTranslation implements Plugin.PluginBase {
   name = 'iNovelTranslation';
   icon = 'src/en/inoveltranslation/icon.png';
   site = 'https://inoveltranslation.com';
-  version = '1.0.0';
+  version = '1.0.1';
   filters: Filters | undefined = undefined;
 
   pluginSettings = {
@@ -174,11 +174,11 @@ class INovelTranslation implements Plugin.PluginBase {
     // ==========================================
 
     // 2.1. Basic cleanup of escaped characters in the RSC stream
-    let cleanText = rscText.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+    const cleanText = rscText.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
 
     // 2.2. Locate the core content signature (first paragraph children)
     const signature = '"children":[{"type":"paragraph"';
-    let sigIndex = cleanText.indexOf(signature);
+    const sigIndex = cleanText.indexOf(signature);
 
     if (sigIndex !== -1) {
       // 2.3. Backtrack to find the opening brace { of the Lexical Object
@@ -227,9 +227,10 @@ class INovelTranslation implements Plugin.PluginBase {
           try {
             // 2.5 Standardize and Parse JSON
             // Strip control characters that might break JSON.parse
+            // eslint-disable-next-line no-control-regex
             const safeJson = jsonStr.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
             const parsedData = JSON.parse(safeJson);
-            let lexicalRoot = parsedData.root || parsedData;
+            const lexicalRoot = parsedData.root || parsedData;
 
             if (lexicalRoot && lexicalRoot.children) {
               return this.lexicalToHtml(lexicalRoot);
@@ -244,7 +245,7 @@ class INovelTranslation implements Plugin.PluginBase {
             const textMatches = jsonStr.match(/"text":"(.*?)"/g);
             if (textMatches && textMatches.length > 0) {
               textMatches.forEach(m => {
-                let text = m.substring(8, m.length - 1);
+                const text = m.substring(8, m.length - 1);
                 if (text.trim() && text !== ' ') {
                   fallbackHtml += `<p>${text}</p>`;
                 }
@@ -264,7 +265,7 @@ class INovelTranslation implements Plugin.PluginBase {
     // 4. Final HTML Scavenger Fallback
     // ==========================================
     const $ = loadCheerio(rscText);
-    let htmlContent = $(
+    const htmlContent = $(
       'main > section[data-sentry-component="RichText"]',
     ).html();
     if (htmlContent) return htmlContent;

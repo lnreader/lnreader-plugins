@@ -1,19 +1,19 @@
 import JSZip from 'jszip';
 import { Plugin } from '@/types/plugin';
 
-export interface EpubOptions {
+export type EpubOptions = {
   title: string;
   author?: string;
   description?: string;
   cover?: string;
   language?: string;
-}
+};
 
-export interface ChapterData {
+export type ChapterData = {
   title: string;
   content: string;
   path: string;
-}
+};
 
 function sanitizeHtml(html: string): string {
   // Remove script tags and their content

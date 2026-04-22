@@ -1,4 +1,4 @@
-import { CheerioAPI, load as parseHTML } from 'cheerio';
+import { load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
@@ -9,7 +9,7 @@ class BakaInUa implements Plugin.PluginBase {
   name = 'BakaInUA';
   icon = 'src/uk/bakainua/icon.png';
   site = 'https://baka.in.ua';
-  version = '3.1.6';
+  version = '3.1.7';
 
   async popularNovels(
     pageNo: number,
@@ -169,7 +169,9 @@ class BakaInUa implements Plugin.PluginBase {
     const $ = parseHTML(body);
 
     // Baka.in.ua використовує ActionText (Trix), текст зазвичай у .trix-content або .prose
-    let content = $('.trix-content, .prose, article, #chapter-content').first();
+    const content = $(
+      '.trix-content, .prose, article, #chapter-content',
+    ).first();
 
     // Якщо основний селектор порожній, шукаємо прихований текст у data-атрібутах (особливість Hotwire/Turbo)
     if (!content.text().trim()) {

@@ -150,7 +150,9 @@
     "sourceSite": "https://novel4up.com/",
     "sourceName": "Novel4Up",
     "options": {
-      "lang": "Arabic"
+      "lang": "Arabic",
+      "down": true,
+      "downSince": 1777153113000
     }
   },
   {

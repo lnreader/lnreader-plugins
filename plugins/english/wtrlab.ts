@@ -8,7 +8,7 @@ class WTRLAB implements Plugin.PluginBase {
   id = 'WTRLAB';
   name = 'WTR-LAB';
   site = 'https://wtr-lab.com/';
-  version = '1.1.0';
+  version = '1.1.1';
   icon = 'src/en/wtrlab/icon.png';
   sourceLang = 'en/';
 
@@ -426,7 +426,7 @@ class WTRLAB implements Plugin.PluginBase {
       URLs.push(src);
     }
 
-    for (let src of URLs) {
+    for (const src of URLs) {
       const script = await fetchApi(`${this.site}${src}`);
       const raw = await script.text();
       index = raw.indexOf(searchKey);
@@ -457,7 +457,7 @@ class WTRLAB implements Plugin.PluginBase {
           'X-Goog-API-Key': 'AIzaSyATBXajvzQLTDHEQbcpq0Ihe0vWDHmO520',
         },
         'referrer': 'https://wtr-lab.com/',
-        'body': `[[${JSON.stringify(contained)},\"zh-CN\",\"en\"],\"te_lib\"]`,
+        'body': `[[${JSON.stringify(contained)},"zh-CN","en"],"te_lib"]`,
         'method': 'POST',
       },
     );

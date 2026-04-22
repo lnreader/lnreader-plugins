@@ -29,7 +29,7 @@ class ixdzs8Plugin implements Plugin.PluginBase {
   id = 'ixdzs8';
   name = '爱下电子书';
   site = 'https://ixdzs8.com/';
-  version = '2.2.8';
+  version = '2.2.9';
   icon = 'src/cn/ixdzs8/favicon.png';
 
   imageRequestInit = {
@@ -49,14 +49,18 @@ class ixdzs8Plugin implements Plugin.PluginBase {
 
     $('ul.u-list > li.burl').each((_i, el) => {
       const $el = $(el);
-      let novelPath: string | undefined;
-      let novelName: string | undefined;
-      let novelCover: string | undefined;
 
       const $link = $el.find('.l-info h3 a');
-      novelPath = $link.attr('href')?.trim();
-      novelName = ($link.attr('title') || $link.text() || '').trim();
-      novelCover = $el.find('.l-img img').attr('src')?.trim();
+      const novelPath: string | undefined = $link.attr('href')?.trim();
+      const novelName: string | undefined = (
+        $link.attr('title') ||
+        $link.text() ||
+        ''
+      ).trim();
+      const novelCover: string | undefined = $el
+        .find('.l-img img')
+        .attr('src')
+        ?.trim();
 
       if (novelPath && novelName) {
         novels.push({

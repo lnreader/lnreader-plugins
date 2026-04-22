@@ -11,7 +11,7 @@ class AuthorToday implements Plugin.PluginBase {
   name = 'Автор Тудей';
   icon = 'src/ru/authortoday/icon.png';
   site = 'https://author.today';
-  version = '1.2.1';
+  version = '1.2.2';
 
   private userAgent =
     'Mozilla/5.0 (Android 15; Mobile; rv:138.0) Gecko/138.0 Firefox/138.0';
@@ -236,7 +236,8 @@ class AuthorToday implements Plugin.PluginBase {
       headers: { 'User-Agent': this.userAgent },
     }).then(res => res.text());
 
-    let [workID, chapterID] = chapterPath.split('/');
+    const [workID, initialChapterID] = chapterPath.split('/');
+    let chapterID = initialChapterID;
     const userRaw = html.match(/userId:(.*?),/)?.[1]?.trim();
     const userId = userRaw === 'null' ? '' : userRaw;
 
