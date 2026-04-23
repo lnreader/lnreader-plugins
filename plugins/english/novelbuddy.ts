@@ -9,7 +9,7 @@ class NovelBuddy implements Plugin.PluginBase {
   name = 'NovelBuddy';
   site = 'https://novelbuddy.com/';
   api = 'https://api.novelbuddy.com/';
-  version = '2.1.0';
+  version = '2.1.1';
   icon = 'src/en/novelbuddy/icon.png';
 
   parseNovels(body: Response): Plugin.NovelItem[] {
@@ -154,18 +154,16 @@ class NovelBuddy implements Plugin.PluginBase {
 
     let content = initialChapter.content;
 
-    if (content) {
-      // Remove Webnovel watermarks/ads
-      content = content.replace(
-        /Find authorized novels in Webnovel.*?faster updates, better experience.*?Please click www\.webnovel\.com for visiting\./gi,
-        '',
-      );
+    const watermarks = [
+      /Find authorized novels in Webnovel，faster updates, better experience，Please click www.webnovel.com for visiting\./gi,
+      /𝗳𝒓𝙚e𝓌e𝚋𝙣𝚘𝐯𝙚𝙡.𝑐૦𝐦/gi,
+      /Read at NovelBuddy\.com/gi,
+      /If you find any errors \( broken links, non-standard content, etc\.\. \), Please let us know < report chapter > so we can fix it as soon as possible\./gi,
+    ];
 
-      // Remove obfuscated freewebnovel watermarks (e.g., free𝑤𝑒𝑏novel.com)
-      content = content.replace(/free.*?novel\.com/gi, '');
-    }
+    watermarks.forEach(wm => (content = content.replace(wm, '')));
 
-    return content;
+    return content.trim();
   }
 
   async searchNovels(
