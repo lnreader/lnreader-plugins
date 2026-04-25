@@ -146,7 +146,7 @@ class RLIB implements Plugin.PluginBase {
       path: novelPath,
       name: data.rus_name || data.name,
       cover: data.cover?.default || defaultCover,
-      summary: data.summary?.trim(),
+      summary: data.summary ? String(data.summary).trim() : '',
     };
 
     if (data.status?.id) {
