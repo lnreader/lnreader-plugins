@@ -8,7 +8,7 @@ class StorySeedlingPlugin implements Plugin.PluginBase {
   name = 'StorySeedling';
   icon = 'src/en/storyseedling/icon.png';
   site = 'https://storyseedling.com/';
-  version = '1.0.4';
+  version = '1.0.5';
   nonce: string | undefined;
 
   async getCheerio(url: string, search: boolean): Promise<CheerioAPI> {
@@ -166,7 +166,7 @@ class StorySeedlingPlugin implements Plugin.PluginBase {
     const $ = await this.getCheerio(this.site + chapterPath, false);
     this.nonce = $('div.mb-4:has(h1.text-xl) > div')
       .attr('x-data')
-      ?.match(/loadChapter\('.+?', '(.+?)'\)/)[1];
+      ?.match(/loadChapter\('.+?', '(.+?)'\)/)![1];
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
@@ -200,7 +200,7 @@ class StorySeedlingPlugin implements Plugin.PluginBase {
         );
       }
     }
-    let html = text
+    const html = text
       .replace(/cls[a-f0-9]+/g, '')
       .split('')
       .map(char => {
@@ -212,7 +212,7 @@ class StorySeedlingPlugin implements Plugin.PluginBase {
           : char;
       })
       .join('');
-    let $ = load(html);
+    const $ = load(html);
 
     $('span').text((_, txt) =>
       txt.toLowerCase().includes('storyseedling') ||

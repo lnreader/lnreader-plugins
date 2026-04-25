@@ -32,7 +32,7 @@ class RulatePlugin implements Plugin.PluginBase {
     this.name = metadata.sourceName + ' (API)';
     this.icon = `multisrc/rulate/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
-    this.version = '1.0.' + (0 + metadata.versionIncrements);
+    this.version = '1.0.' + (1 + metadata.versionIncrements);
     this.filters = metadata.filters;
     this.key = metadata.key;
   }
@@ -76,7 +76,7 @@ class RulatePlugin implements Plugin.PluginBase {
 
   async searchNovels(
     searchTerm: string,
-    page: number = 1,
+    page = 1,
   ): Promise<Plugin.NovelItem[]> {
     const url = `${this.site}/api3/searchBooks?t=${encodeURIComponent(
       searchTerm,
@@ -158,7 +158,7 @@ class RulatePlugin implements Plugin.PluginBase {
     this.site + '/book/' + path + (isNovel ? '/' : '/ready_new');
 }
 
-interface SearchResponse {
+type SearchResponse = {
   status: string;
   response: {
     t_title?: string;
@@ -166,9 +166,9 @@ interface SearchResponse {
     id: number;
     img: string;
   }[];
-}
+};
 
-interface BookResponse {
+type BookResponse = {
   response: {
     t_title?: string;
     s_title: string;
@@ -181,9 +181,9 @@ interface BookResponse {
     status: string;
     rate?: { sum: number; count: number };
   };
-}
+};
 
-interface ChaptersResponse {
+type ChaptersResponse = {
   response: {
     title: string;
     id: number;
@@ -193,10 +193,10 @@ interface ChaptersResponse {
     can_read: boolean;
     illustrated?: boolean;
   }[];
-}
+};
 
-interface ChapterTextResponse {
+type ChapterTextResponse = {
   response: {
     text: string;
   };
-}
+};

@@ -9,7 +9,7 @@ class Chrysanthemumgarden implements Plugin.PluginBase {
   name = 'Chrysanthemum Garden';
   icon = 'src/en/chrysanthemumgarden/icon.png';
   site = 'https://chrysanthemumgarden.com';
-  version = '1.0.1';
+  version = '1.0.2';
   filters: Filters | undefined = undefined;
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
@@ -136,7 +136,9 @@ class Chrysanthemumgarden implements Plugin.PluginBase {
     );
   }
 
-  async getAllNovels() {}
+  async getAllNovels() {
+    // linter? what is the purpose of this
+  }
 
   resolveUrl = (path: string, isNovel?: boolean) =>
     this.site + (isNovel ? '/book/' : '/chapter/') + path;

@@ -1,4 +1,4 @@
-import { load as loadCheerio } from 'cheerio';
+import { CheerioAPI, load as loadCheerio } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { defaultCover } from '@libs/defaultCover';
@@ -14,7 +14,7 @@ class Syosetu implements Plugin.PluginBase {
   icon = 'src/jp/syosetu/icon.png';
   site = 'https://yomou.syosetu.com/';
   novelPrefix = 'https://ncode.syosetu.com';
-  version = '1.1.2';
+  version = '1.1.3';
   headers = {
     'User-Agent':
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -71,7 +71,7 @@ class Syosetu implements Plugin.PluginBase {
     return novels;
   }
   private async parseChaptersFromPage(
-    loadedCheerio: cheerio.CheerioAPI,
+    loadedCheerio: CheerioAPI,
   ): Promise<Plugin.ChapterItem[]> {
     const chapters: Plugin.ChapterItem[] = [];
 
