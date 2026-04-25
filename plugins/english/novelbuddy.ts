@@ -4,15 +4,18 @@ import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { NovelStatus } from '@libs/novelStatus';
 
-class NovelBuddy implements Plugin.PluginBase {
+class NovelBuddy implements Plugin.PagePlugin {
   id = 'novelbuddy';
   name = 'NovelBuddy';
   site = 'https://novelbuddy.com/';
   api = 'https://api.novelbuddy.com/';
-  version = '2.1.0';
+  version = '2.1.1';
   icon = 'src/en/novelbuddy/icon.png';
 
   parseNovels(body: Response): Plugin.NovelItem[] {
+    if (!body?.success || !body?.data?.items) {
+      return [];
+    }
     return body.data.items.map(item => ({
       name: item.name,
       path: new URL(item.url, this.site).pathname.substring(1),
@@ -26,14 +29,10 @@ class NovelBuddy implements Plugin.PluginBase {
   ): Promise<Plugin.NovelItem[]> {
     const { genre, min_ch, max_ch, status, demo, orderBy, keyword } = filters;
 
-    // Chapter bounds must be an integer between 0 and 10,000 or api cri
     const parseNumber = (val?: string) => {
       if (!val?.trim()) return;
-
       const n = Number(val);
-      return Number.isInteger(n) && n >= 0 && n <= 10000
-        ? String(n)
-        : undefined;
+      return Number.isInteger(n) && n >= 0 && n <= 10000 ? String(n) : undefined;
     };
 
     const rawParams: Record<string, string | undefined> = {
@@ -49,7 +48,6 @@ class NovelBuddy implements Plugin.PluginBase {
       q: keyword.value || undefined,
     };
 
-    // Filter out the undefined values
     const params = Object.fromEntries(
       Object.entries(rawParams).filter(([, value]) => value !== undefined),
     ) as Record<string, string>;
@@ -57,26 +55,28 @@ class NovelBuddy implements Plugin.PluginBase {
     const url = new URL('titles/search', this.api);
     url.search = new URLSearchParams(params).toString();
 
-    const result = await fetchApi(url.toString());
-    const body = await result.json();
-
-    return this.parseNovels(body);
+    try {
+      const result = await fetchApi(url.toString());
+      const body = await result.json();
+      return this.parseNovels(body);
+    } catch (e) {
+      return [];
+    }
   }
 
-  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel & { totalPages: number }> {
     const response = await fetchApi(this.site + novelPath);
     const body = await response.text();
     const $ = parseHTML(body);
 
     const script = $('#__NEXT_DATA__').html();
-    if (!script) throw new Error('Could not find __NEXT_DATA__');
+    if (!script) throw new Error('Could find __NEXT_DATA__');
 
     const data: NovelScript = JSON.parse(script);
     const initialManga = data.props.pageProps.initialManga;
-
     if (!initialManga) throw new Error('Could not find initialManga data');
 
-    const novel: Plugin.SourceNovel = {
+    const novel: Plugin.SourceNovel & { totalPages: number } = {
       path: novelPath,
       name: initialManga.name || 'Untitled',
       cover: initialManga.cover,
@@ -84,6 +84,7 @@ class NovelBuddy implements Plugin.PluginBase {
       artist: initialManga.artists?.map(a => a.name).join(', ') || '',
       genres: initialManga.genres?.map(g => g.name).join(',') || '',
       chapters: [],
+      totalPages: 1,
     };
 
     const rawStatus = initialManga.status;
@@ -100,44 +101,72 @@ class NovelBuddy implements Plugin.PluginBase {
     const summary = $(initialManga.summary || '');
     summary.find('br').replaceWith('\n');
     summary.find('p').before('\n').after('\n\n');
-
-    novel.summary =
-      summary
-        .text()
-        .split('\n')
-        .map(line => line.trim())
-        .join('\n')
-        ?.replace(/\n{3,}/g, '\n\n')
-        .trim() || 'Summary Not Found';
+    novel.summary = summary.text().split('\n').map(line => line.trim()).join('\n')?.replace(/\n{3,}/g, '\n\n').trim() || 'Summary Not Found';
 
     if (initialManga.ratingStats) {
       novel.rating = initialManga.ratingStats.average;
     }
 
-    // Fetch full chapter list from API
     const chaptersUrl = `${this.api}titles/${initialManga.id}/chapters`;
-    const chaptersResponse = await fetchApi(chaptersUrl);
-    const chaptersJson: ChapterResponse = await chaptersResponse.json();
-
-    if (chaptersJson?.success && chaptersJson?.data?.chapters) {
-      novel.chapters = chaptersJson.data.chapters
-        .map(chapter => ({
-          name: chapter.name,
-          path: new URL(chapter.url, this.site).pathname.substring(1),
-          releaseTime: chapter.updated_at,
-        }))
-        .reverse();
-    } else if (initialManga.chapters) {
-      novel.chapters = initialManga.chapters
-        .map(chapter => ({
-          name: chapter.name,
-          path: new URL(chapter.url, this.site).pathname.substring(1),
-          releaseTime: chapter.updatedAt,
-        }))
-        .reverse();
+    let allChapters: Items[] = [];
+    try {
+      const chaptersResponse = await fetchApi(chaptersUrl);
+      const chaptersJson: ChapterResponse = await chaptersResponse.json();
+      allChapters = chaptersJson?.data?.chapters || initialManga.chapters || [];
+    } catch (e) {
+      allChapters = initialManga.chapters || [];
     }
 
+    const count = allChapters.length;
+    novel.totalPages = Math.ceil(count / 50);
+
+    novel.chapters = allChapters
+      .map(chapter => ({
+        name: chapter.name,
+        path: new URL(chapter.url, this.site).pathname.substring(1),
+        releaseTime: chapter.updated_at || chapter.updatedAt,
+      }))
+      .reverse()
+      .slice(0, 50)
+      .map(c => ({ ...c, page: '1' }));
+
     return novel;
+  }
+
+  async parsePage(novelPath: string, page: string): Promise<Plugin.SourcePage> {
+    const response = await fetchApi(this.site + novelPath);
+    const body = await response.text();
+    const $ = parseHTML(body);
+
+    const script = $('#__NEXT_DATA__').html();
+    if (!script) throw new Error('Could not find __NEXT_DATA__');
+
+    const data: NovelScript = JSON.parse(script);
+    const initialManga = data.props.pageProps.initialManga;
+
+    const chaptersUrl = `${this.api}titles/${initialManga.id}/chapters`;
+    let chapters: Items[] = [];
+    try {
+      const chaptersResponse = await fetchApi(chaptersUrl);
+      const chaptersJson: ChapterResponse = await chaptersResponse.json();
+      chapters = chaptersJson?.data?.chapters || initialManga.chapters || [];
+    } catch (e) {
+      chapters = initialManga.chapters || [];
+    }
+
+    const allChapters = chapters.map(chapter => ({
+      name: chapter.name,
+      path: new URL(chapter.url, this.site).pathname.substring(1),
+      releaseTime: chapter.updated_at || chapter.updatedAt,
+    })).reverse();
+
+    const pageNo = parseInt(page);
+    const start = (pageNo - 1) * 50;
+    const end = start + 50;
+
+    return {
+      chapters: allChapters.slice(start, end).map(c => ({ ...c, page })),
+    };
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
@@ -152,39 +181,53 @@ class NovelBuddy implements Plugin.PluginBase {
     const initialChapter = data.props.pageProps.initialChapter;
     if (!initialChapter) throw new Error('Could not find chapter content');
 
-    let content = initialChapter.content;
+    const chapterContent = initialChapter.content;
+    const content$ = parseHTML(chapterContent);
+
+    // 1. Remove DOM Garbage
+    content$('script, style, iframe, ins, .ads, .adsbygoogle').remove();
+    
+    // 2. Remove elements containing specific watermarks (Priority #1)
+    content$('p, div, span').each((i, el) => {
+        const text = content$(el).text().toLowerCase();
+        if (text.includes('webnovel.com') || 
+            text.includes('find authorized novels') || 
+            text.includes('freewebnovel')) {
+            content$(el).remove();
+        }
+    });
+
+    let content = content$('body').html() || chapterContent;
 
     if (content) {
-      // Remove Webnovel watermarks/ads
-      content = content.replace(
-        /Find authorized novels in Webnovel.*?faster updates, better experience.*?Please click www\.webnovel\.com for visiting\./gi,
-        '',
-      );
+      // 3. Regex Fallback for mixed/obfuscated content (like "What happened... 𝗳𝒓𝙚e𝓌e𝚋...")
+       const fwn_regex = /(?:𝗳|𝐟|ᵮ|𝑓|𝒇|𝒻|𝓯|𝔣|𝕗|𝖿|𝗳|𝙛|𝚏|ꬵ|ꞙ|ẝ|𝖋|ⓕ|ｆ|ƒ|ḟ|ʃ|բ|ᶠ|⒡|ſ|ꊰ|ʄ|∱|ᶂ|𝘧|\\bf)(?:𝒓|𝒓|ꭇ|ᣴ|ℾ|𝚪|𝛤|𝜞|𝝘|𝞒|Ⲅ|Г|Ꮁ|ᒥ|ꭈ|ⲅ|ꮁ|ⓡ|ｒ|ŕ|ṙ|ř|ȑ|ȓ|ṛ|ṝ|ŗ|г|Ր|ɾ|ᥬ|ṟ|ɍ|ʳ|⒭|ɼ|ѓ|ᴦ|ᶉ|𝐫|𝑟|𝒓|𝓇|𝓻|𝔯|𝕣|𝖗|𝗋|𝗿|r|𝘳|𝙧|ᵲ|ґ|ᵣ)(?:𝙚|ə|ә|ⅇ|ꬲ|ꞓ|⋴|𝛆|𝛜|𝜀|𝜖|𝜺|𝝐|𝝴|𝞊|𝞮|𝟄|ⲉ|ꮛ|𐐩|Ꞓ|Ⲉ|⍷|𝑒|𝓮|𝕖|𝖊|𝘦|𝗲|𝚎|𝙚|𝒆|𝔢|e|𝖾|𝐞|Ҿ|ҿ|ⓔ|ｅ|⒠|è|ᧉ|é|ᶒ|ê|ɘ|ἔ|ề|ế|ễ|૯|ǝ|є|ε|ē|ҽ|ɛ|ể|ẽ|ḕ|ḗ|ĕ|ė|ë|ẻ|ě|ȅ|ȇ|ẹ|ệ|ȩ|ɇ|ₑ|ę|ḝ|ḙ|ḛ|℮|е|ԑ|ѐ|ӗ|ᥱ|ё|ἐ|ἑ|ἒ|ἓ|ἕ|ℯ|e)+(?:𝓌|𝐰|ꝡ|𝑤|𝒘|𝓌|𝔀|𝔴|𝕨|𝖜|𝗐|𝘄|𝘸||𝚠|ա|ẁ|ꮃ|ẃ|ⓦ|⍵|ŵ|ẇ|ẅ|ẘ|ẉ|ⱳ|ὼ|ὠ|ὡ|ὢ|ὣ|ω|ὤ|ὥ|ὦ|ὧ|ῲ|ῳ|ῴ|ῶ|ῷ|Ⱳ|ѡ|ԝ|ᴡ|ώ|ᾠ|ᾡ|ᾢ|ᾣ|ᾤ|ᾥ|ᾦ|ɯ|𝝕|𝟉|𝞏|w)(?:𝙚|ə|ә|ⅇ|ꬲ|ꞓ|⋴|𝛆|𝛜|𝜀|𝜖|𝜺|𝝐|𝝴|𝞊|𝞮|𝟄|ⲉ|ꮛ|𐐩|Ꞓ|Ⲉ|⍷|𝑒|𝓮|𝕖|𝖊|𝘦|𝗲|𝚎|𝙚|𝒆|𝔢|e|𝖾|𝐞|Ҿ|ҿ|ⓔ|ｅ|⒠|è|ᧉ|é|ᶒ|ê|ɘ|ἔ|ề|ế|ễ|૯|ǝ|є|ε|ē|ҽ|ɛ|ể|ẽ|ḕ|ḗ|ĕ|ė|ë|ẻ|ě|ȅ|ȇ|ẹ|ệ|ȩ|ɇ|ₑ|ę|ḝ|ḙ|ḛ|℮|е|ԑ|ѐ|ӗ|ᥱ|ё|ἐ|ἑ|ἒ|ἓ|ἕ|ℯ|e)(?:𝚋|ꮟ|Ꮟ|𝐛|𝘣|𝒷|𝔟|𝓫|𝖇|𝖻|𝑏|𝙗|𝕓|𝒃|𝗯|𝚋|♭|ᑳ|ᒈ|ｂ|ᖚ|ᕹ|ᕺ|ⓑ|ḃ|ḅ|ҍ|ъ|ḇ|ƃ|ɓ|ƅ|ᖯ|Ƅ|Ь|ᑲ|þ|Ƃ|⒝|Ъ|ᶀ|ᑿ|ᒀ|ᒂ|ᒁ|ᑾ|ь|ƀ|Ҍ|Ѣ|ѣ|ᔎ|b)(?:𝙣|ո|ռ|ח|𝒏|𝓷|𝙣|𝑛|𝖓|𝔫|耽|𝗻|ᥒ|ⓝ|ή|ｎ|ǹ|ᴒ|ń|ñ|ᾗ|η|ṅ|ň|ṇ|ɲ|ņ|ṋ|ṉ|ղ|ຖ|Ռ|ƞ|ŋ|⒩|ภ|ก|ɳ|п|ŉ|л|ԉ|Ƞ|ἠ|ἡ|ῃ|դ|ᾐ|ᾑ|ᾒ|ᾓ|ᾔ|ᾕ|ᾖ|ῄ|ῆ|ῇ|ῂ|ἢ|ἣ|ἤ|ἥ|ἦ|ἧ|ὴ|ή|በ|ቡ|ቢ|ба|ቤ|б|ቦ|ȵ|𝛈|𝜂|𝜼|𝝶|𝞰|𝕟|𝘯|𝐧|𝓃|ᶇ|ᵰ|ᥥ|∩|n)(?:૦|ం|ం|ం|ං|૦|௦|۵|ℴ|ｏ|𝒐|𝒐|ꬽ|𝝄|𝛔|𝜎|𝝈|𝞂|ჿ|𝚘|০|୦|ዐ|𝛐|ｏ|𝞼|ဝ|ⲟ|耽|耽|၀|𐐬|𝔬|𐓪|𝓸|🇴|⍤|○|ϙ|🅾|𝒪|𝖮|𝟢|𝟶|𝙾|ｏ|𝗼|𝕠|𝜊|ｏ|𝝾|𝞸|ᐤ|ⓞ|ѳ|᧐|ᥲ|ð|ｏ|ఠ|ᦞ|Փ|ò|ө|ӧ|ó|º|ō|ô|ǒ|ȏ|ŏ|ồ|ȭ|ṏ|ὄ|ṑ|ṓ|ȯ|ȫ|๏|ᴏ|ő|ö|ѻ|о|ዐ|ǭ|ȱ|০|୦|٥|౦|耽|耽|൦|๐|໐|ο|օ|ᴑ|०|੦|ỏ|ơ|ờ|ớ|ỡ|ở|ợ|ọ|ộ|ǫ|ø|ǿ|ɵ|ծ|ὀ|ὁ|ό|ὸ|ό|ὂ|ὃ|ὅ|૦|o|૦)(?:𝐯|∨|⌄|⋁|ⅴ|𝐯|𝑣|𝒗|𝓋|𝔳|𝕧|𝖛|𝗏|ꮩ|ሀ||ⓥ|ｖ|𝜐|𝝊|ṽ|ṿ|౮|ง|ѵ|ע|ᴠ|ν|ט|ᵥ|ѷ|៴|ᘁ|𝙫|𝙫|𝛎|𝜈|𝝂|𝝼|𝞶|ｖ|𝘃|𝓿|v)(?:𝙚|ə|ә|ⅇ|ꬲ|ꞓ|⋴|𝛆|𝛜|𝜀|𝜖|𝜺|𝝐|𝝴|𝞊|𝞮|𝟄|ⲉ|ꮛ|𐐩|Ꞓ|Ⲉ|⍷|𝑒|𝓮|𝕖|𝖊|𝘦|𝗲|ｅ|อี|𝒆|𝔢|e|𝖾|𝐞|Ҿ|ҿ|ⓔ|ｅ|⒠|è|ᧉ|é|ᶒ|ê|ɘ|ἔ|ề|ế|ễ|૯|ǝ|є|ε|ē|ҽ|ɛ|ể|ẽ|ḕ|ḗ|ĕ|ė|ë|ẻ|ě|ȅ|ȇ|ẹ|ệ|ȩ|ɇ|ₑ|ę|ḝ|ḙ|ḛ|℮|е|ԑ|ѐ|ӗ|ᥱ|ё|ἐ|ἑ|ἒ|ἓ|ἕ|ℯ|e)(?:𝙡|ⓛ|ｌ|ŀ|ĺ|ľ|ḷ|ḹ|ļ|Ӏ|ℓ|ḽ|ḻ|ł|ﾚ|ɭ|ƚ|ɫ|ⱡ|\\||Ɩ|⒧|ʅ|ǀ|ו|ן|Ι|І|｜|ᶩ|ӏ|𝓘|𝕀|𝖨|𝗜|𝘐|𝐥|𝑙|𝒍|𝓁|𝔩|𝕝|𝖑|l|𝗅|𝗹|ｌ|ｌ|𝜤|𝝞|ı|𝚤|ɩ|ι|𝛊|𝜄|𝜾|𝞲|I|l)(?:.?(?:𝑐|\.𝑐|𝐜|ⅽ|𝐜|𝑐|𝒄|𝒸|𝓬|𝔠|𝕔|𝖈|𝖼|𝗰|ｃ|𝙘|ｃ|ᴄ|ϲ|ⲥ|с|ꮯ|𐐽|ⲥ|𐐽|ꮯ|ĉ|ⓒ|ć|č|ċ|ç|ҁ|ƈ|ḉ|ȼ|ↄ|с|ር|ᴄ|ϲ|ҫ|꒝|ς|ɽ|ϛ|𝙲|ᑦ|᧚|𝐜|减|𝒄|𝒸|𝓬|𝔠|𝕔|𝖈|𝖼|𝗰|𝘤|𝙘|₵|🇨|ᥴ|ᒼ|ⅽ|𝑐|c)(?:૦|ం|ం|ం|ං|૦|௦|۵|ℴ|ｏ|𝒐|𝒐|ꬽ|𝝄|𝛔|𝜎|𝝈|𝞂|ჿ|𝚘|০|୦|ዐ|𝛐|ｏ|𝞼|ဝ|ⲟ|耽|耽|၀|𐐬|𝔬|𐓪|𝓸|🇴|⍤|○|ϙ|🅾|𝒪|𝖮|𝟢|𝟶|𝙾|ｏ|𝗼|𝕠|𝜊|ｏ|𝝾|𝞸|ᐤ|ⓞ|ѳ|᧐|ᥲ|ð|ｏ|ఠ|ᦞ|Փ|ò|ө|ӧ|ó|º|ō|ô|ǒ|ȏ|ŏ|ồ|ȭ|ṏ|ὄ|ṑ|ṓ|ȯ|ȫ|๏|ᴏ|ő|ö|ѻ|о|ዐ|ǭ|ȱ|০|୦|٥|౦|耽|耽|൦|๐|໐|ο|օ|ᴑ|०|੦|ỏ|ơ|ờ|ớ|ỡ|ở|ợ|ọ|ộ|ǫ|ø|ǿ|ɵ|ծ|ὀ|ὁ|ό|ὸ|ό|ὂ|ὃ|ὅ|૦|o|૦)(?:ｍ|₥|ᵯ|𝖒|𝐦|𝖒|𝔪|𝕞|𝓂|𝕞|ⓜ|ｍ|ന|ᙢ|൩|m|ḿ|ṁ|ⅿ|ϻ|ṃ|ጠ|ɱ|៳|ᶆ|𝒎|𝙢|𝓶|𝚖|𝑚|𝗺|᧕|᧗|ｍ|m))?/gi;
+      
+      content = content.replace(fwn_regex, '');
 
-      // Remove obfuscated freewebnovel watermarks (e.g., free𝑤𝑒𝑏novel.com)
-      content = content.replace(/free.*?novel\.com/gi, '');
+      const final$ = parseHTML(content);
+      final$('div, p, span').each((i, el) => {
+          if (final$(el).text().trim() === '') {
+              final$(el).remove();
+          }
+      });
+      content = final$('body').html() || content;
     }
 
     return content;
   }
 
-  async searchNovels(
-    searchTerm: string,
-    page: number,
-  ): Promise<Plugin.NovelItem[]> {
-    const params = new URLSearchParams({
-      'q': searchTerm,
-      'limit': '24',
-      'page': page.toString(),
-    });
-
+  async searchNovels(searchTerm: string, page: number): Promise<Plugin.NovelItem[]> {
+    const params = new URLSearchParams({ 'q': searchTerm, 'limit': '24', 'page': page.toString() });
     const url = new URL('titles/search', this.api);
     url.search = new URLSearchParams(params).toString();
-
-    const result = await fetchApi(url.toString());
-    const body = await result.json();
-
-    return this.parseNovels(body);
+    try {
+      const result = await fetchApi(url.toString());
+      const body = await result.json();
+      return this.parseNovels(body);
+    } catch (e) {
+      return [];
+    }
   }
 
   filters = {
@@ -202,11 +245,7 @@ class NovelBuddy implements Plugin.PluginBase {
       ],
       type: FilterTypes.Picker,
     },
-    keyword: {
-      value: '',
-      label: 'Keywords',
-      type: FilterTypes.TextInput,
-    },
+    keyword: { value: '', label: 'Keywords', type: FilterTypes.TextInput },
     status: {
       value: 'all',
       label: 'Status',
@@ -220,10 +259,7 @@ class NovelBuddy implements Plugin.PluginBase {
       type: FilterTypes.Picker,
     },
     genre: {
-      value: {
-        include: [],
-        exclude: [],
-      },
+      value: { include: [], exclude: [] },
       label: 'Genres (OR, not AND)',
       options: [
         { label: 'Action', value: 'action' },
@@ -322,16 +358,8 @@ class NovelBuddy implements Plugin.PluginBase {
       ],
       type: FilterTypes.ExcludableCheckboxGroup,
     },
-    min_ch: {
-      value: '',
-      label: 'Minimum Chapters',
-      type: FilterTypes.TextInput,
-    },
-    max_ch: {
-      value: '',
-      label: 'Maximum Chapters',
-      type: FilterTypes.TextInput,
-    },
+    min_ch: { value: '', label: 'Minimum Chapters', type: FilterTypes.TextInput },
+    max_ch: { value: '', label: 'Maximum Chapters', type: FilterTypes.TextInput },
     type: {
       value: '',
       label: 'Types',
@@ -359,73 +387,10 @@ class NovelBuddy implements Plugin.PluginBase {
 
 export default new NovelBuddy();
 
-type Response = {
-  data: {
-    items: Items[];
-  };
-};
-
-type ChapterResponse = {
-  success: boolean;
-  data?: {
-    chapters?: Items[];
-  };
-};
-
-type Items = {
-  id: string;
-  url: string;
-  name: string;
-  alt_name?: string;
-  cover?: string;
-  slug: string;
-  updated_at?: string;
-  updatedAt?: string;
-};
-
-type NovelScript = {
-  props: {
-    pageProps: {
-      initialManga: Manga;
-    };
-  };
-};
-
-type Manga = {
-  id: string;
-  url: string;
-  name?: string;
-  altName?: string;
-  cover: string;
-  status: string;
-  ratingStats?: {
-    average: number;
-  };
-  summary?: string;
-  artists?: {
-    name: string;
-    slug: string;
-  }[];
-  authors?: {
-    name: string;
-    slug: string;
-  }[];
-  genres?: {
-    name: string;
-    slug: string;
-  }[];
-  chapters?: Items[];
-};
-
-type ChapterScript = {
-  props: {
-    pageProps: {
-      initialChapter: Chapter;
-    };
-  };
-};
-
-type Chapter = {
-  name: string;
-  content: string;
-};
+type Response = { success: boolean; data: { items: Items[] } };
+type ChapterResponse = { success: boolean; data?: { chapters?: Items[] } };
+type Items = { id: string; url: string; name: string; alt_name?: string; cover?: string; slug: string; updated_at?: string; updatedAt?: string };
+type NovelScript = { props: { pageProps: { initialManga: Manga } } };
+type Manga = { id: string; url: string; name?: string; altName?: string; cover: string; status: string; ratingStats?: { average: number }; summary?: string; artists?: { name: string; slug: string }[]; authors?: { name: string; slug: string }[]; genres?: { name: string; slug: string }[]; chapters?: Items[] };
+type ChapterScript = { props: { pageProps: { initialChapter: Chapter } } };
+type Chapter = { name: string; content: string };
