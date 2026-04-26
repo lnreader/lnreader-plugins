@@ -9,7 +9,7 @@ class NovelBuddy implements Plugin.PagePlugin {
   name = 'NovelBuddy';
   site = 'https://novelbuddy.com/';
   api = 'https://api.novelbuddy.com/';
-  version = '2.1.6';
+  version = '2.1.1';
   icon = 'src/en/novelbuddy/icon.png';
 
   parseNovels(body: Response): Plugin.NovelItem[] {
