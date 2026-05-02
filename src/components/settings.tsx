@@ -24,6 +24,30 @@ export default function SettingsSection() {
   const [loading, setLoading] = useState(false);
   const [alertVisible, setAlertVisible] = useState(false);
 
+  const [isInitialized, setIsInitialized] = useState(false);
+  const loadedSettings = React.useRef<{
+    cookies: string;
+    fetchMode: FetchMode;
+    useUserAgent: CheckedState;
+  } | null>(null);
+
+  useEffect(() => {
+    fetch('settings')
+      .then(res => res.json())
+      .then(data => {
+        loadedSettings.current = {
+          cookies: data.cookies || '',
+          fetchMode: data.fetchMode ?? FetchMode.PROXY,
+          useUserAgent: data.useUserAgent ?? true,
+        };
+        if (data.cookies !== undefined) setCookies(data.cookies || '');
+        if (data.fetchMode !== undefined) setFetchMode(data.fetchMode);
+        if (data.useUserAgent !== undefined) setUseUserAgent(data.useUserAgent);
+      })
+      .catch(error => console.error('Failed to load settings:', error))
+      .finally(() => setIsInitialized(true));
+  }, []);
+
   useEffect(() => {
     if (alertVisible) {
       const id = setTimeout(() => setAlertVisible(false), 2000);
@@ -32,6 +56,18 @@ export default function SettingsSection() {
   }, [alertVisible]);
 
   useEffect(() => {
+    if (!isInitialized) return;
+    if (debouncedCookies !== cookies) return;
+
+    if (
+      loadedSettings.current &&
+      loadedSettings.current.cookies === debouncedCookies &&
+      loadedSettings.current.fetchMode === fetchMode &&
+      loadedSettings.current.useUserAgent === useUserAgent
+    ) {
+      return;
+    }
+
     setLoading(true);
     fetch('settings', {
       method: 'POST',
@@ -44,10 +80,17 @@ export default function SettingsSection() {
         useUserAgent: useUserAgent === true,
       }),
     })
-      .then(() => setAlertVisible(true))
+      .then(() => {
+        setAlertVisible(true);
+        loadedSettings.current = {
+          cookies: debouncedCookies,
+          fetchMode: fetchMode,
+          useUserAgent: useUserAgent,
+        };
+      })
       .catch(error => console.error('Failed to save settings:', error))
       .finally(() => setLoading(false));
-  }, [debouncedCookies, fetchMode, useUserAgent]);
+  }, [debouncedCookies, cookies, fetchMode, useUserAgent, isInitialized]);
 
   const getFetchModeLabel = (mode: FetchMode) => {
     switch (mode) {
@@ -138,7 +181,9 @@ export default function SettingsSection() {
                 <Input
                   id="cookies"
                   value={cookies}
-                  onChange={e => setCookies(e.target.value.trim())}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setCookies(e.target.value.trim())
+                  }
                   placeholder="Enter cookies (optional)..."
                   className="font-mono text-xs"
                 />
@@ -168,7 +213,7 @@ export default function SettingsSection() {
               </Label>
               <Select
                 value={fetchMode.toString()}
-                onValueChange={value =>
+                onValueChange={(value: string) =>
                   setFetchMode(parseInt(value) as FetchMode)
                 }
               >

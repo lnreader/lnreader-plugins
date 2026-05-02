@@ -12,17 +12,19 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { useAppStore } from '@/store';
+import { useAppStore, AppStore } from '@/store';
 import { usePluginCustomAssets } from '@/hooks/usePluginCustomAssets';
 
 export default function ParseChapterSection() {
-  const plugin = useAppStore(state => state.plugin);
-  const parseChapterPath = useAppStore(state => state.parseChapterPath);
+  const plugin = useAppStore((state: AppStore) => state.plugin);
+  const parseChapterPath = useAppStore(
+    (state: AppStore) => state.parseChapterPath,
+  );
   const shouldAutoSubmitChapter = useAppStore(
-    state => state.shouldAutoSubmitChapter,
+    (state: AppStore) => state.shouldAutoSubmitChapter,
   );
   const clearParseChapterPath = useAppStore(
-    state => state.clearParseChapterPath,
+    (state: AppStore) => state.clearParseChapterPath,
   );
   const [chapterPath, setChapterPath] = useState('');
   const [chapterText, setChapterText] = useState('');
@@ -127,7 +129,9 @@ export default function ParseChapterSection() {
           <Input
             placeholder="Enter chapter path..."
             value={chapterPath}
-            onChange={e => setChapterPath(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setChapterPath(e.target.value)
+            }
             onKeyPress={handleKeyPress}
             className="flex-1"
             disabled={!plugin}

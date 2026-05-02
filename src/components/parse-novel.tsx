@@ -19,7 +19,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { useAppStore } from '@/store';
+import { useAppStore, AppStore } from '@/store';
 import { Plugin } from '@/types/plugin';
 import { useEpubExport } from '@/hooks/useEpubExport';
 
@@ -30,13 +30,17 @@ type ParseNovelSectionProps = {
 export default function ParseNovelSection({
   onNavigateToParseChapter,
 }: ParseNovelSectionProps) {
-  const plugin = useAppStore(state => state.plugin);
-  const parseNovelPath = useAppStore(state => state.parseNovelPath);
+  const plugin = useAppStore((state: AppStore) => state.plugin);
+  const parseNovelPath = useAppStore((state: AppStore) => state.parseNovelPath);
   const shouldAutoSubmitNovel = useAppStore(
-    state => state.shouldAutoSubmitNovel,
+    (state: AppStore) => state.shouldAutoSubmitNovel,
   );
-  const clearParseNovelPath = useAppStore(state => state.clearParseNovelPath);
-  const setParseChapterPath = useAppStore(state => state.setParseChapterPath);
+  const clearParseNovelPath = useAppStore(
+    (state: AppStore) => state.clearParseNovelPath,
+  );
+  const setParseChapterPath = useAppStore(
+    (state: AppStore) => state.setParseChapterPath,
+  );
   const [novelPath, setNovelPath] = useState('');
   const [sourceNovel, setSourceNovel] = useState<
     (Plugin.SourceNovel & { totalPages?: number }) | undefined
@@ -167,7 +171,9 @@ export default function ParseNovelSection({
           <Input
             placeholder="Enter novel path..."
             value={novelPath}
-            onChange={e => setNovelPath(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setNovelPath(e.target.value)
+            }
             onKeyPress={handleKeyPress}
             className="flex-1"
             disabled={!plugin}

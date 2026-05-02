@@ -26,6 +26,14 @@ const settings: ServerSetting = {
 };
 
 const proxySettingMiddleware: Connect.NextHandleFunction = (req, res) => {
+  if (req.method === 'GET') {
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'application/json');
+    res.write(JSON.stringify(settings));
+    res.end();
+    return;
+  }
+
   let str = '';
   req.on('data', chunk => {
     str += chunk;

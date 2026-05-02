@@ -14,10 +14,10 @@ export type LightNovelWorldMetadata = {
   sourceSite: string;
   sourceName: string;
   options?: LightNovelWorldOptions;
-  filters?: any;
+  filters?: Filters;
 };
 
-class LightNovelWorld implements Plugin.PagePlugin {
+export class LightNovelWorld implements Plugin.PagePlugin {
   id: string;
   name: string;
   site: string;
@@ -52,7 +52,7 @@ class LightNovelWorld implements Plugin.PagePlugin {
     link += `${filters.status.value}/`;
     link += page;
 
-    const body = await fetchApi(link).then(r => r.text());
+    const body = await fetchApi(link).then((r: Response) => r.text());
 
     const loadedCheerio = parseHTML(body);
 
@@ -84,7 +84,9 @@ class LightNovelWorld implements Plugin.PagePlugin {
   async parseNovel(
     novelPath: string,
   ): Promise<Plugin.SourceNovel & { totalPages: number }> {
-    const body = await fetchApi(this.site + novelPath).then(r => r.text());
+    const body = await fetchApi(this.site + novelPath).then((r: Response) =>
+      r.text(),
+    );
 
     const loadedCheerio = parseHTML(body);
     const totalChapters = parseInt(
@@ -113,7 +115,7 @@ class LightNovelWorld implements Plugin.PagePlugin {
 
   async parsePage(novelPath: string, page: string): Promise<Plugin.SourcePage> {
     const url = this.site + novelPath + '/chapters/page-' + page;
-    const body = await fetchApi(url).then(res => res.text());
+    const body = await fetchApi(url).then((res: Response) => res.text());
     const loadedCheerio = parseHTML(body);
     const chapter: Plugin.ChapterItem[] = [];
     loadedCheerio('.chapter-list li').each(function () {
@@ -144,7 +146,9 @@ class LightNovelWorld implements Plugin.PagePlugin {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const body = await fetchApi(this.site + chapterPath).then(r => r.text());
+    const body = await fetchApi(this.site + chapterPath).then((r: Response) =>
+      r.text(),
+    );
 
     const loadedCheerio = parseHTML(body);
 
@@ -156,7 +160,7 @@ class LightNovelWorld implements Plugin.PagePlugin {
   async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
     const url = `${this.site}lnsearchlive`;
     const link = `${this.site}search`;
-    const response = await fetchApi(link).then(r => r.text());
+    const response = await fetchApi(link).then((r: Response) => r.text());
     const token = parseHTML(response);
     const verifytoken = token('#novelSearchForm > input').attr('value');
 
@@ -167,7 +171,7 @@ class LightNovelWorld implements Plugin.PagePlugin {
       method: 'POST',
       headers: { LNRequestVerifyToken: verifytoken! },
       body: formData,
-    }).then(r => r.json());
+    }).then((r: Response) => r.json());
 
     const novels: Plugin.NovelItem[] = [];
 

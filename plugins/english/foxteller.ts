@@ -2,17 +2,17 @@ import { Plugin } from '@/types/plugin';
 import { Parser } from 'htmlparser2';
 import { FilterTypes, Filters } from '@libs/filterInputs';
 import { defaultCover } from '@libs/defaultCover';
-import { fetchApi } from '@libs/fetch';
+import { fetchApi, FetchInit } from '@libs/fetch';
 import { NovelStatus } from '@libs/novelStatus';
 
 class Foxteller implements Plugin.PluginBase {
   id = 'foxteller';
   name = 'Foxteller';
   site = 'https://www.foxteller.com';
-  version = '1.0.2';
+  version = '1.0.3';
   icon = 'src/en/foxteller/icon.png';
 
-  async safeFecth(url: string, init: any = {}): Promise<string> {
+  async safeFecth(url: string, init?: FetchInit): Promise<string> {
     const r = await fetchApi(url, init);
     if (!r.ok)
       throw new Error(
@@ -221,8 +221,8 @@ class Foxteller implements Plugin.PluginBase {
         Accept: 'application/json, text/plain, */*',
         'Accept-Language': 'ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3',
         'Content-Type': 'application/json;charset=utf-8',
+        Referer: this.resolveUrl(chapterPath),
       },
-      Referer: this.resolveUrl(chapterPath),
       body: JSON.stringify({ 'x1': novelID, 'x2': chapterID }),
     }).then(res => res.json());
 
@@ -259,8 +259,8 @@ class Foxteller implements Plugin.PluginBase {
         Accept: 'application/json, text/plain, */*',
         'Accept-Language': 'ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3',
         'Content-Type': 'application/json;charset=utf-8',
+        Referer: this.site,
       },
-      Referer: this.site,
       body: JSON.stringify({ query: searchTerm }),
     });
     const novels: Plugin.NovelItem[] = [];

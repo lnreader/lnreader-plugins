@@ -8,5 +8,6 @@ export type {
   Filter,
   FilterOption,
   FilterToValues,
+  FilterValueWithType,
   AnyFilterValue,
 } from '../types/filters';

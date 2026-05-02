@@ -6,7 +6,7 @@
     if (scriptContent) {
       const gibMatch = scriptContent.match(/var gib = (\[.*?\])/);
       if (gibMatch) {
-        const gibArray = eval(gibMatch[1]) as string[];
+        const gibArray = eval(gibMatch[1]);
         gibArray.forEach(cssClass => {
           loadedCheerio(`.${cssClass}`).remove();
         });

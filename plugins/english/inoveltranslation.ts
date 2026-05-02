@@ -11,7 +11,7 @@ class INovelTranslation implements Plugin.PluginBase {
   name = 'iNovelTranslation';
   icon = 'src/en/inoveltranslation/icon.png';
   site = 'https://inoveltranslation.com';
-  version = '1.0.0';
+  version = '1.0.1';
   filters: Filters | undefined = undefined;
 
   pluginSettings = {
@@ -22,7 +22,6 @@ class INovelTranslation implements Plugin.PluginBase {
     },
   };
 
-  // Optimized stealth headers to mirror a real browser environment
   private readonly HEADERS = {
     'Accept':
       'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
@@ -33,20 +32,16 @@ class INovelTranslation implements Plugin.PluginBase {
     'Sec-Fetch-Site': 'same-origin',
   };
 
-  async popularNovels(
-    pageNo: number,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    options: Plugin.PopularNovelsOptions<typeof this.filters>,
-  ): Promise<Plugin.NovelItem[]> {
+  async popularNovels(pageNo: number): Promise<Plugin.NovelItem[]> {
     const url = `${this.site}/api/novels?limit=50&page=${pageNo}`;
-    const result = await fetchApi(url, { headers: this.HEADERS }).then(r =>
-      r.json(),
-    );
+    const result: ApiResponse<NovelData> = await fetchApi(url, {
+      headers: this.HEADERS,
+    }).then(r => r.json());
 
     const novels: Plugin.NovelItem[] = [];
 
     if (result.docs) {
-      result.docs.forEach((doc: any) => {
+      result.docs.forEach(doc => {
         novels.push({
           name: doc.title,
           path: `/novels/${doc.id}`,
@@ -61,27 +56,24 @@ class INovelTranslation implements Plugin.PluginBase {
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
     const id = novelPath.split('/').pop();
     const novelUrl = `${this.site}/api/novels/${id}?depth=1`;
-    const novelData = await fetchApi(novelUrl, { headers: this.HEADERS }).then(
-      r => r.json(),
-    );
-
-    const chaptersUrl = `${this.site}/api/chapters?where[novel][equals]=${id}&limit=999&depth=0`;
-    const chaptersData = await fetchApi(chaptersUrl, {
+    const novelData: NovelData = await fetchApi(novelUrl, {
       headers: this.HEADERS,
     }).then(r => r.json());
 
-    // Extract status
+    const chaptersUrl = `${this.site}/api/chapters?where[novel][equals]=${id}&limit=999&depth=0`;
+    const chaptersData: ApiResponse<ChapterData> = await fetchApi(chaptersUrl, {
+      headers: this.HEADERS,
+    }).then(r => r.json());
+
     const status =
       novelData.publication === 'completed'
         ? NovelStatus.Completed
         : NovelStatus.Ongoing;
 
-    // Extract genres (tags)
     const genres = novelData.tags
-      ? novelData.tags.map((tag: any) => tag.name).join(', ')
+      ? novelData.tags.map(tag => tag.name).join(', ')
       : '';
 
-    // Process summary (Lexical JSON from API 'sypnosis') - use Plain Text for App Synopsis
     let summary = '';
     if (novelData.sypnosis && novelData.sypnosis.root) {
       summary = this.lexicalToText(novelData.sypnosis.root);
@@ -103,7 +95,7 @@ class INovelTranslation implements Plugin.PluginBase {
     const hideLocked = storage.get('hideLocked');
 
     if (chaptersData.docs) {
-      chaptersData.docs.forEach((doc: any) => {
+      chaptersData.docs.forEach(doc => {
         const isLocked = doc.tier !== null;
         if (isLocked && hideLocked) {
           return;
@@ -121,7 +113,6 @@ class INovelTranslation implements Plugin.PluginBase {
       });
     }
 
-    // Ensure chapters are sorted numerically
     novel.chapters = chapters.sort(
       (a, b) => (a.chapterNumber || 0) - (b.chapterNumber || 0),
     );
@@ -129,7 +120,6 @@ class INovelTranslation implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    // Artificial delay to prevent aggressive rate limiting
     await new Promise(res => setTimeout(res, 1500));
 
     const rscHeader = { ...this.HEADERS, rsc: '1' };
@@ -139,8 +129,8 @@ class INovelTranslation implements Plugin.PluginBase {
       response = await fetchApi(this.site + chapterPath, {
         headers: rscHeader,
       });
-    } catch (e: any) {
-      throw new Error(`Network error: ${e.message}`);
+    } catch (e) {
+      throw new Error(`Network error: ${(e as Error).message}`);
     }
 
     if (response.status !== 200) {
@@ -155,7 +145,6 @@ class INovelTranslation implements Plugin.PluginBase {
       throw new Error('Server returned empty data.');
     }
 
-    // 1. Proactive Cloudflare Detection
     if (
       rscText.includes('cf-browser-verification') ||
       rscText.includes('cf-challenge') ||
@@ -170,35 +159,51 @@ class INovelTranslation implements Plugin.PluginBase {
     }
 
     // ==========================================
-    // 2. DEEP LEXICAL EXTRACTION ALGORITHM
+    // 2. ROBUST LEXICAL EXTRACTION ALGORITHM
     // ==========================================
 
-    // 2.1. Basic cleanup of escaped characters in the RSC stream
-    let cleanText = rscText.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+    // Use a more reliable signature: the start of the root Lexical object
+    const signatures = [
+      '"root":{"type":"root"',
+      '\\"root\\":{\\"type\\":\\"root\\"',
+      '"children":[{"type":"paragraph"',
+      '\\"children\\":[{\\"type\\":\\"paragraph\\"',
+    ];
 
-    // 2.2. Locate the core content signature (first paragraph children)
-    const signature = '"children":[{"type":"paragraph"';
-    let sigIndex = cleanText.indexOf(signature);
+    let sigIndex = -1;
+    for (const sig of signatures) {
+      sigIndex = rscText.indexOf(sig);
+      if (sigIndex !== -1) break;
+    }
 
     if (sigIndex !== -1) {
-      // 2.3. Backtrack to find the opening brace { of the Lexical Object
-      let startIndex = cleanText.lastIndexOf('{', sigIndex);
+      // Backtrack to find the opening brace { of the Lexical Object
+      let startIndex = rscText.lastIndexOf('{', sigIndex);
 
-      // Check if it is within a "root": { ... } object to backtrack one level further
-      const rootIndex = cleanText.lastIndexOf('"root"', sigIndex);
-      if (rootIndex !== -1 && rootIndex > startIndex - 30) {
-        startIndex = cleanText.lastIndexOf('{', rootIndex);
+      // Check for "content" or "root" before to find the start of the relevant object
+      const contextKeys = [
+        '"content"',
+        '\\"content\\"',
+        '"root"',
+        '\\"root\\"',
+      ];
+      for (const key of contextKeys) {
+        const keyIndex = rscText.lastIndexOf(key, sigIndex);
+        if (keyIndex !== -1 && keyIndex > startIndex - 50) {
+          startIndex = rscText.lastIndexOf('{', keyIndex);
+          break;
+        }
       }
 
       if (startIndex !== -1) {
-        // 2.4. High-performance Brace Balancing algorithm
         let braces = 0;
         let inString = false;
         let escape = false;
         let jsonStr = '';
 
-        for (let i = startIndex; i < cleanText.length; i++) {
-          const char = cleanText[i];
+        // Perform brace balancing on the raw stream to preserve escaping
+        for (let i = startIndex; i < rscText.length; i++) {
+          const char = rscText[i];
           if (escape) {
             escape = false;
             continue;
@@ -218,67 +223,77 @@ class INovelTranslation implements Plugin.PluginBase {
           }
 
           if (braces === 0 && i > startIndex) {
-            jsonStr = cleanText.substring(startIndex, i + 1);
+            jsonStr = rscText.substring(startIndex, i + 1);
             break;
           }
         }
 
         if (jsonStr) {
           try {
-            // 2.5 Standardize and Parse JSON
-            // Strip control characters that might break JSON.parse
+            // eslint-disable-next-line no-control-regex
             const safeJson = jsonStr.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
-            const parsedData = JSON.parse(safeJson);
-            let lexicalRoot = parsedData.root || parsedData;
+            let parsedData;
+            try {
+              parsedData = JSON.parse(safeJson);
+            } catch {
+              // If fails, it might be escaped, so clean it up and try again
+              const cleanJson = jsonStr
+                .replace(/\\"/g, '"')
+                .replace(/\\\\/g, '\\')
+                // eslint-disable-next-line no-control-regex
+                .replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+              parsedData = JSON.parse(cleanJson);
+            }
 
+            const lexicalRoot =
+              parsedData.root || parsedData.content?.root || parsedData;
             if (lexicalRoot && lexicalRoot.children) {
               return this.lexicalToHtml(lexicalRoot);
             }
-          } catch (e: any) {
-            // ==========================================
-            // 3. ULTIMATE FAILSAFE (REGEX TEXT EXTRACTION)
-            // ==========================================
-            // If JSON parsing fails due to corrupted RSC stream segments,
-            // we extract all "text":"..." fragments to reconstruct the story.
+          } catch (e) {
             let fallbackHtml = '';
-            const textMatches = jsonStr.match(/"text":"(.*?)"/g);
+            const textMatches = jsonStr.match(
+              /\\?"text\\?"\s*:\s*\\?"(.*?)\\?"/g,
+            );
             if (textMatches && textMatches.length > 0) {
               textMatches.forEach(m => {
-                let text = m.substring(8, m.length - 1);
-                if (text.trim() && text !== ' ') {
+                let text = m.match(/: ?"?(.*?)"?$/)?.[1] || '';
+                text = text.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+                if (text.trim() && text !== ' ' && !text.startsWith('Ch. ')) {
                   fallbackHtml += `<p>${text}</p>`;
                 }
               });
-              return fallbackHtml;
+              if (fallbackHtml) return fallbackHtml;
             }
-
-            throw new Error(
-              `JSON Parse error: ${e.message}. Data snippet: ${jsonStr.substring(0, 500)}`,
-            );
           }
         }
       }
     }
 
     // ==========================================
-    // 4. Final HTML Scavenger Fallback
+    // 3. HTML SCAVENGER FALLBACK
     // ==========================================
-    const $ = loadCheerio(rscText);
-    let htmlContent = $(
-      'main > section[data-sentry-component="RichText"]',
-    ).html();
-    if (htmlContent) return htmlContent;
+    // If RSC extraction failed, try fetching the standard HTML page
+    try {
+      const htmlResponse = await fetchApi(this.site + chapterPath, {
+        headers: this.HEADERS,
+      });
+      const htmlText = await htmlResponse.text();
+      const $ = loadCheerio(htmlText);
+      const htmlContent = $(
+        'main > section[data-sentry-component="RichText"]',
+      ).html();
+      if (htmlContent) return htmlContent;
+    } catch (e) {
+      // Ignore fallback errors and throw the final error below
+    }
 
     throw new Error(
-      'Story content not found. Cloudflare might be blocking the request or the page structure has changed. Please try opening in WebView first.',
+      'Story content not found. The page structure might have changed. Please try opening in WebView to verify.',
     );
   }
 
-  /**
-   * Recursively converts Lexical JSON nodes to HTML strings.
-   * Suitable for Chapter Content.
-   */
-  private lexicalToHtml(node: any): string {
+  private lexicalToHtml(node: LexicalNode): string {
     let html = '';
     if (node.children) {
       for (const child of node.children) {
@@ -286,8 +301,8 @@ class INovelTranslation implements Plugin.PluginBase {
           html += `<p>${this.lexicalToHtml(child)}</p>`;
         } else if (child.type === 'text') {
           let text = child.text || '';
-          if (child.format & 1) text = `<b>${text}</b>`;
-          if (child.format & 2) text = `<i>${text}</i>`;
+          if (child.format && child.format & 1) text = `<b>${text}</b>`;
+          if (child.format && child.format & 2) text = `<i>${text}</i>`;
           html += text;
         } else if (child.type === 'list') {
           const tag = child.listType === 'number' ? 'ol' : 'ul';
@@ -305,11 +320,7 @@ class INovelTranslation implements Plugin.PluginBase {
     return html;
   }
 
-  /**
-   * Recursively converts Lexical JSON nodes to Plain Text with newlines.
-   * Suitable for Novel Synopsis in the app.
-   */
-  private lexicalToText(node: any): string {
+  private lexicalToText(node: LexicalNode): string {
     let textOut = '';
     if (node.children) {
       for (const child of node.children) {
@@ -334,14 +345,14 @@ class INovelTranslation implements Plugin.PluginBase {
     const url = `${this.site}/api/novels?where[title][contains]=${encodeURIComponent(
       searchTerm,
     )}&limit=50&page=${pageNo}`;
-    const result = await fetchApi(url, { headers: this.HEADERS }).then(r =>
-      r.json(),
-    );
+    const result: ApiResponse<NovelData> = await fetchApi(url, {
+      headers: this.HEADERS,
+    }).then(r => r.json());
 
     const novels: Plugin.NovelItem[] = [];
 
     if (result.docs) {
-      result.docs.forEach((doc: any) => {
+      result.docs.forEach(doc => {
         novels.push({
           name: doc.title,
           path: `/novels/${doc.id}`,
@@ -352,8 +363,43 @@ class INovelTranslation implements Plugin.PluginBase {
 
     return novels;
   }
-
-  resolveUrl = (path: string, isNovel?: boolean) => this.site + path;
 }
 
 export default new INovelTranslation();
+
+type LexicalNode = {
+  type: string;
+  text?: string;
+  children?: LexicalNode[];
+  format?: number;
+  listType?: string;
+  tag?: string;
+};
+
+type NovelData = {
+  id: string;
+  title: string;
+  cover?: {
+    url: string;
+  };
+  author?: {
+    name: string;
+  };
+  publication?: string;
+  tags?: { name: string }[];
+  sypnosis?: {
+    root: LexicalNode;
+  };
+};
+
+type ChapterData = {
+  id: string;
+  title?: string;
+  chapter: number;
+  tier: string | null;
+  updatedAt: string;
+};
+
+type ApiResponse<T> = {
+  docs: T[];
+};

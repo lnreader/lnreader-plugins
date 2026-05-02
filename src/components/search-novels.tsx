@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAppStore } from '@/store';
+import { useAppStore, AppStore } from '@/store';
 import { Plugin } from '@/types/plugin';
 
 type SearchNovelsSectionProps = {
@@ -17,8 +17,10 @@ type SearchNovelsSectionProps = {
 export default function SearchNovelsSection({
   onNavigateToParseNovel,
 }: SearchNovelsSectionProps) {
-  const plugin = useAppStore(state => state.plugin);
-  const setParseNovelPath = useAppStore(state => state.setParseNovelPath);
+  const plugin = useAppStore((state: AppStore) => state.plugin);
+  const setParseNovelPath = useAppStore(
+    (state: AppStore) => state.setParseNovelPath,
+  );
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [novels, setNovels] = useState<Plugin.NovelItem[]>([]);
@@ -85,7 +87,9 @@ export default function SearchNovelsSection({
           <Input
             placeholder="Enter search term..."
             value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setSearchTerm(e.target.value)
+            }
             onKeyPress={handleKeyPress}
             className="flex-1"
             disabled={!plugin}

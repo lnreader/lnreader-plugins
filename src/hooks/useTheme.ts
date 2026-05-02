@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
-import { useAppStore } from '@/store';
+import { useAppStore, AppStore } from '@/store';
 
 export function useTheme() {
-  const theme = useAppStore(state => state.theme);
-  const setTheme = useAppStore(state => state.setTheme);
+  const theme = useAppStore((state: AppStore) => state.theme);
+  const setTheme = useAppStore((state: AppStore) => state.setTheme);
 
   useEffect(() => {
     const root = document.documentElement;

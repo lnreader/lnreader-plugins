@@ -9,7 +9,7 @@ class LinovelPlugin implements Plugin.PluginBase {
   name = 'linovel';
   icon = 'src/cn/linovel/icon.png';
   site = 'https://www.linovel.net';
-  version = '1.0.0';
+  version = '1.0.1';
   filters: Filters | undefined = undefined;
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
@@ -27,13 +27,12 @@ class LinovelPlugin implements Plugin.PluginBase {
     return parseHTML(body);
   }
 
-  async popularNovels(
-    pageNo: number,
-    {
-      showLatestNovels,
-      filters,
-    }: Plugin.PopularNovelsOptions<typeof this.filters>,
-  ): Promise<Plugin.NovelItem[]> {
+  async popularNovels() // pageNo: number,
+  // {
+  //   showLatestNovels,
+  //   filters,
+  // }: Plugin.PopularNovelsOptions<typeof this.filters>,
+  : Promise<Plugin.NovelItem[]> {
     const novels: Plugin.NovelItem[] = [];
 
     const loadedCheerio = await this.fetchHTML(this.site);
@@ -139,7 +138,7 @@ class LinovelPlugin implements Plugin.PluginBase {
   }
   async searchNovels(
     searchTerm: string,
-    pageNo: number,
+    // pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
     const loadedCheerio = await this.fetchHTML(
       this.site + '/search/?kw=' + searchTerm,

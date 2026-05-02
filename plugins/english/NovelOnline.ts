@@ -8,7 +8,7 @@ class NovelsOnline implements Plugin.PluginBase {
   name = 'novelsOnline';
   site = 'https://novelsonline.org';
   icon = 'src/en/novelsonline/icon.png';
-  version = '1.0.1';
+  version = '1.0.2';
 
   async safeFetch(
     url: string,
@@ -131,12 +131,14 @@ class NovelsOnline implements Plugin.PluginBase {
             .join(', ');
           break;
         case 'Artist(s)':
-          const artist = detail
-            .find('li')
-            .map((_, el) => $(el).text())
-            .get()
-            .join(', ');
-          if (artist && artist != 'N/A') novel.artist = artist;
+          {
+            const artist = detail
+              .find('li')
+              .map((_, el) => $(el).text())
+              .get()
+              .join(', ');
+            if (artist && artist != 'N/A') novel.artist = artist;
+          }
           break;
         case 'Status':
           novel.status = detail.text().trim();

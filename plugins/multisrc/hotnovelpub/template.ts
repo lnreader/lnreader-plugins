@@ -1,5 +1,5 @@
 import { fetchApi } from '@libs/fetch';
-import { Filters, FilterTypes } from '@libs/filterInputs';
+import { Filters } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 
@@ -15,7 +15,7 @@ type HotNovelPubOptions = {
   lang?: string;
 };
 
-class HotNovelPubPlugin implements Plugin.PluginBase {
+export class HotNovelPubPlugin implements Plugin.PluginBase {
   id: string;
   name: string;
   icon: string;
@@ -38,7 +38,10 @@ class HotNovelPubPlugin implements Plugin.PluginBase {
 
   async popularNovels(
     pageNo: number,
-    { filters, showLatestNovels }: Plugin.PopularNovelsOptions,
+    {
+      filters,
+      showLatestNovels,
+    }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
     let url = this.apiSite + '/books/';
     url += showLatestNovels ? 'new' : filters?.sort?.value || 'hot';
@@ -52,7 +55,7 @@ class HotNovelPubPlugin implements Plugin.PluginBase {
       headers: {
         lang: this.lang,
       },
-    }).then(res => res.json());
+    }).then((res: Response) => res.json());
     const novels: Plugin.NovelItem[] = [];
 
     if (result.status && result.data.books.data?.length) {
@@ -75,7 +78,7 @@ class HotNovelPubPlugin implements Plugin.PluginBase {
           lang: this.lang,
         },
       },
-    ).then(res => res.json());
+    ).then((res: Response) => res.json());
 
     const novel: Plugin.SourceNovel = {
       name: json.data.book.name,
@@ -110,8 +113,8 @@ class HotNovelPubPlugin implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const body = await fetchApi(this.resolveUrl(chapterPath)).then(res =>
-      res.text(),
+    const body = await fetchApi(this.resolveUrl(chapterPath)).then(
+      (res: Response) => res.text(),
     );
 
     let chapterText =
@@ -144,7 +147,7 @@ class HotNovelPubPlugin implements Plugin.PluginBase {
       },
       method: 'POST',
       body: JSON.stringify({ key_search: searchTerm }),
-    }).then(res => res.json());
+    }).then((res: Response) => res.json());
     const novels: Plugin.NovelItem[] = [];
 
     if (result.status && result.data.books?.length) {

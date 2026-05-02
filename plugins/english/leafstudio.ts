@@ -28,7 +28,7 @@ class LeafStudio implements Plugin.PluginBase {
 
   async popularNovels(
     page: number,
-    { filters }: Plugin.PopularNovelsOptions<typeof this.filters>,
+    // { filters }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
     let link = this.site + 'novels';
     if (page > 1) {

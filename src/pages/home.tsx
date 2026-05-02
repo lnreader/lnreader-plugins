@@ -6,8 +6,9 @@ import PluginHeader from '../components/plugin-header';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 
+import { Plugin } from '@/types/plugin';
 import plugins from '@plugins/index';
-import { useAppStore } from '@/store';
+import { useAppStore, AppStore } from '@/store';
 import PopularNovelsSection from '@/components/popular-novels';
 import SearchNovelsSection from '@/components/search-novels';
 import ParseNovelSection from '@/components/parse-novel';
@@ -15,14 +16,14 @@ import SettingsSection from '@/components/settings';
 import ParseChapterSection from '@/components/parse-chapter';
 
 function Home() {
-  const { plugin, selectPlugin } = useAppStore(state => state);
+  const { plugin, selectPlugin } = useAppStore((state: AppStore) => state);
   const [searchQuery, setSearchQuery] = useState('');
 
   const [activeTab, setActiveTab] = useState('popular');
 
   const filteredPlugins = useMemo(
     () =>
-      plugins.filter(plugin =>
+      (plugins as Plugin.PluginItem[]).filter(plugin =>
         plugin.name.toLowerCase().includes(searchQuery.toLowerCase()),
       ),
     [searchQuery],
@@ -47,7 +48,9 @@ function Home() {
               <Input
                 placeholder="Search plugin..."
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setSearchQuery(e.target.value)
+                }
                 className="pl-10 h-9"
               />
             </div>

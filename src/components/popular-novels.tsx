@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAppStore } from '@/store';
+import { useAppStore, AppStore } from '@/store';
 import { FilterToValues, Filters } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
 
@@ -19,8 +19,10 @@ type PopularNovelsSectionProps = {
 export default function PopularNovelsSection({
   onNavigateToParseNovel,
 }: PopularNovelsSectionProps) {
-  const plugin = useAppStore(state => state.plugin);
-  const setParseNovelPath = useAppStore(state => state.setParseNovelPath);
+  const plugin = useAppStore((state: AppStore) => state.plugin);
+  const setParseNovelPath = useAppStore(
+    (state: AppStore) => state.setParseNovelPath,
+  );
   const [novels, setNovels] = useState<Plugin.NovelItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);

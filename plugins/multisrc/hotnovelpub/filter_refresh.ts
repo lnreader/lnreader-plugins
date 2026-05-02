@@ -3,9 +3,10 @@ import * as cheerio from 'cheerio';
 import * as path from 'path';
 import list from './sources.json' with { type: 'json' };
 import { HotNovelPubMetadata } from './template';
+import { Filters } from '@libs/filterInputs';
 
 async function getFilters(sources: HotNovelPubMetadata) {
-  const filters: any = {
+  const filters: Filters = {
     sort: {
       type: 'Picker',
       label: 'Order',
@@ -70,7 +71,7 @@ async function start() {
   const result = [];
   for (const sources of list) {
     console.log('updating the filters in', sources.sourceName);
-    const NewFilters = await getFilters(sources as any);
+    const NewFilters = await getFilters(sources as HotNovelPubMetadata);
     sources.filters = NewFilters;
     result.push(sources);
   }

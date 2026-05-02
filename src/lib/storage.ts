@@ -1,5 +1,11 @@
+export type StorageItem<T = unknown> = {
+  created: Date;
+  value: T;
+  expires?: number;
+};
+
 class Storage {
-  private db: Record<string, { created: Date; value: any; expires?: number }>;
+  private db: Record<string, StorageItem>;
 
   /**
    * Initializes a new instance of the Storage class.
@@ -12,10 +18,10 @@ class Storage {
    * Sets a key-value pair in storage.
    *
    * @param {string} key - The key to set.
-   * @param {any} value - The value to set.
+   * @param {T} value - The value to set.
    * @param {Date | number} [expires] - Optional expiry date or time in milliseconds.
    */
-  set(key: string, value: any, expires?: Date | number): void {
+  set<T>(key: string, value: T, expires?: Date | number): void {
     this.db[key] = {
       created: new Date(),
       value,
@@ -28,10 +34,12 @@ class Storage {
    *
    * @param {string} key - The key to retrieve the value for.
    * @param {boolean} [raw] - Optional flag to return the raw stored item.
-   * @returns {any} The stored value or undefined if key is not found.
+   * @returns The stored value or undefined if key is not found.
    */
-  get(key: string, raw?: boolean): any {
-    const item = this.db[key];
+  get<T = unknown>(key: string, raw: true): StorageItem<T> | undefined;
+  get<T = unknown>(key: string, raw?: false): T | undefined;
+  get<T = unknown>(key: string, raw?: boolean): T | StorageItem<T> | undefined {
+    const item = this.db[key] as StorageItem<T> | undefined;
     if (item?.expires && Date.now() > item.expires) {
       this.delete(key);
       return undefined;
@@ -69,7 +77,7 @@ class Storage {
 export const storage = new Storage();
 
 /*
-These parameters cannot be implemented in `test-web`. 
+These parameters cannot be implemented in `test-web`.
 They are generated in the browser when js-scripts are executed
 Read more
 
@@ -80,7 +88,7 @@ https://developer.mozilla.org/en-US/docs/Web/API/Window/sessionStorage
 /**
  * Represents the structure of a storage object with string keys and values.
  */
-type StorageObject = Record<string, any>;
+type StorageObject = Record<string, string>;
 
 /**
  * Represents a simplified version of the browser's localStorage.

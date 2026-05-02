@@ -7,7 +7,7 @@ import { defaultCover } from '@libs/defaultCover';
 class ArchiveOfOurOwn implements Plugin.PluginBase {
   id = 'archiveofourown';
   name = 'Archive Of Our Own';
-  version = '1.0.3';
+  version = '1.0.4';
   icon = 'src/en/ao3/icon.png';
   site = 'https://archiveofourown.org/';
 
@@ -42,57 +42,73 @@ class ArchiveOfOurOwn implements Plugin.PluginBase {
 
   async popularNovels(
     page: number,
-    { showLatestNovels, filters }: Plugin.PopularNovelsOptions<Filters>,
+    {
+      showLatestNovels,
+      filters,
+    }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
-    // Base URL and common parameters
-    let link = `${this.site}works/search?page=${page}&work_search%5Blanguage_id%5D=en`;
+    const params = new URLSearchParams({
+      commit: 'Search',
+      page: page.toString(),
+      'work_search[language_id]': filters.language.value,
+    });
 
-    // Apply sorting based on showLatestNovels
     if (showLatestNovels) {
-      link += `&work_search%5Bsort_column%5D=revised_at&work_search%5Bsort_direction%5D=${filters.sortdir.value}`;
-    } else if (filters) {
-      link += `&work_search%5Bsort_column%5D=${filters.sort.value}&work_search%5Bsort_direction%5D=${filters.sortdir.value}`;
+      params.set('work_search[sort_column]', 'revised_at');
+    } else {
+      params.set('work_search[sort_column]', filters.sort.value);
+    }
+    params.set('work_search[sort_direction]', filters.sortdir.value);
+
+    // we could send in the entire thing without checking for blanks
+    if (filters.completion.value !== '') {
+      params.set('work_search[complete]', filters.completion.value);
+    }
+    if (filters.crossover.value !== '') {
+      params.set('work_search[crossover]', filters.crossover.value);
+    }
+    if (filters.categories.value.length > 0) {
+      filters.categories.value.forEach((category: string) => {
+        params.append('work_search[category_ids][]', category);
+      });
+    }
+    if (filters.warningsFilter.value.length > 0) {
+      filters.warningsFilter.value.forEach((warning: string) => {
+        params.append('work_search[archive_warning_ids][]', warning);
+      });
+    }
+    if (filters.singlechap.value) {
+      params.set('work_search[single_chapter]', '1');
+    }
+    if (filters.author.value !== '') {
+      params.set('work_search[creators]', filters.author.value);
+    }
+    if (
+      filters.dateFilter.value !== '' &&
+      filters.dateIncrements.value !== ''
+    ) {
+      params.set(
+        'work_search[revised_at]',
+        `${filters.dateFilter.value} ${filters.dateIncrements.value}`,
+      );
+    }
+    if (filters.words.value !== '') {
+      params.set('work_search[word_count]', filters.words.value);
+    }
+    if (filters.hits.value !== '') {
+      params.set('work_search[hits]', filters.hits.value);
+    }
+    if (filters.bookmarks.value !== '') {
+      params.set('work_search[bookmarks_count]', filters.bookmarks.value);
+    }
+    if (filters.comments.value !== '') {
+      params.set('work_search[comments_count]', filters.comments.value);
+    }
+    if (filters.kudos.value !== '') {
+      params.set('work_search[kudos_count]', filters.kudos.value);
     }
 
-    // Apply additional filters
-    if (filters) {
-      // if (filters.genre.value !== '') link += `&work_search%5Bfandom_names%5D=${filters.genre.value}`;
-      if (filters.completion.value !== '')
-        link += `&work_search%5Bcomplete%5D=${filters.completion.value}`;
-      if (filters.crossover.value !== '')
-        link += `&work_search%5Bcrossover%5D=${filters.crossover.value}`;
-      if (filters.categories.value.length > 0) {
-        filters.categories.value.forEach((category: string) => {
-          link += `&work_search%5Bcategory_ids%5D%5B%5D=${category}`;
-        });
-      }
-      if (filters.warningsFilter.value.length > 0) {
-        filters.warningsFilter.value.forEach((warning: string) => {
-          link += `&work_search%5Barchive_warning_ids%5D%5B%5D=${warning}`;
-        });
-      }
-      if (filters.singlechap.value !== '')
-        link += `&work_search%5Bsingle_chapter%5D=${filters.singlechap.value}`;
-      if (filters.author.value !== '')
-        link += `&work_search%5Bcreators%5D=${filters.author.value}`;
-      if (
-        filters.dateFilter.value !== '' &&
-        filters.dateIncrements.value !== ''
-      ) {
-        link += `&work_search%5Brevised_at%5D=${filters.dateFilter.value}+${filters.dateIncrements.value}`;
-      }
-      if (filters.words.value !== '')
-        link += `&work_search%5Bword_count%5D=${filters.words.value}`;
-      if (filters.hits.value !== '')
-        link += `&work_search%5Bhits%5D=${filters.hits.value}`;
-      if (filters.bookmarks.value !== '')
-        link += `&work_search%5Bbookmarks_count%5D=${filters.bookmarks.value}`;
-      if (filters.comments.value !== '')
-        link += `&work_search%5Bcomments_count%5D=${filters.comments.value}`;
-      if (filters.kudos.value !== '')
-        link += `&work_search%5Bkudos_count%5D=${filters.kudos.value}`;
-    }
-
+    const link = `${this.site}works/search?${params.toString()}`;
     const body = await fetchApi(link).then(r => r.text());
     const loadedCheerio = parseHTML(body);
     return this.parseNovels(loadedCheerio);
@@ -149,12 +165,12 @@ class ArchiveOfOurOwn implements Plugin.PluginBase {
     novel.summary = `Fandom:\n${fandom}\n\nRating:\n${rating}\n\nWarning:\n${warning}\n\nSummary:\n${summary}\n\nSeries:\n${series}\n\nRelationships:\n${relation}\n\nCharacters:\n${character}\n\nStats:\n${stats}`;
     const chapterItems: Plugin.ChapterItem[] = [];
     const longReleaseDate: string[] = [];
-    let match: RegExpExecArray | null;
+    // let match: RegExpExecArray | null;
     chapterlistload('ol.index').each((i, ele) => {
       chapterlistload(ele)
         .find('li')
         .each((i, el) => {
-          const chapterNameMatch = chapterlistload(el).find('a').text().trim();
+          // const chapterNameMatch = chapterlistload(el).find('a').text().trim();
           const releaseTimeText = chapterlistload(el)
             .find('span.datetime')
             .text()
@@ -282,7 +298,13 @@ class ArchiveOfOurOwn implements Plugin.PluginBase {
     searchTerm: string,
     page: number,
   ): Promise<Plugin.NovelItem[]> {
-    const searchUrl = `${this.site}works/search?page=${page}&work_search%5Blanguage_id%5D=en&work_search%5Bquery%5D=${encodeURIComponent(searchTerm)}`;
+    const params = new URLSearchParams({
+      commit: 'Search',
+      page: page.toString(),
+      'work_search[language_id]': 'en',
+      'work_search[query]': searchTerm,
+    });
+    const searchUrl = `${this.site}works/search?${params.toString()}`;
 
     const result = await fetchApi(searchUrl);
     const body = await result.text();
@@ -521,10 +543,9 @@ class ArchiveOfOurOwn implements Plugin.PluginBase {
       type: FilterTypes.CheckboxGroup,
     },
     singlechap: {
-      value: '',
+      value: false,
       label: 'Single Chapter Stories',
-      options: [{ label: 'Single Chapter', value: '1' }],
-      type: FilterTypes.Picker,
+      type: FilterTypes.Switch,
     },
     author: {
       value: '',

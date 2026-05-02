@@ -8,8 +8,8 @@ class IndraTranslations implements Plugin.PluginBase {
   id = 'indratranslations';
   name = 'Indra Translations';
   site = 'https://indratranslations.com';
-  version = '1.2.0';
-  // icon = 'src/en/indratranslations/icon.png';
+  version = '1.2.1';
+  icon = 'src/en/indratranslations/icon.png';
   // customCSS = 'src/en/indratranslations/customCSS.css';
   // (optional) Add these files to the repo and uncomment the lines above if you want an icon/custom CSS.
 
@@ -101,12 +101,12 @@ class IndraTranslations implements Plugin.PluginBase {
         $(el).find('a[href*="/series/"]').first() ||
         $(el).find('.tab-thumb a[href*="/series/"]').first();
 
-      const href = (a as any).attr?.('href') || '';
+      const href = a.attr?.('href') || '';
       const title =
         this.clean($(el).find('.post-title a').text()) ||
         this.clean($(el).find('.tab-summary .post-title a').text()) ||
-        this.clean((a as any).attr?.('title')) ||
-        this.clean((a as any).text?.());
+        this.clean(a.attr?.('title')) ||
+        this.clean(a.text?.());
 
       const img =
         $(el).find('img').attr('data-src') ||
