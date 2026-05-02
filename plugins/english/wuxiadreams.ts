@@ -5,7 +5,7 @@ import { Filters, FilterTypes } from '@libs/filterInputs';
 import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
-class WuxiaDreams implements Plugin.PluginBase {
+class WuxiaDreams implements Plugin.PagePlugin {
   id = 'wuxiadreams';
   name = 'Wuxia Dreams';
   version = '1.0.0';
@@ -66,12 +66,14 @@ class WuxiaDreams implements Plugin.PluginBase {
     return novels;
   }
 
-  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+  async parseNovel(
+    novelPath: string,
+  ): Promise<Plugin.SourceNovel & { totalPages: number }> {
     const url = `${this.site}novel/${novelPath}`;
     const body = await fetchApi(url).then(r => r.text());
     const loadedCheerio = parseHTML(body);
 
-    const novel: Plugin.SourceNovel = {
+    const novel: Plugin.SourceNovel & { totalPages: number } = {
       path: novelPath,
       name:
         loadedCheerio('h1').text().trim() ||
@@ -85,6 +87,8 @@ class WuxiaDreams implements Plugin.PluginBase {
         defaultCover,
       summary: loadedCheerio('h3:contains("Synopsis")').next().text().trim(),
       status: NovelStatus.Unknown,
+      totalPages: 1,
+      chapters: [],
     };
 
     // Author
@@ -125,52 +129,55 @@ class WuxiaDreams implements Plugin.PluginBase {
         ? NovelStatus.Ongoing
         : NovelStatus.Unknown;
 
-    // Chapters
-    const chapters: Plugin.ChapterItem[] = [];
-
     // Handle pagination
-    let totalPages = 1;
-
     const pageInfo = loadedCheerio('div:contains("Page")').text();
     const match = pageInfo.match(/Page\s+\d+\s+of\s+(\d+)/i);
     if (match) {
-      totalPages = parseInt(match[1]);
+      novel.totalPages = parseInt(match[1]);
     }
 
-    for (let p = 1; p <= totalPages; p++) {
-      let pageCheerio = loadedCheerio;
-      if (p > 1) {
-        const pageUrl = `${url}?page=${p}`;
-        const pageBody = await fetchApi(pageUrl).then(r => r.text());
-        pageCheerio = parseHTML(pageBody);
-      }
+    novel.chapters = this.parseChapters(loadedCheerio, novelPath);
 
-      pageCheerio('a[href^="/novel/' + novelPath + '/chapter-"]').each(
-        (i, ele) => {
-          const chapterName = pageCheerio(ele)
-            .find('span')
-            .first()
-            .text()
-            .trim();
-          const chapterUrl = pageCheerio(ele).attr('href');
-          const releaseDate = pageCheerio(ele)
-            .find('div > span:first-child')
-            .text()
-            .trim();
-
-          if (chapterName && chapterUrl) {
-            chapters.push({
-              name: chapterName,
-              path: chapterUrl.substring(1), // remove leading slash
-              releaseTime: releaseDate,
-            });
-          }
-        },
-      );
-    }
-
-    novel.chapters = chapters;
     return novel;
+  }
+
+  async parsePage(novelPath: string, page: string): Promise<Plugin.SourcePage> {
+    const url = `${this.site}novel/${novelPath}?page=${page}`;
+    const body = await fetchApi(url).then(r => r.text());
+    const loadedCheerio = parseHTML(body);
+
+    return {
+      chapters: this.parseChapters(loadedCheerio, novelPath),
+    };
+  }
+
+  parseChapters(loadedCheerio: CheerioAPI, novelPath: string) {
+    const chapters: Plugin.ChapterItem[] = [];
+
+    loadedCheerio('a[href^="/novel/' + novelPath + '/chapter-"]').each(
+      (i, ele) => {
+        const chapterName = loadedCheerio(ele)
+          .find('span')
+          .first()
+          .text()
+          .trim();
+        const chapterUrl = loadedCheerio(ele).attr('href');
+        const releaseDate = loadedCheerio(ele)
+          .find('div > span:first-child')
+          .text()
+          .trim();
+
+        if (chapterName && chapterUrl) {
+          chapters.push({
+            name: chapterName,
+            path: chapterUrl.substring(1), // remove leading slash
+            releaseTime: releaseDate,
+          });
+        }
+      },
+    );
+
+    return chapters;
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
