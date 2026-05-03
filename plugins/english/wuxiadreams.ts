@@ -85,11 +85,37 @@ class WuxiaDreams implements Plugin.PagePlugin {
       cover:
         loadedCheerio('meta[property="og:image"]').attr('content') ||
         defaultCover,
-      summary: loadedCheerio('h3:contains("Synopsis")').next().text().trim(),
+      summary: '',
       status: NovelStatus.Unknown,
       totalPages: 1,
       chapters: [],
     };
+
+    // Try to get summary from JSON-LD first (cleanest)
+    const jsonLD = loadedCheerio('script[type="application/ld+json"]').html();
+    if (jsonLD) {
+      try {
+        const data = JSON.parse(jsonLD);
+        novel.summary = data.description;
+      } catch (e) {
+        // Fallback to HTML parsing if JSON is invalid
+      }
+    }
+
+    if (!novel.summary) {
+      novel.summary = loadedCheerio('h3:contains("Synopsis")')
+        .next()
+        .html()
+        ?.replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/(p|div|h[1-6])>/gi, '\n\n')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/[ \t]+/g, ' ')
+        .replace(/\n /g, '\n')
+        .replace(/ \n/g, '\n')
+        .replace(/\n\n+/g, '\n\n')
+        .trim();
+    }
 
     // Author
     novel.author = loadedCheerio('span:contains("Author:")')
