@@ -10,7 +10,7 @@ class TuNovelaLigera implements Plugin.PagePlugin {
   name = 'TuNovelaLigera';
   icon = 'src/es/tunovelaligera/icon.png';
   site = 'https://tunovelaligera.com';
-  version = '1.1.0';
+  version = '1.2.0';
 
   async sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -23,14 +23,34 @@ class TuNovelaLigera implements Plugin.PagePlugin {
     }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
     let link = this.site;
+    const isFilterGenres = filters?.genres?.value != '';
+    const isFilterOrder = filters?.order?.value != 'rating';
+    link += isFilterOrder
+      ? `/novelas/?m_orderby=${filters?.order?.value}`
+      : `/wp-admin/admin-ajax.php`;
 
-    link += filters?.genres?.value
-      ? '/genero' + filters.genres.value
-      : '/novelas';
-    link += `/page/${pageNo}?m_orderby=`;
-    link += showLatestNovels ? 'latest' : filters?.order?.value || 'rating';
+    const formData = new FormData();
+    if (!isFilterOrder) {
+      formData.append('action', 'madara_load_more');
+      formData.append('page', pageNo.toString());
+      formData.append('template', 'madara-core/content/content-archive');
+      formData.append('vars[post_type]', 'wp-manga');
 
-    const result = await fetchApi(link).then(res => res.text());
+      if (isFilterGenres) {
+        formData.append('vars[wp-manga-genre]', filters.genres.value);
+      }
+    }
+
+    const result = await fetchApi(
+      link,
+      isFilterOrder
+        ? {}
+        : {
+            method: 'POST',
+            body: formData,
+          },
+    ).then(res => res.text());
+
     const loadedCheerio = parseHTML(result);
 
     const novels: Plugin.NovelItem[] = [];
@@ -48,8 +68,15 @@ class TuNovelaLigera implements Plugin.PagePlugin {
   }
 
   parseChapters(loadedCheerio: CheerioAPI): Plugin.ChapterItem[] {
+    const hasWpMangaItems =
+      loadedCheerio("ul > li[class*='wp-manga'][class^='wp-manga']").length > 0;
+
     const chapters: Plugin.ChapterItem[] = [];
-    loadedCheerio('#lcp_instance_0 li').each((i, el) => {
+    loadedCheerio(
+      hasWpMangaItems
+        ? "ul > li[class*='wp-manga'][class^='wp-manga']"
+        : "ul[id*='lcp_instance'] > li",
+    ).each((_i, el) => {
       const chapterName = loadedCheerio(el)
         .find('a')
         .text()
@@ -74,27 +101,46 @@ class TuNovelaLigera implements Plugin.PagePlugin {
     const body = await result.text();
 
     const loadedCheerio = parseHTML(body);
+
+    const nameNovel = novelPath.split('/')[2];
+
+    const apiChapter = `${this.site}/novelas/${nameNovel}`;
+    const resultApi = await fetchApi(`${apiChapter}/ajax/chapters/`, {
+      method: 'POST',
+    });
+    const bodyApi = await resultApi.text();
+    const chaptersApi = parseHTML(bodyApi);
+
+    const hasWpMangaItems =
+      chaptersApi("ul > li[class*='wp-manga'][class^='wp-manga']").length > 0;
+
     let lastPage = 1;
-    loadedCheerio('ul.lcp_paginator > li > a').each(function () {
+    loadedCheerio("ul[id*='lcp_paginator'] > li > a").each(function () {
       const page = Number(this.attribs['title']);
       if (page && page > lastPage) lastPage = page;
     });
-    const novel: Plugin.SourceNovel & { totalPages: number } = {
+
+    const novel: Plugin.SourceNovel & {
+      totalPages: number;
+      latestChapter?: Plugin.ChapterItem;
+    } = {
       path: novelPath,
       chapters: [],
-      totalPages: lastPage,
+      totalPages: hasWpMangaItems ? 0 : lastPage,
       name: loadedCheerio('.post-title > h1').text().trim(),
+      latestChapter: undefined,
     };
 
     loadedCheerio('.manga-title-badges').remove();
 
     const novelCover = loadedCheerio('.summary_image > a > img');
 
-    novel.cover =
+    novel.cover = (
       novelCover.attr('data-src') ||
       novelCover.attr('src') ||
       novelCover.attr('data-cfsrc') ||
-      defaultCover;
+      defaultCover
+    ).trim();
 
     loadedCheerio('.post-content_item').each(function () {
       const detailName = loadedCheerio(this)
@@ -121,47 +167,90 @@ class TuNovelaLigera implements Plugin.PagePlugin {
 
     novel.summary = loadedCheerio('div.summary__content > p').text().trim();
 
-    novel.chapters = this.parseChapters(loadedCheerio);
-    const latestChapterEle = loadedCheerio('#lcp_instance_0 li').first();
-    const latestChapterUrl = loadedCheerio(latestChapterEle)
-      .find('a')
-      .attr('href');
-    const latestChapterName = loadedCheerio(latestChapterEle)
-      .find('a')
-      .text()
-      .replace(/[\t\n]/g, '')
-      .trim();
-    novel.latestChapter = latestChapterUrl
-      ? {
-          path: latestChapterUrl.replace(this.site, ''),
-          name: latestChapterName,
-        }
-      : undefined;
+    const cherioDefault = hasWpMangaItems ? chaptersApi : loadedCheerio;
+
+    novel.chapters = this.parseChapters(cherioDefault);
+
+    if (!hasWpMangaItems) {
+      const latestChapterEle = loadedCheerio(
+        `ul[id*='lcp_instance'] > li`,
+      ).first();
+      const latestChapterUrl = loadedCheerio(latestChapterEle)
+        .find('a')
+        .attr('href');
+      const latestChapterName = loadedCheerio(latestChapterEle)
+        .find('a')
+        .text()
+        .replace(/[\t\n]/g, '')
+        .trim();
+      novel.latestChapter = latestChapterUrl
+        ? {
+            path: latestChapterUrl.replace(this.site, ''),
+            name: latestChapterName,
+          }
+        : undefined;
+    }
 
     return novel;
   }
 
   async parsePage(novelPath: string, page: string): Promise<Plugin.SourcePage> {
-    const pageUrl = this.site + novelPath + '?lcp_page0=' + page;
+    novelPath = novelPath.replace(/=[0-9]+/, '=');
+    const pageUrl = this.site + novelPath + page;
     const pageText = await fetchApi(pageUrl).then(res => res.text());
     const chapters = this.parseChapters(parseHTML(pageText));
     return {
       chapters,
     };
   }
+
   async parseChapter(chapterPath: string): Promise<string> {
     const result = await fetchApi(this.site + chapterPath);
     const body = await result.text();
 
     const loadedCheerio = parseHTML(body);
 
-    const chapterText = loadedCheerio('.c-blog-post.post').html() || '';
+    const chapterText = loadedCheerio(
+      'div.entry-content_wrap:has(>p), div.entry-content_wrap div:has(>p)',
+    ).first();
 
-    return chapterText;
+    chapterText.children().not('p').remove();
+
+    let paragraph: string[] = [];
+    const chapterHtml: string[] = [];
+    const tagsPermisive: string[] = ['b', 'i', 'u', 'strong', 'em', 'span'];
+
+    chapterText.contents().each((_, element) => {
+      switch (element.type) {
+        case 'text':
+          if (element.data.trim()) {
+            paragraph.push(element.data.trim());
+          }
+          break;
+        case 'tag':
+          const originalTag = element.tagName;
+          if (tagsPermisive.includes(originalTag)) {
+            paragraph.push(loadedCheerio.html(element));
+          } else {
+            if (paragraph.length > 0) {
+              chapterHtml.push(`<p>${paragraph.join(' ').trim()}</p>`);
+              paragraph = [];
+              if (originalTag === 'br') break;
+            }
+            chapterHtml.push(loadedCheerio.html(element));
+          }
+          break;
+      }
+    });
+    // Close any remaining paragraph
+    if (paragraph.length > 0) {
+      chapterHtml.push(`<p>${paragraph.join(' ').trim()}</p>`);
+    }
+    return chapterHtml.join('');
   }
 
   async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
-    const url = `${this.site}/?s=${searchTerm}&post_type=wp-manga`;
+    const url = `${this.site}/?s=${encodeURIComponent(searchTerm)}&post_type=wp-manga`;
 
     const result = await fetchApi(url);
     const body = await result.text();
@@ -187,7 +276,8 @@ class TuNovelaLigera implements Plugin.PagePlugin {
       value: 'rating',
       label: 'Ordenado por',
       options: [
-        { label: 'Lo mas reciente', value: 'latest' },
+        // ! not working
+        // { label: 'Lo mas reciente', value: 'latest_update' },
         { label: 'A-Z', value: 'alphabet' },
         { label: 'Clasificación', value: 'rating' },
         { label: 'Trending', value: 'trending' },
