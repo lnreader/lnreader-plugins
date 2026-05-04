@@ -11,7 +11,7 @@ class INovelTranslation implements Plugin.PluginBase {
   name = 'iNovelTranslation';
   icon = 'src/en/inoveltranslation/icon.png';
   site = 'https://inoveltranslation.com';
-  version = '1.0.0';
+  version = '1.0.1';
   filters: Filters | undefined = undefined;
 
   pluginSettings = {
@@ -170,35 +170,46 @@ class INovelTranslation implements Plugin.PluginBase {
     }
 
     // ==========================================
-    // 2. DEEP LEXICAL EXTRACTION ALGORITHM
+    // 2. ROBUST LEXICAL EXTRACTION ALGORITHM
     // ==========================================
 
-    // 2.1. Basic cleanup of escaped characters in the RSC stream
-    let cleanText = rscText.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+    // Use a more reliable signature: the start of the root Lexical object
+    const signatures = [
+      '"root":{"type":"root"',
+      '\\"root\\":{\\"type\\":\\"root\\"',
+      '"children":[{"type":"paragraph"',
+      '\\"children\\":[{\\"type\\":\\"paragraph\\"',
+    ];
 
-    // 2.2. Locate the core content signature (first paragraph children)
-    const signature = '"children":[{"type":"paragraph"';
-    let sigIndex = cleanText.indexOf(signature);
+    let sigIndex = -1;
+    for (const sig of signatures) {
+      sigIndex = rscText.indexOf(sig);
+      if (sigIndex !== -1) break;
+    }
 
     if (sigIndex !== -1) {
-      // 2.3. Backtrack to find the opening brace { of the Lexical Object
-      let startIndex = cleanText.lastIndexOf('{', sigIndex);
+      // Backtrack to find the opening brace { of the Lexical Object
+      let startIndex = rscText.lastIndexOf('{', sigIndex);
 
-      // Check if it is within a "root": { ... } object to backtrack one level further
-      const rootIndex = cleanText.lastIndexOf('"root"', sigIndex);
-      if (rootIndex !== -1 && rootIndex > startIndex - 30) {
-        startIndex = cleanText.lastIndexOf('{', rootIndex);
+      // Check for "content" or "root" before to find the start of the relevant object
+      const contextKeys = ['"content"', '\\"content\\"', '"root"', '\\"root\\"'];
+      for (const key of contextKeys) {
+        const keyIndex = rscText.lastIndexOf(key, sigIndex);
+        if (keyIndex !== -1 && keyIndex > startIndex - 50) {
+          startIndex = rscText.lastIndexOf('{', keyIndex);
+          break;
+        }
       }
 
       if (startIndex !== -1) {
-        // 2.4. High-performance Brace Balancing algorithm
         let braces = 0;
         let inString = false;
         let escape = false;
         let jsonStr = '';
 
-        for (let i = startIndex; i < cleanText.length; i++) {
-          const char = cleanText[i];
+        // Perform brace balancing on the raw stream to preserve escaping
+        for (let i = startIndex; i < rscText.length; i++) {
+          const char = rscText[i];
           if (escape) {
             escape = false;
             continue;
@@ -218,59 +229,70 @@ class INovelTranslation implements Plugin.PluginBase {
           }
 
           if (braces === 0 && i > startIndex) {
-            jsonStr = cleanText.substring(startIndex, i + 1);
+            jsonStr = rscText.substring(startIndex, i + 1);
             break;
           }
         }
 
         if (jsonStr) {
           try {
-            // 2.5 Standardize and Parse JSON
-            // Strip control characters that might break JSON.parse
-            const safeJson = jsonStr.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
-            const parsedData = JSON.parse(safeJson);
-            let lexicalRoot = parsedData.root || parsedData;
+            // Attempt to parse directly (if it's unescaped RSC)
+            let safeJson = jsonStr.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+            let parsedData;
+            try {
+              parsedData = JSON.parse(safeJson);
+            } catch {
+              // If fails, it might be escaped, so clean it up and try again
+              const cleanJson = jsonStr
+                .replace(/\\"/g, '"')
+                .replace(/\\\\/g, '\\')
+                .replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+              parsedData = JSON.parse(cleanJson);
+            }
 
+            let lexicalRoot = parsedData.root || parsedData.content?.root || parsedData;
             if (lexicalRoot && lexicalRoot.children) {
               return this.lexicalToHtml(lexicalRoot);
             }
           } catch (e: any) {
-            // ==========================================
-            // 3. ULTIMATE FAILSAFE (REGEX TEXT EXTRACTION)
-            // ==========================================
-            // If JSON parsing fails due to corrupted RSC stream segments,
-            // we extract all "text":"..." fragments to reconstruct the story.
+            // Fallback to regex text extraction if JSON parsing fails
             let fallbackHtml = '';
-            const textMatches = jsonStr.match(/"text":"(.*?)"/g);
+            const textMatches = jsonStr.match(/\\?"text\\?"\s*:\s*\\?"(.*?)\\?"/g);
             if (textMatches && textMatches.length > 0) {
               textMatches.forEach(m => {
-                let text = m.substring(8, m.length - 1);
-                if (text.trim() && text !== ' ') {
+                let text = m.match(/: ?"?(.*?)"?$/)?.[1] || '';
+                text = text.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+                if (text.trim() && text !== ' ' && !text.startsWith('Ch. ')) {
                   fallbackHtml += `<p>${text}</p>`;
                 }
               });
-              return fallbackHtml;
+              if (fallbackHtml) return fallbackHtml;
             }
-
-            throw new Error(
-              `JSON Parse error: ${e.message}. Data snippet: ${jsonStr.substring(0, 500)}`,
-            );
           }
         }
       }
     }
 
     // ==========================================
-    // 4. Final HTML Scavenger Fallback
+    // 3. HTML SCAVENGER FALLBACK
     // ==========================================
-    const $ = loadCheerio(rscText);
-    let htmlContent = $(
-      'main > section[data-sentry-component="RichText"]',
-    ).html();
-    if (htmlContent) return htmlContent;
+    // If RSC extraction failed, try fetching the standard HTML page
+    try {
+      const htmlResponse = await fetchApi(this.site + chapterPath, {
+        headers: this.HEADERS,
+      });
+      const htmlText = await htmlResponse.text();
+      const $ = loadCheerio(htmlText);
+      const htmlContent = $(
+        'main > section[data-sentry-component="RichText"]',
+      ).html();
+      if (htmlContent) return htmlContent;
+    } catch (e) {
+      // Ignore fallback errors and throw the final error below
+    }
 
     throw new Error(
-      'Story content not found. Cloudflare might be blocking the request or the page structure has changed. Please try opening in WebView first.',
+      'Story content not found. The page structure might have changed. Please try opening in WebView to verify.',
     );
   }
 
