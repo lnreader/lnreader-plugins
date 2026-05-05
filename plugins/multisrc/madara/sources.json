@@ -420,7 +420,9 @@
     "sourceName": "Belle Reservoir",
     "options": {
       "useNewChapterEndpoint": true,
-      "lang": "English"
+      "lang": "English",
+      "down": true,
+      "downSince": 1768347550685
     }
   },
   {
