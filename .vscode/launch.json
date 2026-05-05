@@ -1,0 +1,27 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "command": "npm run dev:start",
+            "name": "Run npm dev:start",
+            "request": "launch",
+            "type": "node-terminal"
+        },
+        {
+            "name": "Chrome Debug",
+            "request": "launch",
+            "type": "chrome",
+            "url": "http://localhost:3000",
+            "webRoot": "${workspaceFolder}/src",
+            "preLaunchTask": "npm: dev:auto"
+        },
+        {
+            "name": "Firefox Debug",
+            "request": "launch",
+            "type": "firefox",
+            "url": "http://localhost:3000",
+            "webRoot": "${workspaceFolder}/src",
+            "preLaunchTask": "npm: dev:auto"
+        }
+    ]
+}
