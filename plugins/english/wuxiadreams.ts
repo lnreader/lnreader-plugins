@@ -9,7 +9,27 @@ class WuxiaDreams implements Plugin.PagePlugin {
   name = 'Wuxia Dreams';
   icon = 'src/en/wuxiadreams/icon.png';
   site = 'https://wuxiadreams.com/';
-  version = '1.0.0';
+  version = '1.0.1';
+
+  private resolveUrl(path?: string) {
+    if (!path) return undefined;
+    return path.startsWith('http') ? path : this.site + path.replace(/^\//, '');
+  }
+
+  async getCheerio(url: string): Promise<CheerioAPI> {
+    const r = await fetchApi(url);
+    if (!r.ok)
+      throw new Error(
+        'Could not reach site (' + r.status + ') try to open in webview.',
+      );
+    const $ = parseHTML(await r.text());
+
+    if ($('title').text().includes('Cloudflare')) {
+      throw new Error('Cloudflare is blocking requests. Try again later.');
+    }
+
+    return $;
+  }
 
   parseNovels(loadedCheerio: CheerioAPI): Plugin.NovelItem[] {
     const novels: Plugin.NovelItem[] = [];
@@ -22,11 +42,7 @@ class WuxiaDreams implements Plugin.PagePlugin {
       if (name && url) {
         novels.push({
           name,
-          cover: cover?.startsWith('http')
-            ? cover
-            : cover
-              ? this.site + cover.replace(/^\//, '')
-              : undefined,
+          cover: this.resolveUrl(cover),
           path: url.replace(/^\//, ''),
         });
       }
@@ -45,29 +61,20 @@ class WuxiaDreams implements Plugin.PagePlugin {
       url += `&sort=${filters.sort.value}`;
     }
 
-    const response = await fetchApi(url);
-    const body = await response.text();
-    const $ = parseHTML(body);
-
+    const $ = await this.getCheerio(url);
     return this.parseNovels($);
   }
 
   async parseNovel(
     novelPath: string,
   ): Promise<Plugin.SourceNovel & { totalPages: number }> {
-    const response = await fetchApi(`${this.site}${novelPath}`);
-    const body = await response.text();
-    const $ = parseHTML(body);
+    const $ = await this.getCheerio(`${this.site}${novelPath}`);
 
     const cover = $('main img').first().attr('src');
     const novel: Plugin.SourceNovel & { totalPages: number } = {
       path: novelPath,
       name: $('h1').text().trim() || 'Untitled',
-      cover: cover?.startsWith('http')
-        ? cover
-        : cover
-          ? this.site + cover.replace(/^\//, '')
-          : undefined,
+      cover: this.resolveUrl(cover),
       summary: '',
       chapters: [],
       totalPages: 1,
@@ -76,7 +83,10 @@ class WuxiaDreams implements Plugin.PagePlugin {
     // Summary
     const summaryElement = $('h3:contains("Synopsis")').next();
     summaryElement.find('br').replaceWith('\n');
-    novel.summary = summaryElement
+
+    // Wrap in <div> to prevent selector parsing errors on plain text
+    const summary = $('<div>' + (summaryElement.html() || '') + '</div>');
+    novel.summary = summary
       .text()
       .split('\n')
       .map(line => line.trim())
@@ -101,12 +111,17 @@ class WuxiaDreams implements Plugin.PagePlugin {
       .text()
       .toLowerCase();
 
-    if (statusText.includes('completed')) {
-      novel.status = NovelStatus.Completed;
-    } else if (statusText.includes('ongoing')) {
-      novel.status = NovelStatus.Ongoing;
-    } else {
-      novel.status = NovelStatus.Unknown;
+    const statusMap: Record<string, NovelStatus> = {
+      'completed': NovelStatus.Completed,
+      'ongoing': NovelStatus.Ongoing,
+    };
+
+    novel.status = NovelStatus.Unknown;
+    for (const key in statusMap) {
+      if (statusText.includes(key)) {
+        novel.status = statusMap[key];
+        break;
+      }
     }
 
     // Tags as Genres
@@ -172,9 +187,7 @@ class WuxiaDreams implements Plugin.PagePlugin {
   }
 
   async parsePage(novelPath: string, page: string): Promise<Plugin.SourcePage> {
-    const response = await fetchApi(`${this.site}${novelPath}?page=${page}`);
-    const body = await response.text();
-    const $ = parseHTML(body);
+    const $ = await this.getCheerio(`${this.site}${novelPath}?page=${page}`);
 
     return {
       chapters: this.parseChapters($),
@@ -182,12 +195,13 @@ class WuxiaDreams implements Plugin.PagePlugin {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const response = await fetchApi(`${this.site}${chapterPath}`);
-    const body = await response.text();
-    const $ = parseHTML(body);
+    const $ = await this.getCheerio(`${this.site}${chapterPath}`);
 
     const content = $('article.chapter-content-container').html();
-    return content || 'Content not found.';
+    if (!content) {
+      throw new Error('Chapter content not found.');
+    }
+    return content;
   }
 
   async searchNovels(
@@ -196,9 +210,7 @@ class WuxiaDreams implements Plugin.PagePlugin {
   ): Promise<Plugin.NovelItem[]> {
     const url = `${this.site}novels?q=${encodeURIComponent(searchTerm)}&page=${pageNo}`;
 
-    const response = await fetchApi(url);
-    const body = await response.text();
-    const $ = parseHTML(body);
+    const $ = await this.getCheerio(url);
 
     return this.parseNovels($);
   }
