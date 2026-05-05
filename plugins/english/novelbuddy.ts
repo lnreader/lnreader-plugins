@@ -9,7 +9,7 @@ class NovelBuddy implements Plugin.PluginBase {
   name = 'NovelBuddy';
   site = 'https://novelbuddy.com/';
   api = 'https://api.novelbuddy.com/';
-  version = '2.1.0';
+  version = '2.1.1';
   icon = 'src/en/novelbuddy/icon.png';
 
   parseNovels(body: Response): Plugin.NovelItem[] {
@@ -97,7 +97,12 @@ class NovelBuddy implements Plugin.PluginBase {
     };
     novel.status = map[rawStatus.toLowerCase()] ?? NovelStatus.Unknown;
 
-    const summary = $(initialManga.summary || '');
+    // Wrap in <div> before passing to $(): when the API returns plain text (no leading
+    // `<` tag) cheerio's $() treats the input as a CSS selector, and any `.` in the text
+    // (e.g. punctuation in "I was inside a novel.") trips the selector parser with
+    // "Expected name, found ." and the entire parseNovel call fails. Wrapping forces the
+    // HTML-parsing branch regardless of whether the summary is plain text or HTML.
+    const summary = $('<div>' + (initialManga.summary || '') + '</div>');
     summary.find('br').replaceWith('\n');
     summary.find('p').before('\n').after('\n\n');
 
