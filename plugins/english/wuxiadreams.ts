@@ -9,7 +9,7 @@ class WuxiaDreams implements Plugin.PagePlugin {
   name = 'Wuxia Dreams';
   icon = 'src/en/wuxiadreams/icon.png';
   site = 'https://wuxiadreams.com/';
-  version = '1.0.1';
+  version = '1.0.0';
 
   private resolveUrl(path?: string) {
     if (!path) return undefined;
