@@ -18,7 +18,7 @@ const getStandardNovelPath = (url?: string): string | undefined => {
   const parsedUrl = parseUrl(url);
   if (!parsedUrl) return undefined;
   const match = parsedUrl.pathname.match(/^(\/amp)?(\/n\/[^\/]+\/)/);
-  return match?.[2];
+  return match?.[2]?.replace(/^\//, '');
 };
 
 const getChapterFileName = (url?: string): string | undefined => {
@@ -47,7 +47,7 @@ class QuanbenPlugin implements Plugin.PluginBase {
   id = 'quanben';
   name = 'Quanben';
   site = 'https://www.quanben.io/';
-  version = '1.0.1';
+  version = '2.1.2';
   icon = 'src/cn/quanben/icon.png';
   defaultCover = defaultCover;
 
@@ -134,80 +134,98 @@ class QuanbenPlugin implements Plugin.PluginBase {
 
   // novel details and metadata
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const standardPath = novelPath.replace(/^\/amp/, '');
-    if (!standardPath.startsWith('/n/') || !standardPath.endsWith('/'))
+    const standardPath = novelPath.replace(/^\/amp/, '').replace(/^\//, '');
+    if (!standardPath.startsWith('n/') || !standardPath.endsWith('/'))
       throw new Error(`[Quanben parseNovel] Invalid path: ${novelPath}`);
 
-    const fullUrl = makeAbsolute(standardPath, this.site);
-    if (!fullUrl)
-      throw new Error(`[Quanben parseNovel] Could not construct full URL`);
+    const fullUrl = this.site + standardPath;
 
     const res = await fetchApi(fullUrl);
     if (!res.ok)
       throw new Error(`[Quanben parseNovel] Failed to fetch: ${fullUrl}`);
 
     const $ = parseHTML(await res.text());
+
+    // Helper to read Open Graph / novel meta tags, falling back to empty string
+    const getMeta = (prop: string) =>
+      $(`meta[property="${prop}"]`).attr('content')?.trim() || '';
+
     const $info = $('div.list2').first();
     const $desc = $('div.description').first();
 
+    const statusText = getMeta('og:novel:status');
+
     const novel: Plugin.SourceNovel = {
       path: standardPath,
-      name: $info.find('h3').text().trim() || 'Unknown Novel',
+      name:
+        getMeta('og:novel:book_name') ||
+        $info.find('h3').text().trim() ||
+        'Unknown Novel',
       cover:
+        getMeta('og:image') ||
         makeAbsolute($info.find('img').attr('src'), this.site) ||
         this.defaultCover,
       summary:
-        $desc.find('p').text().trim() || $desc.text().trim() || undefined,
-      author: $info.find("p:contains('作者:') span").text().trim() || undefined,
-      status: NovelStatus.Unknown,
-      genres: $info.find("p:contains('类别:') span").text().trim() || undefined,
+        getMeta('og:description') ||
+        $desc.find('p').text().trim() ||
+        $desc.text().trim() ||
+        undefined,
+      author:
+        getMeta('og:novel:author') ||
+        $info.find("p:contains('作者:') span").text().trim() ||
+        undefined,
+      status: statusText
+        ? statusText.includes('完结')
+          ? NovelStatus.Completed
+          : NovelStatus.Ongoing
+        : NovelStatus.Unknown,
+      genres:
+        getMeta('og:novel:category') ||
+        $info.find("p:contains('类别:') span").text().trim() ||
+        undefined,
       chapters: await this.parseChapterList(standardPath),
     };
-
-    novel.status = NovelStatus.Completed;
 
     return novel;
   }
 
   async parseChapterList(novelPath: string): Promise<Plugin.ChapterItem[]> {
-    if (!novelPath.startsWith('/n/') || !novelPath.endsWith('/')) return [];
+    if (!novelPath.startsWith('n/') || !novelPath.endsWith('/')) return [];
 
-    const url = makeAbsolute(novelPath + 'list.html', this.site);
+    const url = this.site + novelPath + 'list.html';
     if (!url) return [];
 
     const res = await fetchApi(url);
     if (!res.ok) return [];
 
     const $ = parseHTML(await res.text());
+
+    const novelSlug = novelPath.match(/^n\/([^\/]+)\//)?.[1];
+    if (!novelSlug) return [];
+
+    // Collect all chapter numbers from hrefs found on the list page
+    const links = $('ul.list3 li a').length ? $('ul.list3 li a') : $('li a');
+
+    const chapterNums: number[] = [];
+    links.each((_, el) => {
+      const href = $(el).attr('href') || '';
+      const match = href.match(/\/n\/.+?\/(\d+)\.html$/);
+      if (match) chapterNums.push(parseInt(match[1], 10));
+    });
+
+    // Generate all chapters sequentially from 1 to the highest found number,
+    // filling any gaps the static list page may have omitted
+    const maxChapter = chapterNums.length ? Math.max(...chapterNums) : 0;
     const chapters: Plugin.ChapterItem[] = [];
-    const novelName = novelPath.match(/\/n\/([^\/]+)\//)?.[1];
-    if (!novelName) return [];
-
-    $('ul.list3 li a').each((_i, el) => {
-      const $el = $(el);
-      const name = $el.text().trim();
-      const href = $el.attr('href');
-      if (!name || !href) return;
-
-      const fileName = getChapterFileName(makeAbsolute(href, this.site));
-      if (!fileName) return;
-
+    for (let i = 1; i <= maxChapter; i++) {
       chapters.push({
-        name,
-        path: `${novelName}/${fileName}`,
+        name: `第${i}章`,
+        path: `${novelSlug}/${i}.html`,
+        chapterNumber: i,
       });
-    });
+    }
 
-    const uniqueChapters = Array.from(
-      new Map(chapters.map(c => [c.path, c])).values(),
-    );
-    uniqueChapters.sort((a, b) => {
-      const numA = parseInt(a.path.match(/(\d+)\.html$/)?.[1] || '0', 10);
-      const numB = parseInt(b.path.match(/(\d+)\.html$/)?.[1] || '0', 10);
-      return numA - numB;
-    });
-
-    return uniqueChapters.map((c, idx) => ({ ...c, chapterNumber: idx + 1 }));
+    return chapters;
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
@@ -263,7 +281,7 @@ class QuanbenPlugin implements Plugin.PluginBase {
         if (path)
           novels.push({
             name,
-            path: '/amp' + path,
+            path,
             cover: cover || this.defaultCover,
           });
       }
