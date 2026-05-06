@@ -6,7 +6,7 @@ import { Plugin } from '@/types/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.9.16';
+  version = '0.9.17';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -517,21 +517,19 @@ class NovelUpdates implements Plugin.PluginBase {
       case 'mythoriatales': {
         /**
          * Mythoria Tales uses Next.js Server Actions for chapter delivery.
-         * Confirmed via HAR: POST to the chapter URL with a stable next-action
-         * hash (getChapterBySlugAction). Body is ["slug", chapterNumber].
-         * Response is a text/x-component stream; content follows "N:T{hexLen},"
+         * The response is a 'text/x-component' stream (RSC).
          *
-         * next-router-state-tree header is not required (confirmed skippable).
-         * next-action hash is compiled into the JS bundle per deployment:
-         *   dpl_6jZ5WV3pQkiMWUU8a6kk6RXZN1nG → 6047fe8d21566eb56a426de4d5d5ee1eb7e01091f9
+         * Payload Structure:
+         * 0:{"a":"$@1",...}   -> Initialization/Metadata
+         * 2:T{hexLen},...     -> Chapter Body (Title on Line 1, Content below)
+         * 1:{"success":...}   -> Series/Chapter JSON metadata
          */
         const ACTION_HASH = '6047fe8d21566eb56a426de4d5d5ee1eb7e01091f9';
 
-        // chapterPath is the full URL, e.g.:
-        //   https://www.mythoriatales.com/series/my-sexy-college-girlfriends/chapter/123
+        // chapterPath: https://www.mythoriatales.com/series/[slug]/chapter/[num]
         const urlParts = chapterPath.split('/');
-        const slug = urlParts[4]; // "my-sexy-college-girlfriends"
-        const chapterNum = parseInt(urlParts[6], 10); // 123 — must be a number, not a string
+        const slug = urlParts[4];
+        const chapterNum = parseInt(urlParts[6], 10);
 
         const response = await fetchApi(chapterPath, {
           method: 'POST',
@@ -550,32 +548,33 @@ class NovelUpdates implements Plugin.PluginBase {
         const rscText = await response.text();
 
         /**
-         * 1. Split the response into segments based on the Next.js RSC protocol.
-         * Each segment starts with a newline followed by an index and a type
-         * marker (T for Text, { for JSON, E for Error).
-         * This prevents "1:" inside a sentence from breaking the split.
+         * 1. Isolate the data segments.
+         * We split by newline followed by a digit and a type marker (:, {, T).
+         * Using a lookahead (?=...) ensures the split marker isn't consumed,
+         * allowing us to verify the segment index (e.g., "2:").
          */
         const segments = rscText.split(/\n(?=\d+:[{TE])/);
 
-        // 2. Find the segment that contains the chapter text (prefixed with 2:T)
+        // 2. Locate the text segment (usually index 2)
         const contentSegment = segments.find(s => s.startsWith('2:T'));
 
         if (!contentSegment) {
           throw new Error(
-            'Could not find the chapter content segment in the response.',
+            'Could not find the chapter content segment (2:T) in the stream.',
           );
         }
 
         /**
-         * 3. Clean the segment.
-         * Remove the "2:T{hexLen}," prefix to get the raw text.
+         * 3. Extract and Clean Raw Text
+         * Removes the "2:T{hexLen}," prefix.
+         * [0-9a-f]+ handles the hexadecimal length provided by the RSC protocol.
          */
         const rawText = contentSegment.replace(/^2:T[0-9a-f]+,/, '').trim();
 
         /**
-         * 4. Split the text into lines.
-         * We handle literal newlines and escaped (\n) newlines,
-         * while filtering out empty lines caused by double-spacing.
+         * 4. Parse Lines and Paragraphs
+         * Splits on literal newlines or escaped sequence "\n".
+         * Filters out empty strings to handle double-spacing in the source.
          */
         const lines = rawText
           .split(/(?:\r?\n|\\n)+/)
@@ -583,14 +582,14 @@ class NovelUpdates implements Plugin.PluginBase {
           .filter(line => line.length > 0);
 
         if (lines.length === 0) {
-          throw new Error('Chapter content is empty after parsing.');
+          throw new Error('Parsed content is empty.');
         }
 
-        // 5. Extract Title and Content
-        // The first line is always the title in this payload structure
-        chapterTitle = lines[0];
+        // 5. Assignment
+        // The first line in the text block is the chapter title.
+        chapterTitle = `Chapter ${chapterNum}: ${lines[0]}`;
 
-        // All subsequent lines are paragraphs
+        // All remaining lines are the story body.
         chapterContent = lines
           .slice(1)
           .map(p => `<p>${p}</p>`)
