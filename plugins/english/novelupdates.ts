@@ -6,7 +6,7 @@ import { Plugin } from '@/types/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.9.10';
+  version = '0.9.11';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -559,7 +559,7 @@ class NovelUpdates implements Plugin.PluginBase {
             .trim();
 
           // Convert newlines to paragraphs
-          const paragraphs = chapterContent
+          chapterContent = chapterContent
             .split(/\n\s*\n+/)
             .map(p => p.trim())
             .filter(p => p.length > 0)
@@ -570,17 +570,8 @@ class NovelUpdates implements Plugin.PluginBase {
             loadedCheerio('h1, h2, h3').first().text().trim() ||
             rscText.match(/title":"([^"]+)"/)?.[1] ||
             'Chapter';
-
-          chapterText = `<h2>${chapterTitle}</h2><hr><br>${paragraphs}`;
         } catch (error) {
-          console.error('MythoriaTales RSC fetch failed:', error);
-
-          // Fallback to normal HTML parsing
-          chapterTitle = loadedCheerio('h1, h2, h3').first().text().trim();
-          chapterContent = loadedCheerio('article, main').first().html() || '';
-          chapterText = chapterContent
-            ? `<h2>${chapterTitle}</h2><hr><br>${chapterContent}`
-            : loadedCheerio('body').html() || '';
+          throw new Error(`MythoriaTales RSC fetch failed: ${error}`);
         }
 
         break;
