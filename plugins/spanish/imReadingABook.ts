@@ -20,7 +20,7 @@ import { defaultCover } from '@libs/defaultCover';
  * - El estado ("Activa", "Finalizada", "Hiatus") está inline en el texto del link.
  * - Las portadas se obtienen desde el og:image de cada página de novela.
  * - Los capítulos se listan en una tabla (<table>) dentro del entry-content de la página de la novela.
- */
+ */ // v1.0.0
 
 class ImReadingABookPlugin implements Plugin.PluginBase {
   id = 'imreadingabook';
