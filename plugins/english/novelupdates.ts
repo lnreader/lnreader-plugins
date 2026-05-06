@@ -6,7 +6,7 @@ import { Plugin } from '@/types/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.9.11';
+  version = '0.9.12';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -515,65 +515,64 @@ class NovelUpdates implements Plugin.PluginBase {
       }
       // Last edited in 0.9.9 by Batorian - 06/05/2026
       case 'mythoriatales': {
-        try {
-          // Fetch the RSC payload directly (most reliable)
-          const rscUrl = `${chapterPath}?_rsc=1`;
+        /**
+         * Mythoria Tales uses Next.js Server Actions for chapter delivery.
+         * Confirmed via HAR: POST to the chapter URL with a stable next-action
+         * hash (getChapterBySlugAction). Body is ["slug", chapterNumber].
+         * Response is a text/x-component stream; content follows "N:T{hexLen},"
+         *
+         * next-router-state-tree header is not required (confirmed skippable).
+         * next-action hash is compiled into the JS bundle per deployment:
+         *   dpl_6jZ5WV3pQkiMWUU8a6kk6RXZN1nG → 6047fe8d21566eb56a426de4d5d5ee1eb7e01091f9
+         */
+        const ACTION_HASH = '6047fe8d21566eb56a426de4d5d5ee1eb7e01091f9';
 
-          const response = await fetchApi(rscUrl, {
-            headers: {
-              'Accept': 'text/x-component',
-              'User-Agent':
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            },
-          });
+        // chapterPath is the full URL, e.g.:
+        //   https://www.mythoriatales.com/series/my-sexy-college-girlfriends/chapter/123
+        const urlParts = chapterPath.split('/');
+        const slug = urlParts[4]; // "my-sexy-college-girlfriends"
+        const chapterNum = parseInt(urlParts[6], 10); // 123 — must be a number, not a string
 
-          const rscText = await response.text();
+        const response = await fetchApi(chapterPath, {
+          method: 'POST',
+          headers: {
+            'Accept': 'text/x-component',
+            'Content-Type': 'text/plain;charset=UTF-8',
+            'next-action': ACTION_HASH,
+          },
+          body: JSON.stringify([slug, chapterNum]),
+        });
 
-          // Extract the chapter content - it's usually the big string after `2:T...`
-          // Pattern: 2:Txxxx,Actual Chapter Text Here...
-          let chapterContent = '';
-
-          const contentMatch = rscText.match(
-            /2:T[\w-]+,([\s\S]*?)(?=\n\d+:|\n[0-9a-f]+:|$)/,
-          );
-
-          if (contentMatch && contentMatch[1]) {
-            chapterContent = contentMatch[1].trim();
-          } else {
-            // Fallback: find the largest text block (the actual story)
-            const largeTextMatch = rscText.match(
-              /"content":"([\s\S]*?)","prevChapter"/,
-            );
-            if (largeTextMatch) {
-              chapterContent = largeTextMatch[1];
-            } else {
-              // Ultimate fallback
-              chapterContent = rscText.replace(/^\d+:[\s\S]*?\n/, '').trim();
-            }
-          }
-
-          // Clean up escaped characters and format
-          chapterContent = chapterContent
-            .replace(/\\n/g, '\n')
-            .replace(/\\"/g, '"')
-            .trim();
-
-          // Convert newlines to paragraphs
-          chapterContent = chapterContent
-            .split(/\n\s*\n+/)
-            .map(p => p.trim())
-            .filter(p => p.length > 0)
-            .map(p => `<p>${p}</p>`)
-            .join('\n');
-
-          chapterTitle =
-            loadedCheerio('h1, h2, h3').first().text().trim() ||
-            rscText.match(/title":"([^"]+)"/)?.[1] ||
-            'Chapter';
-        } catch (error) {
-          throw new Error(`MythoriaTales RSC fetch failed: ${error}`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch chapter: ${response.status}`);
         }
 
+        const rscText = await response.text();
+
+        // Locked/paid chapters return a short response with no content line
+        if (!rscText.includes(':T')) {
+          throw new Error(
+            'This chapter is locked. Please open in webview and log in.',
+          );
+        }
+
+        // Extract content after "N:T{hexLen},"
+        const contentMatch = rscText.match(/^\d+:T[0-9a-f]+,([\s\S]+)/m);
+        if (!contentMatch) {
+          throw new Error(
+            'Could not parse chapter content from server response.',
+          );
+        }
+
+        // Convert plain-text paragraphs (separated by blank lines) to HTML
+        chapterContent = contentMatch[1]
+          .split(/\n\s*\n/)
+          .map((p: string) => p.trim())
+          .filter((p: string) => p.length > 0)
+          .map((p: string) => `<p>${p}</p>`)
+          .join('\n');
+
+        chapterTitle = `Chapter ${chapterNum}`;
         break;
       }
       // Last edited in 0.9.0 by Batorian - 19/03/2025
