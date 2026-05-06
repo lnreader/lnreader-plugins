@@ -6,7 +6,7 @@ import { Plugin } from '@/types/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.9.8';
+  version = '0.9.9';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -511,6 +511,12 @@ class NovelUpdates implements Plugin.PluginBase {
         chapterTitle = titleElement.text();
         titleElement.remove();
         chapterContent = loadedCheerio('.entry-content').html()!;
+        break;
+      }
+      // Last edited in 0.9.9 by Batorian - 06/05/2026
+      case 'mythoriatales': {
+        chapterTitle = loadedCheerio('h3').first().text();
+        chapterContent = loadedCheerio('article').first().html()!;
         break;
       }
       // Last edited in 0.9.0 by Batorian - 19/03/2025
