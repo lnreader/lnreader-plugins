@@ -6,7 +6,7 @@ import { Plugin } from '@/types/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.9.13';
+  version = '0.9.14';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -549,33 +549,26 @@ class NovelUpdates implements Plugin.PluginBase {
 
         const rscText = await response.text();
 
-        // Locked/paid chapters return a short response with no content line
-        if (!rscText.includes(':T')) {
-          throw new Error(
-            'This chapter is locked. Please open in webview and log in.',
-          );
-        }
-
-        // Extract content after "N:T{hexLen},", stopping before the next RSC line
-        // (the trailing "1:{...}" metadata line must not be included)
-        const contentMatch = rscText.match(/^\d+:T([0-9a-f]+),([\s\S]*)/m);
-        if (!contentMatch) {
+        const line = rscText.split('\n').find(l => l.startsWith('2:'));
+        if (!line) {
           throw new Error(
             'Could not parse chapter content from server response.',
           );
         }
 
-        const byteLength = parseInt(contentMatch[1], 16);
-        // Convert plain-text paragraphs (separated by blank lines) to HTML
-        chapterText = contentMatch[2]
-          .slice(0, byteLength)
-          .split(/\n\s*\n/)
+        // Strip the "2:T{hexLen}," prefix
+        const content = line.replace(/^2:T[0-9a-f]+,/, '');
+
+        // First paragraph is the chapter title, rest is the body
+        const [title, ...paragraphs] = content.split(/\n\s*\n/);
+
+        chapterTitle = title.trim();
+        chapterContent = paragraphs
           .map((p: string) => p.trim())
           .filter((p: string) => p.length > 0)
           .map((p: string) => `<p>${p}</p>`)
           .join('\n');
 
-        chapterTitle = `Chapter ${chapterNum}`;
         break;
       }
       // Last edited in 0.9.0 by Batorian - 19/03/2025
