@@ -6,7 +6,7 @@ import { Plugin } from '@/types/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.9.12';
+  version = '0.9.13';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -556,16 +556,19 @@ class NovelUpdates implements Plugin.PluginBase {
           );
         }
 
-        // Extract content after "N:T{hexLen},"
-        const contentMatch = rscText.match(/^\d+:T[0-9a-f]+,([\s\S]+)/m);
+        // Extract content after "N:T{hexLen},", stopping before the next RSC line
+        // (the trailing "1:{...}" metadata line must not be included)
+        const contentMatch = rscText.match(/^\d+:T([0-9a-f]+),([\s\S]*)/m);
         if (!contentMatch) {
           throw new Error(
             'Could not parse chapter content from server response.',
           );
         }
 
+        const byteLength = parseInt(contentMatch[1], 16);
         // Convert plain-text paragraphs (separated by blank lines) to HTML
-        chapterContent = contentMatch[1]
+        chapterText = contentMatch[2]
+          .slice(0, byteLength)
           .split(/\n\s*\n/)
           .map((p: string) => p.trim())
           .filter((p: string) => p.length > 0)
