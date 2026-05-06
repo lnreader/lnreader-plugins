@@ -47,7 +47,7 @@ class QuanbenPlugin implements Plugin.PluginBase {
   id = 'quanben';
   name = 'Quanben';
   site = 'https://www.quanben.io/';
-  version = '2.1.2';
+  version = '2.1.3';
   icon = 'src/cn/quanben/icon.png';
   defaultCover = defaultCover;
 
@@ -192,38 +192,26 @@ class QuanbenPlugin implements Plugin.PluginBase {
   async parseChapterList(novelPath: string): Promise<Plugin.ChapterItem[]> {
     if (!novelPath.startsWith('n/') || !novelPath.endsWith('/')) return [];
 
-    const url = this.site + novelPath + 'list.html';
-    if (!url) return [];
-
-    const res = await fetchApi(url);
-    if (!res.ok) return [];
-
-    const $ = parseHTML(await res.text());
-
     const novelSlug = novelPath.match(/^n\/([^\/]+)\//)?.[1];
     if (!novelSlug) return [];
 
-    // Collect all chapter numbers from hrefs found on the list page
-    const links = $('ul.list3 li a').length ? $('ul.list3 li a') : $('li a');
+    const mirrorUrl = `https://quanben5.com/n/${novelSlug}/xiaoshuo.html`;
+    const res = await fetchApi(mirrorUrl);
+    if (!res.ok) return [];
 
-    const chapterNums: number[] = [];
-    links.each((_, el) => {
-      const href = $(el).attr('href') || '';
-      const match = href.match(/\/n\/.+?\/(\d+)\.html$/);
-      if (match) chapterNums.push(parseInt(match[1], 10));
-    });
-
-    // Generate all chapters sequentially from 1 to the highest found number,
-    // filling any gaps the static list page may have omitted
-    const maxChapter = chapterNums.length ? Math.max(...chapterNums) : 0;
+    const $ = parseHTML(await res.text());
     const chapters: Plugin.ChapterItem[] = [];
-    for (let i = 1; i <= maxChapter; i++) {
+
+    $('ul li a').each((_, el) => {
+      const name = $(el).text().trim();
+      if (!name) return;
+      const i = chapters.length + 1;
       chapters.push({
-        name: `第${i}章`,
+        name,
         path: `${novelSlug}/${i}.html`,
         chapterNumber: i,
       });
-    }
+    });
 
     return chapters;
   }
