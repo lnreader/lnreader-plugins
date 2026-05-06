@@ -6,7 +6,7 @@ import { Plugin } from '@/types/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.9.14';
+  version = '0.9.15';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -560,7 +560,7 @@ class NovelUpdates implements Plugin.PluginBase {
         const content = line.replace(/^2:T[0-9a-f]+,/, '');
 
         // First paragraph is the chapter title, rest is the body
-        const [title, ...paragraphs] = content.split(/\n\s*\n/);
+        const [title, ...paragraphs] = content.split(/(?:\\n\s*)+/);
 
         chapterTitle = title.trim();
         chapterContent = paragraphs
