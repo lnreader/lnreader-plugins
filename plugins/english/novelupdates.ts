@@ -6,7 +6,7 @@ import { Plugin } from '@/types/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.9.9';
+  version = '0.9.10';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -515,8 +515,74 @@ class NovelUpdates implements Plugin.PluginBase {
       }
       // Last edited in 0.9.9 by Batorian - 06/05/2026
       case 'mythoriatales': {
-        chapterTitle = loadedCheerio('h3').first().text();
-        chapterContent = loadedCheerio('article').first().html()!;
+        try {
+          // Fetch the RSC payload directly (most reliable)
+          const rscUrl = `${chapterPath}?_rsc=1`;
+
+          const response = await fetchApi(rscUrl, {
+            headers: {
+              'Accept': 'text/x-component',
+              'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            },
+          });
+
+          const rscText = await response.text();
+
+          // Extract the chapter content - it's usually the big string after `2:T...`
+          // Pattern: 2:Txxxx,Actual Chapter Text Here...
+          let chapterContent = '';
+
+          const contentMatch = rscText.match(
+            /2:T[\w-]+,([\s\S]*?)(?=\n\d+:|\n[0-9a-f]+:|$)/,
+          );
+
+          if (contentMatch && contentMatch[1]) {
+            chapterContent = contentMatch[1].trim();
+          } else {
+            // Fallback: find the largest text block (the actual story)
+            const largeTextMatch = rscText.match(
+              /"content":"([\s\S]*?)","prevChapter"/,
+            );
+            if (largeTextMatch) {
+              chapterContent = largeTextMatch[1];
+            } else {
+              // Ultimate fallback
+              chapterContent = rscText.replace(/^\d+:[\s\S]*?\n/, '').trim();
+            }
+          }
+
+          // Clean up escaped characters and format
+          chapterContent = chapterContent
+            .replace(/\\n/g, '\n')
+            .replace(/\\"/g, '"')
+            .trim();
+
+          // Convert newlines to paragraphs
+          const paragraphs = chapterContent
+            .split(/\n\s*\n+/)
+            .map(p => p.trim())
+            .filter(p => p.length > 0)
+            .map(p => `<p>${p}</p>`)
+            .join('\n');
+
+          chapterTitle =
+            loadedCheerio('h1, h2, h3').first().text().trim() ||
+            rscText.match(/title":"([^"]+)"/)?.[1] ||
+            'Chapter';
+
+          chapterText = `<h2>${chapterTitle}</h2><hr><br>${paragraphs}`;
+        } catch (error) {
+          console.error('MythoriaTales RSC fetch failed:', error);
+
+          // Fallback to normal HTML parsing
+          chapterTitle = loadedCheerio('h1, h2, h3').first().text().trim();
+          chapterContent = loadedCheerio('article, main').first().html() || '';
+          chapterText = chapterContent
+            ? `<h2>${chapterTitle}</h2><hr><br>${chapterContent}`
+            : loadedCheerio('body').html() || '';
+        }
+
         break;
       }
       // Last edited in 0.9.0 by Batorian - 19/03/2025
