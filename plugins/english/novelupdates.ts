@@ -6,7 +6,7 @@ import { Plugin } from '@/types/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.9.15';
+  version = '0.9.16';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -549,24 +549,51 @@ class NovelUpdates implements Plugin.PluginBase {
 
         const rscText = await response.text();
 
-        const line = rscText.split('\n').find(l => l.startsWith('2:'));
-        if (!line) {
+        /**
+         * 1. Split the response into segments based on the Next.js RSC protocol.
+         * Each segment starts with a newline followed by an index and a type
+         * marker (T for Text, { for JSON, E for Error).
+         * This prevents "1:" inside a sentence from breaking the split.
+         */
+        const segments = rscText.split(/\n(?=\d+:[{TE])/);
+
+        // 2. Find the segment that contains the chapter text (prefixed with 2:T)
+        const contentSegment = segments.find(s => s.startsWith('2:T'));
+
+        if (!contentSegment) {
           throw new Error(
-            'Could not parse chapter content from server response.',
+            'Could not find the chapter content segment in the response.',
           );
         }
 
-        // Strip the "2:T{hexLen}," prefix
-        const content = line.replace(/^2:T[0-9a-f]+,/, '');
+        /**
+         * 3. Clean the segment.
+         * Remove the "2:T{hexLen}," prefix to get the raw text.
+         */
+        const rawText = contentSegment.replace(/^2:T[0-9a-f]+,/, '').trim();
 
-        // First paragraph is the chapter title, rest is the body
-        const [title, ...paragraphs] = content.split(/(?:\\n\s*)+/);
+        /**
+         * 4. Split the text into lines.
+         * We handle literal newlines and escaped (\n) newlines,
+         * while filtering out empty lines caused by double-spacing.
+         */
+        const lines = rawText
+          .split(/(?:\r?\n|\\n)+/)
+          .map(line => line.trim())
+          .filter(line => line.length > 0);
 
-        chapterTitle = title.trim();
-        chapterContent = paragraphs
-          .map((p: string) => p.trim())
-          .filter((p: string) => p.length > 0)
-          .map((p: string) => `<p>${p}</p>`)
+        if (lines.length === 0) {
+          throw new Error('Chapter content is empty after parsing.');
+        }
+
+        // 5. Extract Title and Content
+        // The first line is always the title in this payload structure
+        chapterTitle = lines[0];
+
+        // All subsequent lines are paragraphs
+        chapterContent = lines
+          .slice(1)
+          .map(p => `<p>${p}</p>`)
           .join('\n');
 
         break;
