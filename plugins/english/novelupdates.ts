@@ -6,7 +6,7 @@ import { Plugin } from '@/types/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.9.10';
+  version = '0.9.11';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -554,7 +554,7 @@ class NovelUpdates implements Plugin.PluginBase {
           throw new Error(`Failed to fetch chapter: ${response.status}`);
         }
 
-        const rscText = await response.text();
+        const rscText = (await response.text()).replace(/(\d+:[{TE])/g, '\n$1');
 
         /**
          * 1. Isolate the data segments.
