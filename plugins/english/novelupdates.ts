@@ -6,7 +6,7 @@ import { Plugin } from '@/types/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.9.9';
+  version = '0.9.10';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -513,7 +513,7 @@ class NovelUpdates implements Plugin.PluginBase {
         chapterContent = loadedCheerio('.entry-content').html()!;
         break;
       }
-      // Last edited in 0.9.9 by Batorian - 06/05/2026
+      // Last edited in 0.9.9 by Batorian - 09/05/2026
       case 'mythoriatales': {
         /**
          * Mythoria Tales uses Next.js Server Actions for chapter delivery.
@@ -521,8 +521,9 @@ class NovelUpdates implements Plugin.PluginBase {
          *
          * Payload Structure:
          * 0:{"a":"$@1",...}   -> Initialization/Metadata
-         * 2:T{hexLen},...     -> Chapter Body (Title on Line 1, Content below)
-         * 1:{"success":...}   -> Series/Chapter JSON metadata
+         * 2:T{hexLen},...     -> Chapter Body (may span multiple segments)
+         * 3:T{hexLen},...     -> Chapter Body continuation (if split)
+         * 1:{"success":...}   -> Series/Chapter JSON metadata (authoritative title source)
          */
         const html = loadedCheerio('script:contains("script-2")').html();
         if (!html) throw new Error('Failed to find script-2');
@@ -557,14 +558,22 @@ class NovelUpdates implements Plugin.PluginBase {
 
         /**
          * 1. Isolate the data segments.
-         * We split by newline followed by a digit and a type marker (:, {, T).
+         * We split by newline followed by a digit and a type marker ({, T, E).
          * Using a lookahead (?=...) ensures the split marker isn't consumed,
          * allowing us to verify the segment index (e.g., "2:").
          */
         const segments = rscText.split(/\n(?=\d+:[{TE])/);
 
-        // 2. Locate the text segment (usually index 2)
-        const contentSegment = segments.find(s => s.startsWith('2:T'));
+        /**
+         * 2. Locate and join all text content segments.
+         * Some chapters split their body across multiple T-type segments (e.g., 2:T, 3:T).
+         * We collect all of them (excluding the 0: init segment) and join into one string,
+         * stripping each segment's "{index}:T{hexLen}," prefix in the process.
+         */
+        const contentSegment = segments
+          .filter(s => /^\d+:T/.test(s) && !s.startsWith('0:'))
+          .map(s => s.replace(/^\d+:T[0-9a-f]+,/, ''))
+          .join('');
 
         if (!contentSegment) {
           throw new Error(
@@ -573,35 +582,40 @@ class NovelUpdates implements Plugin.PluginBase {
         }
 
         /**
-         * 3. Extract and Clean Raw Text
-         * Removes the "2:T{hexLen}," prefix.
-         * [0-9a-f]+ handles the hexadecimal length provided by the RSC protocol.
-         */
-        const rawText = contentSegment.replace(/^2:T[0-9a-f]+,/, '').trim();
-
-        /**
-         * 4. Parse Lines and Paragraphs
+         * 3. Parse Lines and Paragraphs
          * Splits on literal newlines or escaped sequence "\n".
          * Filters out empty strings to handle double-spacing in the source.
          */
-        const lines = rawText
+        const lines = contentSegment
+          .trim()
           .split(/(?:\r?\n|\\n)+/)
-          .map(line => line.trim())
-          .filter(line => line.length > 0);
+          .map((line: string) => line.trim())
+          .filter((line: string) => line.length > 0);
 
         if (lines.length === 0) {
           throw new Error('Parsed content is empty.');
         }
 
-        // 5. Assignment
-        // The first line in the text block is the chapter title.
-        chapterTitle = `Chapter ${chapterNum}: ${lines[0]}`;
+        /**
+         * 4. Extract title from the "1:{...}" metadata segment.
+         * This is the authoritative source for the chapter title and number,
+         * preferred over parsing the first content line.
+         */
+        const metaSegment = segments.find(s => s.startsWith('1:'));
+        if (metaSegment) {
+          try {
+            const meta = JSON.parse(metaSegment.slice(2)); // strip leading "1:"
+            const title = meta?.data?.chapter?.title;
+            const num = meta?.data?.chapter?.chapterNumber ?? chapterNum;
+            if (title) chapterTitle = `Chapter ${num}: ${title}`;
+          } catch {
+            // fall back to chapterNum if metadata parsing fails
+          }
+        }
+        if (!chapterTitle) chapterTitle = `Chapter ${chapterNum}`;
 
-        // All remaining lines are the story body.
-        chapterContent = lines
-          .slice(1)
-          .map(p => `<p>${p}</p>`)
-          .join('\n');
+        // 5. All lines from the content segment are paragraphs.
+        chapterContent = lines.map((p: string) => `<p>${p}</p>`).join('\n');
 
         break;
       }
