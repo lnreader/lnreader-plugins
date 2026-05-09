@@ -6,7 +6,7 @@ import { Plugin } from '@/types/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.9.11';
+  version = '0.9.12';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -616,6 +616,16 @@ class NovelUpdates implements Plugin.PluginBase {
 
         // 5. All lines from the content segment are paragraphs.
         chapterContent = lines.map((p: string) => `<p>${p}</p>`).join('\n');
+
+        // Clean up custom markup tags:
+        // Format [dialogue speaker="Name"]text[/dialogue] as "Name: text", drop [sfx] blocks entirely
+        chapterContent = chapterContent
+          .replace(
+            /\[dialogue\s+speaker="([^"]*)"\](.*?)\[\/dialogue\]/gi,
+            '$1: $2',
+          )
+          .replace(/\[sfx\].*?\[\/sfx\]/gi, '')
+          .replace(/\[\/?(dialogue|sfx)[^\]]*\]/gi, '');
 
         break;
       }
