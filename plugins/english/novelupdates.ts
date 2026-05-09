@@ -524,12 +524,20 @@ class NovelUpdates implements Plugin.PluginBase {
          * 2:T{hexLen},...     -> Chapter Body (Title on Line 1, Content below)
          * 1:{"success":...}   -> Series/Chapter JSON metadata
          */
-        const ACTION_HASH = '6047fe8d21566eb56a426de4d5d5ee1eb7e01091f9';
+        const html = loadedCheerio('script:contains("script-2")').html();
+        if (!html) throw new Error('Failed to find script-2');
+        const matches = Array.from(html.matchAll(/"script-2.*?[^_]+([^\\]+)/g));
+        const scriptPath = matches[1]?.[1];
+        if (!scriptPath) throw new Error('Failed to extract script-2 URL');
+
+        const scriptUrl = new URL(`/${scriptPath}`, chapterPath).href;
+        const scriptText = await (await fetchApi(scriptUrl)).text();
+        const ACTION_HASH = scriptText.match(/[a-f0-9]{42}/)?.[0];
+        if (!ACTION_HASH) throw new Error('Failed to extract ACTION_HASH');
 
         // chapterPath: https://www.mythoriatales.com/series/[slug]/chapter/[num]
         const urlParts = chapterPath.split('/');
-        const slug = urlParts[4];
-        const chapterNum = parseInt(urlParts[6], 10);
+        const [slug, chapterNum] = [urlParts[4], parseInt(urlParts[6], 10)];
 
         const response = await fetchApi(chapterPath, {
           method: 'POST',
