@@ -47,7 +47,7 @@ class QuanbenPlugin implements Plugin.PluginBase {
   id = 'quanben';
   name = 'Quanben';
   site = 'https://www.quanben.io/';
-  version = '2.1.3';
+  version = '1.1.0';
   icon = 'src/cn/quanben/icon.png';
   defaultCover = defaultCover;
 
