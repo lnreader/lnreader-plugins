@@ -28,7 +28,7 @@ The testing website provides five main sections to test different plugin functio
 
 ## Pre-Submission Testing
 
-Before submitting your plugin, verify that all five sections work without errors, multiple pages load, search returns accurate results, novel parsing extracts all metadata, chapter content is clean, filters work (if implemented), no console errors appear, URLs are properly formatted, and images load correctly.
+Before submitting your plugin, verify that all five sections work without errors, multiple pages load, search returns accurate results, novel parsing extracts all metadata, chapter content is clean, filters work (if implemented), no console errors appear, paths are properly formatted, and images load correctly.
 
 ## Need Help?
 
