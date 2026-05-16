@@ -34,8 +34,8 @@ class ExamplePlugin implements Plugin.PluginBase {}
 | [filters](#pluginbasefilters)                                  | no       | [Filter definition](#filter-definition-object) object |
 | [pluginSettings](#pluginbasepluginsettings)                    | no       | [Plugin settings](#pluginsettings) object             |
 | [popularNovels(page, options)](#pluginbasepopularnovels)       | yes      | Novel list getter                                     |
-| [parseNovel(path)](#pluginbaseparsenovel)                      | yes      | Novel info and chapter list getter                    |
-| [parseChapter(path)](#pluginbaseparsechapter)                  | yes      | Chapter text getter                                   |
+| [parseNovelAndChapters(url)](#pluginbaseparsenovelandchapters) | yes      | Novel info and chapter list getter                    |
+| [parseChapter(url)](#pluginbaseparsechapter)                   | yes      | Chapter text getter                                   |
 | [searchNovels(searchTerm, page)](#pluginbasesearchnovels)      | yes      | Novel searching getter                                |
 
 #### PluginBase::id
@@ -64,12 +64,12 @@ class ExamplePlugin implements Plugin.PluginBase {
 
 #### PluginBase::icon
 
-The path to your plugin's icon inside of `icon` folder
+The path to your plugin's icon inside of `public/static` folder
 
 ```ts
 class ExamplePlugin implements Plugin.PluginBase {
     ...
-    icon = "src/eng/templateplugin/icon.png";
+    icon = "src/en/templateplugin/icon.png";
     ...
 }
 ```
@@ -201,7 +201,7 @@ class ExamplePlugin implements Plugin.PluginBase {
         if(options.filters.example.value === "test"){
             novels.push({
                 name: "Novel1",
-                path: "/novel1",
+                url: "https://example.com/novel1",
                 cover:defaultCover
             })
         }
@@ -218,58 +218,50 @@ This type is used for getting the options of the [popularNovels](#pluginbasepopu
 
 - <span id='popularnovelsoptions-showlatestnovels'></span>`filters: FilterValues<typeof filters>` object containing all selected filter values. [More about Filters](#filters)
 
-#### PluginBase::parseNovel
+#### PluginBase::parseNovelAndChapters
 
 Function that is used to get the information about particular novel and the list of it's chapters
 
 ```ts
-async parseNovel(novelPath: string): Promise<Plugin.SourceNovel>
+async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel>
 ```
 
 See [Using cheerio](#using-cheerio) for more information on how to parse HTML documents
 
 ###### Parameters
 
-- `novelPath` value from [NovelItem::path](#novelitempath)
+- `novelUrl` value from [NovelItem::url](#novelitemurl)
 
 ###### Returns
 
 `SourceNovel` Novel information and chapter list as [SourceNovel](#sourcenovel) object
 
-> [!CAUTION] > [SourceNovel::path]() should be the same value as [NovelItem::path]() provided as parameter!
+> [!CAUTION] > [SourceNovel::url]() should be the same value as [NovelItem::url]() provided as parameter!
 
 ###### Example:
 
 ```ts
 class ExamplePlugin implements Plugin.PluginBase {
     ...
-    async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+    async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
         const novel: Plugin.SourceNovel = {
-            path: novelPath,
-            name: "Novel Name",
-            author: "Author Name",
-            cover: "https://example.com/cover.jpg",
-            genres: "Action, Fantasy",
+            url: novelUrl,
+            name: "test",
+            artist: "none",
+            author: "none",
+            cover: defaultCover,
+            genres: "Isekai, Neverland",
             status: NovelStatus.Completed,
-            summary: "A brief summary of the novel.",
-            chapters: [],
+            summary: ""
         };
-
-        const chapters: Plugin.ChapterItem[] = [
-            {
-                name: "Chapter 1: The Beginning",
-                path: "/novel/chapter-1",
-                releaseTime: "2023-12-01",
-                chapterNumber: 1,
-            },
-            {
-                name: "Chapter 2: The Journey",
-                path: "/novel/chapter-2",
-                releaseTime: "2023-12-02",
-                chapterNumber: 2,
-            }
-        ];
-
+        let chapters: Plugin.ChapterItem[] = [];
+        const chapter: Plugin.ChapterItem = {
+            name: "",
+            url: "",
+            releaseTime: "",
+            chapterNumber: 0,
+        };
+        chapters.push(chapter);
         novel.chapters = chapters;
         return novel;
     }
@@ -279,17 +271,17 @@ class ExamplePlugin implements Plugin.PluginBase {
 
 #### PluginBase::parseChapter
 
-Function that is used to get the content of a particular chapter
+Function that is used to get the information about particular novel and the list of it's chapters
 
 ```ts
-async parseChapter(chapterPath: string): Promise<string>
+async parseChapter(chapterUrl: string): Promise<string>
 ```
 
 See [Using cheerio](#using-cheerio) for more information on how to parse HTML documents
 
 ###### Parameters
 
-- `chapterPath` value from [ChapterItem::path](#chapteritempath)
+- `chapterUrl` value from [ChapterItem::url](#chapteritemurl)
 
 ###### Returns
 
@@ -300,8 +292,8 @@ See [Using cheerio](#using-cheerio) for more information on how to parse HTML do
 ```ts
 class ExamplePlugin implements Plugin.PluginBase {
     ...
-    async parseChapter(chapterPath: string): Promise<string>{
-        return "<h1>Chapter Content</h1>";
+    async parseChapter(chapterUrl: string): Promise<string>{
+        return "<h1>No chapter here</h1>";
     }
     ...
 }
@@ -350,7 +342,7 @@ It is an object representing information how to store/access the novel
 
 | Field                            | type     | Required | Description                                |
 | -------------------------------- | -------- | -------- | ------------------------------------------ |
-| <p id="novelitempath">path</p>   | `string` | yes      | The relative path to the novel             |
+| <p id="novelitemurl">url</p>     | `string` | yes      | The url to the site                        |
 | <p id="novelitemname">name</p>   | `string` | yes      | The name of the novel shown in the library |
 | <p id="novelitemcover">cover</p> | `string` | no       | URL to novel's cover                       |
 
@@ -368,28 +360,20 @@ import { defaultCover } from '@libs/defaultCover';
 
 | Field   | Type                      | Required | Desciption |
 | ------- | ------------------------- | -------- | ---------- |
-| path    | string                    | yes      | Relative path to the novel |
-| name    | string                    | no       | Name of the novel |
-| cover   | `string`                  | no       | URL to novel's cover |
-| genres  | `string`                  | no       | Comma separated genre list |
-| summary | `string`                  | no       | Summary of the novel |
-| author  | `string`                  | no       | Author of the novel |
-| artist  | `string`                  | no       | Artist of the novel |
-| status  | [NovelStatus] or `string` | no       | Status of the novel |
+| url     | string                    | yes      |            |
+| name    | string                    | no       | string     |
+| cover   | `string`                  | no       |            |
+| genres  | `string`                  | no       |            |
+| summary | `string`                  | no       |            |
+| author  | `string`                  | no       |            |
+| artist  | `string`                  | no       |            |
+| status  | [NovelStatus] or `string` | no       |            |
 
         chapters?: ChapterItem[];
 
 ---
 
 ### ChapterItem
-
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| name | `string` | yes | The name of the chapter |
-| path | `string` | yes | The relative path to the chapter |
-| releaseTime | `string` | no | "YYYY-MM-DD" format. Recommended to use `dayjs(date).format('YYYY-MM-DD')` |
-| chapterNumber | `number` | no | The number of the chapter |
-| page | `string` | no | For novels with multiple pages |
 
 ---
 
