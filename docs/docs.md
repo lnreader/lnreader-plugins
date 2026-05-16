@@ -34,8 +34,8 @@ class ExamplePlugin implements Plugin.PluginBase {}
 | [filters](#pluginbasefilters)                                  | no       | [Filter definition](#filter-definition-object) object |
 | [pluginSettings](#pluginbasepluginsettings)                    | no       | [Plugin settings](#pluginsettings) object             |
 | [popularNovels(page, options)](#pluginbasepopularnovels)       | yes      | Novel list getter                                     |
-| [parseNovelAndChapters(url)](#pluginbaseparsenovelandchapters) | yes      | Novel info and chapter list getter                    |
-| [parseChapter(url)](#pluginbaseparsechapter)                   | yes      | Chapter text getter                                   |
+| [parseNovel(path)](#pluginbaseparsenovel)                      | yes      | Novel info and chapter list getter                    |
+| [parseChapter(path)](#pluginbaseparsechapter)                  | yes      | Chapter text getter                                   |
 | [searchNovels(searchTerm, page)](#pluginbasesearchnovels)      | yes      | Novel searching getter                                |
 
 #### PluginBase::id
@@ -64,12 +64,12 @@ class ExamplePlugin implements Plugin.PluginBase {
 
 #### PluginBase::icon
 
-The path to your plugin's icon inside of `icon` folder
+The path to your plugin's icon inside of `public/static` folder
 
 ```ts
 class ExamplePlugin implements Plugin.PluginBase {
     ...
-    icon = "src/eng/templateplugin/icon.png";
+    icon = "src/en/templateplugin/icon.png";
     ...
 }
 ```
@@ -201,7 +201,7 @@ class ExamplePlugin implements Plugin.PluginBase {
         if(options.filters.example.value === "test"){
             novels.push({
                 name: "Novel1",
-                url: "https://example.com/novel1",
+                path: "/novel1",
                 cover:defaultCover
             })
         }
@@ -218,34 +218,34 @@ This type is used for getting the options of the [popularNovels](#pluginbasepopu
 
 - <span id='popularnovelsoptions-showlatestnovels'></span>`filters: FilterValues<typeof filters>` object containing all selected filter values. [More about Filters](#filters)
 
-#### PluginBase::parseNovelAndChapters
+#### PluginBase::parseNovel
 
 Function that is used to get the information about particular novel and the list of it's chapters
 
 ```ts
-async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel>
+async parseNovel(novelPath: string): Promise<Plugin.SourceNovel>
 ```
 
 See [Using cheerio](#using-cheerio) for more information on how to parse HTML documents
 
 ###### Parameters
 
-- `novelUrl` value from [NovelItem::url](#novelitemurl)
+- `novelPath` value from [NovelItem::path](#novelitempath)
 
 ###### Returns
 
 `SourceNovel` Novel information and chapter list as [SourceNovel](#sourcenovel) object
 
-> [!CAUTION] > [SourceNovel::url]() should be the same value as [NovelItem::url]() provided as parameter!
+> [!CAUTION] > [SourceNovel::path]() should be the same value as [NovelItem::path]() provided as parameter!
 
 ###### Example:
 
 ```ts
 class ExamplePlugin implements Plugin.PluginBase {
     ...
-    async parseNovelAndChapters(novelUrl: string): Promise<Plugin.SourceNovel> {
+    async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
         const novel: Plugin.SourceNovel = {
-            url: novelUrl,
+            path: novelPath,
             name: "test",
             artist: "none",
             author: "none",
@@ -257,7 +257,7 @@ class ExamplePlugin implements Plugin.PluginBase {
         let chapters: Plugin.ChapterItem[] = [];
         const chapter: Plugin.ChapterItem = {
             name: "",
-            url: "",
+            path: "",
             releaseTime: "",
             chapterNumber: 0,
         };
@@ -274,14 +274,14 @@ class ExamplePlugin implements Plugin.PluginBase {
 Function that is used to get the information about particular novel and the list of it's chapters
 
 ```ts
-async parseChapter(chapterUrl: string): Promise<string>
+async parseChapter(chapterPath: string): Promise<string>
 ```
 
 See [Using cheerio](#using-cheerio) for more information on how to parse HTML documents
 
 ###### Parameters
 
-- `chapterUrl` value from [ChapterItem::url](#chapteritemurl)
+- `chapterPath` value from [ChapterItem::path](#chapteritempath)
 
 ###### Returns
 
@@ -292,7 +292,7 @@ See [Using cheerio](#using-cheerio) for more information on how to parse HTML do
 ```ts
 class ExamplePlugin implements Plugin.PluginBase {
     ...
-    async parseChapter(chapterUrl: string): Promise<string>{
+    async parseChapter(chapterPath: string): Promise<string>{
         return "<h1>No chapter here</h1>";
     }
     ...
@@ -342,7 +342,7 @@ It is an object representing information how to store/access the novel
 
 | Field                            | type     | Required | Description                                |
 | -------------------------------- | -------- | -------- | ------------------------------------------ |
-| <p id="novelitemurl">url</p>     | `string` | yes      | The url to the site                        |
+| <p id="novelitempath">path</p>   | `string` | yes      | The relative path to the novel             |
 | <p id="novelitemname">name</p>   | `string` | yes      | The name of the novel shown in the library |
 | <p id="novelitemcover">cover</p> | `string` | no       | URL to novel's cover                       |
 
@@ -360,7 +360,7 @@ import { defaultCover } from '@libs/defaultCover';
 
 | Field   | Type                      | Required | Desciption |
 | ------- | ------------------------- | -------- | ---------- |
-| url     | string                    | yes      |            |
+| path    | string                    | yes      |            |
 | name    | string                    | no       | string     |
 | cover   | `string`                  | no       |            |
 | genres  | `string`                  | no       |            |
@@ -375,7 +375,13 @@ import { defaultCover } from '@libs/defaultCover';
 
 ### ChapterItem
 
----
+| Field         | Type     | Required | Description                     |
+| ------------- | -------- | -------- | ------------------------------- |
+| name          | string   | yes      |                                 |
+| path          | string   | yes      |                                 |
+| releaseTime   | string   | no       | release time in `YYYY-MM-DD`    |
+| chapterNumber | number   | no       |                                 |
+| page          | string   | no       | for multi-page chapter lists    |
 
 ### Filters
 
