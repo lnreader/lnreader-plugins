@@ -8,7 +8,7 @@
 
 -   [git](https://git-scm.com/doc/ext) basics
 -   Typescript or Javascript basics
--   Node >=18
+-   Node >=22
 -   Installing the dependencies with `npm i`
 
 ### Guide
