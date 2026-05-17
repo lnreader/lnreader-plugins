@@ -119,7 +119,19 @@ class NovelBuddy implements Plugin.PluginBase {
       novel.rating = initialManga.ratingStats.average;
     }
 
-    if (initialManga.chapters) {
+    const chaptersUrl = `${this.api}titles/${initialManga.id}/chapters`;
+    const chaptersResponse = await fetchApi(chaptersUrl);
+    const chaptersJson: ChapterResponse = await chaptersResponse.json();
+
+    if (chaptersJson?.success && chaptersJson?.data?.chapters) {
+      novel.chapters = chaptersJson.data.chapters
+        .map(chapter => ({
+          name: chapter.name,
+          path: new URL(chapter.url, this.site).pathname.substring(1),
+          releaseTime: chapter.updated_at,
+        }))
+        .reverse();
+    } else if (initialManga.chapters) {
       novel.chapters = initialManga.chapters
         .map(chapter => ({
           name: chapter.name,
