@@ -58,41 +58,60 @@ class TruyenSS implements Plugin.PluginBase {
     },
   } satisfies Filters;
 
-  /** Matches LNReader's built-in placeholder file; raw URL tends to load more reliably with plugin Referer headers than blob URLs. */
-  private readonly browseFallbackCover =
-    'https://raw.githubusercontent.com/lnreader/lnreader-plugins/master/public/static/coverNotAvailable.webp';
+  /** Host-local placeholder from the site (og:image); works with plugin Referer headers. */
+  private get sitePlaceholderCover(): string {
+    return `${this.site}/images/no_avatar.jpg`;
+  }
 
-  private absolutizeCoverUrl(raw: string): string | undefined {
+  private resolveCoverUrl(
+    raw: string | undefined,
+    pageUrl: string,
+  ): string | undefined {
+    if (!raw) return undefined;
     const u = raw.trim();
     if (!u || u.startsWith('data:')) return undefined;
-    if (u.startsWith('//')) return 'https:' + u;
-    if (u.startsWith('http')) return u;
-    return this.site + (u.startsWith('/') ? u : '/' + u);
+    try {
+      if (u.startsWith('//')) return 'https:' + u;
+      if (u.startsWith('http')) return u;
+      return new URL(u, pageUrl).href;
+    } catch {
+      return undefined;
+    }
   }
 
   private coverFromTruyenAnchor(
     loadedCheerio: CheerioAPI,
     el: Element,
+    pageUrl: string,
   ): string {
     const $a = loadedCheerio(el);
     const fromImg = (img: Cheerio<Element>) => {
       const src =
-        img.attr('data-src') || img.attr('data-lazy-src') || img.attr('src');
-      if (!src) return undefined;
-      return this.absolutizeCoverUrl(src);
+        img.attr('data-src') ||
+        img.attr('data-lazy-src') ||
+        img.attr('data-original') ||
+        img.attr('src');
+      return this.resolveCoverUrl(src, pageUrl);
     };
 
-    const inner = fromImg($a.find('img'));
+    const inner = fromImg($a.find('img').first());
     if (inner) return inner;
 
-    const parentImg = $a.parent().children('img').first();
-    const sibling = fromImg(parentImg);
-    if (sibling) return sibling;
+    const cardImg = $a.closest('.card').find('img').first();
+    const fromCard = fromImg(cardImg);
+    if (fromCard) return fromCard;
 
-    return this.browseFallbackCover;
+    const rowImg = $a.closest('.row').find('img').first();
+    const fromRow = fromImg(rowImg);
+    if (fromRow) return fromRow;
+
+    return this.sitePlaceholderCover;
   }
 
-  private collectTruyenLinks(loadedCheerio: CheerioAPI): Plugin.NovelItem[] {
+  private collectTruyenLinks(
+    loadedCheerio: CheerioAPI,
+    pageUrl: string,
+  ): Plugin.NovelItem[] {
     const novels: Plugin.NovelItem[] = [];
     const seen = new Set<string>();
     loadedCheerio('a[href^="/truyen/"]').each((_, el) => {
@@ -103,7 +122,7 @@ class TruyenSS implements Plugin.PluginBase {
       seen.add(path);
       const name = loadedCheerio(el).text().replace(/\s+/g, ' ').trim();
       if (!name) return;
-      const cover = this.coverFromTruyenAnchor(loadedCheerio, el);
+      const cover = this.coverFromTruyenAnchor(loadedCheerio, el, pageUrl);
       novels.push({ path, name, cover });
     });
     return novels;
@@ -119,7 +138,7 @@ class TruyenSS implements Plugin.PluginBase {
     if (showLatestNovels) {
       if (pageNo > 1) return [];
       const body = await fetchApi(this.site + '/').then(r => r.text());
-      return this.collectTruyenLinks(parseHTML(body));
+      return this.collectTruyenLinks(parseHTML(body), `${this.site}/`);
     }
     const genre = filters?.genre.value ?? 'tien-hiep';
     const url =
@@ -127,7 +146,7 @@ class TruyenSS implements Plugin.PluginBase {
         ? `${this.site}/${genre}`
         : `${this.site}/${genre}?page=${pageNo}`;
     const body = await fetchApi(url).then(r => r.text());
-    return this.collectTruyenLinks(parseHTML(body));
+    return this.collectTruyenLinks(parseHTML(body), url);
   }
 
   private parseStatusLine(raw: string): string {
@@ -182,12 +201,9 @@ class TruyenSS implements Plugin.PluginBase {
       chapters: [],
     };
 
-    const cover = loadedCheerio('.info_truyen img.avatar').attr('src');
-    novel.cover = cover
-      ? cover.startsWith('http')
-        ? cover
-        : this.site + cover
-      : this.browseFallbackCover;
+    const coverSrc = loadedCheerio('.info_truyen img.avatar').attr('src');
+    novel.cover =
+      this.resolveCoverUrl(coverSrc, url) ?? this.sitePlaceholderCover;
 
     const infoBlock = loadedCheerio('.info_truyen').first();
     const infoText = infoBlock.text();
@@ -272,7 +288,7 @@ class TruyenSS implements Plugin.PluginBase {
 
     for (const tryUrl of tryUrls) {
       const body = await fetchApi(tryUrl).then(r => r.text());
-      const novels = this.collectTruyenLinks(parseHTML(body));
+      const novels = this.collectTruyenLinks(parseHTML(body), tryUrl);
       if (novels.length) return novels;
     }
     return [];
