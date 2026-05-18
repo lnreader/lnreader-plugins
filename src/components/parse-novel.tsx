@@ -27,18 +27,6 @@ type ParseNovelSectionProps = {
   onNavigateToParseChapter?: () => void;
 };
 
-/** Normalize line breaks / spaces for multi-line summary display (playground + long single-line strings). */
-function formatSummaryForDisplay(raw: string): string {
-  return raw
-    .replace(/\r\n/g, '\n')
-    .replace(/\r/g, '\n')
-    .replace(/[\t\f\v]+/g, ' ')
-    .replace(/ *\n */g, '\n')
-    .replace(/[ \u00a0]+/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-}
-
 const ParseNovelSection = React.memo(function ParseNovelSection({
   onNavigateToParseChapter,
 }: ParseNovelSectionProps) {
@@ -372,8 +360,8 @@ const ParseNovelSection = React.memo(function ParseNovelSection({
                     <h4 className="font-semibold text-foreground mb-2">
                       Summary
                     </h4>
-                    <p className="max-w-prose text-sm text-muted-foreground leading-7 whitespace-pre-line break-words font-sans antialiased">
-                      {formatSummaryForDisplay(sourceNovel.summary)}
+                    <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                      {sourceNovel.summary}
                     </p>
                   </div>
                 )}
