@@ -245,6 +245,7 @@ import p_242 from '@plugins/ukrainian/smakolykytl';
 import p_243 from '@plugins/vietnamese/LNHako';
 import p_244 from '@plugins/vietnamese/lightnovelvn';
 import p_245 from '@plugins/vietnamese/nettruyen';
+import p_246 from '@plugins/vietnamese/truyenss';
 
 const PLUGINS: Plugin.PluginBase[] = [
   p_0,
@@ -493,5 +494,6 @@ const PLUGINS: Plugin.PluginBase[] = [
   p_243,
   p_244,
   p_245,
+  p_246,
 ];
 export default PLUGINS;
