@@ -668,5 +668,13 @@
       "lang": "English",
       "useNewChapterEndpoint": true
     }
+  },
+  {
+    "id": "boxnovel",
+    "sourceSite": "https://novelnice.com/",
+    "sourceName": "BoxNovel",
+    "options": {
+      "lang": "English"
+    }
   }
 ]

@@ -34,15 +34,6 @@
     }
   },
   {
-    "id": "boxnovel",
-    "sourceSite": "https://novlove.com/",
-    "sourceName": "BoxNovel",
-    "options": {
-      "latestPage": "sort/nov-love-daily-update",
-      "searchPage": "search"
-    }
-  },
-  {
     "id": "novelfull",
     "sourceSite": "https://novelfull.com/",
     "sourceName": "NovelFull",

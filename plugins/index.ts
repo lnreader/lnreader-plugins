@@ -23,7 +23,7 @@ import p_20 from '@plugins/english/AllNovelFull[readnovelfull]';
 import p_21 from '@plugins/english/AllNovel[readnovelfull]';
 import p_22 from '@plugins/english/ArcaneTranslations[lightnovelwp]';
 import p_23 from '@plugins/english/BelleReservoir[madara]';
-import p_24 from '@plugins/english/BoxNovel[readnovelfull]';
+import p_24 from '@plugins/english/BoxNovel[madara]';
 import p_25 from '@plugins/english/CPUnovel[lightnovelwp]';
 import p_26 from '@plugins/english/CherryMistCafe[fictioneer]';
 import p_27 from '@plugins/english/CitrusAurora[madara]';
