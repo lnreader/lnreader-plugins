@@ -4,22 +4,7 @@ import { FetchMode, ServerSetting } from './src/types/types';
 import { Connect } from 'vite';
 import httpProxy from 'http-proxy';
 import { exec } from 'child_process';
-import { brotliDecompressSync, gunzipSync } from 'node:zlib';
-import * as zlibNs from 'node:zlib';
-
-type ZlibWithZstd = typeof zlibNs & {
-  zstdDecompressSync?: (buffer: Buffer) => Buffer;
-};
-
-function zstdDecompressSync(buffer: Buffer): Buffer {
-  const fn = (zlibNs as ZlibWithZstd).zstdDecompressSync;
-  if (typeof fn !== 'function') {
-    throw new Error(
-      'Response uses zstd encoding but this Node.js build has no zlib.zstdDecompressSync. Use Node 22.12+ (or newer current LTS with zstd) or switch fetch mode in settings.',
-    );
-  }
-  return fn(buffer);
-}
+import { brotliDecompressSync, gunzipSync, zstdDecompressSync } from 'zlib';
 
 const proxy = httpProxy.createProxyServer({});
 
