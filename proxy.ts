@@ -261,15 +261,19 @@ proxy.on('proxyRes', function (proxyRes, req, res) {
   proxyRes.on('data', chunk => chunks.push(Buffer.from(chunk)));
   proxyRes.on('end', () => {
     try {
-      // Use 'any' to fix Buffer type mismatch in newer Node environments
-      let buffer: any = Buffer.concat(chunks);
-      if (buffer.length > 0) {
-        if (contentEncoding.includes('br'))
-          buffer = brotliDecompressSync(buffer);
-        else if (contentEncoding.includes('gzip')) buffer = gunzipSync(buffer);
-        else if (contentEncoding.includes('zstd'))
-          buffer = zstdDecompressSync(buffer);
-        res.write(buffer);
+      const compressedBuffer = Buffer.concat(chunks);
+      if (compressedBuffer.length > 0) {
+        let decompressedBuffer: Buffer;
+        if (contentEncoding.includes('br')) {
+          decompressedBuffer = brotliDecompressSync(compressedBuffer);
+        } else if (contentEncoding.includes('gzip')) {
+          decompressedBuffer = gunzipSync(compressedBuffer);
+        } else if (contentEncoding.includes('zstd')) {
+          decompressedBuffer = zstdDecompressSync(compressedBuffer);
+        } else {
+          decompressedBuffer = compressedBuffer;
+        }
+        res.write(decompressedBuffer);
       }
       res.end();
     } catch (err) {
