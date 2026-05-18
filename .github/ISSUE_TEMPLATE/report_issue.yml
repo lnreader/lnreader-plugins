@@ -258,6 +258,7 @@ body:
         - "Tiếng Việt: Light Novel VN"
         - "Tiếng Việt: Hako"
         - "Tiếng Việt: Nettruyen"
+        - "Tiếng Việt: TruyenSS"
         - "Multi: Komga"
     validations:
       required: true
