@@ -8,8 +8,6 @@
 
 Community-driven plugin repository for [LNReader](https://github.com/LNReader/lnreader). This repository hosts plugins and manages related issues and requests.
 
-Includes the custom Vietnamese source **TruyenSS** (`truyenss.com`). HTML snapshots used while implementing it are in `fixtures/truyenss-samples/`.
-
 ## Quick Start
 
 **Prerequisites:** Node.js >= 22 

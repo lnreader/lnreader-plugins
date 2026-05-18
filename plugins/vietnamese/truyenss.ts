@@ -1,4 +1,5 @@
 import { CheerioAPI, load as parseHTML } from 'cheerio';
+import { defaultCover } from '@libs/defaultCover';
 import { fetchApi } from '@libs/fetch';
 import { FilterTypes, Filters } from '@libs/filterInputs';
 import { NovelStatus } from '@libs/novelStatus';
@@ -11,7 +12,7 @@ class TruyenSS implements Plugin.PluginBase {
   name = 'TruyenSS';
   icon = 'src/vi/truyenss/icon.png';
   site = 'https://truyenss.com';
-  version = '1.0.1';
+  version = '1.0.0';
 
   imageRequestInit: Plugin.ImageRequestInit = {
     headers: { Referer: this.site + '/' },
@@ -68,7 +69,7 @@ class TruyenSS implements Plugin.PluginBase {
       seen.add(path);
       const name = loadedCheerio(el).text().replace(/\s+/g, ' ').trim();
       if (!name) return;
-      novels.push({ path, name });
+      novels.push({ path, name, cover: defaultCover });
     });
     return novels;
   }
@@ -132,14 +133,7 @@ class TruyenSS implements Plugin.PluginBase {
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    let path = novelPath;
-    if (path.startsWith('http')) {
-      try {
-        path = new URL(path).pathname;
-      } catch {
-        /* keep path */
-      }
-    }
+    const path = novelPath;
     const url = this.site + path;
     const body = await fetchApi(url).then(r => r.text());
     const loadedCheerio = parseHTML(body);
@@ -154,9 +148,11 @@ class TruyenSS implements Plugin.PluginBase {
     };
 
     const cover = loadedCheerio('.info_truyen img.avatar').attr('src');
-    if (cover) {
-      novel.cover = cover.startsWith('http') ? cover : this.site + cover;
-    }
+    novel.cover = cover
+      ? cover.startsWith('http')
+        ? cover
+        : this.site + cover
+      : defaultCover;
 
     const infoBlock = loadedCheerio('.info_truyen').first();
     const infoText = infoBlock.text();
@@ -246,13 +242,6 @@ class TruyenSS implements Plugin.PluginBase {
     }
     return [];
   }
-
-  resolveUrl = (path: string): string => {
-    const m = path.match(CHAPTER_PATH);
-    if (m) return `${this.site}/truyen/${m[1]}#${m[2]}`;
-    if (path.startsWith('http')) return path;
-    return this.site + path;
-  };
 }
 
 export default new TruyenSS();
