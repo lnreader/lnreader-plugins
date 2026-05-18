@@ -3,14 +3,14 @@ import { Plugin } from '@/types/plugin';
 import { load as parseHTML } from 'cheerio';
 import { NovelStatus } from '@libs/novelStatus';
 import { defaultCover } from '@libs/defaultCover';
-import { Filters, FilterTypes } from '@/types/filters';
+import { Filters, FilterTypes } from '@libs/filterInputs';
 
 class NovelHi implements Plugin.PluginBase {
   id = 'novelhi';
   name = 'NovelHi';
   icon = 'src/en/novelhi/icon.png';
   site = 'https://novelhi.com/';
-  version = '1.1.0';
+  version = '1.1.1';
 
   // flag indicates whether access to LocalStorage, SesesionStorage is required.
   webStorageUtilized?: boolean;
@@ -20,13 +20,13 @@ class NovelHi implements Plugin.PluginBase {
 
   private async getNovels(
     pageNo: number,
-    keyword = '',
+    keyword: string | undefined,
     filters?: Plugin.PopularNovelsOptions<typeof this.filters>['filters'],
   ): Promise<CachedNovel[]> {
     const params = new URLSearchParams({
       curr: pageNo.toString(),
       limit: '10',
-      keyword,
+      ...(keyword && { keyword }),
       ...(filters?.genres.value && { 'bookGenres[]': filters.genres.value }),
       ...(filters?.order.value && { bookStatus: filters.order.value }),
       ...(filters?.time.value && { updatePeriod: filters.time.value }),
@@ -58,7 +58,7 @@ class NovelHi implements Plugin.PluginBase {
     pageNo: number,
     { filters }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<CachedNovel[]> {
-    return this.getNovels(pageNo, '', filters);
+    return this.getNovels(pageNo, undefined, filters);
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
@@ -74,7 +74,10 @@ class NovelHi implements Plugin.PluginBase {
 
     const novel: Plugin.SourceNovel = {
       path: novelPath,
-      name: loadedCheerio('meta[name=keywords]').attr('content') || 'Untitled',
+      name:
+        loadedCheerio('b.layui-icon').text().trim() ||
+        loadedCheerio('.tit h1').text().trim() ||
+        'Untitled',
       cover: loadedCheerio('.cover,.decorate-img').attr('src') || defaultCover,
     };
 
@@ -126,10 +129,43 @@ class NovelHi implements Plugin.PluginBase {
     const result = await fetchApi(url).then(res => res.text());
 
     const loadedCheerio = parseHTML(result);
+    const path = loadedCheerio('#chapterContentPath').attr('value');
+    const token = loadedCheerio('#chapterContentToken').attr('value');
+
+    if (!path || !token) return '';
+
+    const contentPath = new URL(path, this.site).href;
+    const content: ApiContent = await fetchApi(
+      `${contentPath}?token=${token}`,
+      {
+        headers: {
+          'Referer': url,
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+      },
+    ).then(r => r.json());
+
+    if (content) {
+      const rot13 = content.data.content.replace(
+        /(<[^>]+>)|([a-zA-Z])/g,
+        (_, tag, char) => {
+          if (tag) return tag;
+
+          const base = char <= 'Z' ? 65 : 97;
+          const shift = ((char.charCodeAt(0) - base + 13) % 26) + base;
+          return String.fromCharCode(shift);
+        },
+      );
+      const chapter = rot13
+        .replace(/<sent\b/gi, '<p')
+        .replace(/<\/sent>/gi, '</p>')
+        .replace(/<br\s*\/?>/gi, '');
+      loadedCheerio('#showReading').html(chapter);
+    }
     loadedCheerio('#showReading script,ins').remove();
     const chapterText = loadedCheerio('#showReading').html();
     if (!chapterText) {
-      return loadedCheerio('#translate <').html() || '';
+      return loadedCheerio('#translate').parent().html() || '';
     }
     return chapterText;
   }
@@ -255,5 +291,12 @@ type ApiChapter = {
     pageSize: string;
     total: string;
     list: ChapterData[];
+  };
+};
+
+type ApiContent = {
+  code: number;
+  data: {
+    content: string;
   };
 };
