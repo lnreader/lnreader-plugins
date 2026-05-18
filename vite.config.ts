@@ -31,6 +31,7 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    open: true,
+    // Opt-in: avoids `spawn xdg-open ENOENT` on minimal Linux; open http://localhost:3000 manually.
+    open: process.env.VITE_OPEN === '1' || process.env.VITE_OPEN === 'true',
   },
 });
