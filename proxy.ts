@@ -57,12 +57,7 @@ const proxySettingMiddleware: Connect.NextHandleFunction = (req, res) => {
 };
 
 const proxyHandlerMiddle: Connect.NextHandleFunction = (req, res) => {
-  const path = req.url ?? '';
-  /** Browser fetch becomes GET /https://host/... — must not use `https:` + path (breaks URL). */
-  const rawUrl =
-    path.startsWith('/https://') || path.startsWith('/http://')
-      ? path.slice(1)
-      : `https:${path}`;
+  const rawUrl = 'https:' + req.url;
   if (req.headers['access-control-request-method']) {
     res.setHeader(
       'access-control-allow-methods',
