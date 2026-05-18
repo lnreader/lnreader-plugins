@@ -117,7 +117,15 @@ const proxyRequest: Connect.SimpleHandleFunction = (req, res) => {
   headers:`,
   );
   Object.entries(req.headers).forEach(([name, value]) => {
-    console.log('\t', '\x1b[32m', name + ':', '\x1b[37m', value);
+    // Redact sensitive headers in logs
+    const isSensitive = ['cookie', 'authorization'].includes(name.toLowerCase());
+    console.log(
+      '\t',
+      '\x1b[32m',
+      name + ':',
+      '\x1b[37m',
+      isSensitive ? '[REDACTED]' : value,
+    );
   });
   console.log('\x1b[36m', '----------------');
 
@@ -253,7 +261,8 @@ proxy.on('proxyRes', function (proxyRes, req, res) {
   proxyRes.on('data', chunk => chunks.push(Buffer.from(chunk)));
   proxyRes.on('end', () => {
     try {
-      let buffer = Buffer.concat(chunks);
+      // Use 'any' to fix Buffer type mismatch in newer Node environments
+      let buffer: any = Buffer.concat(chunks);
       if (buffer.length > 0) {
         if (contentEncoding.includes('br'))
           buffer = brotliDecompressSync(buffer);
