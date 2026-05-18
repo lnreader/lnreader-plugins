@@ -21,10 +21,10 @@ export type LightNovelWPMetadata = {
   sourceSite: string;
   sourceName: string;
   options?: LightNovelWPOptions;
-  filters?: any;
+  filters?: Filters;
 };
 
-class LightNovelWPPlugin implements Plugin.PluginBase {
+export class LightNovelWPPlugin implements Plugin.PluginBase {
   id: string;
   name: string;
   icon: string;
@@ -34,7 +34,7 @@ class LightNovelWPPlugin implements Plugin.PluginBase {
   filters?: Filters;
 
   hideLocked = storage.get('hideLocked');
-  pluginSettings?: Record<string, any>;
+  pluginSettings?: Filters;
 
   constructor(metadata: LightNovelWPMetadata) {
     this.id = metadata.id;
@@ -42,7 +42,7 @@ class LightNovelWPPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/lightnovelwp/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `1.1.${9 + versionIncrements}`;
+    this.version = `1.1.${10 + versionIncrements}`;
     this.options = metadata.options ?? ({} as LightNovelWPOptions);
     this.filters = metadata.filters satisfies Filters;
 
@@ -99,12 +99,12 @@ class LightNovelWPPlugin implements Plugin.PluginBase {
     const articles = html.match(/<article([^]*?)<\/article>/g) || [];
     articles.forEach(article => {
       const [, novelUrl, novelName] =
-        article.match(/<a href="([^\"]*)".*? title="([^\"]*)"/) || [];
+        article.match(/<a href="([^"]*)".*? title="([^"]*)"/) || [];
 
       if (novelName && novelUrl) {
         const novelCover =
           article.match(
-            /<img [^>]*?src="([^\"]*)"[^>]*?(?: data-src="([^\"]*)")?[^>]*>/,
+            /<img [^>]*?src="([^"]*)"[^>]*?(?: data-src="([^"]*)")?[^>]*>/,
           ) || [];
 
         let novelPath;

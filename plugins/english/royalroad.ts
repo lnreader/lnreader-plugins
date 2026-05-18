@@ -9,7 +9,7 @@ import { storage } from '@libs/storage';
 class RoyalRoad implements Plugin.PluginBase {
   id = 'royalroad';
   name = 'Royal Road';
-  version = '2.3.0';
+  version = '2.3.1';
   icon = 'src/en/royalroad/icon.png';
   site = 'https://www.royalroad.com/';
 
@@ -415,18 +415,20 @@ class RoyalRoad implements Plugin.PluginBase {
               depth--;
               return;
             case ParsingState.InNote:
-              const noteClass = `author-note-${isBeforeChapter ? 'before' : 'after'}`;
-              const notesHtml = notesHtmlParts.join('').trim();
-              const fullNote = `<div class="${noteClass}">${notesHtml}</div>`;
-              if (isBeforeChapter) {
-                beforeNotesParts.push(fullNote);
-              } else {
-                afterNotesParts.push(fullNote);
+              {
+                const noteClass = `author-note-${isBeforeChapter ? 'before' : 'after'}`;
+                const notesHtml = notesHtmlParts.join('').trim();
+                const fullNote = `<div class="${noteClass}">${notesHtml}</div>`;
+                if (isBeforeChapter) {
+                  beforeNotesParts.push(fullNote);
+                } else {
+                  afterNotesParts.push(fullNote);
+                }
+                notesHtmlParts.length = 0;
+                state = ParsingState.Idle;
+                stateDepth = 0;
+                depth--;
               }
-              notesHtmlParts.length = 0;
-              state = ParsingState.Idle;
-              stateDepth = 0;
-              depth--;
               return;
           }
         } else if (

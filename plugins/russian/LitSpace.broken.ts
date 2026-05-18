@@ -3,9 +3,9 @@ import { FilterTypes, Filters } from '@libs/filterInputs';
 import { defaultCover } from '@libs/defaultCover';
 import { fetchApi } from '@libs/fetch';
 
-const headers: any = {
+const headers: Record<string, string> = {
   'Content-Type': 'application/json',
-  'X-Inertia': true,
+  'X-Inertia': 'true',
   'X-Inertia-Version': '6666cd76f96956469e7be39d750cc7d9',
 };
 
@@ -30,10 +30,12 @@ class freedlit implements Plugin.PluginBase {
     url += '&page=' + page;
     const novels: Plugin.NovelItem[] = [];
 
-    const { books }: { books: Books } = await fetchApi(url).then(res => {
-      this.getToken(res.headers);
-      return res.json();
-    });
+    const { books }: { books: Books } = await fetchApi(url).then(
+      (res: Response) => {
+        this.getToken(res.headers);
+        return res.json();
+      },
+    );
 
     books.data.forEach(novel =>
       novels.push({
@@ -57,7 +59,7 @@ class freedlit implements Plugin.PluginBase {
         headers,
         Referer: this.resolveUrl(novelPath, true),
       },
-    ).then(res => {
+    ).then((res: Response) => {
       this.getToken(res.headers);
       return res.json();
     });
@@ -79,7 +81,7 @@ class freedlit implements Plugin.PluginBase {
         Referer: this.resolveUrl(novelPath),
         body: JSON.stringify({ book_id: novelPath }),
       },
-    ).then(res => {
+    ).then((res: Response) => {
       this.getToken(res.headers);
       return res.json();
     });
@@ -103,7 +105,9 @@ class freedlit implements Plugin.PluginBase {
   async parseChapter(chapterPath: string): Promise<string> {
     const [book_id, chapter_id] = chapterPath.split('/');
     if (!headers['X-XSRF-TOKEN']) {
-      await fetchApi(this.site).then(res => this.getToken(res.headers));
+      await fetchApi(this.site).then((res: Response) =>
+        this.getToken(res.headers),
+      );
     }
 
     const { success }: { success: chapterContent } = await fetchApi(
@@ -114,7 +118,7 @@ class freedlit implements Plugin.PluginBase {
         Referer: this.resolveUrl(chapterPath),
         body: JSON.stringify({ book_id, chapter_id }),
       },
-    ).then(res => {
+    ).then((res: Response) => {
       this.getToken(res.headers);
       return res.json();
     });
@@ -126,7 +130,7 @@ class freedlit implements Plugin.PluginBase {
   async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
     const { success }: { success: book[] } = await fetchApi(
       this.site + '/api/search?query=' + searchTerm,
-    ).then(res => {
+    ).then((res: Response) => {
       this.getToken(res.headers);
       return res.json();
     });
@@ -152,9 +156,9 @@ class freedlit implements Plugin.PluginBase {
   resolveUrl = (path: string, isNovel?: boolean) =>
     this.site + (isNovel ? '/book/' : '/reader/') + path;
 
-  getToken = (header: any) => {
-    const cookies = header.map['set-cookie'] || '';
-    for (const cookie of cookies.split('; ') as string[]) {
+  getToken = (header: Headers) => {
+    const cookies = header.get('set-cookie') || '';
+    for (const cookie of cookies.split('; ')) {
       const [key, val] = cookie.split('=');
       if (key === 'XSRF-TOKEN') {
         headers['X-XSRF-TOKEN'] = decodeURIComponent(val);

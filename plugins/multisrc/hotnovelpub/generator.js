@@ -48,10 +48,7 @@ const generator = function generator(metadata) {
 
   const pluginScript = `
     ${HotNovelPubTemplate}
-const plugin = new HotNovelPubPlugin(${JSON.stringify(metadata).replace(
-    /"type":"([^"]+)"/g,
-    '"type":FilterTypes.$1',
-  )});
+const plugin = new HotNovelPubPlugin(${JSON.stringify(metadata)});
 export default plugin;
     `.trim();
 

@@ -15,7 +15,7 @@ class RV implements Plugin.PluginBase {
 
   async fetchNovels(
     page: number,
-    { filters }: Plugin.PopularNovelsOptions<typeof this.filters>,
+    filters?: Plugin.PopularNovelsOptions<typeof this.filters>['filters'],
     searchTerm?: string,
   ): Promise<Plugin.NovelItem[]> {
     let url = this.site + 'api/books?page=' + page;
@@ -23,8 +23,8 @@ class RV implements Plugin.PluginBase {
 
     if (searchTerm) url += '&search=' + searchTerm;
 
-    const { data }: { data: book[] } = await fetchApi(url).then(res =>
-      res.json(),
+    const { data }: { data: book[] } = await fetchApi(url).then(
+      (res: Response) => res.json(),
     );
     const novels: Plugin.NovelItem[] = [];
 
@@ -39,18 +39,21 @@ class RV implements Plugin.PluginBase {
     return novels;
   }
 
-  popularNovels = this.fetchNovels;
-
-  async searchNovels(
-    searchTerm: string,
+  async popularNovels(
     page: number,
-  ): Promise<Plugin.NovelItem[]> {
-    const defaultOptions: any = { filters: {} };
-    return this.fetchNovels(page, defaultOptions, searchTerm);
+    { filters }: Plugin.PopularNovelsOptions<typeof this.filters>,
+  ) {
+    return this.fetchNovels(page, filters);
+  }
+
+  async searchNovels(searchTerm: string, page: number) {
+    return this.fetchNovels(page, undefined, searchTerm);
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const body = await fetchApi(this.site + novelPath).then(res => res.text());
+    const body = await fetchApi(this.site + novelPath).then((res: Response) =>
+      res.text(),
+    );
     const loadedCheerio = parseHTML(body);
 
     const novel: Plugin.SourceNovel = {
@@ -73,7 +76,7 @@ class RV implements Plugin.PluginBase {
 
     const chaptersJSON: { data: chapters[] } = await fetchApi(
       this.site + 'api/books/' + bookId + '/chapters/all',
-    ).then(res => res.json());
+    ).then((res: Response) => res.json());
 
     if (chaptersJSON.data.length) {
       const chapters: Plugin.ChapterItem[] = [];
@@ -98,7 +101,7 @@ class RV implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const body = await fetchApi(this.site + chapterPath).then(res =>
+    const body = await fetchApi(this.site + chapterPath).then((res: Response) =>
       res.text(),
     );
     const encrypted = body.match(

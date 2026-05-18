@@ -56,7 +56,7 @@ class EarlyNovelPlugin implements Plugin.PagePlugin {
 
     link += `?page=${pageNo}`;
 
-    const body = await fetchApi(link).then(res => res.text());
+    const body = await fetchApi(link).then((res: Response) => res.text());
 
     const loadedCheerio = parseHTML(body);
     return this.parseNovels(loadedCheerio);
@@ -110,7 +110,7 @@ class EarlyNovelPlugin implements Plugin.PagePlugin {
 
   async parsePage(novelPath: string, page: string): Promise<Plugin.SourcePage> {
     const url = this.site + novelPath + '?page=' + page;
-    const body = await fetchApi(url).then(res => res.text());
+    const body = await fetchApi(url).then((res: Response) => res.text());
     const loadedCheerio = parseHTML(body);
     const chapters = this.parseChapters(loadedCheerio);
     return { chapters };

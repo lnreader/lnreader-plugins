@@ -13,7 +13,9 @@ export const generateAll = function () {
         readFileSync(`${__dirname}/filters/mtlnovel.json`, 'utf-8'),
       );
       source.filters = filters;
-    } catch (e) {}
+    } catch (e) {
+      // for the linter
+    }
     console.log(
       `[mtlnovel] Generating: ${source.id}`.padEnd(35),
       source.filters ? '🔎with filters🔍' : '🚫 no filters 🚫',

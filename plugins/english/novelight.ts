@@ -10,7 +10,7 @@ import { storage } from '@libs/storage';
 class Novelight implements Plugin.PagePlugin {
   id = 'novelight';
   name = 'Novelight';
-  version = '1.1.4';
+  version = '1.1.5';
   icon = 'src/en/novelight/icon.png';
   site = 'https://novelight.net/';
 
@@ -184,7 +184,9 @@ class Novelight implements Plugin.PagePlugin {
           parseHTML(ele)('.date').text().trim(),
           'DD.MM.YYYY',
         ).toISOString();
-      } catch (error) {}
+      } catch (error) {
+        // linter happy
+      }
 
       const chapterName = isLocked ? '🔒 ' + title : title;
       let chapterUrl = ele.attribs.href;

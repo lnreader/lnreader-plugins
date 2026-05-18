@@ -31,15 +31,15 @@ class Agitoon implements Plugin.PluginBase {
       body: new URLSearchParams({
         mode: 'get_data_novel_list_p',
         novel_menu: showLatestNovels ? '1' : '3',
-        np_day: new Date().getDay(),
+        np_day: new Date().getDay().toString(),
         np_rank: '1',
         np_distributor: '0',
         np_genre: '00',
         np_order: '1',
         np_genre_ex_1: '00',
         np_genre_ex_2: '00',
-        list_limit: 20 * (pageNo - 1),
-        is_query_first: pageNo == 1,
+        list_limit: (20 * (pageNo - 1)).toString(),
+        is_query_first: (pageNo == 1).toString(),
       }).toString(),
     });
     if (!res.ok) {
@@ -66,7 +66,7 @@ class Agitoon implements Plugin.PluginBase {
     const result = await fetchApi(this.resolveUrl(novelPath, true)).then(res =>
       res.text(),
     );
-    const loadedCheerio = parseHTML(result, { decodeEntities: false });
+    const loadedCheerio = parseHTML(result);
 
     const novel: Plugin.SourceNovel = {
       path: novelPath,
@@ -147,7 +147,7 @@ class Agitoon implements Plugin.PluginBase {
       body: new URLSearchParams({
         mode: 'get_data_novel_list_p_sch',
         search_novel: searchTerm,
-        list_limit: 0,
+        list_limit: '0',
       }).toString(),
     });
     const resJson = (await rawResults.json()) as response;

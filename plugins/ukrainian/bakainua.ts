@@ -1,4 +1,4 @@
-import { CheerioAPI, load as parseHTML } from 'cheerio';
+import { load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
@@ -9,7 +9,7 @@ class BakaInUa implements Plugin.PluginBase {
   name = 'BakaInUA';
   icon = 'src/uk/bakainua/icon.png';
   site = 'https://baka.in.ua';
-  version = '3.1.6';
+  version = '3.1.7';
 
   async popularNovels(
     pageNo: number,
@@ -43,24 +43,26 @@ class BakaInUa implements Plugin.PluginBase {
       if (id) fictionIds.push(id);
     });
 
-    const requests = fictionIds.map(async id => {
-      try {
-        const res = await fetchApi(`${this.site}/fictions/${id}/details`, {
-          headers: { 'user-agent': 'Mozilla/5.0' },
-        });
-        const detailHtml = await res.text();
-        const $d = parseHTML(detailHtml);
-        const link = $d('a').first();
+    const requests = fictionIds.map(
+      async (id): Promise<Plugin.NovelItem | null> => {
+        try {
+          const res = await fetchApi(`${this.site}/fictions/${id}/details`, {
+            headers: { 'user-agent': 'Mozilla/5.0' },
+          });
+          const detailHtml = await res.text();
+          const $d = parseHTML(detailHtml);
+          const link = $d('a').first();
 
-        return {
-          name: $d('h3').text().trim(),
-          path: link.attr('href')?.replace(this.site + '/', '') || '',
-          cover: this.site + link.find('img').attr('src'),
-        };
-      } catch (e) {
-        return null;
-      }
-    });
+          return {
+            name: $d('h3').text().trim(),
+            path: link.attr('href')?.replace(this.site + '/', '') || '',
+            cover: this.site + link.find('img').attr('src'),
+          };
+        } catch (e) {
+          return null;
+        }
+      },
+    );
 
     const novels = await Promise.all(requests);
     return novels.filter((n): n is Plugin.NovelItem => n !== null);
@@ -169,7 +171,9 @@ class BakaInUa implements Plugin.PluginBase {
     const $ = parseHTML(body);
 
     // Baka.in.ua використовує ActionText (Trix), текст зазвичай у .trix-content або .prose
-    let content = $('.trix-content, .prose, article, #chapter-content').first();
+    const content = $(
+      '.trix-content, .prose, article, #chapter-content',
+    ).first();
 
     // Якщо основний селектор порожній, шукаємо прихований текст у data-атрібутах (особливість Hotwire/Turbo)
     if (!content.text().trim()) {

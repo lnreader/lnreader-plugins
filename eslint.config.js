@@ -165,10 +165,11 @@ export default tseslint.config(
     },
   },
   {
-    files: ['**/*.{ts,tsx,mts,cts,js}'],
+    files: ['**/*.{ts,tsx,mts,cts,js,cjs}'],
     ignores: ['./plugins/*/*.ts', './plugins/multisrc/*/template.ts'],
     rules: {
       'no-unused-vars': 'off',
+      '@typescript-eslint/no-var-requires': 'off',
       '@typescript-eslint/no-unused-vars': 'warn',
       '@typescript-eslint/no-namespace': 'off',
       '@typescript-eslint/consistent-type-definitions': ['error', 'type'],
@@ -191,7 +192,14 @@ export default tseslint.config(
       globals: {
         ...globals.serviceworker,
         ...globals.browser,
+        ...globals.node,
       },
+    },
+  },
+  {
+    files: ['**/fictioneer/custom/*/*.js'],
+    rules: {
+      'no-undef': 'off',
     },
   },
 );

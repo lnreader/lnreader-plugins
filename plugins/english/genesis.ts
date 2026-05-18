@@ -1,9 +1,10 @@
-import { CheerioAPI, load } from 'cheerio';
+import { load } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { storage } from '@libs/storage';
+import { defaultCover } from '@libs/defaultCover';
 
 class Genesis implements Plugin.PluginBase {
   id = 'genesistudio';
@@ -12,7 +13,7 @@ class Genesis implements Plugin.PluginBase {
   customCSS = 'src/en/genesis/customCSS.css';
   site = 'https://genesistudio.com';
   api = 'https://api.genesistudio.com';
-  version = '2.0.0';
+  version = '2.0.1';
 
   hideLocked = storage.get('hideLocked');
   pluginSettings = {
@@ -23,14 +24,27 @@ class Genesis implements Plugin.PluginBase {
     },
   };
 
-  imageRequestInit?: Plugin.ImageRequestInit | undefined = {
+  imageRequestInit?: Plugin.ImageRequestInit = {
     headers: {
       'referrer': this.site,
     },
   };
 
-  async parseNovelJSON(json: any[]): Promise<Plugin.SourceNovel[]> {
-    return json.map((novel: any) => ({
+  async parseNovelJSON(): Promise<Plugin.SourceNovel[]> {
+    // Thought about caching this,
+    // but not sure what would happen if a new novel were to be
+    // added to the library, so, fetch everytime it is
+    //
+    // fields param literally gives you the JSON you want
+    // maybe TODO: add filtering
+    const params = new URLSearchParams({
+      status: 'published',
+      fields: '["id","novel_title","cover","abbreviation"]',
+      limit: '-1',
+    });
+    const link = `${this.site}/api/directus/novels?${params.toString()}`;
+    const json: NovelJSON[] = await fetchApi(link).then(r => r.json());
+    return json.map(novel => ({
       name: novel.novel_title,
       path: `/novels/${novel.abbreviation}`.trim(),
       cover: `${this.api}/storage/v1/object/public/directus/${novel.cover}.png`,
@@ -40,11 +54,19 @@ class Genesis implements Plugin.PluginBase {
   async popularNovels(pageNo: number): Promise<Plugin.NovelItem[]> {
     // There is only one page of results, and no known page function, so do not try
     if (pageNo !== 1) return [];
-    // Only 14 results, no use in sorting or status
-    // Also all novels are Ongoing with no Completed, can't test status filter
-    const link = `${this.site}/api/directus/novels?status=published&fields=["cover","novel_title","cover","abbreviation"]&limit=-1`;
-    const json = await fetchApi(link).then(r => r.json());
-    return this.parseNovelJSON(json);
+    return this.parseNovelJSON();
+  }
+
+  async getCoverUrl(coverId: string): Promise<string> {
+    // genesis doesn't actually use jpegs but just in case
+    const ext = await fetchApi(`${this.site}/api/directus-file/${coverId}`)
+      .then(res => res.json())
+      .then(data =>
+        data.type ? data.type.split('/')[1].replace('jpeg', 'jpg') : 'png',
+      )
+      .catch(() => 'png');
+
+    return `${this.api}/storage/v1/object/public/directus/${coverId}.${ext}`;
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
@@ -53,13 +75,20 @@ class Genesis implements Plugin.PluginBase {
 
     // Fetch the novel's data in JSON format
     const raw = await fetchApi(url);
-    const json = await raw.json();
+    const json: NovelJSON = await raw.json();
 
-    // Initialize the novel object with default values
-    const parse = await this.parseNovelJSON([json]);
-    const novel: Plugin.SourceNovel = parse[0];
-    novel.summary = json.synopsis;
-    novel.author = json.author;
+    const novel: Plugin.SourceNovel = {
+      name: json.novel_title,
+      path: novelPath,
+      summary: json.synopsis,
+      author: json.author,
+      cover: json.cover ? await this.getCoverUrl(json.cover) : defaultCover,
+      genres: json.genres
+        ?.map(g => g.genres_id?.label)
+        .filter(l => l)
+        .join(','),
+    };
+
     const map: Record<string, string> = {
       ongoing: NovelStatus.Ongoing,
       hiatus: NovelStatus.OnHiatus,
@@ -68,21 +97,8 @@ class Genesis implements Plugin.PluginBase {
       completed: NovelStatus.Completed,
       unknown: NovelStatus.Unknown,
     };
-    novel.status = map[json.serialization.toLowerCase()] ?? NovelStatus.Unknown;
-    if (json.cover) {
-      const url = `${this.site}/api/directus-file/${json.cover}`;
-      const imgJson = await (await fetchApi(url)).json();
-      console.log(imgJson.type);
-      novel.cover = `${this.api}/storage/v1/object/public/directus/${json.cover}.png`;
-      if (imgJson.type == 'image/gif') {
-        novel.cover = novel.cover?.replace('.png', '.gif');
-      } else if (imgJson.type !== 'image/png') {
-        novel.cover = novel.cover?.replace(
-          '.png',
-          '.' + imgJson.type.toString().split('/')[1],
-        );
-      }
-    }
+    novel.status =
+      map[json.serialization?.toLowerCase() || ''] ?? NovelStatus.Unknown;
 
     // Parse the chapters if available and assign them to the novel object
     novel.chapters = await this.extractChapters(json.id);
@@ -91,12 +107,12 @@ class Genesis implements Plugin.PluginBase {
   }
 
   // Helper function to extract and format chapters
-  async extractChapters(id: string): Plugin.ChapterItem[] {
+  async extractChapters(id: string): Promise<Plugin.ChapterItem[]> {
     const url = `${this.site}/api/novels-chapter/${id}`;
 
     // Fetch the chapter data in JSON format
     const raw = await fetchApi(url);
-    const json = await raw.json();
+    const json: ChapterJSON = await raw.json();
 
     // Format each chapter and add only valid ones
     const chapters = json.data.chapters
@@ -116,7 +132,7 @@ class Genesis implements Plugin.PluginBase {
           chapterNumber: Number(chapterNum),
         };
       })
-      .filter(chapter => chapter !== null) as Plugin.ChapterItem[];
+      .filter(chapter => chapter !== null);
 
     return chapters;
   }
@@ -131,21 +147,17 @@ class Genesis implements Plugin.PluginBase {
     let external_api;
     let apikey;
 
-    let URLs = [];
+    const URLs: string[] = [];
     let code;
 
-    // Find URL with API Key
-    const srcs = $('head')
-      .find('script')
-      .map(function () {
-        const src = $(this).attr('src');
-        if (src in URLs) {
-          return null;
-        }
+    $('head script[src]').each((_, el) => {
+      const src = $(el).attr('src')!;
+      if (!URLs.includes(src)) {
         URLs.push(src);
-      })
-      .toArray();
-    for (let src of URLs) {
+      }
+    });
+
+    for (const src of URLs) {
       const script = await fetchApi(`${this.site}${src}`);
       const raw = await script.text();
       if (raw.includes('sb_publishable')) {
@@ -176,9 +188,14 @@ class Genesis implements Plugin.PluginBase {
       }
     }
 
-    const path = `${external_api}/rest/v1/chapters?select=id,chapter_title,chapter_number,chapter_content,status,novel&id=eq.${id}&status=eq.released`;
+    const path = `${external_api}/rest/v1/chapters`;
+    const search = new URLSearchParams({
+      select: 'id,chapter_title,chapter_number,chapter_content,status,novel',
+      id: `eq.${id}`,
+      status: 'eq.released',
+    });
 
-    const chQuery = await fetchApi(path, {
+    const chQuery = await fetchApi(`${path}?${search}`, {
       method: 'GET',
       headers: {
         // Cookie: 'csrftoken=' + csrftoken,
@@ -197,12 +214,21 @@ class Genesis implements Plugin.PluginBase {
     pageNo: number,
   ): Promise<Plugin.SourceNovel[]> {
     if (pageNo !== 1) return [];
-    // TODO: Figure out how to search
-    const url = `${this.site}/api/novels/search?title=${encodeURIComponent(searchTerm)}`;
-    const json = await fetchApi(url).then(r => r.json());
-    return this.parseNovelJSON(json);
+    // Since only 26 novels, fetch all the novels
+    // then filter out the novels which match the criteria
+    const novels = await this.parseNovelJSON();
+    const query = this.normalize(searchTerm);
+
+    return novels.filter(novel => this.normalize(novel.name).includes(query));
   }
 
+  // grabbed from Witch Cult Translations
+  private normalize(str: string) {
+    return str.toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  // due to the low amount of novels, using filters kinda overkill
+  // unless we apply filters to cached results
   filters = {
     sort: {
       label: 'Sort Results By',
@@ -213,32 +239,43 @@ class Genesis implements Plugin.PluginBase {
       ],
       type: FilterTypes.Picker,
     },
-    storyStatus: {
-      label: 'Status',
-      value: 'All',
-      options: [
-        { label: 'All', value: 'All' },
-        { label: 'Ongoing', value: 'Ongoing' },
-        { label: 'Completed', value: 'Completed' },
-      ],
-      type: FilterTypes.Picker,
-    },
+    // storyStatus: {
+    //   label: 'Status',
+    //   value: 'All',
+    //   options: [
+    //     { label: 'All', value: 'All' },
+    //     { label: 'Ongoing', value: 'Ongoing' },
+    //     { label: 'Completed', value: 'Completed' },
+    //   ],
+    //   type: FilterTypes.Picker,
+    // },
     genres: {
       label: 'Genres',
       value: [],
       options: [
-        { label: 'Action', value: 'Action' },
-        { label: 'Comedy', value: 'Comedy' },
-        { label: 'Drama', value: 'Drama' },
-        { label: 'Fantasy', value: 'Fantasy' },
-        { label: 'Harem', value: 'Harem' },
-        { label: 'Martial Arts', value: 'Martial Arts' },
-        { label: 'Modern', value: 'Modern' },
-        { label: 'Mystery', value: 'Mystery' },
-        { label: 'Psychological', value: 'Psychological' },
-        { label: 'Romance', value: 'Romance' },
-        { label: 'Slice of life', value: 'Slice of Life' },
-        { label: 'Tragedy', value: 'Tragedy' },
+        { 'label': 'Academy', 'value': '21' },
+        { 'label': 'Action', 'value': '1' },
+        { 'label': 'Adventure', 'value': '15' },
+        { 'label': 'Calm Protagonist', 'value': '22' },
+        { 'label': 'Comedy', 'value': '2' },
+        { 'label': 'Cultivation', 'value': '25' },
+        { 'label': 'Drama', 'value': '3' },
+        { 'label': 'Fantasy', 'value': '5' },
+        { 'label': 'Harem', 'value': '11' },
+        { 'label': 'Idol', 'value': '20' },
+        { 'label': 'Martial Arts', 'value': '6' },
+        { 'label': 'Modern', 'value': '4' },
+        { 'label': 'Modern Fantasy', 'value': '27' },
+        { 'label': 'Mystery', 'value': '8' },
+        { 'label': 'Psychological', 'value': '10' },
+        { 'label': 'Romance', 'value': '9' },
+        { 'label': 'School Life', 'value': '13' },
+        { 'label': 'Sci-fi', 'value': '24' },
+        { 'label': 'Slice of Life', 'value': '7' },
+        { 'label': 'Supernatural', 'value': '14' },
+        { 'label': 'Tragedy', 'value': '12' },
+        { 'label': 'Transmigration', 'value': '23' },
+        { 'label': 'Yandere', 'value': '26' },
       ],
       type: FilterTypes.CheckboxGroup,
     },
@@ -246,3 +283,30 @@ class Genesis implements Plugin.PluginBase {
 }
 
 export default new Genesis();
+
+type NovelJSON = {
+  id: string;
+  novel_title: string;
+  abbreviation: string;
+  cover: string;
+  synopsis?: string;
+  author?: string;
+  serialization?: string;
+  genres?: {
+    genres_id?: {
+      id?: number;
+      label?: string;
+    };
+  }[];
+};
+
+type ChapterJSON = {
+  data: {
+    chapters: {
+      id: string;
+      chapter_number: number;
+      chapter_title: string;
+      isUnlocked: boolean;
+    }[];
+  };
+};

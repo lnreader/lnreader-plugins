@@ -11,7 +11,7 @@ class ReN implements Plugin.PluginBase {
   name = 'Renovels';
   icon = 'src/ru/renovels/icon.png';
   site = 'https://renovels.org';
-  version = '1.0.3';
+  version = '1.0.4';
 
   async popularNovels(
     pageNo: number,
@@ -20,26 +20,25 @@ class ReN implements Plugin.PluginBase {
       filters,
     }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
-    let url = this.site + '/api/v2/search/catalog/?count=30&ordering=-';
-    url += showLatestNovels ? 'chapter_date' : filters?.sort?.value || 'rating';
-
-    Object.entries(filters || {}).forEach(([type, { value }]: any) => {
-      if (value instanceof Array && value.length) {
-        url += '&' + type + '=' + value.join('&' + type + '=');
-      }
-      if (value?.include instanceof Array && value.include.length) {
-        url += '&' + type + '=' + value.include.join('&' + type + '=');
-      }
-      if (value?.exclude instanceof Array && value.exclude.length) {
-        url +=
-          '&exclude_' +
-          type +
-          '=' +
-          value.exclude.join('&exclude_' + type + '=');
-      }
+    const params = new URLSearchParams({
+      count: '30',
+      ordering: '-' + (showLatestNovels ? 'chapter_date' : filters.sort.value),
     });
 
-    url += '&page=' + pageNo;
+    for (const [type, filter] of Object.entries(filters)) {
+      const value = filter.value;
+      if (Array.isArray(value)) {
+        value.forEach(v => params.append(type, v));
+      } else if (typeof value === 'object' && value !== null) {
+        value.include?.forEach((v: string) => params.append(type, v));
+        value.exclude?.forEach((v: string) =>
+          params.append(`exclude_${type}`, v),
+        );
+      }
+    }
+
+    params.append('page', pageNo.toString());
+    const url = `${this.site}/api/v2/search/catalog/?${params.toString()}`;
 
     const { results }: { results: responseNovels[] } = await fetchApi(url).then(
       res => res.json(),

@@ -15,7 +15,7 @@ import {
 import { useAppStore } from '@/store';
 import { usePluginCustomAssets } from '@/hooks/usePluginCustomAssets';
 
-export default function ParseChapterSection() {
+const ParseChapterSection = React.memo(function ParseChapterSection() {
   const plugin = useAppStore(state => state.plugin);
   const parseChapterPath = useAppStore(state => state.parseChapterPath);
   const shouldAutoSubmitChapter = useAppStore(
@@ -30,6 +30,15 @@ export default function ParseChapterSection() {
   const [fetchError, setFetchError] = useState('');
   const [showRawHtml, setShowRawHtml] = useState(false);
   const lastProcessedPath = useRef<string>();
+  const [prevPluginId, setPrevPluginId] = useState<string | undefined>();
+
+  if (plugin?.id !== prevPluginId) {
+    setPrevPluginId(plugin?.id);
+    setChapterPath('');
+    setChapterText('');
+    setFetchError('');
+    setShowRawHtml(false);
+  }
 
   const { customCSSLoaded, customJSLoaded, customCSSError, customJSError } =
     usePluginCustomAssets(plugin, chapterText);
@@ -56,7 +65,7 @@ export default function ParseChapterSection() {
     await fetchChapterByPath(chapterPath);
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && chapterPath.trim()) {
       fetchChapter();
     }
@@ -128,7 +137,7 @@ export default function ParseChapterSection() {
             placeholder="Enter chapter path..."
             value={chapterPath}
             onChange={e => setChapterPath(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyDown}
             className="flex-1"
             disabled={!plugin}
           />
@@ -327,4 +336,6 @@ export default function ParseChapterSection() {
       </Card>
     </div>
   );
-}
+});
+
+export default ParseChapterSection;

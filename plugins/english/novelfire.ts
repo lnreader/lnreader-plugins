@@ -9,7 +9,7 @@ import { storage } from '@libs/storage';
 class NovelFire implements Plugin.PluginBase {
   id = 'novelfire';
   name = 'Novel Fire';
-  version = '1.4.1';
+  version = '1.4.2';
   icon = 'src/en/novelfire/icon.png';
   site = 'https://novelfire.net/';
   webStorageUtilized = true;
@@ -294,7 +294,7 @@ class NovelFire implements Plugin.PluginBase {
     }
 
     novel.genres = $('.categories .property-item')
-      .map((i, el) => $(el).text())
+      .map((_, el) => $(el).text())
       .toArray()
       .join(',');
 
@@ -356,7 +356,11 @@ class NovelFire implements Plugin.PluginBase {
 
     if (post_id && !isNaN(Number(post_id))) {
       try {
-        const chapters = await this.getAllChapters(novelPath, post_id, page);
+        const chapters = await this.getAllChapters(
+          novelPath,
+          String(post_id),
+          page,
+        );
         return { chapters };
       } catch (e) {
         // Fallback to scraping if AJAX fails
@@ -373,7 +377,7 @@ class NovelFire implements Plugin.PluginBase {
       const loadedCheerio = load(body);
 
       const chapters = loadedCheerio('.chapter-list li')
-        .map((index, ele) => {
+        .map((_, ele) => {
           const chapterName =
             loadedCheerio(ele).find('a').attr('title') || 'No Title Found';
           const chapterPath = loadedCheerio(ele).find('a').attr('href');

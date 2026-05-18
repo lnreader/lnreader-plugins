@@ -4,26 +4,24 @@ import { defaultCover } from '@libs/defaultCover';
 import { fetchApi } from '@libs/fetch';
 import { NovelStatus } from '@libs/novelStatus';
 import { load as parseHTML } from 'cheerio';
-import dayjs from 'dayjs';
+import dayjs, { ManipulateType } from 'dayjs';
 
 class VyNovel implements Plugin.PluginBase {
   id = 'vynovel';
   name = 'VyNovel';
   site = 'https://vynovel.com';
-  version = '1.0.0';
+  version = '1.0.1';
   icon = 'src/en/vynovel/icon.png';
 
   async fetchNovels(
     page: number,
-    {
-      filters,
-      showLatestNovels,
-    }: Plugin.PopularNovelsOptions<typeof this.filters>,
+    showLatestNovels?: boolean,
+    filters?: Plugin.PopularNovelsOptions<typeof this.filters>['filters'],
     searchTerm?: string,
   ): Promise<Plugin.NovelItem[]> {
     const data = new URLSearchParams({
       sort: showLatestNovels ? 'updated_at' : filters?.sort?.value || 'viewed',
-      page,
+      page: page.toString(),
     });
     if (searchTerm) data.append('q', searchTerm);
 
@@ -33,7 +31,7 @@ class VyNovel implements Plugin.PluginBase {
     const loadedCheerio = parseHTML(body);
 
     const novels: Plugin.NovelItem[] = [];
-    loadedCheerio('div[class="comic-item"] > a').each((index, element) => {
+    loadedCheerio('div[class="comic-item"] > a').each((_, element) => {
       const name = loadedCheerio(element)
         .find('div[class="comic-title"]')
         .text()
@@ -52,17 +50,18 @@ class VyNovel implements Plugin.PluginBase {
     return novels;
   }
 
-  popularNovels = this.fetchNovels;
-
-  async searchNovels(
-    searchTerm: string,
+  async popularNovels(
     page: number,
-  ): Promise<Plugin.NovelItem[]> {
-    const defaultOptions: any = {
-      filters: undefined,
-      showLatestNovels: false,
-    };
-    return this.fetchNovels(page, defaultOptions, searchTerm);
+    {
+      showLatestNovels,
+      filters,
+    }: Plugin.PopularNovelsOptions<typeof this.filters>,
+  ) {
+    return this.fetchNovels(page, showLatestNovels, filters);
+  }
+
+  async searchNovels(searchTerm: string, page: number) {
+    return this.fetchNovels(page, false, undefined, searchTerm);
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
@@ -102,7 +101,7 @@ class VyNovel implements Plugin.PluginBase {
         chapters.push({
           name,
           path: novelPath + '/' + id,
-          releaseTime: this.parseDate(releaseDate?.trim()),
+          releaseTime: this.parseAgoDate(releaseDate),
           chapterNumber: totalChapters - chapterIndex,
         });
       },
@@ -122,38 +121,35 @@ class VyNovel implements Plugin.PluginBase {
     return chapterText || '';
   }
 
-  parseDate = (date = '') => {
-    if (!date) return null;
-    if (date.includes('ago')) {
-      const [value, type] = date.split(' ');
-      if (!value || !type) return null;
-
-      switch (type.toLowerCase()) {
-        case 'minutes': {
-          const minutes = parseInt(value, 10);
-          date = Date.now() - minutes * 60 * 1000;
-          break;
-        }
-        case 'hour':
-        case 'hours': {
-          const hours = parseInt(value, 10);
-          date = Date.now() - hours * 60 * 60 * 1000;
-          break;
-        }
-        case 'day':
-        case 'days': {
-          const days = parseInt(value, 10);
-          date = Date.now() - days * 24 * 60 * 60 * 1000;
-          break;
-        }
-        default:
-          console.log(date);
-          date = undefined;
-      }
-      return dayjs(date).format('LLL');
+  private parseAgoDate(date: string | undefined) {
+    //parseMadaraDate
+    const parsed = dayjs(date);
+    if (date && parsed.isValid()) {
+      return parsed.toISOString();
     }
-    return date;
-  };
+
+    const [amt, time, ago] = date?.toLowerCase().trim().split(/\s+/) || [];
+    const decade = time?.includes('decade'); // dayjs no support, but just in case
+    const amount = (amt === 'a' || amt === 'an' ? 1 : +amt) * (decade ? 10 : 1);
+    const unit = (decade ? 'year' : time) as ManipulateType;
+
+    const validUnits = [
+      'millisecond', // waow
+      'second',
+      'minute',
+      'hour',
+      'day',
+      'week',
+      'month',
+      'year',
+    ];
+
+    if (ago !== 'ago' || isNaN(amount) || !validUnits.includes(unit)) {
+      return null;
+    }
+
+    return dayjs().subtract(amount, unit).toISOString();
+  }
 
   resolveUrl = (path: string, isNovel?: boolean) =>
     this.site + (isNovel ? '/novel/' : '/read/') + path;

@@ -1,4 +1,5 @@
-import { Cheerio, CheerioAPI, load, Element } from 'cheerio';
+import { Cheerio, CheerioAPI, load } from 'cheerio';
+import { Element } from 'domhandler';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { defaultCover } from '@libs/defaultCover';
@@ -9,12 +10,12 @@ class XiaowazPlugin implements Plugin.PluginBase {
   name = 'Xiaowaz';
   icon = 'src/fr/xiaowaz/icon.png';
   site = 'https://xiaowaz.fr';
-  version = '1.0.1';
+  version = '1.0.2';
   static novels: Plugin.NovelItem[] | undefined;
 
   async getCheerio(url: string): Promise<CheerioAPI> {
     let retries = 5; // when fetching for images the sites sometimes terminates the connection
-    let returnError: any;
+    let returnError: unknown;
     while (retries > 0) {
       try {
         const r = await fetchApi(url);
@@ -29,7 +30,9 @@ class XiaowazPlugin implements Plugin.PluginBase {
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
-    throw new Error(returnError ? returnError : 'Error fetching the page');
+    throw new Error(
+      returnError ? String(returnError) : 'Error fetching the page',
+    );
   }
 
   async getAllNovels(): Promise<Plugin.NovelItem[]> {

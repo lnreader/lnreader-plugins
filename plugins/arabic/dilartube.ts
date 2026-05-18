@@ -1,13 +1,13 @@
-import { CheerioAPI, load as parseHTML } from 'cheerio';
+import { load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
-import { Filters, FilterTypes } from '@libs/filterInputs';
+import { Filters } from '@libs/filterInputs';
 import { defaultCover } from '@libs/defaultCover';
 
 class dilartube implements Plugin.PluginBase {
   id = 'dilartube';
   name = 'dilar tube';
-  version = '1.0.1';
+  version = '1.0.2';
   icon = 'src/ar/dilartube/icon.png';
   site = 'https://golden.rest/';
 
@@ -53,7 +53,7 @@ class dilartube implements Plugin.PluginBase {
 
   async popularNovels(
     page: number,
-    { showLatestNovels, filters }: Plugin.PopularNovelsOptions<Filters>,
+    { showLatestNovels }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
     let link = `${this.site}api/releases?page=${page}`;
     if (showLatestNovels) {
@@ -82,14 +82,14 @@ class dilartube implements Plugin.PluginBase {
     const chapterItems: Plugin.ChapterItem[] = [];
     const fullUrl = this.site + 'api/' + novelUrl;
     const chapterUrl = this.site + 'api/' + novelUrl + '/releases';
-    const manga = await fetchApi(fullUrl).then(r => r.json());
+    const manga: MangaResponse = await fetchApi(fullUrl).then(r => r.json());
     const chapters = await fetchApi(chapterUrl).then(r => r.json());
     const mangaData = manga.mangaData;
     const chapterData = chapters.releases;
 
     const novel: Plugin.SourceNovel = {
       path: novelUrl,
-      name: mangaData.arabic_title || 'Untitled',
+      name: mangaData.arabic_title ?? mangaData.title ?? 'Untitled',
       author:
         (mangaData.authors.length > 0 ? mangaData.authors[0].name : '') ||
         'Unknown',
@@ -97,7 +97,7 @@ class dilartube implements Plugin.PluginBase {
       cover: `${this.site}uploads/manga/cover/${mangaData.id}/${mangaData.cover}`,
       chapters: [],
     };
-    const translationStatusId: string = mangaData.translation_status;
+    const translationStatusId = mangaData.translation_status.toString();
     const translationText =
       {
         '1': 'مستمره',
@@ -105,13 +105,15 @@ class dilartube implements Plugin.PluginBase {
         '2': 'متوقفة',
         '3': 'غير مترجمه',
       }[translationStatusId] || 'غير معروف';
-    const statusWords = new Set(['مكتمل', 'جديد', 'مستمر']);
-    const mainGenres = mangaData.categories
-      .map((category: { name: any }) => category.name)
+    // const statusWords = new Set(['مكتمل', 'جديد', 'مستمر']);
+    const mainGenres = Array.from(
+      new Set(mangaData.categories.map(g => g.name)),
+    )
+      .filter(Boolean)
       .join(',');
     novel.genres = `${translationText},${mainGenres}`;
 
-    const statusId: string = mangaData.story_status;
+    const statusId = mangaData.story_status.toString();
     const statusText =
       {
         '2': 'Ongoing',
@@ -138,12 +140,18 @@ class dilartube implements Plugin.PluginBase {
     const parsedData = JSON.parse(jsonData as string);
 
     const chapterText = parsedData.readerDataAction.readerData.release.content;
-    return chapterText;
+    // return html with p tags
+    return chapterText
+      .split(/\r?\n/)
+      .map((line: string) => line.trim())
+      .filter(Boolean)
+      .map((line: string) => `<p>${line}</p>`)
+      .join('');
   }
 
   async searchNovels(
     searchTerm: string,
-    page: number,
+    // page: number,
   ): Promise<Plugin.NovelItem[]> {
     const formData = new FormData();
     formData.append('query', searchTerm);
@@ -156,6 +164,7 @@ class dilartube implements Plugin.PluginBase {
     return this.parseNovels(data);
   }
 
+  filters: Filters | undefined = undefined;
   // filters = {
   //   types: {
   //   value: [],
@@ -245,8 +254,8 @@ type Manga = {
   publisher_name: string | null;
   discord_url: string | null;
   mobile_exclusive: boolean;
-  authors: any[];
-  artists: any[];
+  // authors: any[];
+  // artists: any[];
   categories: Category[];
   type: Type;
 };
@@ -327,7 +336,7 @@ type MangaData = {
   uniq_visitors_count: number;
   publisher_id: number | null;
   publisher_name: string | null;
-  arabic_title: string;
+  arabic_title: string | null;
   english: string;
   synonyms: string;
   japanese: string;
@@ -360,11 +369,12 @@ type MangaData = {
 };
 
 type MangaResponse = {
-  membersMentioning: any[];
-  memberRates: any | null;
-  mangaLogs: Record<string, any>;
+  // membersMentioning: any[];
+  // memberRates: any | null;
+  // mangaLogs: Record<string, any>;
   mangaData: MangaData;
 };
+
 type ChapterRelease = {
   id: number;
   manga_id: number;
@@ -385,7 +395,7 @@ type ChapterRelease = {
   has_rev_link: boolean;
 };
 type searchManga = {
-  filter: any;
+  // filter: any;
   id: number;
   title: string;
   summary: string;
@@ -417,8 +427,8 @@ type searchManga = {
   publisher_name: string | null;
   discord_url: string | null;
   mobile_exclusive: boolean;
-  authors: any[];
-  artists: any[];
+  // authors: any[];
+  // artists: any[];
   categories: Category[];
   type: Type;
 };

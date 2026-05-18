@@ -10,7 +10,7 @@ class Illusia implements Plugin.PluginBase {
   name = 'Illusia';
   icon = 'src/pt-br/illusia/icon.png';
   site = 'https://illusia.com.br';
-  version = '1.0.1';
+  version = '1.0.2';
   filters: Filters | undefined = undefined;
 
   headers = {
@@ -323,7 +323,7 @@ class Illusia implements Plugin.PluginBase {
     return uniqueNovels;
   }
 
-  resolveUrl = (path: string, isNovel?: boolean) => `${this.site}/${path}/`;
+  // resolveUrl = (path: string, isNovel?: boolean) => `${this.site}/${path}/`;
 }
 
 export default new Illusia();

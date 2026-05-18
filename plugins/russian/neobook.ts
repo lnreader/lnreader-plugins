@@ -17,15 +17,13 @@ class Neobook implements Plugin.PluginBase {
   name = 'Neobook';
   site = 'https://neobook.org';
   apiSite = 'https://api.neobook.org/';
-  version = '1.0.2';
+  version = '1.0.3';
   icon = 'src/ru/neobook/icon.png';
 
   async fetchNovels(
     page: number,
-    {
-      filters,
-      showLatestNovels,
-    }: Plugin.PopularNovelsOptions<typeof this.filters>,
+    showLatestNovels?: boolean,
+    filters?: Plugin.PopularNovelsOptions<typeof this.filters>['filters'],
     searchTerm?: string,
   ): Promise<Plugin.NovelItem[]> {
     const formData = new FormData();
@@ -70,17 +68,18 @@ class Neobook implements Plugin.PluginBase {
     return novels;
   }
 
-  popularNovels = this.fetchNovels;
-
-  async searchNovels(
-    searchTerm: string,
+  async popularNovels(
     page: number,
-  ): Promise<Plugin.NovelItem[]> {
-    const defaultOptions: any = {
-      filters: undefined,
-      showLatestNovels: false,
-    };
-    return this.fetchNovels(page, defaultOptions, searchTerm);
+    {
+      showLatestNovels,
+      filters,
+    }: Plugin.PopularNovelsOptions<typeof this.filters>,
+  ) {
+    return this.fetchNovels(page, showLatestNovels, filters);
+  }
+
+  async searchNovels(searchTerm: string, page: number) {
+    return this.fetchNovels(page, false, undefined, searchTerm);
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
@@ -215,8 +214,8 @@ class Neobook implements Plugin.PluginBase {
 export default new Neobook();
 
 type BundleBooks = {
-  categories: any[];
-  topSection: any[];
+  // categories: any[];
+  // topSection: any[];
   feed: Novels[];
 };
 
@@ -286,7 +285,7 @@ type Novels = {
   readProgress?: ReadProgress;
   tags?: string[];
   chapters?: Chapter[];
-  lastComments?: any[];
+  // lastComments?: any[];
   bottomSection?: BottomSection;
   carouselItems?: Novels[];
   book?: Novels;
@@ -339,7 +338,7 @@ type Data = {
   dateEdit: string;
   datePublish: string;
   attachment: Attachment;
-  lastComments: any[];
+  // lastComments: any[];
 };
 
 type NovelsCounters = {
@@ -371,12 +370,12 @@ type Login = {
   grm: string;
   counters: LoginCounters;
   user: LoginUser;
-  pro: any[];
-  earn: any[];
-  boost: any[];
-  deposit: any[];
-  affiliate: any[];
-  preferences: any[];
+  // pro: any[];
+  // earn: any[];
+  // boost: any[];
+  // deposit: any[];
+  // affiliate: any[];
+  // preferences: any[];
 };
 
 type LoginCounters = {

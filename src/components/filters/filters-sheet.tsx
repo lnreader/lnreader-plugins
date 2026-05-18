@@ -1,4 +1,4 @@
-import React, { useEffect, useState, ReactNode } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -158,8 +158,6 @@ export function FiltersSheet({
   filters,
   refetch,
 }: FiltersSheetProps) {
-  const [filterElements, setFilterElements] = useState<ReactNode>(null);
-
   const setFilterWithKey = (key: string, newValue: AnyFilterValue) =>
     setValues(fValues =>
       !fValues
@@ -186,14 +184,12 @@ export function FiltersSheet({
     }
   };
 
-  useEffect(() => {
-    setFilterElements(renderFilters(filters, values, setFilterWithKey));
-  }, [values, filters]);
-
   const handleApply = () => {
     refetch();
     onOpenChange(false);
   };
+
+  const filterElements = renderFilters(filters, values, setFilterWithKey);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

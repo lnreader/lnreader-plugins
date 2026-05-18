@@ -1,5 +1,5 @@
 import { fetchApi } from '@libs/fetch';
-import { Filters } from '@libs/filterInputs';
+import { FilterToValues, Filters } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import dayjs from 'dayjs';
@@ -18,7 +18,7 @@ const headers = {
   'accept-encoding': 'gzip',
 };
 
-class RulatePlugin implements Plugin.PluginBase {
+export class RulatePlugin implements Plugin.PluginBase {
   id: string;
   name: string;
   icon: string;
@@ -32,14 +32,14 @@ class RulatePlugin implements Plugin.PluginBase {
     this.name = metadata.sourceName + ' (API)';
     this.icon = `multisrc/rulate/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
-    this.version = '1.0.' + (0 + metadata.versionIncrements);
+    this.version = '1.0.' + (1 + metadata.versionIncrements);
     this.filters = metadata.filters;
     this.key = metadata.key;
   }
 
   parseNovels(url: string) {
     return fetchApi(url, { headers })
-      .then(res => res.json() as Promise<SearchResponse>)
+      .then((res: Response) => res.json() as Promise<SearchResponse>)
       .then((data: SearchResponse) => {
         const novels: Plugin.NovelItem[] = [];
 
@@ -59,12 +59,16 @@ class RulatePlugin implements Plugin.PluginBase {
 
   async popularNovels(
     page: number,
-    { filters, showLatestNovels }: Plugin.PopularNovelsOptions,
+    {
+      filters,
+      showLatestNovels,
+    }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
     let url = this.site + '/api3/searchBooks?limit=40&page=' + page;
     url += '&sort=' + (showLatestNovels ? '4' : filters?.sort?.value || '6');
 
-    Object.entries(filters || {}).forEach(([type, { value }]) => {
+    Object.entries(filters || {}).forEach(([type, filter]) => {
+      const { value } = filter as FilterToValues<Filters>[string];
       if (value instanceof Array && value.length) {
         url += '&' + value.map(val => type + '[]=' + val).join('&');
       }
@@ -76,7 +80,7 @@ class RulatePlugin implements Plugin.PluginBase {
 
   async searchNovels(
     searchTerm: string,
-    page: number = 1,
+    page = 1,
   ): Promise<Plugin.NovelItem[]> {
     const url = `${this.site}/api3/searchBooks?t=${encodeURIComponent(
       searchTerm,
@@ -88,14 +92,16 @@ class RulatePlugin implements Plugin.PluginBase {
     const book = await fetchApi(
       this.site + '/api3/book?book_id=' + novelPath + '&key=' + this.key,
       { headers },
-    ).then(res => res.json() as Promise<BookResponse>);
+    ).then((res: Response) => res.json() as Promise<BookResponse>);
 
     const novel: Plugin.SourceNovel = {
       name: book.response.t_title || book.response.s_title,
       path: novelPath,
       cover: book.response.img,
       genres: [book.response.genres, book.response.tags]
-        .flatMap(c => c?.map?.((g: any) => g.title || g.name))
+        .flatMap(c =>
+          c?.map?.((g: { title?: string; name?: string }) => g.title || g.name),
+        )
         .join(','),
       summary: book.response.description,
       author: book.response.author,
@@ -118,12 +124,12 @@ class RulatePlugin implements Plugin.PluginBase {
         '&key=' +
         this.key,
       { headers },
-    ).then(res => res.json() as Promise<ChaptersResponse>);
+    ).then((res: Response) => res.json() as Promise<ChaptersResponse>);
 
     const chapters: Plugin.ChapterItem[] = [];
 
     if (chaptersData.response && Array.isArray(chaptersData.response)) {
-      chaptersData.response.forEach(chapter => {
+      chaptersData.response.forEach((chapter: ChapterResponse) => {
         if (chapter.can_read && chapter.subscription === 0) {
           chapters.push({
             name: chapter.title + (chapter.illustrated ? ' 🖼️' : ''),
@@ -150,7 +156,7 @@ class RulatePlugin implements Plugin.PluginBase {
         '&key=' +
         this.key,
       { headers },
-    ).then(res => res.json() as Promise<ChapterTextResponse>);
+    ).then((res: Response) => res.json() as Promise<ChapterTextResponse>);
 
     return body.response.text;
   }
@@ -158,7 +164,7 @@ class RulatePlugin implements Plugin.PluginBase {
     this.site + '/book/' + path + (isNovel ? '/' : '/ready_new');
 }
 
-interface SearchResponse {
+type SearchResponse = {
   status: string;
   response: {
     t_title?: string;
@@ -166,9 +172,9 @@ interface SearchResponse {
     id: number;
     img: string;
   }[];
-}
+};
 
-interface BookResponse {
+type BookResponse = {
   response: {
     t_title?: string;
     s_title: string;
@@ -181,22 +187,24 @@ interface BookResponse {
     status: string;
     rate?: { sum: number; count: number };
   };
-}
+};
 
-interface ChaptersResponse {
-  response: {
-    title: string;
-    id: number;
-    ord: number;
-    cdate: number;
-    subscription: number;
-    can_read: boolean;
-    illustrated?: boolean;
-  }[];
-}
+type ChapterResponse = {
+  title: string;
+  id: number;
+  ord: number;
+  cdate: number;
+  subscription: number;
+  can_read: boolean;
+  illustrated?: boolean;
+};
 
-interface ChapterTextResponse {
+type ChaptersResponse = {
+  response: ChapterResponse[];
+};
+
+type ChapterTextResponse = {
   response: {
     text: string;
   };
-}
+};

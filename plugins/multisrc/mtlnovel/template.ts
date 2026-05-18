@@ -14,10 +14,10 @@ export type MTLNovelMetadata = {
   sourceSite: string;
   sourceName: string;
   options?: MTLNovelOptions;
-  filters?: any;
+  filters?: Filters;
 };
 
-class MTLNovelPlugin implements Plugin.PluginBase {
+export class MTLNovelPlugin implements Plugin.PluginBase {
   id: string;
   name: string;
   icon: string;

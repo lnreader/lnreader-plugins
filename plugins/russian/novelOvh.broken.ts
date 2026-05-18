@@ -24,7 +24,9 @@ class novelOvh implements Plugin.PluginBase {
         : filters?.sort?.value || 'averageRating') +
       ',desc';
 
-    const books: BooksEntity[] = await fetchApi(url).then(res => res.json());
+    const books: BooksEntity[] = await fetchApi(url).then((res: Response) =>
+      res.json(),
+    );
 
     const novels: Plugin.NovelItem[] = [];
     books.forEach(novel =>
@@ -44,7 +46,7 @@ class novelOvh implements Plugin.PluginBase {
         '/content/' +
         novelPath +
         '?_data=routes/reader/book/$slug/index',
-    ).then(res => res.json());
+    ).then((res: Response) => res.json());
 
     const novel: Plugin.SourceNovel = {
       path: novelPath,
@@ -99,7 +101,7 @@ class novelOvh implements Plugin.PluginBase {
   async parseChapter(chapterPath: string): Promise<string> {
     const book: responseChapter = await fetchApi(
       this.apiSite + 'chapters/' + chapterPath.split('/')[1],
-    ).then(res => res.json());
+    ).then((res: Response) => res.json());
 
     const image = Object.fromEntries(
       book?.pages?.map(({ id, image }) => [id, image]) || [],
@@ -111,7 +113,9 @@ class novelOvh implements Plugin.PluginBase {
 
   async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
     const url = this.apiSite + 'books?type=NOVEL&search=' + searchTerm;
-    const books: BooksEntity[] = await fetchApi(url).then(res => res.json());
+    const books: BooksEntity[] = await fetchApi(url).then((res: Response) =>
+      res.json(),
+    );
 
     const novels: Plugin.NovelItem[] = [];
     books.forEach(novel =>

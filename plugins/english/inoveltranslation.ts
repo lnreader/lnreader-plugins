@@ -11,7 +11,7 @@ class INovelTranslation implements Plugin.PluginBase {
   name = 'iNovelTranslation';
   icon = 'src/en/inoveltranslation/icon.png';
   site = 'https://inoveltranslation.com';
-  version = '1.0.1';
+  version = '1.0.2';
   filters: Filters | undefined = undefined;
 
   pluginSettings = {
@@ -22,7 +22,6 @@ class INovelTranslation implements Plugin.PluginBase {
     },
   };
 
-  // Optimized stealth headers to mirror a real browser environment
   private readonly HEADERS = {
     'Accept':
       'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
@@ -33,20 +32,16 @@ class INovelTranslation implements Plugin.PluginBase {
     'Sec-Fetch-Site': 'same-origin',
   };
 
-  async popularNovels(
-    pageNo: number,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    options: Plugin.PopularNovelsOptions<typeof this.filters>,
-  ): Promise<Plugin.NovelItem[]> {
+  async popularNovels(pageNo: number): Promise<Plugin.NovelItem[]> {
     const url = `${this.site}/api/novels?limit=50&page=${pageNo}`;
-    const result = await fetchApi(url, { headers: this.HEADERS }).then(r =>
-      r.json(),
-    );
+    const result: ApiResponse<NovelData> = await fetchApi(url, {
+      headers: this.HEADERS,
+    }).then(r => r.json());
 
     const novels: Plugin.NovelItem[] = [];
 
     if (result.docs) {
-      result.docs.forEach((doc: any) => {
+      result.docs.forEach(doc => {
         novels.push({
           name: doc.title,
           path: `/novels/${doc.id}`,
@@ -61,27 +56,24 @@ class INovelTranslation implements Plugin.PluginBase {
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
     const id = novelPath.split('/').pop();
     const novelUrl = `${this.site}/api/novels/${id}?depth=1`;
-    const novelData = await fetchApi(novelUrl, { headers: this.HEADERS }).then(
-      r => r.json(),
-    );
-
-    const chaptersUrl = `${this.site}/api/chapters?where[novel][equals]=${id}&limit=999&depth=0`;
-    const chaptersData = await fetchApi(chaptersUrl, {
+    const novelData: NovelData = await fetchApi(novelUrl, {
       headers: this.HEADERS,
     }).then(r => r.json());
 
-    // Extract status
+    const chaptersUrl = `${this.site}/api/chapters?where[novel][equals]=${id}&limit=999&depth=0`;
+    const chaptersData: ApiResponse<ChapterData> = await fetchApi(chaptersUrl, {
+      headers: this.HEADERS,
+    }).then(r => r.json());
+
     const status =
       novelData.publication === 'completed'
         ? NovelStatus.Completed
         : NovelStatus.Ongoing;
 
-    // Extract genres (tags)
     const genres = novelData.tags
-      ? novelData.tags.map((tag: any) => tag.name).join(', ')
+      ? novelData.tags.map(tag => tag.name).join(', ')
       : '';
 
-    // Process summary (Lexical JSON from API 'sypnosis') - use Plain Text for App Synopsis
     let summary = '';
     if (novelData.sypnosis && novelData.sypnosis.root) {
       summary = this.lexicalToText(novelData.sypnosis.root);
@@ -103,7 +95,7 @@ class INovelTranslation implements Plugin.PluginBase {
     const hideLocked = storage.get('hideLocked');
 
     if (chaptersData.docs) {
-      chaptersData.docs.forEach((doc: any) => {
+      chaptersData.docs.forEach(doc => {
         const isLocked = doc.tier !== null;
         if (isLocked && hideLocked) {
           return;
@@ -121,7 +113,6 @@ class INovelTranslation implements Plugin.PluginBase {
       });
     }
 
-    // Ensure chapters are sorted numerically
     novel.chapters = chapters.sort(
       (a, b) => (a.chapterNumber || 0) - (b.chapterNumber || 0),
     );
@@ -129,7 +120,6 @@ class INovelTranslation implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    // Artificial delay to prevent aggressive rate limiting
     await new Promise(res => setTimeout(res, 1500));
 
     const rscHeader = { ...this.HEADERS, rsc: '1' };
@@ -139,8 +129,8 @@ class INovelTranslation implements Plugin.PluginBase {
       response = await fetchApi(this.site + chapterPath, {
         headers: rscHeader,
       });
-    } catch (e: any) {
-      throw new Error(`Network error: ${e.message}`);
+    } catch (e) {
+      throw new Error(`Network error: ${(e as Error).message}`);
     }
 
     if (response.status !== 200) {
@@ -155,7 +145,6 @@ class INovelTranslation implements Plugin.PluginBase {
       throw new Error('Server returned empty data.');
     }
 
-    // 1. Proactive Cloudflare Detection
     if (
       rscText.includes('cf-browser-verification') ||
       rscText.includes('cf-challenge') ||
@@ -192,7 +181,12 @@ class INovelTranslation implements Plugin.PluginBase {
       let startIndex = rscText.lastIndexOf('{', sigIndex);
 
       // Check for "content" or "root" before to find the start of the relevant object
-      const contextKeys = ['"content"', '\\"content\\"', '"root"', '\\"root\\"'];
+      const contextKeys = [
+        '"content"',
+        '\\"content\\"',
+        '"root"',
+        '\\"root\\"',
+      ];
       for (const key of contextKeys) {
         const keyIndex = rscText.lastIndexOf(key, sigIndex);
         if (keyIndex !== -1 && keyIndex > startIndex - 50) {
@@ -236,8 +230,8 @@ class INovelTranslation implements Plugin.PluginBase {
 
         if (jsonStr) {
           try {
-            // Attempt to parse directly (if it's unescaped RSC)
-            let safeJson = jsonStr.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+            // eslint-disable-next-line no-control-regex
+            const safeJson = jsonStr.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
             let parsedData;
             try {
               parsedData = JSON.parse(safeJson);
@@ -246,18 +240,22 @@ class INovelTranslation implements Plugin.PluginBase {
               const cleanJson = jsonStr
                 .replace(/\\"/g, '"')
                 .replace(/\\\\/g, '\\')
+                // eslint-disable-next-line no-control-regex
                 .replace(/[\x00-\x1F\x7F-\x9F]/g, '');
               parsedData = JSON.parse(cleanJson);
             }
 
-            let lexicalRoot = parsedData.root || parsedData.content?.root || parsedData;
+            const lexicalRoot =
+              parsedData.root || parsedData.content?.root || parsedData;
             if (lexicalRoot && lexicalRoot.children) {
               return this.lexicalToHtml(lexicalRoot);
             }
-          } catch (e: any) {
+          } catch (e: unknown) {
             // Fallback to regex text extraction if JSON parsing fails
             let fallbackHtml = '';
-            const textMatches = jsonStr.match(/\\?"text\\?"\s*:\s*\\?"(.*?)\\?"/g);
+            const textMatches = jsonStr.match(
+              /\\?"text\\?"\s*:\s*\\?"(.*?)\\?"/g,
+            );
             if (textMatches && textMatches.length > 0) {
               textMatches.forEach(m => {
                 let text = m.match(/: ?"?(.*?)"?$/)?.[1] || '';
@@ -296,11 +294,7 @@ class INovelTranslation implements Plugin.PluginBase {
     );
   }
 
-  /**
-   * Recursively converts Lexical JSON nodes to HTML strings.
-   * Suitable for Chapter Content.
-   */
-  private lexicalToHtml(node: any): string {
+  private lexicalToHtml(node: LexicalNode): string {
     let html = '';
     if (node.children) {
       for (const child of node.children) {
@@ -308,8 +302,8 @@ class INovelTranslation implements Plugin.PluginBase {
           html += `<p>${this.lexicalToHtml(child)}</p>`;
         } else if (child.type === 'text') {
           let text = child.text || '';
-          if (child.format & 1) text = `<b>${text}</b>`;
-          if (child.format & 2) text = `<i>${text}</i>`;
+          if (child.format && child.format & 1) text = `<b>${text}</b>`;
+          if (child.format && child.format & 2) text = `<i>${text}</i>`;
           html += text;
         } else if (child.type === 'list') {
           const tag = child.listType === 'number' ? 'ol' : 'ul';
@@ -327,11 +321,7 @@ class INovelTranslation implements Plugin.PluginBase {
     return html;
   }
 
-  /**
-   * Recursively converts Lexical JSON nodes to Plain Text with newlines.
-   * Suitable for Novel Synopsis in the app.
-   */
-  private lexicalToText(node: any): string {
+  private lexicalToText(node: LexicalNode): string {
     let textOut = '';
     if (node.children) {
       for (const child of node.children) {
@@ -356,14 +346,14 @@ class INovelTranslation implements Plugin.PluginBase {
     const url = `${this.site}/api/novels?where[title][contains]=${encodeURIComponent(
       searchTerm,
     )}&limit=50&page=${pageNo}`;
-    const result = await fetchApi(url, { headers: this.HEADERS }).then(r =>
-      r.json(),
-    );
+    const result: ApiResponse<NovelData> = await fetchApi(url, {
+      headers: this.HEADERS,
+    }).then(r => r.json());
 
     const novels: Plugin.NovelItem[] = [];
 
     if (result.docs) {
-      result.docs.forEach((doc: any) => {
+      result.docs.forEach(doc => {
         novels.push({
           name: doc.title,
           path: `/novels/${doc.id}`,
@@ -374,8 +364,43 @@ class INovelTranslation implements Plugin.PluginBase {
 
     return novels;
   }
-
-  resolveUrl = (path: string, isNovel?: boolean) => this.site + path;
 }
 
 export default new INovelTranslation();
+
+type LexicalNode = {
+  type: string;
+  text?: string;
+  children?: LexicalNode[];
+  format?: number;
+  listType?: string;
+  tag?: string;
+};
+
+type NovelData = {
+  id: string;
+  title: string;
+  cover?: {
+    url: string;
+  };
+  author?: {
+    name: string;
+  };
+  publication?: string;
+  tags?: { name: string }[];
+  sypnosis?: {
+    root: LexicalNode;
+  };
+};
+
+type ChapterData = {
+  id: string;
+  title?: string;
+  chapter: number;
+  tier: string | null;
+  updatedAt: string;
+};
+
+type ApiResponse<T> = {
+  docs: T[];
+};

@@ -8,7 +8,7 @@ class LnMTLPlugin implements Plugin.PagePlugin {
   name = 'LnMTL';
   icon = 'src/en/lnmtl/icon.png';
   site = 'https://lnmtl.com/';
-  version = '2.1.0';
+  version = '2.1.1';
 
   async sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -126,10 +126,12 @@ class LnMTLPlugin implements Plugin.PagePlugin {
       ontext(data) {
         switch (state) {
           case ParsingState.InScript:
-            const volume = JSON.parse(
-              data.match(/lnmtl.volumes = (.+])(?=;)/)![1] || '',
-            );
-            novel.totalPages = volume.length;
+            {
+              const volume = JSON.parse(
+                data.match(/lnmtl.volumes = (.+])(?=;)/)![1] || '',
+              );
+              novel.totalPages = volume.length;
+            }
             break;
           case ParsingState.InDescription:
             summaryParts.push(data.trim());

@@ -1,4 +1,4 @@
-import { CheerioAPI, load as loadCheerio, load } from 'cheerio';
+import { CheerioAPI, load as loadCheerio } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
@@ -17,7 +17,7 @@ export type FictioneerMetadata = {
   options: FictioneerOptions;
 };
 
-class FictioneerPlugin implements Plugin.PluginBase {
+export class FictioneerPlugin implements Plugin.PluginBase {
   id: string;
   name: string;
   icon: string;
@@ -32,16 +32,38 @@ class FictioneerPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/fictioneer/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `1.0.${0 + versionIncrements}`;
+    this.version = `1.1.${0 + versionIncrements}`;
     this.options = metadata.options;
+  }
+
+  private parseNovels(
+    loadedCheerio: CheerioAPI,
+    selector: string,
+  ): Plugin.NovelItem[] {
+    return loadedCheerio(selector)
+      .map((i, el) => {
+        const element = loadedCheerio(el);
+        const novelName = element.find('h3 > a').text();
+        const novelCover = element.find('a.cell-img:has(img)').attr('href');
+        const novelUrl = element.find('h3 > a').attr('href');
+
+        if (!novelUrl) return;
+
+        return {
+          name: novelName,
+          cover: novelCover,
+          path: new URL(novelUrl, this.site).pathname.substring(1),
+        };
+      })
+      .toArray();
   }
 
   async popularNovels(
     pageNo: number,
-    {
-      showLatestNovels,
-      filters,
-    }: Plugin.PopularNovelsOptions<typeof this.filters>,
+    // {
+    //   showLatestNovels,
+    //   filters,
+    // }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
     const req = await fetchApi(
       this.site +
@@ -53,23 +75,10 @@ class FictioneerPlugin implements Plugin.PluginBase {
     const body = await req.text();
     const loadedCheerio = loadCheerio(body);
 
-    return loadedCheerio(
+    return this.parseNovels(
+      loadedCheerio,
       '#featured-list > li > div > div, #list-of-stories > li > div > div',
-    )
-      .map((i, el) => {
-        const novelName = loadedCheerio(el).find('h3 > a').text();
-        const novelCover = loadedCheerio(el)
-          .find('a.cell-img:has(img)')
-          .attr('href');
-        const novelUrl = loadedCheerio(el).find('h3 > a').attr('href');
-
-        return {
-          name: novelName,
-          cover: novelCover,
-          path: novelUrl!.replace(this.site + '/', '').replace(/\/$/, ''),
-        };
-      })
-      .toArray();
+    );
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
@@ -94,6 +103,8 @@ class FictioneerPlugin implements Plugin.PluginBase {
       .map((i, el) => loadedCheerio(el).text())
       .toArray()
       .join(',');
+
+    loadedCheerio('section.story__summary .related-stories-block').remove();
     novel.summary = loadedCheerio('section.story__summary').text();
 
     novel.chapters = loadedCheerio('li.chapter-group__list-item._publish')
@@ -108,15 +119,12 @@ class FictioneerPlugin implements Plugin.PluginBase {
       )
       .map((i, el) => {
         const chapterName = loadedCheerio(el).find('a').text();
-        const chapterUrl = loadedCheerio(el)
-          .find('a')
-          .attr('href')
-          ?.replace(this.site + '/', '')
-          .replace(/\/$/, '');
+        const chapterUrl = loadedCheerio(el).find('a').attr('href');
 
+        if (!chapterUrl) return;
         return {
           name: chapterName,
-          path: chapterUrl!,
+          path: new URL(chapterUrl, this.site).pathname.substring(1),
         };
       })
       .toArray();
@@ -152,23 +160,12 @@ class FictioneerPlugin implements Plugin.PluginBase {
     const body = await req.text();
     const loadedCheerio = loadCheerio(body);
 
-    return loadedCheerio('#search-result-list > li > div > div')
-      .map((i, el) => {
-        const novelName = loadedCheerio(el).find('h3 > a').text();
-        const novelCover = loadedCheerio(el)
-          .find('a.cell-img:has(img)')
-          .attr('href');
-        const novelUrl = loadedCheerio(el).find('h3 > a').attr('href');
-
-        return {
-          name: novelName,
-          cover: novelCover,
-          path: novelUrl!.replace(this.site + '/', '').replace(/\/$/, ''),
-        };
-      })
-      .toArray();
+    return this.parseNovels(
+      loadedCheerio,
+      '#search-result-list > li > div > div',
+    );
   }
 
-  resolveUrl = (path: string, isNovel?: boolean) =>
-    this.site + '/' + path + '/';
+  // resolveUrl = (path: string, isNovel?: boolean) =>
+  //   this.site + '/' + path + '/';
 }

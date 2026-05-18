@@ -10,7 +10,7 @@ class TuNovelaLigera implements Plugin.PagePlugin {
   name = 'TuNovelaLigera';
   icon = 'src/es/tunovelaligera/icon.png';
   site = 'https://tunovelaligera.com';
-  version = '1.2.0';
+  version = '1.2.1';
 
   async sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -18,7 +18,7 @@ class TuNovelaLigera implements Plugin.PagePlugin {
   async popularNovels(
     pageNo: number,
     {
-      showLatestNovels,
+      // showLatestNovels,
       filters,
     }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
@@ -228,16 +228,18 @@ class TuNovelaLigera implements Plugin.PagePlugin {
           }
           break;
         case 'tag':
-          const originalTag = element.tagName;
-          if (tagsPermisive.includes(originalTag)) {
-            paragraph.push(loadedCheerio.html(element));
-          } else {
-            if (paragraph.length > 0) {
-              chapterHtml.push(`<p>${paragraph.join(' ').trim()}</p>`);
-              paragraph = [];
-              if (originalTag === 'br') break;
+          {
+            const originalTag = element.tagName;
+            if (tagsPermisive.includes(originalTag)) {
+              paragraph.push(loadedCheerio.html(element));
+            } else {
+              if (paragraph.length > 0) {
+                chapterHtml.push(`<p>${paragraph.join(' ').trim()}</p>`);
+                paragraph = [];
+                if (originalTag === 'br') break;
+              }
+              chapterHtml.push(loadedCheerio.html(element));
             }
-            chapterHtml.push(loadedCheerio.html(element));
           }
           break;
       }

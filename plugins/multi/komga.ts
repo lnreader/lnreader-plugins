@@ -5,13 +5,49 @@ import { Plugin } from '@/types/plugin';
 import { load as parseHTML } from 'cheerio';
 import { storage } from '@libs/storage';
 
+type Author = {
+  name: string;
+  role: string;
+};
+
+type TocItem = {
+  title?: string;
+  href?: string;
+  children?: TocItem[];
+};
+
+type SeriesResponse = {
+  id: string;
+  name: string;
+  metadata: {
+    status: string;
+    genres: string[];
+  };
+  booksMetadata: {
+    authors: Author[];
+    summary: string;
+  };
+};
+
+type BookResponse = {
+  id: string;
+  metadata: {
+    title: string;
+  };
+};
+
+type BookManifest = {
+  toc: TocItem[];
+  readingOrder: { href: string }[];
+};
+
 class KomgaPlugin implements Plugin.PluginBase {
   id = 'komga';
   name = 'Komga';
   icon = 'src/multi/komga/icon.png';
-  version = '1.0.1';
+  version = '1.0.2';
 
-  site = storage.get('url');
+  site = storage.get('url') as string;
   email = storage.get('email');
   password = storage.get('password');
 
@@ -51,8 +87,8 @@ class KomgaPlugin implements Plugin.PluginBase {
     return output;
   }
 
-  flattenArray(arr: any) {
-    return arr.reduce((acc: any, obj: any) => {
+  flattenArray(arr: TocItem[]): TocItem[] {
+    return arr.reduce((acc: TocItem[], obj: TocItem) => {
       const { children, ...rest } = obj;
       acc.push(rest);
 
@@ -69,7 +105,7 @@ class KomgaPlugin implements Plugin.PluginBase {
 
     const response = await this.makeRequest(url);
 
-    const series = JSON.parse(response).content;
+    const series: SeriesResponse[] = JSON.parse(response).content;
 
     for (const s of series) {
       novels.push({
@@ -112,13 +148,13 @@ class KomgaPlugin implements Plugin.PluginBase {
 
     const response = await this.makeRequest(url);
 
-    const series = JSON.parse(response);
+    const series: SeriesResponse = JSON.parse(response);
 
     novel.name = series.name;
     novel.author = series.booksMetadata.authors
-      .filter((author: any) => author.role === 'writer')
+      .filter((author: Author) => author.role === 'writer')
       .reduce(
-        (accumulated: string, current: any) =>
+        (accumulated: string, current: Author) =>
           accumulated + (accumulated !== '' ? ', ' : '') + current.name,
         '',
       );
@@ -150,21 +186,21 @@ class KomgaPlugin implements Plugin.PluginBase {
       this.site + `api/v1/series/${series.id}/books?unpaged=true`,
     );
 
-    const booksData = JSON.parse(booksResponse).content;
+    const booksData: BookResponse[] = JSON.parse(booksResponse).content;
 
     for (const book of booksData) {
       const bookManifestResponse = await this.makeRequest(
         this.site + `opds/v2/books/${book.id}/manifest`,
       );
 
-      const bookManifest = JSON.parse(bookManifestResponse);
+      const bookManifest: BookManifest = JSON.parse(bookManifestResponse);
 
       const toc = this.flattenArray(bookManifest.toc);
 
       let i = 1;
       for (const page of bookManifest.readingOrder) {
         const tocItem = toc.find(
-          (v: any) => v.href?.split('#')[0] === page.href,
+          (v: TocItem) => v.href?.split('#')[0] === page.href,
         );
         const title = tocItem ? tocItem.title : null;
         chapters.push({
@@ -198,9 +234,9 @@ class KomgaPlugin implements Plugin.PluginBase {
 
       if (href) {
         const img = $('<img />').attr({
-          src: href.startsWith('http') ? href : `${baseUrl}${href}`,
-          width: width || undefined,
-          height: height || undefined,
+          src: new URL(href, baseUrl).href,
+          width: width || '',
+          height: height || '',
         });
         $(image).closest('svg').replaceWith(img);
       }

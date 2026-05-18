@@ -6,7 +6,7 @@ import { Filters, FilterTypes } from '@libs/filterInputs';
 class PawRead implements Plugin.PluginBase {
   id = 'pawread';
   name = 'PawRead';
-  version = '2.1.0';
+  version = '2.1.1';
   icon = 'src/en/pawread/icon.png';
   site = 'https://m.pawread.com/';
 
@@ -171,13 +171,15 @@ class PawRead implements Plugin.PluginBase {
             break;
           case ParsingState.ChapterTime:
             if (text?.includes('Advanced')) return;
-            const releaseDate = text.split('.').map(x => Number(x));
-            if (releaseDate.length === 3) {
-              tempChapter.releaseTime = new Date(
-                releaseDate[0],
-                releaseDate[1] - 1,
-                releaseDate[2],
-              ).toISOString();
+            {
+              const releaseDate = text.split('.').map(x => Number(x));
+              if (releaseDate.length === 3) {
+                tempChapter.releaseTime = new Date(
+                  releaseDate[0],
+                  releaseDate[1] - 1,
+                  releaseDate[2],
+                ).toISOString();
+              }
             }
             break;
         }
@@ -251,9 +253,7 @@ class PawRead implements Plugin.PluginBase {
     let state: ParsingState = ParsingState.Idle;
     const chapterHtml: string[] = [];
 
-    type EscapeChar = '&' | '<' | '>' | '"' | "'" | ' ';
-    const escapeRegex = /[&<>"' ]/g;
-    const escapeMap: Record<EscapeChar, string> = {
+    const escapeMap: Record<string, string> = {
       '&': '&amp;',
       '<': '&lt;',
       '>': '&gt;',
@@ -262,7 +262,7 @@ class PawRead implements Plugin.PluginBase {
       ' ': '&nbsp;',
     };
     const escapeHtml = (text: string): string =>
-      text.replace(escapeRegex, char => escapeMap[char as EscapeChar]);
+      text.replace(/[&<>"'\xA0]/g, char => escapeMap[char]);
 
     const parser = new Parser({
       onopentag(name, attribs) {

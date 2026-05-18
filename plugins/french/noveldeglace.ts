@@ -10,7 +10,7 @@ class NovelDeGlacePlugin implements Plugin.PluginBase {
   name = 'NovelDeGlace';
   icon = 'src/fr/noveldeglace/icon.png';
   site = 'https://noveldeglace.com/';
-  version = '1.0.4';
+  version = '1.0.5';
 
   async getCheerio(url: string): Promise<CheerioAPI | undefined> {
     const r = await fetchApi(url, {
@@ -86,10 +86,7 @@ class NovelDeGlacePlugin implements Plugin.PluginBase {
 
     const novel: Plugin.SourceNovel = { path: novelPath, name: 'Untitled' };
 
-    novel.name =
-      (
-        $('div.entry-content > div > strong')[0].nextSibling as string | null
-      )?.nodeValue?.trim() || 'Untitled';
+    novel.name = $('span.current').text().trim();
 
     novel.cover = $('.su-row > div > div > img').attr('src') || defaultCover;
 
