@@ -7,21 +7,19 @@ class TopLiba implements Plugin.PluginBase {
   id = 'TopLiba';
   name = 'ТопЛиба';
   site = 'https://topliba.com';
-  version = '1.0.0';
+  version = '1.0.1';
   icon = 'src/ru/topliba/icon.png';
   _token = '';
 
   async fetchNovels(
     page: number,
-    {
-      showLatestNovels,
-      filters,
-    }: Plugin.PopularNovelsOptions<typeof this.filters>,
+    showLatestNovels?: boolean,
+    filters?: Plugin.PopularNovelsOptions<typeof this.filters>['filters'],
     searchTerm?: string,
   ): Promise<Plugin.NovelItem[]> {
     const data = new URLSearchParams({
       order_field: showLatestNovels ? 'date' : filters?.sort?.value || 'rating',
-      p: page,
+      p: page.toString(),
     });
 
     if (searchTerm) data.append('q', searchTerm);
@@ -30,7 +28,9 @@ class TopLiba implements Plugin.PluginBase {
     );
     const novels: Plugin.NovelItem[] = [];
 
-    this._token = body.match(/<meta name="_token" content="(.*?)"/)?.[1];
+    this._token = body.match(
+      /<meta name="_token" content="(.*?)"/,
+    )?.[1] as string;
 
     const elements = body.match(/<img class="cover" data-original=".*>/g) || [];
     elements.forEach(element => {
@@ -48,17 +48,18 @@ class TopLiba implements Plugin.PluginBase {
     return novels;
   }
 
-  popularNovels = this.fetchNovels;
-
-  async searchNovels(
-    searchTerm: string,
+  async popularNovels(
     page: number,
-  ): Promise<Plugin.NovelItem[]> {
-    const defaultOptions: any = {
-      showLatestNovels: false,
-      filters: {},
-    };
-    return this.fetchNovels(page, defaultOptions, searchTerm);
+    {
+      showLatestNovels,
+      filters,
+    }: Plugin.PopularNovelsOptions<typeof this.filters>,
+  ) {
+    return this.fetchNovels(page, showLatestNovels, filters);
+  }
+
+  async searchNovels(searchTerm: string, page: number) {
+    return this.fetchNovels(page, false, undefined, searchTerm);
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
@@ -124,7 +125,7 @@ class TopLiba implements Plugin.PluginBase {
       );
       this._token = chaptersHTML.match(
         /<meta name="_token" content="(.*?)"/,
-      )?.[1];
+      )?.[1] as string;
     }
 
     const chapterText = await fetchApi(this.resolveUrl(bookID) + '/chapter', {

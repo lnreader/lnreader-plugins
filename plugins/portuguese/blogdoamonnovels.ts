@@ -4,10 +4,18 @@ import { Plugin } from '@/types/plugin';
 import { defaultCover } from '@libs/defaultCover';
 import { Filters } from '@libs/filterInputs';
 
+type BloggerEntry = {
+  title: { $t: string };
+  link: { rel: string; href: string }[];
+  media$thumbnail?: { url: string };
+  updated?: { $t: string };
+  content?: { $t: string };
+};
+
 class BlogDoAnonNovelsPlugin implements Plugin.PluginBase {
   id = 'blogdoamonnovels';
   name = 'Blog do Amon Novels';
-  version = '1.0.0';
+  version = '1.0.1';
   icon = 'src/pt-br/blogdoamonnovels/icon.png';
   site = 'https://www.blogdoamonnovels.com';
 
@@ -20,15 +28,15 @@ class BlogDoAnonNovelsPlugin implements Plugin.PluginBase {
       return novels;
     }
 
-    result.feed.entry.forEach((n: any) => {
+    result.feed.entry.forEach((n: BloggerEntry) => {
       const novelName: string = n.title.$t;
 
       const novelUrl = n.link.find(
         (t: { rel: string }) => 'alternate' == t.rel,
-      ).href;
+      )?.href;
       if (!novelUrl) return;
 
-      const coverUrl = n.media$thumbnail.url.replace('/s72-c/', '/w340/');
+      const coverUrl = n.media$thumbnail?.url.replace('/s72-c/', '/w340/');
 
       const novel = {
         name: novelName,
@@ -164,7 +172,7 @@ class BlogDoAnonNovelsPlugin implements Plugin.PluginBase {
         break;
       }
 
-      result.feed.entry.forEach((n: any) => {
+      result.feed.entry.forEach((n: BloggerEntry) => {
         let chapterName: string = n.title.$t;
 
         // Skip self
@@ -175,8 +183,8 @@ class BlogDoAnonNovelsPlugin implements Plugin.PluginBase {
         // const chapterNumber: number = parseFloat(chapterName.split(' ', 2)[1]);
         const chapterUrl = n.link.find(
           (t: { rel: string }) => 'alternate' == t.rel,
-        ).href;
-        const releaseTime = new Date(n.updated.$t);
+        )?.href;
+        const releaseTime = n.updated ? new Date(n.updated.$t) : null;
         if (!chapterUrl) return;
 
         if (n.content && n.content.$t) {
@@ -191,7 +199,7 @@ class BlogDoAnonNovelsPlugin implements Plugin.PluginBase {
         chapters.push({
           name: chapterName,
           path: chapterUrl.replace(this.site, ''),
-          releaseTime: releaseTime.toISOString(),
+          releaseTime: releaseTime?.toISOString(),
           // chapterNumber: chapterNumber,
         });
       });

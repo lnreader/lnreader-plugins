@@ -1,14 +1,36 @@
 import { CheerioAPI, load } from 'cheerio';
 import { Plugin } from '@/types/plugin';
-import { fetchApi, fetchText } from '@libs/fetch';
+import { fetchApi } from '@libs/fetch';
 import { NovelStatus } from '@libs/novelStatus';
+import dayjs, { ManipulateType } from 'dayjs';
+
+type NovelJSON = {
+  success: boolean;
+  data: {
+    posts: {
+      title: string;
+      thumbnail: string;
+      permalink: string;
+    }[];
+  };
+};
+
+type ChapterJSON = {
+  success: boolean;
+  data: {
+    title: string;
+    url: string;
+    slug: string;
+    date: string;
+  }[];
+};
 
 class StorySeedlingPlugin implements Plugin.PluginBase {
   id = 'storyseedling';
   name = 'StorySeedling';
   icon = 'src/en/storyseedling/icon.png';
   site = 'https://storyseedling.com/';
-  version = '1.0.4';
+  version = '1.0.6';
   nonce: string | undefined;
 
   async getCheerio(url: string, search: boolean): Promise<CheerioAPI> {
@@ -22,8 +44,40 @@ class StorySeedlingPlugin implements Plugin.PluginBase {
     return $;
   }
 
-  async popularNovels(pageNo: number): Promise<Plugin.NovelItem[]> {
-    const novels: Plugin.NovelItem[] = [];
+  private parseAgoDate(date: string | undefined) {
+    //parseMadaraDate
+    const parsed = dayjs(date);
+    if (date && parsed.isValid()) {
+      return parsed.toISOString();
+    }
+
+    const [amt, time, ago] = date?.toLowerCase().trim().split(/\s+/) || [];
+    const decade = time?.includes('decade'); // dayjs no support, but just in case
+    const amount = (amt === 'a' || amt === 'an' ? 1 : +amt) * (decade ? 10 : 1);
+    const unit = (decade ? 'year' : time) as ManipulateType;
+
+    const validUnits = [
+      'millisecond', // waow
+      'second',
+      'minute',
+      'hour',
+      'day',
+      'week',
+      'month',
+      'year',
+    ];
+
+    if (ago !== 'ago' || isNaN(amount) || !validUnits.includes(unit)) {
+      return null;
+    }
+
+    return dayjs().subtract(amount, unit).toISOString();
+  }
+
+  private async getNovels(
+    pageNo: number,
+    searchTerm = '',
+  ): Promise<Plugin.NovelItem[]> {
     const body = await fetchApi(this.site + 'browse').then(r => r.text());
     const loadedCheerio = load(body);
 
@@ -33,31 +87,32 @@ class StorySeedlingPlugin implements Plugin.PluginBase {
       .replace("')", '') as string;
 
     const data = new FormData();
-    data.append('search', '');
+    data.append('search', searchTerm);
     data.append('orderBy', 'recent');
     data.append('curpage', pageNo.toString());
     data.append('post', postValue);
     data.append('action', 'fetch_browse');
 
-    const response: any = await fetchApi(this.site + 'ajax', {
+    const response = (await fetchApi(this.site + 'ajax', {
       body: data,
       method: 'POST',
-    }).then(res => res.json());
+    }).then(res => res.json())) as NovelJSON;
 
-    response.data.posts.forEach((element: any) =>
-      novels.push({
-        name: element.title,
-        cover: element.thumbnail,
-        path: element.permalink.replace(this.site, ''),
-      }),
-    );
+    const novels: Plugin.NovelItem[] = response.data.posts.map(element => ({
+      name: element.title,
+      cover: element.thumbnail,
+      path: element.permalink.replace(this.site, ''),
+    }));
 
     return novels;
   }
 
+  async popularNovels(pageNo: number): Promise<Plugin.NovelItem[]> {
+    return this.getNovels(pageNo);
+  }
+
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
     const $ = await this.getCheerio(this.site + novelPath, false);
-    const baseUrl = this.site;
 
     const novel: Partial<Plugin.SourceNovel> = {
       path: novelPath,
@@ -67,7 +122,7 @@ class StorySeedlingPlugin implements Plugin.PluginBase {
     const coverUrl = $('img[x-ref="art"].w-full.rounded.shadow-md').attr('src');
 
     if (coverUrl) {
-      novel.cover = new URL(coverUrl, baseUrl).href;
+      novel.cover = new URL(coverUrl, this.site).href;
     }
 
     const genres: string[] = [];
@@ -122,7 +177,7 @@ class StorySeedlingPlugin implements Plugin.PluginBase {
         const chaptersUrl = `${this.site}${chapterListing}`;
         const refererUrl = `${this.site}${novel.path}`;
 
-        let results = await fetchApi(chaptersUrl, {
+        const results: ChapterJSON = await fetchApi(chaptersUrl, {
           method: 'POST',
           referrer: refererUrl,
           referrerPolicy: 'origin',
@@ -136,20 +191,18 @@ class StorySeedlingPlugin implements Plugin.PluginBase {
           );
 
         if (results.data) {
-          results = results.data;
-          results.forEach(function (chap: any) {
+          results.data.forEach(chap => {
             if (chap.url == null) {
               return;
             }
             const name = chap.title;
             const url = chap.url as string;
-            const releaseTime = chap.date;
             const chapterNumber = chap.slug;
 
             chapters.push({
               name: name,
-              path: url.replace(baseUrl, ''),
-              releaseTime,
+              path: url.replace(this.site, ''),
+              releaseTime: this.parseAgoDate(chap.date),
               chapterNumber: parseInt(chapterNumber),
             });
           });
@@ -166,7 +219,7 @@ class StorySeedlingPlugin implements Plugin.PluginBase {
     const $ = await this.getCheerio(this.site + chapterPath, false);
     this.nonce = $('div.mb-4:has(h1.text-xl) > div')
       .attr('x-data')
-      ?.match(/loadChapter\('.+?', '(.+?)'\)/)[1];
+      ?.match(/loadChapter\('.+?', '(.+?)'\)/)![1];
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
@@ -200,7 +253,7 @@ class StorySeedlingPlugin implements Plugin.PluginBase {
         );
       }
     }
-    let html = text
+    const html = text
       .replace(/cls[a-f0-9]+/g, '')
       .split('')
       .map(char => {
@@ -212,7 +265,7 @@ class StorySeedlingPlugin implements Plugin.PluginBase {
           : char;
       })
       .join('');
-    let $ = load(html);
+    const $ = load(html);
 
     $('span').text((_, txt) =>
       txt.toLowerCase().includes('storyseedling') ||
@@ -228,37 +281,7 @@ class StorySeedlingPlugin implements Plugin.PluginBase {
     searchTerm: string,
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
-    const novels: Plugin.NovelItem[] = [];
-
-    const body = await fetchApi(this.site + 'browse').then(r => r.text());
-    const loadedCheerio = load(body);
-
-    const postValue = loadedCheerio('div[ax-load][x-data]')
-      .attr('x-data')
-      ?.replace("browse('", '')
-      .replace("')", '') as string;
-
-    const data = new FormData();
-    data.append('search', searchTerm);
-    data.append('orderBy', 'recent');
-    data.append('curpage', pageNo.toString());
-    data.append('post', postValue);
-    data.append('action', 'fetch_browse');
-
-    const response: any = await fetchApi(this.site + 'ajax', {
-      body: data,
-      method: 'POST',
-    }).then(res => res.json());
-
-    response.data.posts.forEach((element: any) =>
-      novels.push({
-        name: element.title,
-        cover: element.thumbnail,
-        path: element.permalink.replace(this.site, ''),
-      }),
-    );
-
-    return novels;
+    return this.getNovels(pageNo, searchTerm);
   }
 }
 

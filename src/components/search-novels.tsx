@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Search as SearchIcon } from 'lucide-react';
 
 import { NovelCard } from '@/components/novel-card';
@@ -14,7 +14,7 @@ type SearchNovelsSectionProps = {
   onNavigateToParseNovel?: () => void;
 };
 
-export default function SearchNovelsSection({
+const SearchNovelsSection = React.memo(function SearchNovelsSection({
   onNavigateToParseNovel,
 }: SearchNovelsSectionProps) {
   const plugin = useAppStore(state => state.plugin);
@@ -24,6 +24,15 @@ export default function SearchNovelsSection({
   const [novels, setNovels] = useState<Plugin.NovelItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState('');
+  const [prevPluginId, setPrevPluginId] = useState<string | undefined>();
+
+  if (plugin?.id !== prevPluginId) {
+    setPrevPluginId(plugin?.id);
+    setCurrentPage(1);
+    setNovels([]);
+    setSearchTerm('');
+    setFetchError('');
+  }
 
   const fetchNovels = async (page: number) => {
     if (plugin && searchTerm.trim()) {
@@ -44,14 +53,7 @@ export default function SearchNovelsSection({
     }
   };
 
-  useEffect(() => {
-    setCurrentPage(1);
-    setNovels([]);
-    setSearchTerm('');
-    setFetchError('');
-  }, [plugin]);
-
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && searchTerm.trim()) {
       fetchNovels(1);
     }
@@ -86,7 +88,7 @@ export default function SearchNovelsSection({
             placeholder="Enter search term..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyDown}
             className="flex-1"
             disabled={!plugin}
           />
@@ -159,4 +161,6 @@ export default function SearchNovelsSection({
       </Card>
     </div>
   );
-}
+});
+
+export default SearchNovelsSection;

@@ -2,13 +2,13 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
+// import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 // import { isUrlAbsolute } from '@libs/isAbsoluteUrl';
 // import { storage, localStorage, sessionStorage } from '@libs/storage';
 // import { encode, decode } from 'urlencode';
 // import dayjs from 'dayjs';
-import { Parser } from 'htmlparser2';
+// import { Parser } from 'htmlparser2';
 
 class LNTPlugin implements Plugin.PluginBase {
   id = 'lightnoveltranslations';
@@ -26,7 +26,7 @@ class LNTPlugin implements Plugin.PluginBase {
     pageNo: number,
     {
       showLatestNovels,
-      filters,
+      // filters,
     }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
     let link = this.site + 'read/';
@@ -193,11 +193,11 @@ class LNTPlugin implements Plugin.PluginBase {
       novels.push(tempNovel);
     });
 
-    type SearchEntry = {
-      title: string;
-      thumbnail: string;
-      permalink: string;
-    };
+    // type SearchEntry = {
+    //   title: string;
+    //   thumbnail: string;
+    //   permalink: string;
+    // };
     return novels;
   }
 

@@ -5,6 +5,8 @@ import { Filters, FilterTypes } from '@libs/filterInputs';
 import { Parser } from 'htmlparser2';
 
 //has to be here cus this scoping moment
+// im just gonna disable eslint here instead of reading lol
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const parserData: {
   inTag?: string;
   depthRatingWrapper?: number;
@@ -45,33 +47,29 @@ class MVLEMPYRPlugin implements Plugin.PluginBase {
 
   async popularNovels(
     pageNo: number,
-    { filters }: Plugin.PopularNovelsOptions<Filters>,
+    { filters }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
     const data = await this.getAllNovels();
     const filtered = data.filter(novel => {
-      // @ts-ignore
-      for (const genre of filters.genre.value.exclude) {
+      for (const genre of filters.genre.value.exclude || []) {
         if (novel.genres.includes(genre)) {
           return false;
         }
       }
 
-      // @ts-ignore
-      for (const genre of filters.genre.value.include) {
+      for (const genre of filters.genre.value.include || []) {
         if (!novel.genres.includes(genre)) {
           return false;
         }
       }
 
-      // @ts-ignore
-      for (const tag of filters.tag.value.exclude) {
+      for (const tag of filters.tag.value.exclude || []) {
         if (novel.tags.includes(tag)) {
           return false;
         }
       }
 
-      // @ts-ignore
-      for (const tag of filters.tag.value.include) {
+      for (const tag of filters.tag.value.include || []) {
         if (!novel.tags.includes(tag)) {
           return false;
         }

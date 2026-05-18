@@ -2,7 +2,7 @@
 
 import { parse as parseProto } from 'protobufjs';
 
-type FetchInit = {
+export type FetchInit = {
   headers?: Record<string, string | undefined> | Headers;
   method?: string;
   body?: FormData | string;
@@ -104,7 +104,7 @@ type ProtoRequestInit = {
   // merged .proto file
   proto: string;
   requestType: string;
-  requestData?: any;
+  requestData?: Record<string, unknown>;
   responseType: string;
 };
 
@@ -117,11 +117,13 @@ export const fetchProto = async function <ReturnType>(
 ) {
   const protoRoot = parseProto(protoInit.proto).root;
   const RequestMessge = protoRoot.lookupType(protoInit.requestType);
-  if (RequestMessge.verify(protoInit.requestData)) {
+  if (RequestMessge.verify(protoInit.requestData || {})) {
     throw new Error('Invalid Proto');
   }
   // encode request data
-  const encodedrequest = RequestMessge.encode(protoInit.requestData).finish();
+  const encodedrequest = RequestMessge.encode(
+    protoInit.requestData || {},
+  ).finish();
   const requestLength = BigInt(encodedrequest.length);
   const headers = new Uint8Array(
     Array(5)

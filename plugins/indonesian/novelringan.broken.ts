@@ -43,9 +43,9 @@ class NovelRingan implements Plugin.PluginBase {
     link += `&order=${filters.sort.value}`;
 
     if (filters.type.value.length)
-      link += filters.type.value.map(i => `&type[]=${i}`).join('');
+      link += filters.type.value.map((i: string) => `&type[]=${i}`).join('');
     if (filters.genre.value.length)
-      link += filters.genre.value.map(i => `&genre[]=${i}`).join('');
+      link += filters.genre.value.map((i: string) => `&genre[]=${i}`).join('');
 
     const result = await fetchApi(link);
     const body = await result.text();

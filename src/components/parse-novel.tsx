@@ -27,7 +27,7 @@ type ParseNovelSectionProps = {
   onNavigateToParseChapter?: () => void;
 };
 
-export default function ParseNovelSection({
+const ParseNovelSection = React.memo(function ParseNovelSection({
   onNavigateToParseChapter,
 }: ParseNovelSectionProps) {
   const plugin = useAppStore(state => state.plugin);
@@ -46,6 +46,16 @@ export default function ParseNovelSection({
   const [currentPage, setCurrentPage] = useState(1);
   const [fetchError, setFetchError] = useState('');
   const lastProcessedPath = useRef<string>();
+  const [prevPluginId, setPrevPluginId] = useState<string | undefined>();
+
+  if (plugin?.id !== prevPluginId) {
+    setPrevPluginId(plugin?.id);
+    setNovelPath('');
+    setSourceNovel(undefined);
+    setChapters([]);
+    setCurrentPage(1);
+    setFetchError('');
+  }
 
   const { exportEpub, isExporting } = useEpubExport({
     plugin: plugin || null,
@@ -100,7 +110,7 @@ export default function ParseNovelSection({
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && novelPath.trim()) {
       fetchNovel();
     }
@@ -168,7 +178,7 @@ export default function ParseNovelSection({
             placeholder="Enter novel path..."
             value={novelPath}
             onChange={e => setNovelPath(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyDown}
             className="flex-1"
             disabled={!plugin}
           />
@@ -551,4 +561,6 @@ export default function ParseNovelSection({
       </Card>
     </div>
   );
-}
+});
+
+export default ParseNovelSection;

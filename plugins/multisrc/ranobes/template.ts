@@ -1,5 +1,5 @@
 import { Parser } from 'htmlparser2';
-import { fetchApi } from '@libs/fetch';
+import { fetchApi, FetchInit } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 
@@ -15,7 +15,7 @@ export type RanobesMetadata = {
   options?: RanobesOptions;
 };
 
-class RanobesPlugin implements Plugin.PluginBase {
+export class RanobesPlugin implements Plugin.PluginBase {
   id: string;
   name: string;
   icon: string;
@@ -32,7 +32,7 @@ class RanobesPlugin implements Plugin.PluginBase {
     this.options = metadata.options as RanobesOptions;
   }
 
-  async safeFecth(url: string, init: any = {}): Promise<string> {
+  async safeFecth(url: string, init?: FetchInit): Promise<string> {
     const r = await fetchApi(url, init);
     if (!r.ok)
       throw new Error(

@@ -1,4 +1,4 @@
-import { load as loadCheerio } from 'cheerio';
+import { CheerioAPI, load as loadCheerio } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { defaultCover } from '@libs/defaultCover';
@@ -14,7 +14,7 @@ class Syosetu implements Plugin.PluginBase {
   icon = 'src/jp/syosetu/icon.png';
   site = 'https://yomou.syosetu.com/';
   novelPrefix = 'https://ncode.syosetu.com';
-  version = '1.1.2';
+  version = '1.1.4';
   headers = {
     'User-Agent':
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -45,9 +45,7 @@ class Syosetu implements Plugin.PluginBase {
       }
       const html = await (await fetchApi(url)).text();
 
-      const loadedCheerio = loadCheerio(html, {
-        decodeEntities: false,
-      });
+      const loadedCheerio = loadCheerio(html);
 
       if (parseInt(loadedCheerio('.is-current').html() || '1') !== pagenumber)
         return [];
@@ -71,7 +69,7 @@ class Syosetu implements Plugin.PluginBase {
     return novels;
   }
   private async parseChaptersFromPage(
-    loadedCheerio: cheerio.CheerioAPI,
+    loadedCheerio: CheerioAPI,
   ): Promise<Plugin.ChapterItem[]> {
     const chapters: Plugin.ChapterItem[] = [];
 
@@ -103,7 +101,7 @@ class Syosetu implements Plugin.PluginBase {
       headers: this.headers,
     });
     const body = await result.text();
-    const loadedCheerio = loadCheerio(body, { decodeEntities: false });
+    const loadedCheerio = loadCheerio(body);
 
     // Parse status
     let status = 'Unknown';
@@ -182,7 +180,7 @@ class Syosetu implements Plugin.PluginBase {
 
       // Process each page's chapters
       pageResults.forEach(pageBody => {
-        const pageCheerio = loadCheerio(pageBody, { decodeEntities: false });
+        const pageCheerio = loadCheerio(pageBody);
         pageCheerio('.p-eplist__sublist').each((_, element) => {
           const chapterLink = pageCheerio(element).find('a');
           const chapterUrl = chapterLink.attr('href');
@@ -214,9 +212,7 @@ class Syosetu implements Plugin.PluginBase {
     });
     const body = await result.text();
 
-    const cheerioQuery = loadCheerio(body, {
-      decodeEntities: false,
-    });
+    const cheerioQuery = loadCheerio(body);
 
     // Get the chapter title
     const chapterTitle = cheerioQuery('.p-novel__title').html() || '';
@@ -243,7 +239,7 @@ class Syosetu implements Plugin.PluginBase {
       const result = await fetchApi(url, { headers: this.headers });
       const body = await result.text();
       // Cheerio it!
-      const cheerioQuery = loadCheerio(body, { decodeEntities: false });
+      const cheerioQuery = loadCheerio(body);
 
       const pageNovels: Plugin.NovelItem[] = [];
       // find class=searchkekka_box

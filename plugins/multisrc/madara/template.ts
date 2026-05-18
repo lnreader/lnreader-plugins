@@ -1,7 +1,8 @@
 import { fetchApi } from '@libs/fetch';
 import { Filters } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
-import { Cheerio, AnyNode, CheerioAPI, load as parseHTML } from 'cheerio';
+import { Cheerio, CheerioAPI, load as parseHTML } from 'cheerio';
+import { AnyNode } from 'domhandler';
 import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 import dayjs from 'dayjs';
@@ -24,10 +25,10 @@ export type MadaraMetadata = {
   sourceSite: string;
   sourceName: string;
   options?: MadaraOptions;
-  filters?: any;
+  filters?: Filters;
 };
 
-class MadaraPlugin implements Plugin.PluginBase {
+export class MadaraPlugin implements Plugin.PluginBase {
   id: string;
   name: string;
   icon: string;
@@ -37,7 +38,7 @@ class MadaraPlugin implements Plugin.PluginBase {
   filters?: Filters | undefined;
 
   hideLocked = storage.get('hideLocked');
-  pluginSettings?: Record<string, any>;
+  pluginSettings?: Filters;
 
   constructor(metadata: MadaraMetadata) {
     this.id = metadata.id;
@@ -45,7 +46,7 @@ class MadaraPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/madara/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `1.0.${8 + versionIncrements}`;
+    this.version = `1.0.${9 + versionIncrements}`;
     this.options = metadata.options;
     this.filters = metadata.filters;
 
@@ -302,7 +303,7 @@ class MadaraPlugin implements Plugin.PluginBase {
       html = await fetchApi(this.site + novelPath + 'ajax/chapters/', {
         method: 'POST',
         referrer: this.site + novelPath,
-      }).then(res => res.text());
+      }).then((res: Response) => res.text());
     } else {
       const novelId =
         loadedCheerio('.rating-post-id').attr('value') ||
@@ -316,7 +317,7 @@ class MadaraPlugin implements Plugin.PluginBase {
       html = await fetchApi(this.site + 'wp-admin/admin-ajax.php', {
         method: 'POST',
         body: formData,
-      }).then(res => res.text());
+      }).then((res: Response) => res.text());
     }
 
     if (html !== '0') {

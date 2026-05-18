@@ -1,4 +1,4 @@
-import { CheerioAPI, load as parseHTML } from 'cheerio';
+import { load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
@@ -7,7 +7,7 @@ import { defaultCover } from '@libs/defaultCover';
 class RewayatClub implements Plugin.PagePlugin {
   id = 'rewayatclub';
   name = 'Rewayat Club';
-  version = '1.0.2';
+  version = '1.0.3';
   icon = 'src/ar/rewayatclub/icon.png';
   site = 'https://rewayat.club/';
 
@@ -34,7 +34,10 @@ class RewayatClub implements Plugin.PagePlugin {
 
   async popularNovels(
     page: number,
-    { showLatestNovels, filters }: Plugin.PopularNovelsOptions<Filters>,
+    {
+      showLatestNovels,
+      filters,
+    }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
     let link = `https://api.rewayat.club/api/novels/`;
     let body: NovelData = {
@@ -253,7 +256,7 @@ type ChapterEntry = {
     hits: number;
     id: number;
   };
-  read: any[];
+  // read: any[];
 };
 
 type ChapterData = {

@@ -29,7 +29,7 @@ class RLIB implements Plugin.PluginBase {
   name = 'RanobeLib';
   site = 'https://ranobelib.me';
   apiSite = 'https://api.cdnlibs.org/api/manga/';
-  version = '2.2.3';
+  version = '2.2.4';
   icon = 'src/ru/ranobelib/icon.png';
   webStorageUtilized = true;
   imageRequestInit = {
@@ -223,13 +223,11 @@ class RLIB implements Plugin.PluginBase {
           volume,
         { headers: this.getHeaders() },
       ).then(res => res.json());
+      const content = result?.data?.content;
       chapterText =
-        result?.data?.content?.type == 'doc'
-          ? jsonToHtml(
-              result.data.content.content,
-              result.data.attachments || [],
-            )
-          : result?.data?.content;
+        typeof content === 'object' && content?.type === 'doc'
+          ? jsonToHtml(content.content, result.data.attachments || [])
+          : (content as string) || '';
     }
     return chapterText;
   }
@@ -277,7 +275,9 @@ class RLIB implements Plugin.PluginBase {
   };
 
   getUser = () => {
-    const user = storage.get('user');
+    const user = storage.get('user') as
+      | { token: string; id: number }
+      | undefined;
     if (user) {
       return { token: { Authorization: 'Bearer ' + user.token }, ui: user.id };
     }
@@ -719,7 +719,7 @@ type DataClass = {
   created_at?: string;
   moderated?: AgeRestriction;
   likes_count?: number;
-  content?: any;
+  content?: string | { type: string; content: HTML[] };
   attachments?: Attachment[];
 };
 

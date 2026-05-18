@@ -3,7 +3,6 @@ import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
 import { defaultCover } from '@libs/defaultCover';
-import { NovelItem } from '../../test_web/static/js';
 import { NovelStatus } from '@libs/novelStatus';
 
 type FuzzySearchOptions = {
@@ -164,7 +163,7 @@ class ReLibraryPlugin implements Plugin.PluginBase {
   name = 'Re:Library';
   icon = 'src/en/relibrary/icon.png';
   site = 'https://re-library.com';
-  version = '1.0.2';
+  version = '1.0.3';
   imageRequestInit: Plugin.ImageRequestInit = {
     headers: {
       Referer: 'https://re-library.com/',
@@ -183,7 +182,7 @@ class ReLibraryPlugin implements Plugin.PluginBase {
 
     const loadedCheerio = loadCheerio(body);
     loadedCheerio('.entry-content > ol > li').each((_i, el) => {
-      const novel: Partial<NovelItem> = {};
+      const novel: Partial<Plugin.NovelItem> = {};
       novel.name = loadedCheerio(el).find('h3 > a').text();
       novel.path = loadedCheerio(el)
         .find('table > tbody > tr > td > a')
@@ -197,9 +196,7 @@ class ReLibraryPlugin implements Plugin.PluginBase {
           .find('table > tbody > tr > td > a > img')
           .attr('src') ||
         defaultCover;
-      if (novel.path.startsWith(this.site)) {
-        novel.path = novel.path.slice(this.site.length);
-      }
+      novel.path = new URL(novel.path, this.site).pathname;
       novels.push(novel as Plugin.NovelItem);
     });
     return novels;
@@ -224,9 +221,7 @@ class ReLibraryPlugin implements Plugin.PluginBase {
           .find('.entry-content > table > tbody > tr > td > a >img')
           .attr('src') ||
         defaultCover;
-      if (novel.path.startsWith(this.site)) {
-        novel.path = novel.path.slice(this.site.length);
-      }
+      novel.path = new URL(novel.path, this.site).pathname;
       novels.push(novel as Plugin.NovelItem);
     });
     return novels;
@@ -257,7 +252,7 @@ class ReLibraryPlugin implements Plugin.PluginBase {
     // synopis:		.entry-content > div.su-box > div.su-box-content
     // chapters:	.entry-content > div.su-accordion <then> li.page_item[]
 
-    const result = await fetchApi(`${this.site}/${novelPath}`);
+    const result = await fetchApi(`${this.site}${novelPath}`);
     const body = await result.text();
 
     const loadedCheerio = loadCheerio(body);
@@ -330,18 +325,11 @@ class ReLibraryPlugin implements Plugin.PluginBase {
         .find('li > a')
         .each((_i2, chap_el) => {
           chapter_idx += 1;
-          let chap_path = loadedCheerio(chap_el).attr('href')?.trim();
-          if (
-            loadedCheerio(chap_el).text() === undefined ||
-            chap_path === undefined
-          )
-            return;
-          if (chap_path.startsWith(this.site)) {
-            chap_path = chap_path.slice(this.site.length);
-          }
+          const chap_path = loadedCheerio(chap_el).attr('href')?.trim();
+          if (loadedCheerio(chap_el).text() === undefined || !chap_path) return;
           chapters.push({
             name: loadedCheerio(chap_el).text(),
-            path: chap_path,
+            path: new URL(chap_path, this.site).pathname,
             chapterNumber: chapter_idx,
             // we KNOW that we can't get the released time (at least without any additional fetches), so set it to null purposfully
             releaseTime: null,
@@ -355,7 +343,7 @@ class ReLibraryPlugin implements Plugin.PluginBase {
 
   async parseChapter(chapterPath: string): Promise<string> {
     // parse chapter text here
-    const result = await fetchApi(`${this.site}/${chapterPath}`);
+    const result = await fetchApi(`${this.site}${chapterPath}`);
     const body = await result.text();
 
     const loadedCheerio = loadCheerio(body);
@@ -408,10 +396,11 @@ class ReLibraryPlugin implements Plugin.PluginBase {
 
     loadedCheerio('article article').each((_i, el) => {
       const e = loadedCheerio(el);
-      if (e.find('a').attr('href') && e.find('a').text()) {
+      const href = e.find('a').attr('href');
+      if (href && e.find('a').text()) {
         novels.push({
           name: e.find('h4').text(),
-          path: e.find('a').attr('href')?.replace(this.site, '') || '',
+          path: new URL(href, this.site).pathname,
           cover:
             e.find('img').attr('data-cfsrc') ||
             e.find('img').attr('src') ||

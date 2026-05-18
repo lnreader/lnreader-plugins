@@ -39,7 +39,9 @@
     "sourceName": "DaoNovel",
     "options": {
       "useNewChapterEndpoint": true,
-      "versionIncrements": 1
+      "versionIncrements": 2,
+      "down": true,
+      "downSince": 1777153113000
     }
   },
   {
@@ -150,7 +152,10 @@
     "sourceSite": "https://novel4up.com/",
     "sourceName": "Novel4Up",
     "options": {
-      "lang": "Arabic"
+      "lang": "Arabic",
+      "versionIncrements": 1,
+      "down": true,
+      "downSince": 1777153113000
     }
   },
   {
@@ -420,7 +425,10 @@
     "sourceName": "Belle Reservoir",
     "options": {
       "useNewChapterEndpoint": true,
-      "lang": "English"
+      "versionIncrements": 1,
+      "lang": "English",
+      "down": true,
+      "downSince": 1777153113000
     }
   },
   {
@@ -439,7 +447,10 @@
     "sourceName": "Coral Boutique",
     "options": {
       "useNewChapterEndpoint": true,
-      "lang": "English"
+      "lang": "English",
+      "versionIncrements": 1,
+      "down": true,
+      "downSince": 1777153113000
     }
   },
   {

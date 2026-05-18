@@ -6,7 +6,7 @@ import { Plugin } from '@/types/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.9.8';
+  version = '0.9.9';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -342,23 +342,26 @@ class NovelUpdates implements Plugin.PluginBase {
         chapterContent = loadedCheerio('.content').html()!;
         break;
       }
-      // Last edited in 0.9.0 by Batorian - 19/03/2025
+      // Last edited in 0.9.0 by Batorian - 19/03/2025,
+      // remove any typing in 0.9.9 by K1ngfish3r - 04/05/2026, remove this comment if no issues
       case 'genesistudio': {
         const url = `${chapterPath}/__data.json?x-sveltekit-invalidated=001`;
         try {
           // Fetch the chapter's data in JSON format
-          const json = await fetchApi(url).then(r => r.json());
+          const json = (await fetchApi(url).then(r => r.json())) as {
+            nodes: { type: string; data: Record<string, unknown> }[];
+          };
           const nodes = json.nodes;
           const data = nodes
-            .filter((node: { type: string }) => node.type === 'data')
-            .map((node: { data: any }) => node.data)[0];
+            .filter(node => node.type === 'data')
+            .map(node => node.data)[0];
           // Look for chapter container with required fields
           const contentKey = 'content';
           const notesKey = 'notes';
           const footnotesKey = 'footnotes';
           // Iterate over each property in data to find chapter containers
           for (const key in data) {
-            const mapping = data[key];
+            const mapping = data[key] as Record<string, number>;
             // Check container for keys that match the required fields
             if (
               mapping &&
@@ -368,9 +371,11 @@ class NovelUpdates implements Plugin.PluginBase {
               footnotesKey in mapping
             ) {
               // Retrieve the chapter's content, notes, and footnotes using the mapping.
-              const content = data[mapping[contentKey]];
-              const notes = data[mapping[notesKey]];
-              const footnotes = data[mapping[footnotesKey]];
+              const content = data[String(mapping[contentKey])] as string;
+              const notes = data[String(mapping[notesKey])] as string;
+              const footnotes = data[String(mapping[footnotesKey])] as
+                | string
+                | undefined;
               // Combine the parts with appropriate formatting
               chapterText =
                 content +
@@ -511,6 +516,122 @@ class NovelUpdates implements Plugin.PluginBase {
         chapterTitle = titleElement.text();
         titleElement.remove();
         chapterContent = loadedCheerio('.entry-content').html()!;
+        break;
+      }
+      // Last edited in 0.9.9 by Batorian - 09/05/2026
+      case 'mythoriatales': {
+        /**
+         * Mythoria Tales uses Next.js Server Actions for chapter delivery.
+         * The response is a 'text/x-component' stream (RSC).
+         *
+         * Payload Structure:
+         * 0:{"a":"$@1",...}   -> Initialization/Metadata
+         * 2:T{hexLen},...     -> Chapter Body (may span multiple segments)
+         * 3:T{hexLen},...     -> Chapter Body continuation (if split)
+         * 1:{"success":...}   -> Series/Chapter JSON metadata (authoritative title source)
+         */
+        const html = loadedCheerio('script:contains("script-2")').html();
+        if (!html) throw new Error('Failed to find script-2');
+        const matches = Array.from(html.matchAll(/"script-2.*?[^_]+([^\\]+)/g));
+        const scriptPath = matches[1]?.[1];
+        if (!scriptPath) throw new Error('Failed to extract script-2 URL');
+
+        const scriptUrl = new URL(`/${scriptPath}`, chapterPath).href;
+        const scriptText = await (await fetchApi(scriptUrl)).text();
+        const ACTION_HASH = scriptText.match(/[a-f0-9]{42}/)?.[0];
+        if (!ACTION_HASH) throw new Error('Failed to extract ACTION_HASH');
+
+        // chapterPath: https://www.mythoriatales.com/series/[slug]/chapter/[num]
+        const urlParts = chapterPath.split('/');
+        const [slug, chapterNum] = [urlParts[4], parseInt(urlParts[6], 10)];
+
+        const response = await fetchApi(chapterPath, {
+          method: 'POST',
+          headers: {
+            'Accept': 'text/x-component',
+            'Content-Type': 'text/plain;charset=UTF-8',
+            'next-action': ACTION_HASH,
+          },
+          body: JSON.stringify([slug, chapterNum]),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch chapter: ${response.status}`);
+        }
+
+        const rscText = (await response.text()).replace(/(\d+:[{TE])/g, '\n$1');
+
+        /**
+         * 1. Isolate the data segments.
+         * We split by newline followed by a digit and a type marker ({, T, E).
+         * Using a lookahead (?=...) ensures the split marker isn't consumed,
+         * allowing us to verify the segment index (e.g., "2:").
+         */
+        const segments = rscText.split(/\n(?=\d+:[{TE])/);
+
+        /**
+         * 2. Locate and join all text content segments.
+         * Some chapters split their body across multiple T-type segments (e.g., 2:T, 3:T).
+         * We collect all of them (excluding the 0: init segment) and join into one string,
+         * stripping each segment's "{index}:T{hexLen}," prefix in the process.
+         */
+        const contentSegment = segments
+          .filter(s => /^\d+:T/.test(s) && !s.startsWith('0:'))
+          .map(s => s.replace(/^\d+:T[0-9a-f]+,/, ''))
+          .join('');
+
+        if (!contentSegment) {
+          throw new Error(
+            'Could not find the chapter content segment (2:T) in the stream.',
+          );
+        }
+
+        /**
+         * 3. Parse Lines and Paragraphs
+         * Splits on literal newlines or escaped sequence "\n".
+         * Filters out empty strings to handle double-spacing in the source.
+         */
+        const lines = contentSegment
+          .trim()
+          .split(/(?:\r?\n|\\n)+/)
+          .map((line: string) => line.trim())
+          .filter((line: string) => line.length > 0);
+
+        if (lines.length === 0) {
+          throw new Error('Parsed content is empty.');
+        }
+
+        /**
+         * 4. Extract title from the "1:{...}" metadata segment.
+         * This is the authoritative source for the chapter title and number,
+         * preferred over parsing the first content line.
+         */
+        const metaSegment = segments.find(s => s.startsWith('1:'));
+        if (metaSegment) {
+          try {
+            const meta = JSON.parse(metaSegment.slice(2)); // strip leading "1:"
+            const title = meta?.data?.chapter?.title;
+            const num = meta?.data?.chapter?.chapterNumber ?? chapterNum;
+            if (title) chapterTitle = `Chapter ${num}: ${title}`;
+          } catch {
+            // fall back to chapterNum if metadata parsing fails
+          }
+        }
+        if (!chapterTitle) chapterTitle = `Chapter ${chapterNum}`;
+
+        // 5. All lines from the content segment are paragraphs.
+        chapterContent = lines.map((p: string) => `<p>${p}</p>`).join('\n');
+
+        // Clean up custom markup tags:
+        // Format [dialogue speaker="Name"]text[/dialogue] as "Name: text", drop [sfx] blocks entirely
+        chapterContent = chapterContent
+          .replace(
+            /\[dialogue\s+speaker="([^"]*)"\](.*?)\[\/dialogue\]/gi,
+            '$1: $2',
+          )
+          .replace(/\[sfx\].*?\[\/sfx\]/gi, '')
+          .replace(/\[\/?(dialogue|sfx)[^\]]*\]/gi, '');
+
         break;
       }
       // Last edited in 0.9.0 by Batorian - 19/03/2025

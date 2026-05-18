@@ -18,7 +18,7 @@ class InkittPlugin implements Plugin.PluginBase {
   async popularNovels(
     pageNo: number,
     {
-      showLatestNovels,
+      // showLatestNovels,
       filters,
     }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
@@ -40,7 +40,7 @@ class InkittPlugin implements Plugin.PluginBase {
       throw new Error('Failed to load novels, try opening in webview.');
     }
 
-    return data.stories.map((novel: any) => {
+    return data.stories.map((novel: InkittNovel) => {
       return {
         name: novel.title,
         path: this.getPath(novel),
@@ -52,7 +52,7 @@ class InkittPlugin implements Plugin.PluginBase {
     });
   }
 
-  getPath(novel: any) {
+  getPath(novel: InkittNovel) {
     return (novel.category_one || novel.genres[0]) + '/' + novel.id;
   }
 
@@ -69,7 +69,7 @@ class InkittPlugin implements Plugin.PluginBase {
     novel.author = loadedCheerio('dl > dd > a.author-link').text();
 
     novel.genres = loadedCheerio('dd.genres > a')
-      .map((i, el) => loadedCheerio(el).text())
+      .map((_, el) => loadedCheerio(el).text())
       .toArray()
       .join(', ');
     const status = loadedCheerio('div.dlc > dl:has(dt:contains("Status")) > dd')
@@ -81,12 +81,12 @@ class InkittPlugin implements Plugin.PluginBase {
     const apiReq = await fetchApi(
       this.site + `/api/stories/${novelPath.split('/')[1]}`,
     );
-    const apiData = await apiReq.json();
+    const apiData = (await apiReq.json()) as InkittApi;
     novel.cover = apiData.vertical_cover.url;
 
     novel.summary = loadedCheerio('p.story-summary').text();
 
-    novel.chapters = apiData.chapters.map((c: any) => {
+    novel.chapters = apiData.chapters.map((c: InkittChapter) => {
       return {
         name: c.name,
         path: novelPath + '/chapters/' + c.chapter_number,
@@ -119,7 +119,7 @@ class InkittPlugin implements Plugin.PluginBase {
       throw new Error('Failed to search novels, try opening in webview.');
     }
 
-    return data.stories.map((novel: any) => {
+    return data.stories.map((novel: InkittNovel) => {
       return {
         name: novel.title,
         path: this.getPath(novel),
@@ -131,8 +131,8 @@ class InkittPlugin implements Plugin.PluginBase {
     });
   }
 
-  resolveUrl = (path: string, isNovel?: boolean) =>
-    this.site + '/stories/' + path;
+  // resolveUrl = (path: string, isNovel?: boolean) =>
+  //   this.site + '/stories/' + path;
 
   filters = {
     genres: {
@@ -160,3 +160,31 @@ class InkittPlugin implements Plugin.PluginBase {
 }
 
 export default new InkittPlugin();
+
+// Typings inferred from usage, no actual investigation done
+// TODO: change layout
+type InkittNovel = {
+  id: number;
+  title: string;
+  category_one?: string;
+  genres: string[];
+  cover: {
+    url: string;
+  };
+  vertical_cover: {
+    url: string;
+    iphone: string;
+  };
+};
+
+type InkittChapter = {
+  name: string;
+  chapter_number: number;
+};
+
+type InkittApi = {
+  vertical_cover: {
+    url: string;
+  };
+  chapters: InkittChapter[];
+};

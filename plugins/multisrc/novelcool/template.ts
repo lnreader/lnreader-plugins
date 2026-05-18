@@ -17,7 +17,7 @@ export type NovelCoolMetadata = {
   options: NovelCoolOptions;
 };
 
-class NovelCoolPlugin implements Plugin.PluginBase {
+export class NovelCoolPlugin implements Plugin.PluginBase {
   id: string;
   name: string;
   icon: string;
@@ -78,7 +78,7 @@ class NovelCoolPlugin implements Plugin.PluginBase {
           page_size: '20',
         }).toString(),
       },
-    ).then(res => res.json());
+    ).then((res: Response) => res.json());
     const novels: Plugin.NovelItem[] = [];
 
     list.forEach(novel =>
@@ -110,7 +110,7 @@ class NovelCoolPlugin implements Plugin.PluginBase {
           lang: this.options.langCode,
         }).toString(),
       },
-    ).then(res => res.json());
+    ).then((res: Response) => res.json());
 
     const novel: Plugin.SourceNovel = {
       path: novelPath,
@@ -142,7 +142,7 @@ class NovelCoolPlugin implements Plugin.PluginBase {
           lang: this.options.langCode,
         }).toString(),
       },
-    ).then(res => res.json());
+    ).then((res: Response) => res.json());
 
     list.forEach(chapter => {
       if (!chapter.is_locked) {
@@ -179,7 +179,7 @@ class NovelCoolPlugin implements Plugin.PluginBase {
           lang: this.options.langCode,
         }).toString(),
       },
-    ).then(res => res.json());
+    ).then((res: Response) => res.json());
 
     return info.content;
   }
@@ -207,7 +207,7 @@ class NovelCoolPlugin implements Plugin.PluginBase {
           page_size: '20',
         }).toString(),
       },
-    ).then(res => res.json());
+    ).then((res: Response) => res.json());
     const novels: Plugin.NovelItem[] = [];
 
     list.forEach(novel =>
@@ -266,7 +266,7 @@ type Novel = {
   last_url?: string;
   category_str: string;
   category_list: string[];
-  star_list: any[];
+  // star_list: any[];
   int_mark: string;
   time: string;
   show_ads: string;

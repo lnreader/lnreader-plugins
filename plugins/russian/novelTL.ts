@@ -16,12 +16,12 @@ class TL implements Plugin.PluginBase {
   id = 'TL';
   name = 'NovelTL';
   site = 'https://novel.tl';
-  version = '1.0.1';
+  version = '1.0.2';
   icon = 'src/ru/noveltl/icon.png';
 
   async fetchNovels(
     page: number,
-    { filters }: Plugin.PopularNovelsOptions<typeof this.filters>,
+    filters?: Plugin.PopularNovelsOptions<typeof this.filters>['filters'],
     searchTerm?: string,
   ): Promise<Plugin.NovelItem[]> {
     const { data }: response = await fetchApi(
@@ -40,10 +40,10 @@ class TL implements Plugin.PluginBase {
           variables: {
             filter: {
               query: searchTerm || undefined,
-              tags: filters.tags?.value?.length
+              tags: filters?.tags?.value?.length
                 ? filters.tags.value
                 : undefined,
-              genres: filters.genres?.value?.length
+              genres: filters?.genres?.value?.length
                 ? filters.genres.value
                 : undefined,
             },
@@ -69,16 +69,15 @@ class TL implements Plugin.PluginBase {
     return novels;
   }
 
-  popularNovels = this.fetchNovels;
-
-  async searchNovels(
-    searchTerm: string,
+  async popularNovels(
     page: number,
-  ): Promise<Plugin.NovelItem[]> {
-    const defaultOptions: any = {
-      filters: {},
-    };
-    return this.fetchNovels(page, defaultOptions, searchTerm);
+    { filters }: Plugin.PopularNovelsOptions<typeof this.filters>,
+  ) {
+    return this.fetchNovels(page, filters);
+  }
+
+  async searchNovels(searchTerm: string, page: number) {
+    return this.fetchNovels(page, undefined, searchTerm);
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {

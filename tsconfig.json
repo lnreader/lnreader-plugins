@@ -37,7 +37,7 @@
     "paths": {
       "@/*": ["./src/*"],
       "@plugins/*": ["./plugins/*"],
-      "@libs/*": ["./src/libs/*"]
+      "@libs/*": ["./src/libs/*"],
     } /* Specify a set of entries that re-map imports to additional lookup locations. */,
     // "rootDirs": [],                                   /* Allow multiple folders to be treated as one when resolving modules. */
     // "typeRoots": [],                                  /* Specify multiple folders that act like './node_modules/@types'. */
@@ -116,20 +116,17 @@
     /* Completeness */
     // "skipDefaultLibCheck": true,                      /* Skip type checking .d.ts files that are included with TypeScript. */
 
-    "skipLibCheck": true /* Skip type checking all .d.ts files. */
+    "skipLibCheck": true /* Skip type checking all .d.ts files. */,
   },
   "exclude": [
     "./plugins/**/*.broken.ts",
     "./.js/**/*",
     "scripts/**",
     "docs/**",
-    "./src/*.*",
-    "./*.*",
     "public/**",
     ".github/**",
     ".husky/**",
     "node_modules/**",
-    "./src/**",
-    "./plugins/multisrc/*"
-  ]
+    "./plugins/multisrc/*",
+  ],
 }

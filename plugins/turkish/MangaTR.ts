@@ -8,7 +8,7 @@ class MangaTR implements Plugin.PluginBase {
   name = 'MangaTR';
   icon = 'src/tr/mangatr/icon.png';
   site = 'https://manga-tr.com/';
-  version = '1.0.0';
+  version = '1.0.1';
 
   opts = {
     method: 'POST',
@@ -258,9 +258,9 @@ class MangaTR implements Plugin.PluginBase {
       });
   }
 
-  resolveUrl(path: string, isNovel?: boolean): string {
-    return this.site + path;
-  }
+  // resolveUrl(path: string, isNovel?: boolean): string {
+  //   return this.site + path;
+  // }
 
   filters = {
     sort: {
