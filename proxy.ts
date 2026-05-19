@@ -21,7 +21,13 @@ const settings: ServerSetting = {
     'sec-fetch-dest',
     'pragma',
   ],
-  disAllowResponseHeaders: ['link', 'set-cookie', 'set-cookie2'],
+  disAllowResponseHeaders: [
+    'link',
+    'set-cookie',
+    'set-cookie2',
+    'content-encoding',
+    'content-length',
+  ],
   useUserAgent: true,
 };
 
@@ -160,11 +166,7 @@ const proxyRequest: Connect.SimpleHandleFunction = (req, res) => {
       .then(async res2 => {
         res.statusCode = res2.status;
         res2.headers.forEach((val, key) => {
-          if (
-            !settings.disAllowResponseHeaders.includes(key) &&
-            key !== 'content-encoding' &&
-            key !== 'content-length'
-          ) {
+          if (!settings.disAllowResponseHeaders.includes(key)) {
             res.setHeader(key, val);
           }
         });
@@ -234,11 +236,7 @@ proxy.on('proxyRes', function (proxyRes, req, res) {
 
   // Propagate headers but filter restricted ones
   Object.keys(proxyRes.headers).forEach(key => {
-    if (
-      !settings.disAllowResponseHeaders.includes(key) &&
-      key !== 'content-encoding' &&
-      key !== 'content-length'
-    ) {
+    if (!settings.disAllowResponseHeaders.includes(key)) {
       res.setHeader(key, proxyRes.headers[key] as string);
     }
   });
