@@ -117,15 +117,7 @@ const proxyRequest: Connect.SimpleHandleFunction = (req, res) => {
   headers:`,
   );
   Object.entries(req.headers).forEach(([name, value]) => {
-    // Redact sensitive headers in logs
-    const isSensitive = ['cookie', 'authorization'].includes(name.toLowerCase());
-    console.log(
-      '\t',
-      '\x1b[32m',
-      name + ':',
-      '\x1b[37m',
-      isSensitive ? '[REDACTED]' : value,
-    );
+    console.log('\t', '\x1b[32m', name + ':', '\x1b[37m', value);
   });
   console.log('\x1b[36m', '----------------');
 
