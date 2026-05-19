@@ -674,7 +674,8 @@
     "sourceSite": "https://novelnice.com/",
     "sourceName": "BoxNovel",
     "options": {
-      "lang": "English"
+      "lang": "English",
+      "useNewChapterEndpoint": true
     }
   }
 ]
