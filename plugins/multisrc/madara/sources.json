@@ -675,7 +675,8 @@
     "sourceName": "BoxNovel",
     "options": {
       "lang": "English",
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "versionIncrements": 2
     }
   }
 ]
