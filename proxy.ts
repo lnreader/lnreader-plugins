@@ -75,6 +75,7 @@ const proxyHandlerMiddle: Connect.NextHandleFunction = (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', settings.CLIENT_HOST);
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   req.headers.referer = rawUrl;
+
   if (req.method === 'OPTIONS') {
     res.statusCode = 200;
     res.end();
@@ -90,21 +91,17 @@ const proxyHandlerMiddle: Connect.NextHandleFunction = (req, res) => {
         }
       }
       req.headers['sec-fetch-mode'] = 'cors';
-      if (settings.cookies) {
-        req.headers['cookie'] = settings.cookies;
-      }
-      if (!settings.useUserAgent) {
-        delete req.headers['user-agent'];
-      }
+      if (settings.cookies) req.headers['cookie'] = settings.cookies;
+      if (!settings.useUserAgent) delete req.headers['user-agent'];
       req.headers.host = _url.host;
       req.url = _url.toString();
-      res.statusCode = 200;
       proxyRequest(req, res);
     } catch (err) {
       console.log('\x1b[31m', '----------ERRROR----------');
       console.error(err);
       console.log('\x1b[31m', '----------ERRROR----------');
       if (!res.closed) {
+        res.statusCode = 500;
         res.end();
       }
     }
@@ -123,16 +120,13 @@ const proxyRequest: Connect.SimpleHandleFunction = (req, res) => {
     console.log('\t', '\x1b[32m', name + ':', '\x1b[37m', value);
   });
   console.log('\x1b[36m', '----------------');
+
   if (settings.fetchMode === FetchMode.CURL) {
-    //i mean if it works it works i guess, better than nothing
-    let curl = `curl '${_url.href}'`;
-    if (settings.useUserAgent) {
+    let curl = `curl -L '${_url.href}'`;
+    if (settings.useUserAgent)
       curl += ` -H 'User-Agent: ${req.headers['user-agent']}'`;
-    }
     if (settings.cookies) curl += ` -H 'Cookie: ${settings.cookies}'`;
     if (req.headers.origin2) curl += ` -H 'Origin: ${req.headers.origin2}'`;
-
-    console.log('Running curl command:', curl);
 
     const isWindows = process.platform === 'win32';
     const options = isWindows
@@ -143,16 +137,12 @@ const proxyRequest: Connect.SimpleHandleFunction = (req, res) => {
         }
       : {};
 
-    exec(curl, options, (error, stdout, stderr) => {
+    exec(curl, options, (error, stdout) => {
       if (error) {
-        console.error(`exec error: ${error}`);
         res.statusCode = 500;
         res.write(`exec error: ${error}`);
         res.end();
         return;
-      }
-      if (stderr) {
-        console.error(`stderr: ${stderr}`);
       }
       res.statusCode = 200;
       res.write(stdout);
@@ -160,20 +150,14 @@ const proxyRequest: Connect.SimpleHandleFunction = (req, res) => {
     });
   } else if (settings.fetchMode === FetchMode.NODE_FETCH) {
     const headers = new Headers();
-    if (settings.useUserAgent) {
+    if (settings.useUserAgent)
       headers.append('user-agent', req.headers['user-agent'] as string);
-    }
-    if (settings.cookies) {
-      headers.append('cookie', settings.cookies);
-    }
-    if (req.headers.origin2) {
+    if (settings.cookies) headers.append('cookie', settings.cookies);
+    if (req.headers.origin2)
       headers.append('origin', req.headers.origin2 as string);
-    }
-    fetch(_url.href, {
-      headers: headers,
-    })
-      .then(async res2 => [res2, await res2.text()] as const)
-      .then(([res2, text]) => {
+
+    fetch(_url.href, { headers })
+      .then(async res2 => {
         res.statusCode = res2.status;
         res2.headers.forEach((val, key) => {
           if (
@@ -184,7 +168,7 @@ const proxyRequest: Connect.SimpleHandleFunction = (req, res) => {
             res.setHeader(key, val);
           }
         });
-        res.write(text);
+        res.write(await res2.text());
         res.end();
       })
       .catch(err => {
@@ -196,13 +180,9 @@ const proxyRequest: Connect.SimpleHandleFunction = (req, res) => {
     proxy.web(
       req,
       res,
-      {
-        target: _url.origin,
-        selfHandleResponse: true,
-        followRedirects: true,
-      },
+      { target: _url.origin, selfHandleResponse: true, followRedirects: true },
       err => {
-        console.error(err);
+        console.error('Proxy target error:', err);
         res.statusCode = 500;
         res.end();
       },
@@ -211,94 +191,89 @@ const proxyRequest: Connect.SimpleHandleFunction = (req, res) => {
 };
 
 proxy.on('proxyRes', function (proxyRes, req, res) {
-  const statusCode = proxyRes.statusCode;
-  // Redirect
-  if (
-    statusCode === 301 ||
-    statusCode === 302 ||
-    statusCode === 303 ||
-    statusCode === 307 ||
-    statusCode === 308
-  ) {
-    req.method = 'GET';
-    req.headers['content-length'] = '0';
-    delete req.headers['content-type'];
-    // Remove all listeners (=reset events to initial state)
-    req.removeAllListeners();
+  const statusCode = proxyRes.statusCode || 200;
 
-    // Initiate a new proxy request.
-    proxyRequest(req, res);
-    return false;
-  }
-
-  const contentEncoding = proxyRes.headers['content-encoding'];
-  const isBrotli =
-    contentEncoding &&
-    (Array.isArray(contentEncoding)
-      ? contentEncoding.some(enc => enc.includes('br'))
-      : contentEncoding.includes('br'));
-
-  const isGzip =
-    contentEncoding &&
-    (Array.isArray(contentEncoding)
-      ? contentEncoding.some(enc => enc.includes('gzip'))
-      : contentEncoding.includes('gzip'));
-
-  const isZstd =
-    contentEncoding &&
-    (Array.isArray(contentEncoding)
-      ? contentEncoding.some(enc => enc.includes('zstd'))
-      : contentEncoding.includes('zstd'));
-
-  if (isBrotli || isGzip || isZstd) {
-    delete proxyRes.headers['content-encoding'];
-    delete proxyRes.headers['content-length'];
-
-    for (const _header in proxyRes.headers) {
-      if (!settings.disAllowResponseHeaders.includes(_header)) {
-        res.setHeader(_header, proxyRes.headers[_header] as string);
-      }
-    }
-
-    const chunks: Buffer[] = [];
-    proxyRes.on('data', chunk => chunks.push(Buffer.from(chunk)));
-    proxyRes.on('end', async function () {
+  // Redirect handling
+  if ([301, 302, 303, 307, 308].includes(statusCode)) {
+    const location = proxyRes.headers['location'];
+    if (location) {
       try {
-        const buffer = Buffer.concat(chunks);
-        let decompressed;
+        const _url = new URL(req.url || '');
+        const redirectUrl = new URL(location, _url.href);
+        req.url = redirectUrl.toString();
 
-        if (isBrotli) {
-          decompressed = brotliDecompressSync(buffer);
-        } else if (isZstd) {
-          decompressed = zstdDecompressSync(buffer);
-        } else {
-          decompressed = gunzipSync(buffer);
+        // Prevent infinite loops
+        const reqWithRedirect = req as Connect.IncomingMessage & {
+          _redirectCount?: number;
+        };
+        const redirectCount = reqWithRedirect._redirectCount || 0;
+        if (redirectCount >= 5) {
+          res.statusCode = 508;
+          res.end('Too many redirects');
+          return;
+        }
+        reqWithRedirect._redirectCount = redirectCount + 1;
+
+        // Update method for 301/302/303 to GET as per spec
+        if ([301, 302, 303].includes(statusCode)) {
+          req.method = 'GET';
+          req.headers['content-length'] = '0';
+          delete req.headers['content-type'];
         }
 
-        res.write(Buffer.from(decompressed));
-        res.end();
+        req.removeAllListeners();
+        proxyRequest(req, res);
+        return;
       } catch (err) {
-        console.error(err);
-        res.statusCode = 500;
-        res.end(`Error decompressing ${isBrotli ? 'Brotli' : 'GZIP'} content`);
-      }
-    });
-  } else {
-    for (const _header in proxyRes.headers) {
-      if (!settings.disAllowResponseHeaders.includes(_header)) {
-        res.setHeader(_header, proxyRes.headers[_header] as string);
+        console.error('Redirect parsing error:', err);
       }
     }
-    for (const _header in settings.disAllowedRequestHeaders) {
-      delete proxyRes.headers[_header];
-    }
-    proxyRes.on('data', function (chunk) {
-      res.write(chunk);
-    });
-    proxyRes.on('end', function () {
-      res.end();
-    });
   }
+
+  res.statusCode = statusCode;
+
+  // Propagate headers but filter restricted ones
+  Object.keys(proxyRes.headers).forEach(key => {
+    if (
+      !settings.disAllowResponseHeaders.includes(key) &&
+      key !== 'content-encoding' &&
+      key !== 'content-length'
+    ) {
+      res.setHeader(key, proxyRes.headers[key] as string);
+    }
+  });
+
+  if (statusCode === 304) {
+    res.end();
+    return;
+  }
+
+  const contentEncoding = proxyRes.headers['content-encoding'] || '';
+  const chunks: Buffer[] = [];
+  proxyRes.on('data', chunk => chunks.push(Buffer.from(chunk)));
+  proxyRes.on('end', () => {
+    try {
+      const compressedBuffer = Buffer.concat(chunks);
+      if (compressedBuffer.length > 0) {
+        let decompressedBuffer: Buffer;
+        if (contentEncoding.includes('br')) {
+          decompressedBuffer = brotliDecompressSync(compressedBuffer);
+        } else if (contentEncoding.includes('gzip')) {
+          decompressedBuffer = gunzipSync(compressedBuffer);
+        } else if (contentEncoding.includes('zstd')) {
+          decompressedBuffer = zstdDecompressSync(compressedBuffer);
+        } else {
+          decompressedBuffer = compressedBuffer;
+        }
+        res.write(decompressedBuffer);
+      }
+      res.end();
+    } catch (err) {
+      console.error('Decompression error:', err);
+      res.statusCode = 500;
+      res.end('Decompression error');
+    }
+  });
 });
 
 export { proxyHandlerMiddle, proxySettingMiddleware };
