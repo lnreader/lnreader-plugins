@@ -12,6 +12,7 @@ class FaqWikiUs implements Plugin.PluginBase {
 
   parseNovels(loadedCheerio: CheerioAPI, searchTerm?: string) {
     let novels: Plugin.NovelItem[] = [];
+    loadedCheerio('script').remove();
 
     loadedCheerio('.plt-page-item').each((index, element) => {
       const name = loadedCheerio(element)
