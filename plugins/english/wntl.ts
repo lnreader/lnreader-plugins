@@ -20,7 +20,8 @@ class WNTLPlugin implements Plugin.PluginBase {
       filters,
     }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
-    const url = `${this.site}api/novels?page=${pageNo}`;
+    if (pageNo !== 1) return [];
+    const url = `${this.site}api/novels?page=1`;
     const response = await fetchApi(url);
     const data = await response.json();
 
