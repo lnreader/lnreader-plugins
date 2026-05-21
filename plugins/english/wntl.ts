@@ -9,7 +9,7 @@ class WNTLPlugin implements Plugin.PluginBase {
   name = 'WNTL';
   icon = 'src/en/wntl/icon.png';
   site = 'https://wntl.net/';
-  version = '1.0.0';
+  version = '1.0.1';
   filters: Filters | undefined = undefined;
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
