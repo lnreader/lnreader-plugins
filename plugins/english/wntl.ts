@@ -9,7 +9,7 @@ class WNTLPlugin implements Plugin.PluginBase {
   name = 'WNTL';
   icon = 'src/en/wntl/icon.png';
   site = 'https://wntl.net/';
-  version = '1.0.8';
+  version = '1.0.9';
   filters: Filters | undefined = undefined;
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
@@ -132,18 +132,18 @@ class WNTLPlugin implements Plugin.PluginBase {
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
     if (pageNo !== 1) return [];
+    if (!searchTerm || typeof searchTerm !== 'string') return [];
     const data = await this.fetchNovels();
 
     const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
     const searchLower = normalize(searchTerm);
+    if (!searchLower) return [];
+
     const filtered = data.novels.filter(
       (novel: any) =>
         normalize(novel.title).includes(searchLower) ||
-        searchLower.includes(normalize(novel.title)) ||
-        (novel['alternate-title'] || []).some(
-          (alt: string) =>
-            normalize(alt).includes(searchLower) ||
-            searchLower.includes(normalize(alt)),
+        (novel['alternate-title'] || []).some((alt: string) =>
+          normalize(alt).includes(searchLower),
         ),
     );
 
