@@ -111,7 +111,7 @@ class WNTLPlugin implements Plugin.PluginBase {
   }
 
   resolveUrl = (path: string, isNovel?: boolean) =>
-    this.site + (isNovel ? '/series/' : '/chapter/') + path;
+    isNovel ? this.site + 'series/' + path : this.site + 'read/' + path;
 }
 
 export default new WNTLPlugin();
