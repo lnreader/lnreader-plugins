@@ -9,7 +9,7 @@ class WNTLPlugin implements Plugin.PluginBase {
   name = 'WNTL';
   icon = 'src/en/wntl/icon.png';
   site = 'https://wntl.net/';
-  version = '1.0.2';
+  version = '1.0.3';
   filters: Filters | undefined = undefined;
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
@@ -111,7 +111,9 @@ class WNTLPlugin implements Plugin.PluginBase {
   }
 
   resolveUrl = (path: string, isNovel?: boolean) =>
-    isNovel ? this.site + 'series/' + path : this.site + 'read/' + path;
+    isNovel
+      ? this.site + 'series/' + path
+      : this.site + 'read/' + path.replace(/\.md$/, '');
 }
 
 export default new WNTLPlugin();
