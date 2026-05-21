@@ -12,7 +12,6 @@ class FaqWikiUs implements Plugin.PluginBase {
 
   parseNovels(loadedCheerio: CheerioAPI, searchTerm?: string) {
     let novels: Plugin.NovelItem[] = [];
-    loadedCheerio('script').remove();
 
     loadedCheerio('.plt-page-item').each((index, element) => {
       const name = loadedCheerio(element)
@@ -58,6 +57,7 @@ class FaqWikiUs implements Plugin.PluginBase {
   async parseNovel(path: string): Promise<Plugin.SourceNovel> {
     const body = await fetchApi(this.site + path).then(res => res.text());
     const loadedCheerio = parseHTML(body);
+    loadedCheerio('script').remove();
 
     const novel: Plugin.SourceNovel = {
       path,
