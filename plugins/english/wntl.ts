@@ -1,16 +1,41 @@
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
-import { Filters } from '@libs/filterInputs';
+import { Filters, FilterTypes } from '@libs/filterInputs';
 import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
+
+const GENRES = [
+  'Action',
+  'Adventure',
+  'Comedy',
+  'Fantasy',
+  'Game',
+  'Horror',
+  'Isekai',
+  'Otome',
+  'Psychological',
+  'Rankers',
+  'Regression',
+  'Romance',
+  'School Life',
+  'Shounen',
+  'System',
+];
 
 class WNTLPlugin implements Plugin.PluginBase {
   id = 'wntl';
   name = 'WNTL';
   icon = 'src/en/wntl/icon.png';
   site = 'https://wntl.net/';
-  version = '1.0.5';
-  filters: Filters | undefined = undefined;
+  version = '1.0.6';
+  filters: Filters = {
+    genre: {
+      value: [],
+      label: 'Genre',
+      options: GENRES.map(g => ({ label: g, value: g })),
+      type: FilterTypes.Picker,
+    },
+  };
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   async popularNovels(
@@ -25,7 +50,17 @@ class WNTLPlugin implements Plugin.PluginBase {
     const response = await fetchApi(url);
     const data = await response.json();
 
-    return data.novels.map((novel: any) => ({
+    let novels = data.novels;
+
+    if (filters?.genre?.value?.length) {
+      novels = novels.filter((novel: any) =>
+        (novel.genre || []).some((g: string) =>
+          filters.genre.value.includes(g),
+        ),
+      );
+    }
+
+    return novels.map((novel: any) => ({
       name: novel.title,
       cover: novel.cover ? this.site + novel.cover.slice(1) : defaultCover,
       path: novel.id,
