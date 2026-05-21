@@ -9,7 +9,7 @@ class WNTLPlugin implements Plugin.PluginBase {
   name = 'WNTL';
   icon = 'src/en/wntl/icon.png';
   site = 'https://wntl.net/';
-  version = '1.0.7';
+  version = '1.0.8';
   filters: Filters | undefined = undefined;
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
@@ -81,17 +81,16 @@ class WNTLPlugin implements Plugin.PluginBase {
 
     const novelData = novelsData.novels.find((n: any) => n.id === novelPath);
 
-    const status = novelData?.status?.[0];
+    const statusList = novelData?.status || [];
     let novelStatus: NovelStatus;
-    switch (status) {
-      case 'Completed':
-        novelStatus = NovelStatus.Completed;
-        break;
-      case 'Ongoing':
-        novelStatus = NovelStatus.Ongoing;
-        break;
-      default:
-        novelStatus = NovelStatus.Unknown;
+    if (statusList.includes('Completed')) {
+      novelStatus = NovelStatus.Completed;
+    } else if (statusList.includes('Ongoing')) {
+      novelStatus = NovelStatus.Ongoing;
+    } else if (statusList.includes('On-Break')) {
+      novelStatus = NovelStatus.OnHiatus;
+    } else {
+      novelStatus = NovelStatus.Unknown;
     }
 
     const chapters: Plugin.ChapterItem[] = chaptersData.chapters.map(
@@ -135,15 +134,16 @@ class WNTLPlugin implements Plugin.PluginBase {
     if (pageNo !== 1) return [];
     const data = await this.fetchNovels();
 
-    const searchLower = searchTerm.toLowerCase();
+    const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const searchLower = normalize(searchTerm);
     const filtered = data.novels.filter(
       (novel: any) =>
-        novel.title.toLowerCase().includes(searchLower) ||
-        searchLower.includes(novel.title.toLowerCase()) ||
+        normalize(novel.title).includes(searchLower) ||
+        searchLower.includes(normalize(novel.title)) ||
         (novel['alternate-title'] || []).some(
           (alt: string) =>
-            alt.toLowerCase().includes(searchLower) ||
-            searchLower.includes(alt.toLowerCase()),
+            normalize(alt).includes(searchLower) ||
+            searchLower.includes(normalize(alt)),
         ),
     );
 
