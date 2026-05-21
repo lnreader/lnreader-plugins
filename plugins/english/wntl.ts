@@ -9,7 +9,7 @@ class WNTLPlugin implements Plugin.PluginBase {
   name = 'WNTL';
   icon = 'src/en/wntl/icon.png';
   site = 'https://wntl.net/';
-  version = '1.0.4';
+  version = '1.0.5';
   filters: Filters | undefined = undefined;
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
@@ -99,11 +99,15 @@ class WNTLPlugin implements Plugin.PluginBase {
     const response = await fetchApi(url);
     const data = await response.json();
 
+    const searchLower = searchTerm.toLowerCase();
     const filtered = data.novels.filter(
       (novel: any) =>
-        novel.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (novel['alternate-title'] || []).some((alt: string) =>
-          alt.toLowerCase().includes(searchTerm.toLowerCase()),
+        novel.title.toLowerCase().includes(searchLower) ||
+        searchLower.includes(novel.title.toLowerCase()) ||
+        (novel['alternate-title'] || []).some(
+          (alt: string) =>
+            alt.toLowerCase().includes(searchLower) ||
+            searchLower.includes(alt.toLowerCase()),
         ),
     );
 
