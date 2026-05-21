@@ -10,9 +10,7 @@ class FaqWikiUs implements Plugin.PluginBase {
   version = '3.0.1';
   icon = 'src/en/faqwikius/icon.png';
 
-  // Parses a list of NovelItem objects from already-loaded Cheerio HTML.
-  // "List" clarifies it returns NovelItem[] (used by popularNovels and searchNovels).
-  parseNovelList(loadedCheerio: CheerioAPI, searchTerm?: string) {
+  parseNovels(loadedCheerio: CheerioAPI, searchTerm?: string) {
     let novels: Plugin.NovelItem[] = [];
 
     loadedCheerio('.plt-page-item').each((index, element) => {
@@ -53,12 +51,10 @@ class FaqWikiUs implements Plugin.PluginBase {
     const body = await fetchApi(this.site).then(res => res.text());
     const loadedCheerio = parseHTML(body);
 
-    return this.parseNovelList(loadedCheerio);
+    return this.parseNovels(loadedCheerio);
   }
 
-  // Fetches and parses a single novel's full details page (metadata, chapters, status).
-  // "Details" distinguishes it from the list parser above.
-  async parseNovelDetails(path: string): Promise<Plugin.SourceNovel> {
+  async parseNovel(path: string): Promise<Plugin.SourceNovel> {
     const body = await fetchApi(this.site + path).then(res => res.text());
     const loadedCheerio = parseHTML(body);
     loadedCheerio('script').remove();
@@ -186,7 +182,7 @@ class FaqWikiUs implements Plugin.PluginBase {
     const body = await fetchApi(this.site).then(res => res.text());
     const loadedCheerio = parseHTML(body);
 
-    return this.parseNovelList(loadedCheerio, searchTerm);
+    return this.parseNovels(loadedCheerio, searchTerm);
   }
 }
 
