@@ -33,7 +33,7 @@ class WNTLPlugin implements Plugin.PluginBase {
       value: [],
       label: 'Genre',
       options: GENRES.map(g => ({ label: g, value: g })),
-      type: FilterTypes.Picker,
+      type: FilterTypes.Checkbox,
     },
   };
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
