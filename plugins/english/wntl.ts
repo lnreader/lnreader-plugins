@@ -4,39 +4,40 @@ import { Filters, FilterTypes } from '@libs/filterInputs';
 import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
-const GENRES = [
-  'Action',
-  'Adventure',
-  'Comedy',
-  'Fantasy',
-  'Game',
-  'Horror',
-  'Isekai',
-  'Otome',
-  'Psychological',
-  'Rankers',
-  'Regression',
-  'Romance',
-  'School Life',
-  'Shounen',
-  'System',
-];
-
 class WNTLPlugin implements Plugin.PluginBase {
   id = 'wntl';
   name = 'WNTL';
   icon = 'src/en/wntl/icon.png';
   site = 'https://wntl.net/';
-  version = '1.0.6';
-  filters: Filters = {
-    genre: {
-      value: [],
-      label: 'Genre',
-      options: GENRES.map(g => ({ label: g, value: g })),
-      type: FilterTypes.Checkbox,
-    },
-  };
+  version = '1.0.7';
+  filters: Filters | undefined = undefined;
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
+
+  private async fetchNovels() {
+    const url = `${this.site}api/novels?page=1`;
+    const response = await fetchApi(url);
+    return response.json();
+  }
+
+  private getGenres(novels: any[]): string[] {
+    const genreSet = new Set<string>();
+    novels.forEach((n: any) =>
+      (n.genre || []).forEach((g: string) => genreSet.add(g)),
+    );
+    return Array.from(genreSet).sort();
+  }
+
+  private buildFilters(novels: any[]): Filters {
+    const genres = this.getGenres(novels);
+    return {
+      genre: {
+        value: [],
+        label: 'Genre',
+        options: genres.map(g => ({ label: g, value: g })),
+        type: FilterTypes.Checkbox,
+      },
+    };
+  }
 
   async popularNovels(
     pageNo: number,
@@ -46,9 +47,11 @@ class WNTLPlugin implements Plugin.PluginBase {
     }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
     if (pageNo !== 1) return [];
-    const url = `${this.site}api/novels?page=1`;
-    const response = await fetchApi(url);
-    const data = await response.json();
+    const data = await this.fetchNovels();
+
+    if (!this.filters) {
+      this.filters = this.buildFilters(data.novels);
+    }
 
     let novels = data.novels;
 
@@ -130,9 +133,7 @@ class WNTLPlugin implements Plugin.PluginBase {
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
     if (pageNo !== 1) return [];
-    const url = `${this.site}api/novels?page=1`;
-    const response = await fetchApi(url);
-    const data = await response.json();
+    const data = await this.fetchNovels();
 
     const searchLower = searchTerm.toLowerCase();
     const filtered = data.novels.filter(
