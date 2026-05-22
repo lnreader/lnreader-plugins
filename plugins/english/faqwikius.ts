@@ -6,8 +6,8 @@ import { NovelStatus } from '@libs/novelStatus';
 class FaqWikiUs implements Plugin.PluginBase {
   id = 'FWK.US';
   name = 'Faq Wiki';
-  site = 'https://faqwiki.us/';
-  version = '2.0.1';
+  site = 'https://faqwiki.us/novel';
+  version = '3.0.1';
   icon = 'src/en/faqwikius/icon.png';
 
   parseNovels(loadedCheerio: CheerioAPI, searchTerm?: string) {
@@ -57,6 +57,7 @@ class FaqWikiUs implements Plugin.PluginBase {
   async parseNovel(path: string): Promise<Plugin.SourceNovel> {
     const body = await fetchApi(this.site + path).then(res => res.text());
     const loadedCheerio = parseHTML(body);
+    loadedCheerio('script').remove();
 
     const novel: Plugin.SourceNovel = {
       path,
