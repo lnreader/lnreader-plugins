@@ -1,9 +1,9 @@
-import process from 'node:process';
+/* global RequestInit */
 import { Buffer } from 'buffer';
 import { FetchMode, ServerSetting } from './src/types/types';
 import { Connect } from 'vite';
 import httpProxy from 'http-proxy';
-import { exec } from 'child_process';
+import { spawn } from 'child_process';
 import { brotliDecompressSync, gunzipSync, zstdDecompressSync } from 'zlib';
 
 const proxy = httpProxy.createProxyServer({});
@@ -127,58 +127,7 @@ const proxyRequest: Connect.SimpleHandleFunction = (req, res) => {
   });
   console.log('\x1b[36m', '----------------');
 
-  if (settings.fetchMode === FetchMode.CURL) {
-    let curl = `curl -L '${_url.href}'`;
-    if (settings.useUserAgent)
-      curl += ` -H 'User-Agent: ${req.headers['user-agent']}'`;
-    if (settings.cookies) curl += ` -H 'Cookie: ${settings.cookies}'`;
-    if (req.headers.origin2) curl += ` -H 'Origin: ${req.headers.origin2}'`;
-
-    const isWindows = process.platform === 'win32';
-    const options = isWindows
-      ? {
-          shell:
-            process.env.BASH_LOCATION ||
-            process.env.ProgramFiles + '\\git\\usr\\bin\\bash.exe',
-        }
-      : {};
-
-    exec(curl, options, (error, stdout) => {
-      if (error) {
-        res.statusCode = 500;
-        res.write(`exec error: ${error}`);
-        res.end();
-        return;
-      }
-      res.statusCode = 200;
-      res.write(stdout);
-      res.end();
-    });
-  } else if (settings.fetchMode === FetchMode.NODE_FETCH) {
-    const headers = new Headers();
-    if (settings.useUserAgent)
-      headers.append('user-agent', req.headers['user-agent'] as string);
-    if (settings.cookies) headers.append('cookie', settings.cookies);
-    if (req.headers.origin2)
-      headers.append('origin', req.headers.origin2 as string);
-
-    fetch(_url.href, { headers })
-      .then(async res2 => {
-        res.statusCode = res2.status;
-        res2.headers.forEach((val, key) => {
-          if (!settings.disAllowResponseHeaders.includes(key)) {
-            res.setHeader(key, val);
-          }
-        });
-        res.write(await res2.text());
-        res.end();
-      })
-      .catch(err => {
-        console.error(err);
-        res.statusCode = 500;
-        res.end();
-      });
-  } else if (settings.fetchMode === FetchMode.PROXY) {
+  if (settings.fetchMode === FetchMode.PROXY) {
     proxy.web(
       req,
       res,
@@ -189,7 +138,89 @@ const proxyRequest: Connect.SimpleHandleFunction = (req, res) => {
         res.end();
       },
     );
+    return;
   }
+
+  const method = req.method || 'GET';
+  const chunks: Buffer[] = [];
+
+  req.on('data', chunk => chunks.push(Buffer.from(chunk)));
+  req.on('end', () => {
+    const bodyBuffer = Buffer.concat(chunks);
+
+    if (settings.fetchMode === FetchMode.CURL) {
+      const args = ['-X', method, '-sL', _url.href];
+
+      if (settings.useUserAgent && req.headers['user-agent'])
+        args.push('-H', `User-Agent: ${req.headers['user-agent']}`);
+      if (settings.cookies) args.push('-H', `Cookie: ${settings.cookies}`);
+      if (req.headers.origin2)
+        args.push('-H', `Origin: ${req.headers.origin2}`);
+      if (req.headers['content-type'])
+        args.push('-H', `Content-Type: ${req.headers['content-type']}`);
+
+      if (bodyBuffer.length > 0) {
+        args.push('--data-binary', '@-'); // @- tells curl to read body from stdin
+      }
+
+      const child = spawn('curl', args);
+
+      if (bodyBuffer.length > 0) {
+        child.stdin.write(bodyBuffer);
+        child.stdin.end();
+      }
+
+      res.statusCode = 200;
+      child.stdout.pipe(res);
+
+      let stderr = '';
+      child.stderr.on('data', chunk => (stderr += chunk));
+
+      child.on('close', code => {
+        if (code !== 0) {
+          console.error(stderr);
+          // Only send error if headers haven't been sent by piping yet
+          if (!res.headersSent) {
+            res.statusCode = 500;
+            res.write(`curl error code: ${code}\n${stderr}`);
+            res.end();
+          }
+        }
+      });
+    } else if (settings.fetchMode === FetchMode.NODE_FETCH) {
+      const headers = new Headers();
+
+      if (settings.useUserAgent && req.headers['user-agent'])
+        headers.append('user-agent', req.headers['user-agent'] as string);
+      if (settings.cookies) headers.append('cookie', settings.cookies);
+      if (req.headers.origin2)
+        headers.append('origin', req.headers.origin2 as string);
+      if (req.headers['content-type'])
+        headers.append('content-type', req.headers['content-type'] as string);
+
+      const fetchOptions: RequestInit = { method, headers };
+      if (method !== 'GET' && method !== 'HEAD' && bodyBuffer.length > 0) {
+        fetchOptions.body = bodyBuffer;
+      }
+
+      fetch(_url.href, fetchOptions)
+        .then(async res2 => {
+          res.statusCode = res2.status;
+          res2.headers.forEach((val, key) => {
+            if (!settings.disAllowResponseHeaders.includes(key)) {
+              res.setHeader(key, val);
+            }
+          });
+          res.write(await res2.text());
+          res.end();
+        })
+        .catch(err => {
+          console.error(err);
+          res.statusCode = 500;
+          res.end();
+        });
+    }
+  });
 };
 
 proxy.on('proxyRes', function (proxyRes, req, res) {
