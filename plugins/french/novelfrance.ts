@@ -69,10 +69,10 @@ class NovelFrancePlugin implements Plugin.PluginBase {
 
   private buildCoverUrl(coverImage?: string | null): string {
     if (!coverImage) return defaultCover;
-    return this.site.replace(/\/$/, '') + coverImage;
+    return new URL(coverImage, this.site).href;
   }
 
-  private mapStatus(apiStatus?: string): NovelStatus {
+  private mapStatus(apiStatus?: string): string {
     switch (apiStatus) {
       case 'ONGOING':
         return NovelStatus.Ongoing;
@@ -235,9 +235,7 @@ class NovelFrancePlugin implements Plugin.PluginBase {
     }));
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  resolveUrl = (path: string, _isNovel?: boolean) =>
-    this.site + 'novel/' + path;
+  resolveUrl = (path: string) => new URL(`novel/${path}`, this.site).href;
 
   filters = {
     genre: {
