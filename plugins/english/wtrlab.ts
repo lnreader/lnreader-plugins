@@ -8,9 +8,10 @@ class WTRLAB implements Plugin.PluginBase {
   id = 'WTRLAB';
   name = 'WTR-LAB';
   site = 'https://wtr-lab.com/';
-  version = '1.1.2';
+  version = '1.1.3';
   icon = 'src/en/wtrlab/icon.png';
   sourceLang = 'en/';
+  baggage = '';
 
   async popularNovels(
     page: number,
@@ -137,6 +138,7 @@ class WTRLAB implements Plugin.PluginBase {
     const body = await fetchApi(this.site + novelPath).then(res => res.text());
     const loadedCheerio = parseHTML(body);
 
+    this.baggage = loadedCheerio('meta[name="baggage"]').attr('content')!;
     const nextDataElement = loadedCheerio('#__NEXT_DATA__');
     const nextDataText = nextDataElement.html();
 
@@ -591,8 +593,14 @@ class WTRLAB implements Plugin.PluginBase {
       const end = Math.min(start + batchSize - 1, totalChapters);
 
       try {
+        const headers: Record<string, string> = {};
+        if (this.baggage) {
+          headers.baggage = this.baggage;
+        }
+
         const response = await fetchApi(
           `${this.site}api/chapters/${rawId}?start=${start}&end=${end}`,
+          { headers },
         );
 
         const data = await response.json();
