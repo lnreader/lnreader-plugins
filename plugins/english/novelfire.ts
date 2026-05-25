@@ -52,11 +52,9 @@ class NovelFire implements Plugin.PluginBase {
     selector = '.novel-item',
     isFirstPage = false,
   ): Plugin.NovelItem[] {
-    const currentPagePaths = new Set<string>();
     const novels: Plugin.NovelItem[] = [];
 
     const elements = loadedCheerio(selector).toArray();
-
     for (const el of elements) {
       const $el = loadedCheerio(el);
 
@@ -68,9 +66,6 @@ class NovelFire implements Plugin.PluginBase {
       if (!novelPath) continue;
 
       const path = new URL(novelPath, this.site).pathname.substring(1);
-
-      if (currentPagePaths.has(path)) continue;
-      currentPagePaths.add(path);
 
       if (!isFirstPage) {
         if (this.novelList.has(path)) continue;
@@ -102,8 +97,7 @@ class NovelFire implements Plugin.PluginBase {
       filters,
     }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
-    const isFirstPage = pageNo <= 1;
-    if (isFirstPage) {
+    if (pageNo === 1) {
       this.novelList.clear();
       this.draw = 0;
     }
@@ -131,7 +125,7 @@ class NovelFire implements Plugin.PluginBase {
       false,
     );
 
-    return this.parseNovels(loadedCheerio, '.novel-item', isFirstPage);
+    return this.parseNovels(loadedCheerio, '.novel-item', pageNo === 1);
   }
 
   async getAllChapters(
@@ -430,8 +424,7 @@ class NovelFire implements Plugin.PluginBase {
     searchTerm: string,
     page: number,
   ): Promise<Plugin.NovelItem[]> {
-    const isFirstPage = page <= 1;
-    if (isFirstPage) {
+    if (page === 1) {
       this.novelList.clear();
       this.draw = 0;
     }
@@ -447,7 +440,7 @@ class NovelFire implements Plugin.PluginBase {
     return this.parseNovels(
       loadedCheerio,
       '.novel-list.chapters .novel-item',
-      isFirstPage,
+      page === 1,
     );
   }
 
