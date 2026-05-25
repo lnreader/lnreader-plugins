@@ -6,6 +6,7 @@
   - [ChapterItem](#chapteritem)
   - [Filters](#filters)
   - [PluginSettings](#pluginsettings)
+- [PagePlugin](#pageplugin)
 - [Using Cheerio](#using-cheerio)
 - [Custom fetching functions](#custom-fetching-functions)
 
@@ -632,6 +633,101 @@ class ExamplePlugin implements Plugin.PluginBase {
         }).then(res => res.text());
     }
     ...
+}
+```
+
+---
+
+### PagePlugin
+
+`PagePlugin` is a specialized plugin type used for sites that split their chapter list across multiple pages (pagination). It extends `PluginBase` and adds methods to parse pages individually.
+
+To implement a `PagePlugin`, your class must implement `Plugin.PagePlugin`:
+
+```ts
+class ExamplePlugin implements Plugin.PagePlugin {
+    ...
+}
+```
+
+#### Differences from PluginBase
+
+| Method / Field | Return Type / Type | Description |
+| --- | --- | --- |
+| [parseNovel(novelPath)](#pagepluginparsenovel) | `Promise<SourceNovel & { totalPages: number }>` | Parses novel metadata. The returned object MUST include `totalPages` (the total number of chapter pages) and typically initiates the `chapters` array as empty `[]`. |
+| [parsePage(novelPath, page)](#pagepluginparsepage) | `Promise<SourcePage>` | Parses a specific page's chapter list. `page` is passed as a string (representing the page number or identifier). Returns a `SourcePage` object. |
+
+#### PagePlugin::parseNovel
+
+```ts
+async parseNovel(
+    novelPath: string
+): Promise<Plugin.SourceNovel & { totalPages: number }>
+```
+
+Unlike `PluginBase::parseNovel`, this method does not fetch the entire chapter list at once. Instead, it parses the metadata of the novel and identifies the total number of pages.
+
+##### Returns
+`SourceNovel & { totalPages: number }`
+- `totalPages`: The total number of pages of chapters available for this novel.
+
+##### Example:
+
+```ts
+async parseNovel(
+    novelPath: string
+): Promise<Plugin.SourceNovel & { totalPages: number }> {
+    const novel: Plugin.SourceNovel & { totalPages: number } = {
+        path: novelPath,
+        name: "Novel Name",
+        cover: defaultCover,
+        totalPages: 5, // total pages of chapters
+        chapters: [],
+    };
+    return novel;
+}
+```
+
+#### PagePlugin::parsePage
+
+```ts
+async parsePage(
+    novelPath: string, 
+    page: string
+): Promise<Plugin.SourcePage>
+```
+
+This method fetches and parses the chapters belonging to a specific page.
+
+##### Parameters
+- `novelPath`: The relative path to the novel.
+- `page`: The page number or page identifier as a string.
+
+##### Returns
+`SourcePage` An object containing a `chapters` array for that page:
+```ts
+type SourcePage = {
+    chapters: ChapterItem[];
+};
+```
+
+##### Example:
+
+```ts
+async parsePage(
+    novelPath: string, 
+    page: string
+): Promise<Plugin.SourcePage> {
+    const chapters: Plugin.ChapterItem[] = [];
+    
+    // Parse chapters for the given page...
+    chapters.push({
+        name: "Chapter 1",
+        path: novelPath + "/chapter-1",
+        page: page,
+    });
+    
+    return { chapters };
 }
 ```
 
