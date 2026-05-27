@@ -8,10 +8,18 @@ class WTRLAB implements Plugin.PluginBase {
   id = 'WTRLAB';
   name = 'WTR-LAB';
   site = 'https://wtr-lab.com/';
-  version = '1.1.3';
+  version = '1.1.4';
   icon = 'src/en/wtrlab/icon.png';
   sourceLang = 'en/';
   baggage = '';
+  trace = '';
+
+  get headers(): Record<string, string> {
+    return {
+      baggage: this.baggage,
+      'sentry-trace': this.trace,
+    };
+  }
 
   async popularNovels(
     page: number,
@@ -134,11 +142,30 @@ class WTRLAB implements Plugin.PluginBase {
     }
   }
 
+  async fetchTokens() {
+    const body = await fetchApi(this.site + this.sourceLang).then(res =>
+      res.text(),
+    );
+    const $ = parseHTML(body);
+
+    this.baggage = $('meta[name="baggage"]').attr('content') ?? '';
+    this.trace = $('meta[name="sentry-trace"]').attr('content') ?? '';
+  }
+
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
     const body = await fetchApi(this.site + novelPath).then(res => res.text());
     const loadedCheerio = parseHTML(body);
 
-    this.baggage = loadedCheerio('meta[name="baggage"]').attr('content')!;
+    const baggage = loadedCheerio('meta[name="baggage"]').attr('content');
+    const trace = loadedCheerio('meta[name="sentry-trace"]').attr('content');
+
+    if (baggage && trace) {
+      this.baggage = baggage;
+      this.trace = trace;
+    } else if (!this.baggage || !this.trace) {
+      await this.fetchTokens();
+    }
+
     const nextDataElement = loadedCheerio('#__NEXT_DATA__');
     const nextDataText = nextDataElement.html();
 
@@ -327,7 +354,19 @@ class WTRLAB implements Plugin.PluginBase {
     if (chapterCountMatch) {
       chapterCount = parseInt(chapterCountMatch[1]);
     }
+    if (chapterCount === 0 && nextDataText) {
+      try {
+        const jsonData = JSON.parse(nextDataText);
 
+        chapterCount =
+          jsonData?.props?.pageProps?.serie?.serie_data?.chapter_count ?? 0;
+      } catch (error) {
+        console.error(
+          'Failed to parse chapter_count from __NEXT_DATA__:',
+          error,
+        );
+      }
+    }
     let chapters: Plugin.ChapterItem[] = [];
 
     if (rawId && slug && chapterCount > 0) {
@@ -593,20 +632,20 @@ class WTRLAB implements Plugin.PluginBase {
       const end = Math.min(start + batchSize - 1, totalChapters);
 
       try {
-        const headers: Record<string, string> = {};
-        if (this.baggage) {
-          headers.baggage = this.baggage;
-        }
-
         const response = await fetchApi(
           `${this.site}api/chapters/${rawId}?start=${start}&end=${end}`,
-          { headers },
+          {
+            headers: {
+              ...this.headers,
+            },
+          },
         );
 
         const data = await response.json();
+        const chapters = data.chapters ?? data.data?.chapters ?? [];
 
-        if (data.chapters && Array.isArray(data.chapters)) {
-          const batchChapters: Plugin.ChapterItem[] = data.chapters.map(
+        if (Array.isArray(chapters)) {
+          const batchChapters: Plugin.ChapterItem[] = chapters.map(
             (apiChapter: ApiChapter) => ({
               name: apiChapter.title,
               path: `${this.sourceLang}serie-${rawId}/${slug}/chapter-${apiChapter.order}`,
@@ -616,9 +655,11 @@ class WTRLAB implements Plugin.PluginBase {
           );
 
           allChapters.push(...batchChapters);
-        }
 
-        if (!data.chapters || data.chapters.length < batchSize) {
+          if (chapters.length < batchSize) {
+            break;
+          }
+        } else {
           break;
         }
       } catch (error) {
