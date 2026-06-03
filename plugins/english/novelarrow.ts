@@ -8,13 +8,16 @@ class NovelArrow implements Plugin {
   name = 'Novel Arrow';
   icon = 'https://novelarrow.com/favicon-32.png';
   site = 'https://novelarrow.com/';
-  version = '1.0.1';
+  version = '1.0.2';
 
   // Headers cần thiết để vượt qua Cloudflare và giả lập trình duyệt di động
   headers = {
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
     'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Mobile Safari/537.36',
     'Referer': 'https://novelarrow.com/',
+    'x-client-platform': 'web-mobile',
+    'x-device-type': 'mobile',
+    'x-version-app': 'web-mobile',
   };
 
   async popularNovels(page: number) {
@@ -55,57 +58,37 @@ class NovelArrow implements Plugin {
       chapters: [],
     };
 
-    // Tìm tất cả các chương bằng Regex vì chúng nằm trong stream JSON của Next.js
-    const chapterRegex = /\\?"chapter_id\\?":\\?"([^"]+)\\?",\\?"chapter_name\\?":\\?"([^"]+)\\?"/g;
-    let match;
-    const chaptersMap = new Map();
+    // Sử dụng API web để lấy đầy đủ danh sách chương (Hỗ trợ truyện 3000+ chương)
+    const chaptersUrl = `${this.site}api-web/novels/${novelPath}/chapters?sort=asc`;
+    try {
+        const chaptersJson = await fetchApi(chaptersUrl, { 
+            headers: {
+                ...this.headers,
+                'Accept': 'application/json',
+            } 
+        }).then(res => res.json());
 
-    while ((match = chapterRegex.exec(result)) !== null) {
-      const path = match[1];
-      const name = match[2].replace(/\\"/g, '"');
-      if (!chaptersMap.has(path)) {
-        chaptersMap.set(path, {
-          name,
-          path,
-          releaseTime: null,
-        });
-      }
-    }
-
-    // Lấy chương đầu và chương cuối từ meta tags (đề phòng danh sách bị thiếu)
-    const firstChapterUrl = $('meta[property="og:novel:read_url"]').attr('content');
-    const latestChapterUrl = $('meta[property="og:novel:latest_chapter_url"]').attr('content');
-    const latestChapterName = $('meta[property="og:novel:latest_chapter_name"]').attr('content');
-
-    if (firstChapterUrl) {
-        const path = firstChapterUrl.replace(/.*\/chapter\//, '').split('/').pop() || '';
-        if (path && !chaptersMap.has(path)) {
-            chaptersMap.set(path, { name: 'Chapter 1', path, releaseTime: null });
+        if (chaptersJson && chaptersJson.items) {
+            novel.chapters = chaptersJson.items.map((item: any) => ({
+                name: item.chapter_name,
+                path: item.chapter_id,
+                releaseTime: null,
+            }));
         }
-    }
+    } catch (e) {
+        // Fallback: Tìm bằng Regex trong stream JSON của Next.js
+        const chapterRegex = /\\?"chapter_id\\?":\\?"([^"]+)\\?",\\?"chapter_name\\?":\\?"([^"]+)\\?"/g;
+        let match;
+        const chaptersMap = new Map();
 
-    if (latestChapterUrl && latestChapterName) {
-        const path = latestChapterUrl.replace(/.*\/chapter\//, '').split('/').pop() || '';
-        if (path && !chaptersMap.has(path)) {
-            chaptersMap.set(path, { name: latestChapterName, path, releaseTime: null });
+        while ((match = chapterRegex.exec(result)) !== null) {
+            const path = match[1];
+            const name = match[2].replace(/\\"/g, '"');
+            if (!chaptersMap.has(path)) {
+                chaptersMap.set(path, { name, path, releaseTime: null });
+            }
         }
-    }
-
-    novel.chapters = Array.from(chaptersMap.values());
-
-    // Nếu không tìm thấy bằng Regex, thử dùng fallback Cheerio
-    if (novel.chapters.length === 0) {
-      $('a[href^="/chapter/"]').each((i, el) => {
-        const name = $(el).text().trim();
-        const href = $(el).attr('href');
-        if (name && href) {
-          novel.chapters.push({
-            name,
-            path: href.replace('/chapter/', ''),
-            releaseTime: null,
-          });
-        }
-      });
+        novel.chapters = Array.from(chaptersMap.values());
     }
 
     return novel;
@@ -127,7 +110,7 @@ class NovelArrow implements Plugin {
 
     let chapterHtml = match[0];
     
-    // Giải mã Unicode và các ký tự thoát
+    // Giải mã Unicode và các ký tự thoát đặc thù của Next.js
     chapterHtml = chapterHtml
       .replace(/\\u003c/g, '<')
       .replace(/\\u003e/g, '>')
@@ -137,8 +120,7 @@ class NovelArrow implements Plugin {
       .replace(/\\r/g, '')
       .replace(/\\\\/g, '\\');
 
-    // Làm sạch nội dung (loại bỏ các chuỗi thừa nếu Regex tham lam lấy quá nhiều)
-    // Nội dung thật thường kết thúc bằng </p> và sau đó là các ký tự điều khiển JSON
+    // Làm sạch nội dung: Cắt bỏ các chuỗi thừa sau thẻ </p> cuối cùng
     const lastPTagIndex = chapterHtml.lastIndexOf('</p>');
     if (lastPTagIndex !== -1) {
         chapterHtml = chapterHtml.substring(0, lastPTagIndex + 4);
