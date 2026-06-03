@@ -8,7 +8,7 @@ class NovelArrow implements Plugin {
   name = 'Novel Arrow';
   icon = 'https://novelarrow.com/favicon-32.png';
   site = 'https://novelarrow.com/';
-  version = '1.0.2';
+  version = '1.0.3';
 
   // Headers cần thiết để vượt qua Cloudflare và giả lập trình duyệt di động
   headers = {
@@ -95,38 +95,48 @@ class NovelArrow implements Plugin {
   }
 
   async parseChapter(novelPath: string, chapterPath: string) {
-    const url = `${this.site}chapter/${novelPath}/${chapterPath}`;
-    const result = await fetchApi(url, { headers: this.headers }).then(res => res.text());
+    // Sử dụng API web để lấy nội dung chương (Rất tin cậy)
+    const url = `${this.site}api-web/novels/${novelPath}/chapters/${chapterPath}`;
+    try {
+        const json = await fetchApi(url, { 
+            headers: {
+                ...this.headers,
+                'Accept': 'application/json',
+            } 
+        }).then(res => res.json());
 
-    // Tìm nội dung chương trong stream Next.js
-    // Sử dụng Regex tham lam để lấy từ <h4> đầu tiên đến </p> cuối cùng trong block
-    const contentRegex = /\\u003ch4\\u003e(.*)\\u003c\/p\\u003e/;
-    const match = result.match(contentRegex);
+        if (json && json.item && json.item.chapterInfo && json.item.chapterInfo.chapter_content) {
+            return json.item.chapterInfo.chapter_content;
+        }
+    } catch (e) {
+        // Fallback: Tìm trong stream JSON của Next.js nếu API web lỗi
+        const result = await fetchApi(`${this.site}chapter/${novelPath}/${chapterPath}`, { headers: this.headers }).then(res => res.text());
+        const contentRegex = /\\u003ch4\\u003e(.*)\\u003c\/p\\u003e/;
+        const match = result.match(contentRegex);
 
-    if (!match) {
-      const $ = parseHTML(result);
-      return $('.site-reading-copy').html() || "Content not found or premium.";
+        if (match) {
+            let chapterHtml = match[0];
+            chapterHtml = chapterHtml
+                .replace(/\\u003c/g, '<')
+                .replace(/\\u003e/g, '>')
+                .replace(/\\"/g, '"')
+                .replace(/\\n/g, '')
+                .replace(/\\t/g, '')
+                .replace(/\\r/g, '')
+                .replace(/\\\\/g, '\\');
+
+            const lastPTagIndex = chapterHtml.lastIndexOf('</p>');
+            if (lastPTagIndex !== -1) {
+                chapterHtml = chapterHtml.substring(0, lastPTagIndex + 4);
+            }
+            return chapterHtml;
+        }
+
+        const $ = parseHTML(result);
+        return $('.site-reading-copy').html() || "Content not found or premium.";
     }
 
-    let chapterHtml = match[0];
-    
-    // Giải mã Unicode và các ký tự thoát đặc thù của Next.js
-    chapterHtml = chapterHtml
-      .replace(/\\u003c/g, '<')
-      .replace(/\\u003e/g, '>')
-      .replace(/\\"/g, '"')
-      .replace(/\\n/g, '')
-      .replace(/\\t/g, '')
-      .replace(/\\r/g, '')
-      .replace(/\\\\/g, '\\');
-
-    // Làm sạch nội dung: Cắt bỏ các chuỗi thừa sau thẻ </p> cuối cùng
-    const lastPTagIndex = chapterHtml.lastIndexOf('</p>');
-    if (lastPTagIndex !== -1) {
-        chapterHtml = chapterHtml.substring(0, lastPTagIndex + 4);
-    }
-
-    return chapterHtml;
+    return "Content not found or premium.";
   }
 
   async searchNovels(searchTerm: string, page: number) {
