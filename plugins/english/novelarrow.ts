@@ -8,7 +8,7 @@ class NovelArrow implements Plugin {
   name = 'Novel Arrow';
   icon = 'https://novelarrow.com/favicon-32.png';
   site = 'https://novelarrow.com/';
-  version = '1.0.4';
+  version = '1.0.5';
 
   // Headers cần thiết để vượt qua Cloudflare và giả lập trình duyệt di động
   headers = {
@@ -79,28 +79,36 @@ class NovelArrow implements Plugin {
         // Fallback: Tìm bằng Regex trong stream JSON của Next.js
         const chapterRegex = /\\?"chapter_id\\?":\\?"([^"]+)\\?",\\?"chapter_name\\?":\\?"([^"]+)\\?"/g;
         let match;
+        const chaptersMap = new Map();
+
         while ((match = chapterRegex.exec(result)) !== null) {
             const path = match[1];
             const name = match[2].replace(/\\"/g, '"');
-            novel.chapters.push({
-                name,
-                path: `${novelPath}/${path}`,
-                releaseTime: null,
-            });
+            if (!chaptersMap.has(path)) {
+                chaptersMap.set(path, { name, path: `${novelPath}/${path}`, releaseTime: null });
+            }
         }
+        novel.chapters = Array.from(chaptersMap.values());
     }
 
     return novel;
   }
 
   async parseChapter(chapterPath: string) {
-    // chapterPath bây giờ có dạng "novel-slug/chapter-slug"
-    const url = `${this.site}api-web/novels/${chapterPath}`;
+    // chapterPath có dạng "novel-slug/chapter-slug"
+    const pathParts = chapterPath.split('/');
+    const novelId = pathParts[0];
+    const chapterId = pathParts[1];
+
+    // API URL đúng phải có /chapters/ ở giữa
+    const url = `${this.site}api-web/novels/${novelId}/chapters/${chapterId}`;
+    
     try {
         const json = await fetchApi(url, { 
             headers: {
                 ...this.headers,
                 'Accept': 'application/json',
+                'x-track-reading-progress': 'false',
             } 
         }).then(res => res.json());
 
