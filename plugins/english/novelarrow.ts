@@ -8,9 +8,9 @@ class NovelArrow implements Plugin {
   name = 'Novel Arrow';
   icon = 'https://novelarrow.com/favicon-32.png';
   site = 'https://novelarrow.com/';
-  version = '1.0.0';
+  version = '1.0.1';
 
-  // Headers cần thiết để vượt qua Cloudflare và giả lập trình duyệt di động như bạn đã cung cấp
+  // Headers cần thiết để vượt qua Cloudflare và giả lập trình duyệt di động
   headers = {
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
     'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Mobile Safari/537.36',
@@ -55,20 +55,39 @@ class NovelArrow implements Plugin {
       chapters: [],
     };
 
-    // Trích xuất danh sách chương từ script Next.js (thường nằm trong self.__next_f.push)
-    // Lưu ý: Next.js App Router đôi khi render danh sách chương qua API riêng hoặc nhúng sâu trong script
-    // Đây là logic fallback lấy từ các link có sẵn trong HTML
-    $('a[href^="/chapter/"]').each((i, el) => {
-      const name = $(el).text().trim();
-      const href = $(el).attr('href');
-      if (name && href) {
-        novel.chapters.push({
+    // Tìm tất cả các chương bằng Regex vì chúng nằm trong stream JSON của Next.js
+    const chapterRegex = /\\?"chapter_id\\?":\\?"([^"]+)\\?",\\?"chapter_name\\?":\\?"([^"]+)\\?"/g;
+    let match;
+    const chaptersMap = new Map();
+
+    while ((match = chapterRegex.exec(result)) !== null) {
+      const path = match[1];
+      const name = match[2].replace(/\\"/g, '"');
+      if (!chaptersMap.has(path)) {
+        chaptersMap.set(path, {
           name,
-          path: href.replace('/chapter/', ''),
+          path,
           releaseTime: null,
         });
       }
-    });
+    }
+
+    novel.chapters = Array.from(chaptersMap.values());
+
+    // Nếu không tìm thấy bằng Regex, thử dùng fallback Cheerio
+    if (novel.chapters.length === 0) {
+      $('a[href^="/chapter/"]').each((i, el) => {
+        const name = $(el).text().trim();
+        const href = $(el).attr('href');
+        if (name && href) {
+          novel.chapters.push({
+            name,
+            path: href.replace('/chapter/', ''),
+            releaseTime: null,
+          });
+        }
+      });
+    }
 
     return novel;
   }
@@ -77,30 +96,32 @@ class NovelArrow implements Plugin {
     const url = `${this.site}chapter/${novelPath}/${chapterPath}`;
     const result = await fetchApi(url, { headers: this.headers }).then(res => res.text());
 
-    // Vì nội dung chương nằm trong self.__next_f.push, chúng ta dùng Regex để trích xuất HTML
-    const contentMatch = result.match(/\\u003ch4\u003e(.*?)\\u003c\/p\u003e/);
-    
-    if (!contentMatch) {
-        // Fallback: Thử tìm trong thẻ HTML thông thường nếu server-side render
-        const $ = parseHTML(result);
-        return $('.site-reading-copy').html() || "Content not found or premium.";
+    // Tìm nội dung chương trong stream Next.js
+    // Nội dung thường bắt đầu bằng <h4> và chứa nhiều <p>
+    const contentRegex = /\\u003ch4\\u003e([\s\S]*?)\\u003c\/p\\u003e/;
+    const match = result.match(contentRegex);
+
+    if (!match) {
+      const $ = parseHTML(result);
+      return $('.site-reading-copy').html() || "Content not found or premium.";
     }
 
-    let chapterHtml = contentMatch[0];
+    let chapterHtml = match[0];
     
-    // Giải mã các ký tự Unicode/Escaped của JSON Next.js
+    // Giải mã Unicode và các ký tự thoát
     chapterHtml = chapterHtml
       .replace(/\\u003c/g, '<')
       .replace(/\\u003e/g, '>')
       .replace(/\\"/g, '"')
       .replace(/\\n/g, '')
-      .replace(/\\t/g, '');
+      .replace(/\\t/g, '')
+      .replace(/\\r/g, '')
+      .replace(/\\\\/g, '\\');
 
     return chapterHtml;
   }
 
   async searchNovels(searchTerm: string, page: number) {
-    // NovelArrow thường dùng query param cho search
     const url = `${this.site}novels/search?q=${encodeURIComponent(searchTerm)}&page=${page}`;
     const result = await fetchApi(url, { headers: this.headers }).then(res => res.text());
     const $ = parseHTML(result);
