@@ -8,7 +8,7 @@ class NovelArrow implements Plugin {
   name = 'Novel Arrow';
   icon = 'https://novelarrow.com/favicon-32.png';
   site = 'https://novelarrow.com/';
-  version = '1.0.6';
+  version = '1.0.7';
 
   // Headers cần thiết để vượt qua Cloudflare và giả lập trình duyệt di động
   headers = {
@@ -52,11 +52,13 @@ class NovelArrow implements Plugin {
     const novelId = novelPath.replace('novel/', '');
     const novel: any = {
       path: novelPath,
-      name: $('meta[property="og:novel:novel_name"]').attr('content') || $('h1').first().text().trim(),
+      name: $('meta[name="og:novel:novel_name"]').attr('content') || 
+            $('meta[property="og:title"]').attr('content')?.split(' Novel')[0] || 
+            $('h1').text().trim(),
       cover: $('meta[property="og:image"]').attr('content'),
-      author: $('meta[property="og:novel:author"]').attr('content'),
-      status: $('meta[property="og:novel:status"]').attr('content') === 'Ongoing' ? NovelStatus.Ongoing : NovelStatus.Completed,
-      summary: $('meta[name="description"]').attr('content'),
+      author: $('meta[name="og:novel:author"]').attr('content') || $('meta[name="author"]').attr('content'),
+      status: $('meta[name="og:novel:status"]').attr('content') === 'Ongoing' ? NovelStatus.Ongoing : NovelStatus.Completed,
+      summary: $('meta[name="description"]').attr('content') || $('meta[property="og:description"]').attr('content'),
       chapters: [],
     };
 
@@ -99,7 +101,6 @@ class NovelArrow implements Plugin {
 
   async parseChapter(chapterPath: string) {
     // chapterPath bây giờ có dạng "chapter/novel-slug/chapter-slug"
-    // Để gọi API, chúng ta cần "novel-slug/chapters/chapter-slug"
     const pathParts = chapterPath.replace('chapter/', '').split('/');
     const novelId = pathParts[0];
     const chapterId = pathParts[1];
