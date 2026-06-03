@@ -8,9 +8,9 @@ class NovelArrow implements Plugin {
   name = 'Novel Arrow';
   icon = 'https://novelarrow.com/favicon-32.png';
   site = 'https://novelarrow.com/';
-  version = '1.1.4';
+  version = '0.0.1';
 
-  // Headers cần thiết để vượt qua Cloudflare và giả lập trình duyệt di động
+  // Required headers to bypass Cloudflare and simulate a mobile browser
   headers = {
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
     'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Mobile Safari/537.36',
@@ -35,7 +35,7 @@ class NovelArrow implements Plugin {
         novels.push({
           name: title,
           cover,
-          path: href.substring(1), 
+          path: href.substring(1), // Result: "novel/slug"
         });
       }
     });
@@ -44,13 +44,14 @@ class NovelArrow implements Plugin {
   }
 
   async parseNovel(novelPath: string) {
+    // Ensure no double slashes in the URL
     const url = this.site + novelPath.replace(/^\//, '');
     const result = await fetchApi(url, { headers: this.headers }).then(res => res.text());
     const $ = parseHTML(result);
 
     const novelId = novelPath.replace('novel/', '').replace(/^\//, '');
     
-    // Thu thập thể loại (Genre) - Hỗ trợ nhiều loại tag meta
+    // Collect genres
     let genres = $('meta[name="og:novel:genre"]').attr('content') || 
                  $('meta[property="og:novel:genre"]').attr('content');
     
@@ -63,7 +64,7 @@ class NovelArrow implements Plugin {
         genres = genreList.join(', ');
     }
 
-    // Thử lấy tóm tắt đầy đủ từ stream JSON nếu meta bị cắt ngắn
+    // Attempt to get the full summary from the JSON stream if the meta tag is truncated
     let fullSummary = $('meta[name="description"]').attr('content') || $('meta[property="og:description"]').attr('content');
     const summaryMatch = result.match(/\\?"description\\?":\\?"(.*?)\\?"/);
     if (summaryMatch && summaryMatch[1].length > (fullSummary?.length || 0)) {
@@ -105,7 +106,7 @@ class NovelArrow implements Plugin {
         }
     } catch (e) {
         const chaptersMap = new Map();
-        // Sử dụng Regex linh hoạt hơn
+        // Flexible Regex to handle JSON stream variations
         const combinedRegex = /\\?"chapter_id\\?":\\?"([^"]+)\\?",\\?"chapter_name\\?":\\?"([^"]+)\\?"/g;
         let match;
         while ((match = combinedRegex.exec(result)) !== null) {
