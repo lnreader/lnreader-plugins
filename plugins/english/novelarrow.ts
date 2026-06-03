@@ -2,14 +2,13 @@ import { load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
-import { Filters, FilterTypes } from '@libs/filterInputs';
 
 class NovelArrow implements Plugin {
   id = 'novelarrow';
   name = 'Novel Arrow';
   icon = 'https://novelarrow.com/favicon-32.png';
   site = 'https://novelarrow.com/';
-  version = '1.1.0';
+  version = '1.1.1';
 
   // Headers cần thiết để vượt qua Cloudflare và giả lập trình duyệt di động
   headers = {
@@ -21,22 +20,8 @@ class NovelArrow implements Plugin {
     'x-version-app': 'web-mobile',
   };
 
-  async popularNovels(page: number, { filters, showLatestNovels }: Plugin.PopularNovelsOptions<typeof this.filters>) {
-    let url = this.site;
-    
-    // Ưu tiên hiển thị danh sách Latest Updates (Giống v1.0.7) hoặc Hot/Popular nếu được chọn
-    if (showLatestNovels) {
-        url += `novels/latest?page=${page}`;
-    } else if (filters?.genre && filters.genre !== '') {
-        // Chế độ lọc nâng cao: Bắt buộc chọn Genre
-        url += `genre/${filters.genre}?page=${page}`;
-        if (filters.language) url += `&language=${filters.language}`;
-        if (filters.sort) url += `&sort=${filters.sort}`;
-    } else {
-        // Mặc định cho Popular tab (v1.0.7 dùng latest, ở đây ta dùng hot/popular cho đúng nghĩa Popular)
-        url += `novels/popular?page=${page}`;
-    }
-
+  async popularNovels(page: number) {
+    const url = `${this.site}novels/latest?page=${page}`;
     const result = await fetchApi(url, { headers: this.headers }).then(res => res.text());
     const $ = parseHTML(result);
     const novels: any[] = [];
@@ -50,7 +35,7 @@ class NovelArrow implements Plugin {
         novels.push({
           name: title,
           cover,
-          path: href.substring(1), 
+          path: href.substring(1), // Kết quả: "novel/slug"
         });
       }
     });
@@ -182,93 +167,6 @@ class NovelArrow implements Plugin {
 
     return novels;
   }
-
-  readonly filters = {
-    genre: {
-      label: 'Genre (Mandatory for filtering)',
-      type: FilterTypes.Picker,
-      options: [
-        { label: 'None', value: '' },
-        { label: 'Action', value: 'action' },
-        { label: 'Adult', value: 'adult' },
-        { label: 'Adventure', value: 'adventure' },
-        { label: 'Anime & Comics', value: 'anime-&-comics' },
-        { label: 'Comedy', value: 'comedy' },
-        { label: 'Drama', value: 'drama' },
-        { label: 'Eastern', value: 'eastern' },
-        { label: 'Ecchi', value: 'ecchi' },
-        { label: 'Fan-fiction', value: 'fan-fiction' },
-        { label: 'Fantasy', value: 'fantasy' },
-        { label: 'Game', value: 'game' },
-        { label: 'Gender bender', value: 'gender-bender' },
-        { label: 'Harem', value: 'harem' },
-        { label: 'Historical', value: 'historical' },
-        { label: 'Horror', value: 'horror' },
-        { label: 'Isekai', value: 'isekai' },
-        { label: 'Josei', value: 'josei' },
-        { label: 'Lgbt+', value: 'lgbt+' },
-        { label: 'Litrpg', value: 'litrpg' },
-        { label: 'Magic', value: 'magic' },
-        { label: 'Magical realism', value: 'magical-realism' },
-        { label: 'Martial arts', value: 'martial-arts' },
-        { label: 'Mature', value: 'mature' },
-        { label: 'Mecha', value: 'mecha' },
-        { label: 'Military', value: 'military' },
-        { label: 'Modern life', value: 'modern-life' },
-        { label: 'Mystery', value: 'mystery' },
-        { label: 'Other', value: 'other' },
-        { label: 'Psychological', value: 'psychological' },
-        { label: 'Realistic', value: 'realistic' },
-        { label: 'Reincarnation', value: 'reincarnation' },
-        { label: 'Romance', value: 'romance' },
-        { label: 'School life', value: 'school-life' },
-        { label: 'Sci-fi', value: 'sci-fi' },
-        { label: 'Seinen', value: 'seinen' },
-        { label: 'Shoujo', value: 'shoujo' },
-        { label: 'Shoujo ai', value: 'shoujo-ai' },
-        { label: 'Shounen', value: 'shounen' },
-        { label: 'Shounen ai', value: 'shounen-ai' },
-        { label: 'Slice of life', value: 'slice-of-life' },
-        { label: 'Smut', value: 'smut' },
-        { label: 'Sports', value: 'sports' },
-        { label: 'Supernatural', value: 'supernatural' },
-        { label: 'System', value: 'system' },
-        { label: 'Thriller', value: 'thriller' },
-        { label: 'Tragedy', value: 'tragedy' },
-        { label: 'Urban', value: 'urban' },
-        { label: 'Video games', value: 'video-games' },
-        { label: 'War', value: 'war' },
-        { label: 'Wuxia', value: 'wuxia' },
-        { label: 'Xianxia', value: 'xianxia' },
-        { label: 'Xuanhuan', value: 'xuanhuan' },
-        { label: 'Yaoi', value: 'yaoi' },
-        { label: 'Yuri', value: 'yuri' },
-      ],
-    },
-    sort: {
-      label: 'Sort By',
-      type: FilterTypes.Picker,
-      options: [
-        { label: 'Latest', value: 'LASTEST' },
-        { label: 'New', value: 'NEW' },
-        { label: 'All Time', value: 'ALL_TIME' },
-        { label: 'Popular', value: 'POPULAR' },
-        { label: 'Rating', value: 'RATING' },
-        { label: 'Chapters', value: 'CHAPTERS' },
-      ],
-    },
-    language: {
-      label: 'Filter by Language',
-      type: FilterTypes.Picker,
-      options: [
-        { label: 'All', value: 'ALL' },
-        { label: 'English', value: 'EN' },
-        { label: 'Chinese', value: 'CN' },
-        { label: 'Japanese', value: 'JP' },
-        { label: 'Korean', value: 'KR' },
-      ],
-    },
-  } satisfies Filters;
 }
 
 export default new NovelArrow();
