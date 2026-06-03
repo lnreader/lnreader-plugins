@@ -72,6 +72,25 @@ class NovelArrow implements Plugin {
       }
     }
 
+    // Lấy chương đầu và chương cuối từ meta tags (đề phòng danh sách bị thiếu)
+    const firstChapterUrl = $('meta[property="og:novel:read_url"]').attr('content');
+    const latestChapterUrl = $('meta[property="og:novel:latest_chapter_url"]').attr('content');
+    const latestChapterName = $('meta[property="og:novel:latest_chapter_name"]').attr('content');
+
+    if (firstChapterUrl) {
+        const path = firstChapterUrl.replace(/.*\/chapter\//, '').split('/').pop() || '';
+        if (path && !chaptersMap.has(path)) {
+            chaptersMap.set(path, { name: 'Chapter 1', path, releaseTime: null });
+        }
+    }
+
+    if (latestChapterUrl && latestChapterName) {
+        const path = latestChapterUrl.replace(/.*\/chapter\//, '').split('/').pop() || '';
+        if (path && !chaptersMap.has(path)) {
+            chaptersMap.set(path, { name: latestChapterName, path, releaseTime: null });
+        }
+    }
+
     novel.chapters = Array.from(chaptersMap.values());
 
     // Nếu không tìm thấy bằng Regex, thử dùng fallback Cheerio
@@ -97,8 +116,8 @@ class NovelArrow implements Plugin {
     const result = await fetchApi(url, { headers: this.headers }).then(res => res.text());
 
     // Tìm nội dung chương trong stream Next.js
-    // Nội dung thường bắt đầu bằng <h4> và chứa nhiều <p>
-    const contentRegex = /\\u003ch4\\u003e([\s\S]*?)\\u003c\/p\\u003e/;
+    // Sử dụng Regex tham lam để lấy từ <h4> đầu tiên đến </p> cuối cùng trong block
+    const contentRegex = /\\u003ch4\\u003e(.*)\\u003c\/p\\u003e/;
     const match = result.match(contentRegex);
 
     if (!match) {
@@ -117,6 +136,13 @@ class NovelArrow implements Plugin {
       .replace(/\\t/g, '')
       .replace(/\\r/g, '')
       .replace(/\\\\/g, '\\');
+
+    // Làm sạch nội dung (loại bỏ các chuỗi thừa nếu Regex tham lam lấy quá nhiều)
+    // Nội dung thật thường kết thúc bằng </p> và sau đó là các ký tự điều khiển JSON
+    const lastPTagIndex = chapterHtml.lastIndexOf('</p>');
+    if (lastPTagIndex !== -1) {
+        chapterHtml = chapterHtml.substring(0, lastPTagIndex + 4);
+    }
 
     return chapterHtml;
   }
