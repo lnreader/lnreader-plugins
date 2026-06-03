@@ -398,7 +398,7 @@ There are 2 main objects when using filters:
 
 #### Filter definition object
 
-This is the user-defined object that defines strictly what filters are available in the \"filter\" menu in app.
+This is the user-defined object that defines strictly what filters are available in the "filter" menu in app.
 Every property of this object is a different filter. The key of the object is the name that will be used to reference this filter's value in the [FilterValues](#filtervalues-object) object
 
 ```ts
