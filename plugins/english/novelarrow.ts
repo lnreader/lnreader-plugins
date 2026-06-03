@@ -8,7 +8,7 @@ class NovelArrow implements Plugin {
   name = 'Novel Arrow';
   icon = 'https://novelarrow.com/favicon-32.png';
   site = 'https://novelarrow.com/';
-  version = '1.0.3';
+  version = '1.0.4';
 
   // Headers cần thiết để vượt qua Cloudflare và giả lập trình duyệt di động
   headers = {
@@ -71,7 +71,7 @@ class NovelArrow implements Plugin {
         if (chaptersJson && chaptersJson.items) {
             novel.chapters = chaptersJson.items.map((item: any) => ({
                 name: item.chapter_name,
-                path: item.chapter_id,
+                path: `${novelPath}/${item.chapter_id}`, // Lưu cả novelId và chapterId
                 releaseTime: null,
             }));
         }
@@ -79,24 +79,23 @@ class NovelArrow implements Plugin {
         // Fallback: Tìm bằng Regex trong stream JSON của Next.js
         const chapterRegex = /\\?"chapter_id\\?":\\?"([^"]+)\\?",\\?"chapter_name\\?":\\?"([^"]+)\\?"/g;
         let match;
-        const chaptersMap = new Map();
-
         while ((match = chapterRegex.exec(result)) !== null) {
             const path = match[1];
             const name = match[2].replace(/\\"/g, '"');
-            if (!chaptersMap.has(path)) {
-                chaptersMap.set(path, { name, path, releaseTime: null });
-            }
+            novel.chapters.push({
+                name,
+                path: `${novelPath}/${path}`,
+                releaseTime: null,
+            });
         }
-        novel.chapters = Array.from(chaptersMap.values());
     }
 
     return novel;
   }
 
-  async parseChapter(novelPath: string, chapterPath: string) {
-    // Sử dụng API web để lấy nội dung chương (Rất tin cậy)
-    const url = `${this.site}api-web/novels/${novelPath}/chapters/${chapterPath}`;
+  async parseChapter(chapterPath: string) {
+    // chapterPath bây giờ có dạng "novel-slug/chapter-slug"
+    const url = `${this.site}api-web/novels/${chapterPath}`;
     try {
         const json = await fetchApi(url, { 
             headers: {
@@ -105,12 +104,13 @@ class NovelArrow implements Plugin {
             } 
         }).then(res => res.json());
 
+        // Kiểm tra đúng cấu trúc JSON trả về: item.chapterInfo.chapter_content
         if (json && json.item && json.item.chapterInfo && json.item.chapterInfo.chapter_content) {
             return json.item.chapterInfo.chapter_content;
         }
     } catch (e) {
-        // Fallback: Tìm trong stream JSON của Next.js nếu API web lỗi
-        const result = await fetchApi(`${this.site}chapter/${novelPath}/${chapterPath}`, { headers: this.headers }).then(res => res.text());
+        // Fallback: Thử tải trang HTML và quét Regex
+        const result = await fetchApi(`${this.site}chapter/${chapterPath}`, { headers: this.headers }).then(res => res.text());
         const contentRegex = /\\u003ch4\\u003e(.*)\\u003c\/p\\u003e/;
         const match = result.match(contentRegex);
 
