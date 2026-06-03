@@ -8,7 +8,7 @@ class NovelArrow implements Plugin {
   name = 'Novel Arrow';
   icon = 'https://novelarrow.com/favicon-32.png';
   site = 'https://novelarrow.com/';
-  version = '1.0.5';
+  version = '1.0.6';
 
   // Headers cần thiết để vượt qua Cloudflare và giả lập trình duyệt di động
   headers = {
@@ -35,7 +35,7 @@ class NovelArrow implements Plugin {
         novels.push({
           name: title,
           cover,
-          path: href.replace('/novel/', ''),
+          path: href.substring(1), // Kết quả: "novel/slug" thay vì chỉ "slug"
         });
       }
     });
@@ -44,10 +44,12 @@ class NovelArrow implements Plugin {
   }
 
   async parseNovel(novelPath: string) {
-    const url = `${this.site}novel/${novelPath}`;
+    // novelPath bây giờ có dạng "novel/slug"
+    const url = `${this.site}${novelPath}`;
     const result = await fetchApi(url, { headers: this.headers }).then(res => res.text());
     const $ = parseHTML(result);
 
+    const novelId = novelPath.replace('novel/', '');
     const novel: any = {
       path: novelPath,
       name: $('meta[property="og:novel:novel_name"]').attr('content') || $('h1').first().text().trim(),
@@ -58,8 +60,8 @@ class NovelArrow implements Plugin {
       chapters: [],
     };
 
-    // Sử dụng API web để lấy đầy đủ danh sách chương (Hỗ trợ truyện 3000+ chương)
-    const chaptersUrl = `${this.site}api-web/novels/${novelPath}/chapters?sort=asc`;
+    // Sử dụng API web để lấy đầy đủ danh sách chương
+    const chaptersUrl = `${this.site}api-web/novels/${novelId}/chapters?sort=asc`;
     try {
         const chaptersJson = await fetchApi(chaptersUrl, { 
             headers: {
@@ -71,7 +73,7 @@ class NovelArrow implements Plugin {
         if (chaptersJson && chaptersJson.items) {
             novel.chapters = chaptersJson.items.map((item: any) => ({
                 name: item.chapter_name,
-                path: `${novelPath}/${item.chapter_id}`, // Lưu cả novelId và chapterId
+                path: `chapter/${novelId}/${item.chapter_id}`, // Kết quả: "chapter/novel-slug/chapter-slug"
                 releaseTime: null,
             }));
         }
@@ -84,8 +86,9 @@ class NovelArrow implements Plugin {
         while ((match = chapterRegex.exec(result)) !== null) {
             const path = match[1];
             const name = match[2].replace(/\\"/g, '"');
-            if (!chaptersMap.has(path)) {
-                chaptersMap.set(path, { name, path: `${novelPath}/${path}`, releaseTime: null });
+            const fullPath = `chapter/${novelId}/${path}`;
+            if (!chaptersMap.has(fullPath)) {
+                chaptersMap.set(fullPath, { name, path: fullPath, releaseTime: null });
             }
         }
         novel.chapters = Array.from(chaptersMap.values());
@@ -95,12 +98,12 @@ class NovelArrow implements Plugin {
   }
 
   async parseChapter(chapterPath: string) {
-    // chapterPath có dạng "novel-slug/chapter-slug"
-    const pathParts = chapterPath.split('/');
+    // chapterPath bây giờ có dạng "chapter/novel-slug/chapter-slug"
+    // Để gọi API, chúng ta cần "novel-slug/chapters/chapter-slug"
+    const pathParts = chapterPath.replace('chapter/', '').split('/');
     const novelId = pathParts[0];
     const chapterId = pathParts[1];
 
-    // API URL đúng phải có /chapters/ ở giữa
     const url = `${this.site}api-web/novels/${novelId}/chapters/${chapterId}`;
     
     try {
@@ -112,13 +115,12 @@ class NovelArrow implements Plugin {
             } 
         }).then(res => res.json());
 
-        // Kiểm tra đúng cấu trúc JSON trả về: item.chapterInfo.chapter_content
         if (json && json.item && json.item.chapterInfo && json.item.chapterInfo.chapter_content) {
             return json.item.chapterInfo.chapter_content;
         }
     } catch (e) {
-        // Fallback: Thử tải trang HTML và quét Regex
-        const result = await fetchApi(`${this.site}chapter/${chapterPath}`, { headers: this.headers }).then(res => res.text());
+        // Fallback: Thử tải trang HTML (Sử dụng chính chapterPath làm slug)
+        const result = await fetchApi(`${this.site}${chapterPath}`, { headers: this.headers }).then(res => res.text());
         const contentRegex = /\\u003ch4\\u003e(.*)\\u003c\/p\\u003e/;
         const match = result.match(contentRegex);
 
@@ -162,7 +164,7 @@ class NovelArrow implements Plugin {
         novels.push({
           name: title,
           cover,
-          path: href.replace('/novel/', ''),
+          path: href.substring(1), // Kết quả: "novel/slug"
         });
       }
     });
