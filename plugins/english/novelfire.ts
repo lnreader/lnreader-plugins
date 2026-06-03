@@ -9,11 +9,11 @@ import { storage } from '@libs/storage';
 class NovelFire implements Plugin.PluginBase {
   id = 'novelfire';
   name = 'Novel Fire';
-  version = '1.4.2';
+  version = '1.4.3';
   icon = 'src/en/novelfire/icon.png';
   site = 'https://novelfire.net/';
   webStorageUtilized = true;
-  novelList: string[] = [];
+  novelList = new Set<string>();
   draw = 0;
 
   pluginSettings = {
@@ -50,45 +50,44 @@ class NovelFire implements Plugin.PluginBase {
   parseNovels(
     loadedCheerio: CheerioAPI,
     selector = '.novel-item',
+    isFirstPage = false,
   ): Plugin.NovelItem[] {
-    return loadedCheerio(selector)
-      .map((_, el) => {
-        const $el = loadedCheerio(el);
-        const titleElement = $el.find('.novel-title > a');
-        const fallbackElement = $el.find('a');
+    const novels: Plugin.NovelItem[] = [];
 
-        const novelName =
-          titleElement.text() ||
-          fallbackElement.attr('title') ||
-          'No Title Found';
+    const elements = loadedCheerio(selector).toArray();
+    for (const el of elements) {
+      const $el = loadedCheerio(el);
 
-        const imgElement = $el.find('.novel-cover > img');
-        const rawSrc = imgElement.attr('data-src') ?? imgElement.attr('src');
-        const novelCover = rawSrc
-          ? new URL(rawSrc, this.site).href
-          : defaultCover;
+      const novelName =
+        $el.find('a').attr('title') ?? $el.find('h4').text().trim();
+      const novelPath =
+        $el.children('a').attr('href') ?? $el.find('h4 a').attr('href');
 
-        const novelPath =
-          titleElement.attr('href') || fallbackElement.attr('href');
+      if (!novelPath) continue;
 
-        if (!novelPath) return null;
+      const path = new URL(novelPath, this.site).pathname.substring(1);
 
-        return {
-          name: novelName,
-          cover: novelCover,
-          path: new URL(novelPath, this.site).pathname.substring(1),
-        };
-      })
-      .get()
-      .filter(novel => novel !== null)
-      .filter(novel => {
-        if (this.novelList.includes(novel.path)) {
-          return false;
-        } else {
-          this.novelList.push(novel.path);
-          return true;
-        }
+      if (!isFirstPage) {
+        if (this.novelList.has(path)) continue;
+        this.novelList.add(path);
+      } else {
+        this.novelList.add(path);
+      }
+
+      const imgElement = $el.find('.novel-cover > img');
+      const rawSrc = imgElement.attr('data-src') ?? imgElement.attr('src');
+      const novelCover = rawSrc
+        ? new URL(rawSrc, this.site).href
+        : defaultCover;
+
+      novels.push({
+        name: novelName,
+        cover: novelCover,
+        path,
       });
+    }
+
+    return novels;
   }
 
   async popularNovels(
@@ -99,9 +98,10 @@ class NovelFire implements Plugin.PluginBase {
     }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
     if (pageNo === 1) {
-      this.novelList = [];
+      this.novelList.clear();
       this.draw = 0;
     }
+
     const url = this.site + 'search-adv';
     const params = new URLSearchParams();
 
@@ -125,7 +125,7 @@ class NovelFire implements Plugin.PluginBase {
       false,
     );
 
-    return this.parseNovels(loadedCheerio);
+    return this.parseNovels(loadedCheerio, '.novel-item', pageNo === 1);
   }
 
   async getAllChapters(
@@ -425,7 +425,7 @@ class NovelFire implements Plugin.PluginBase {
     page: number,
   ): Promise<Plugin.NovelItem[]> {
     if (page === 1) {
-      this.novelList = [];
+      this.novelList.clear();
       this.draw = 0;
     }
     const params = new URLSearchParams();
@@ -437,7 +437,11 @@ class NovelFire implements Plugin.PluginBase {
 
     const loadedCheerio = load(body);
 
-    return this.parseNovels(loadedCheerio, '.novel-list.chapters .novel-item');
+    return this.parseNovels(
+      loadedCheerio,
+      '.novel-list.chapters .novel-item',
+      page === 1,
+    );
   }
 
   filters = {
