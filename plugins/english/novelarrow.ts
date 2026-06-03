@@ -8,7 +8,7 @@ class NovelArrow implements Plugin {
   name = 'Novel Arrow';
   icon = 'https://novelarrow.com/favicon-32.png';
   site = 'https://novelarrow.com/';
-  version = '1.1.1';
+  version = '1.1.3';
 
   // Headers cần thiết để vượt qua Cloudflare và giả lập trình duyệt di động
   headers = {
@@ -35,7 +35,7 @@ class NovelArrow implements Plugin {
         novels.push({
           name: title,
           cover,
-          path: href.substring(1), // Kết quả: "novel/slug"
+          path: href.substring(1), 
         });
       }
     });
@@ -44,20 +44,39 @@ class NovelArrow implements Plugin {
   }
 
   async parseNovel(novelPath: string) {
-    const url = `${this.site}${novelPath}`;
+    const url = this.site + novelPath.replace(/^\//, '');
     const result = await fetchApi(url, { headers: this.headers }).then(res => res.text());
     const $ = parseHTML(result);
 
-    const novelId = novelPath.replace('novel/', '');
+    const novelId = novelPath.replace('novel/', '').replace(/^\//, '');
+    
+    const genres: string[] = [];
+    $('meta[property="article:tag"]').each((i, el) => {
+        const tag = $(el).attr('content');
+        if (tag) genres.push(tag);
+    });
+
+    // Thử lấy tóm tắt đầy đủ từ stream JSON nếu meta bị cắt ngắn
+    let fullSummary = $('meta[name="description"]').attr('content') || $('meta[property="og:description"]').attr('content');
+    const summaryMatch = result.match(/\\?"description\\?":\\?"(.*?)\\?"/);
+    if (summaryMatch && summaryMatch[1].length > (fullSummary?.length || 0)) {
+        fullSummary = summaryMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+    }
+
     const novel: any = {
       path: novelPath,
       name: $('meta[name="og:novel:novel_name"]').attr('content') || 
+            $('meta[property="og:novel:novel_name"]').attr('content') ||
             $('meta[property="og:title"]').attr('content')?.split(' Novel')[0] || 
-            $('h1').text().trim(),
-      cover: $('meta[property="og:image"]').attr('content'),
-      author: $('meta[name="og:novel:author"]').attr('content') || $('meta[name="author"]').attr('content'),
-      status: $('meta[name="og:novel:status"]').attr('content') === 'Ongoing' ? NovelStatus.Ongoing : NovelStatus.Completed,
-      summary: $('meta[name="description"]').attr('content') || $('meta[property="og:description"]').attr('content'),
+            $('h1').first().text().trim(),
+      cover: $('meta[property="og:image"]').attr('content') || $('meta[name="og:image"]').attr('content'),
+      author: $('meta[name="og:novel:author"]').attr('content') || 
+              $('meta[property="og:novel:author"]').attr('content') ||
+              $('meta[name="author"]').attr('content') ||
+              $('meta[property="article:author"]').attr('content'),
+      status: ($('meta[name="og:novel:status"]').attr('content') || $('meta[property="og:novel:status"]').attr('content')) === 'Ongoing' ? NovelStatus.Ongoing : NovelStatus.Completed,
+      summary: fullSummary,
+      genres: genres.join(', '),
       chapters: [],
     };
 
@@ -78,11 +97,11 @@ class NovelArrow implements Plugin {
             }));
         }
     } catch (e) {
-        const chapterRegex = /\\?"chapter_id\\?":\\?"([^"]+)\\?",\\?"chapter_name\\?":\\?"([^"]+)\\?"/g;
-        let match;
         const chaptersMap = new Map();
-
-        while ((match = chapterRegex.exec(result)) !== null) {
+        // Sử dụng Regex linh hoạt hơn
+        const combinedRegex = /\\?"chapter_id\\?":\\?"([^"]+)\\?",\\?"chapter_name\\?":\\?"([^"]+)\\?"/g;
+        let match;
+        while ((match = combinedRegex.exec(result)) !== null) {
             const path = match[1];
             const name = match[2].replace(/\\"/g, '"');
             const fullPath = `chapter/${novelId}/${path}`;
