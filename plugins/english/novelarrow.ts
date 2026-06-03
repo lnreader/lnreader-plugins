@@ -2,13 +2,14 @@ import { load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
+import { Filters, FilterTypes } from '@libs/filterInputs';
 
 class NovelArrow implements Plugin {
   id = 'novelarrow';
   name = 'Novel Arrow';
   icon = 'https://novelarrow.com/favicon-32.png';
   site = 'https://novelarrow.com/';
-  version = '1.0.7';
+  version = '1.0.8';
 
   // Headers cần thiết để vượt qua Cloudflare và giả lập trình duyệt di động
   headers = {
@@ -20,8 +21,15 @@ class NovelArrow implements Plugin {
     'x-version-app': 'web-mobile',
   };
 
-  async popularNovels(page: number) {
-    const url = `${this.site}novels/latest?page=${page}`;
+  async popularNovels(page: number, { filters }: Plugin.PopularNovelsOptions<typeof this.filters>) {
+    let url = this.site;
+    if (filters?.genre && filters.genre !== '') {
+        url += `genre/${filters.genre}?page=${page}`;
+    } else {
+        const category = filters?.category || 'latest';
+        url += `novels/${category}?page=${page}`;
+    }
+
     const result = await fetchApi(url, { headers: this.headers }).then(res => res.text());
     const $ = parseHTML(result);
     const novels: any[] = [];
@@ -35,7 +43,7 @@ class NovelArrow implements Plugin {
         novels.push({
           name: title,
           cover,
-          path: href.substring(1), // Kết quả: "novel/slug" thay vì chỉ "slug"
+          path: href.substring(1), // Kết quả: "novel/slug"
         });
       }
     });
@@ -44,7 +52,7 @@ class NovelArrow implements Plugin {
   }
 
   async parseNovel(novelPath: string) {
-    // novelPath bây giờ có dạng "novel/slug"
+    // novelPath có dạng "novel/slug"
     const url = `${this.site}${novelPath}`;
     const result = await fetchApi(url, { headers: this.headers }).then(res => res.text());
     const $ = parseHTML(result);
@@ -75,7 +83,7 @@ class NovelArrow implements Plugin {
         if (chaptersJson && chaptersJson.items) {
             novel.chapters = chaptersJson.items.map((item: any) => ({
                 name: item.chapter_name,
-                path: `chapter/${novelId}/${item.chapter_id}`, // Kết quả: "chapter/novel-slug/chapter-slug"
+                path: `chapter/${novelId}/${item.chapter_id}`,
                 releaseTime: null,
             }));
         }
@@ -100,7 +108,7 @@ class NovelArrow implements Plugin {
   }
 
   async parseChapter(chapterPath: string) {
-    // chapterPath bây giờ có dạng "chapter/novel-slug/chapter-slug"
+    // chapterPath có dạng "chapter/novel-slug/chapter-slug"
     const pathParts = chapterPath.replace('chapter/', '').split('/');
     const novelId = pathParts[0];
     const chapterId = pathParts[1];
@@ -172,6 +180,80 @@ class NovelArrow implements Plugin {
 
     return novels;
   }
+
+  readonly filters = {
+    category: {
+      label: 'Category',
+      type: FilterTypes.Picker,
+      options: [
+        { label: 'Latest Updates', value: 'latest' },
+        { label: 'Hot Novels', value: 'hot' },
+        { label: 'Completed', value: 'complete' },
+        { label: 'Ongoing', value: 'ongoing' },
+      ],
+    },
+    genre: {
+      label: 'Genre',
+      type: FilterTypes.Picker,
+      options: [
+        { label: 'None', value: '' },
+        { label: 'Action', value: 'action' },
+        { label: 'Adult', value: 'adult' },
+        { label: 'Adventure', value: 'adventure' },
+        { label: 'Anime & Comics', value: 'anime-&-comics' },
+        { label: 'Comedy', value: 'comedy' },
+        { label: 'Drama', value: 'drama' },
+        { label: 'Eastern', value: 'eastern' },
+        { label: 'Ecchi', value: 'ecchi' },
+        { label: 'Fan-fiction', value: 'fan-fiction' },
+        { label: 'Fantasy', value: 'fantasy' },
+        { label: 'Game', value: 'game' },
+        { label: 'Gender bender', value: 'gender-bender' },
+        { label: 'Harem', value: 'harem' },
+        { label: 'Historical', value: 'historical' },
+        { label: 'Horror', value: 'horror' },
+        { label: 'Isekai', value: 'isekai' },
+        { label: 'Josei', value: 'josei' },
+        { label: 'Lgbt+', value: 'lgbt+' },
+        { label: 'Litrpg', value: 'litrpg' },
+        { label: 'Magic', value: 'magic' },
+        { label: 'Magical realism', value: 'magical-realism' },
+        { label: 'Martial arts', value: 'martial-arts' },
+        { label: 'Mature', value: 'mature' },
+        { label: 'Mecha', value: 'mecha' },
+        { label: 'Military', value: 'military' },
+        { label: 'Modern life', value: 'modern-life' },
+        { label: 'Mystery', value: 'mystery' },
+        { label: 'Other', value: 'other' },
+        { label: 'Psychological', value: 'psychological' },
+        { label: 'Realistic', value: 'realistic' },
+        { label: 'Reincarnation', value: 'reincarnation' },
+        { label: 'Romance', value: 'romance' },
+        { label: 'School life', value: 'school-life' },
+        { label: 'Sci-fi', value: 'sci-fi' },
+        { label: 'Seinen', value: 'seinen' },
+        { label: 'Shoujo', value: 'shoujo' },
+        { label: 'Shoujo ai', value: 'shoujo-ai' },
+        { label: 'Shounen', value: 'shounen' },
+        { label: 'Shounen ai', value: 'shounen-ai' },
+        { label: 'Slice of life', value: 'slice-of-life' },
+        { label: 'Smut', value: 'smut' },
+        { label: 'Sports', value: 'sports' },
+        { label: 'Supernatural', value: 'supernatural' },
+        { label: 'System', value: 'system' },
+        { label: 'Thriller', value: 'thriller' },
+        { label: 'Tragedy', value: 'tragedy' },
+        { label: 'Urban', value: 'urban' },
+        { label: 'Video games', value: 'video-games' },
+        { label: 'War', value: 'war' },
+        { label: 'Wuxia', value: 'wuxia' },
+        { label: 'Xianxia', value: 'xianxia' },
+        { label: 'Xuanhuan', value: 'xuanhuan' },
+        { label: 'Yaoi', value: 'yaoi' },
+        { label: 'Yuri', value: 'yuri' },
+      ],
+    },
+  } satisfies Filters;
 }
 
 export default new NovelArrow();
