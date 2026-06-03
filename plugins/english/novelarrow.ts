@@ -9,7 +9,7 @@ class NovelArrow implements Plugin {
   name = 'Novel Arrow';
   icon = 'https://novelarrow.com/favicon-32.png';
   site = 'https://novelarrow.com/';
-  version = '1.0.9';
+  version = '1.1.0';
 
   // Headers cần thiết để vượt qua Cloudflare và giả lập trình duyệt di động
   headers = {
@@ -21,17 +21,20 @@ class NovelArrow implements Plugin {
     'x-version-app': 'web-mobile',
   };
 
-  async popularNovels(page: number, { filters }: Plugin.PopularNovelsOptions<typeof this.filters>) {
+  async popularNovels(page: number, { filters, showLatestNovels }: Plugin.PopularNovelsOptions<typeof this.filters>) {
     let url = this.site;
     
-    // Nếu có chọn thể loại (Filter bắt buộc theo yêu cầu user)
-    if (filters?.genre && filters.genre !== '') {
+    // Ưu tiên hiển thị danh sách Latest Updates (Giống v1.0.7) hoặc Hot/Popular nếu được chọn
+    if (showLatestNovels) {
+        url += `novels/latest?page=${page}`;
+    } else if (filters?.genre && filters.genre !== '') {
+        // Chế độ lọc nâng cao: Bắt buộc chọn Genre
         url += `genre/${filters.genre}?page=${page}`;
         if (filters.language) url += `&language=${filters.language}`;
         if (filters.sort) url += `&sort=${filters.sort}`;
     } else {
-        // Mặc định hiển thị danh sách mới nhất (Popular)
-        url += `novels/latest?page=${page}`;
+        // Mặc định cho Popular tab (v1.0.7 dùng latest, ở đây ta dùng hot/popular cho đúng nghĩa Popular)
+        url += `novels/popular?page=${page}`;
     }
 
     const result = await fetchApi(url, { headers: this.headers }).then(res => res.text());
@@ -47,7 +50,7 @@ class NovelArrow implements Plugin {
         novels.push({
           name: title,
           cover,
-          path: href.substring(1), // Kết quả: "novel/slug"
+          path: href.substring(1), 
         });
       }
     });
@@ -185,6 +188,7 @@ class NovelArrow implements Plugin {
       label: 'Genre (Mandatory for filtering)',
       type: FilterTypes.Picker,
       options: [
+        { label: 'None', value: '' },
         { label: 'Action', value: 'action' },
         { label: 'Adult', value: 'adult' },
         { label: 'Adventure', value: 'adventure' },
