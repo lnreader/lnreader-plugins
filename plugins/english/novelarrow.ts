@@ -9,7 +9,7 @@ class NovelArrow implements Plugin {
   name = 'Novel Arrow';
   icon = 'https://novelarrow.com/favicon-32.png';
   site = 'https://novelarrow.com/';
-  version = '1.0.8';
+  version = '1.0.9';
 
   // Headers cần thiết để vượt qua Cloudflare và giả lập trình duyệt di động
   headers = {
@@ -23,11 +23,15 @@ class NovelArrow implements Plugin {
 
   async popularNovels(page: number, { filters }: Plugin.PopularNovelsOptions<typeof this.filters>) {
     let url = this.site;
+    
+    // Nếu có chọn thể loại (Filter bắt buộc theo yêu cầu user)
     if (filters?.genre && filters.genre !== '') {
         url += `genre/${filters.genre}?page=${page}`;
+        if (filters.language) url += `&language=${filters.language}`;
+        if (filters.sort) url += `&sort=${filters.sort}`;
     } else {
-        const category = filters?.category || 'latest';
-        url += `novels/${category}?page=${page}`;
+        // Mặc định hiển thị danh sách mới nhất (Popular)
+        url += `novels/latest?page=${page}`;
     }
 
     const result = await fetchApi(url, { headers: this.headers }).then(res => res.text());
@@ -52,7 +56,6 @@ class NovelArrow implements Plugin {
   }
 
   async parseNovel(novelPath: string) {
-    // novelPath có dạng "novel/slug"
     const url = `${this.site}${novelPath}`;
     const result = await fetchApi(url, { headers: this.headers }).then(res => res.text());
     const $ = parseHTML(result);
@@ -70,7 +73,6 @@ class NovelArrow implements Plugin {
       chapters: [],
     };
 
-    // Sử dụng API web để lấy đầy đủ danh sách chương
     const chaptersUrl = `${this.site}api-web/novels/${novelId}/chapters?sort=asc`;
     try {
         const chaptersJson = await fetchApi(chaptersUrl, { 
@@ -88,7 +90,6 @@ class NovelArrow implements Plugin {
             }));
         }
     } catch (e) {
-        // Fallback: Tìm bằng Regex trong stream JSON của Next.js
         const chapterRegex = /\\?"chapter_id\\?":\\?"([^"]+)\\?",\\?"chapter_name\\?":\\?"([^"]+)\\?"/g;
         let match;
         const chaptersMap = new Map();
@@ -108,7 +109,6 @@ class NovelArrow implements Plugin {
   }
 
   async parseChapter(chapterPath: string) {
-    // chapterPath có dạng "chapter/novel-slug/chapter-slug"
     const pathParts = chapterPath.replace('chapter/', '').split('/');
     const novelId = pathParts[0];
     const chapterId = pathParts[1];
@@ -128,7 +128,6 @@ class NovelArrow implements Plugin {
             return json.item.chapterInfo.chapter_content;
         }
     } catch (e) {
-        // Fallback: Thử tải trang HTML (Sử dụng chính chapterPath làm slug)
         const result = await fetchApi(`${this.site}${chapterPath}`, { headers: this.headers }).then(res => res.text());
         const contentRegex = /\\u003ch4\\u003e(.*)\\u003c\/p\\u003e/;
         const match = result.match(contentRegex);
@@ -159,7 +158,7 @@ class NovelArrow implements Plugin {
   }
 
   async searchNovels(searchTerm: string, page: number) {
-    const url = `${this.site}novels/search?q=${encodeURIComponent(searchTerm)}&page=${page}`;
+    const url = `${this.site}novels/search?keyword=${encodeURIComponent(searchTerm)}&page=${page}`;
     const result = await fetchApi(url, { headers: this.headers }).then(res => res.text());
     const $ = parseHTML(result);
     const novels: any[] = [];
@@ -173,7 +172,7 @@ class NovelArrow implements Plugin {
         novels.push({
           name: title,
           cover,
-          path: href.substring(1), // Kết quả: "novel/slug"
+          path: href.substring(1), 
         });
       }
     });
@@ -182,21 +181,10 @@ class NovelArrow implements Plugin {
   }
 
   readonly filters = {
-    category: {
-      label: 'Category',
-      type: FilterTypes.Picker,
-      options: [
-        { label: 'Latest Updates', value: 'latest' },
-        { label: 'Hot Novels', value: 'hot' },
-        { label: 'Completed', value: 'complete' },
-        { label: 'Ongoing', value: 'ongoing' },
-      ],
-    },
     genre: {
-      label: 'Genre',
+      label: 'Genre (Mandatory for filtering)',
       type: FilterTypes.Picker,
       options: [
-        { label: 'None', value: '' },
         { label: 'Action', value: 'action' },
         { label: 'Adult', value: 'adult' },
         { label: 'Adventure', value: 'adventure' },
@@ -251,6 +239,29 @@ class NovelArrow implements Plugin {
         { label: 'Xuanhuan', value: 'xuanhuan' },
         { label: 'Yaoi', value: 'yaoi' },
         { label: 'Yuri', value: 'yuri' },
+      ],
+    },
+    sort: {
+      label: 'Sort By',
+      type: FilterTypes.Picker,
+      options: [
+        { label: 'Latest', value: 'LASTEST' },
+        { label: 'New', value: 'NEW' },
+        { label: 'All Time', value: 'ALL_TIME' },
+        { label: 'Popular', value: 'POPULAR' },
+        { label: 'Rating', value: 'RATING' },
+        { label: 'Chapters', value: 'CHAPTERS' },
+      ],
+    },
+    language: {
+      label: 'Filter by Language',
+      type: FilterTypes.Picker,
+      options: [
+        { label: 'All', value: 'ALL' },
+        { label: 'English', value: 'EN' },
+        { label: 'Chinese', value: 'CN' },
+        { label: 'Japanese', value: 'JP' },
+        { label: 'Korean', value: 'KR' },
       ],
     },
   } satisfies Filters;
