@@ -8,7 +8,7 @@ class NovelArrow implements Plugin {
   name = 'Novel Arrow';
   icon = 'https://novelarrow.com/favicon-32.png';
   site = 'https://novelarrow.com/';
-  version = '1.1.3';
+  version = '1.1.4';
 
   // Headers cần thiết để vượt qua Cloudflare và giả lập trình duyệt di động
   headers = {
@@ -50,11 +50,18 @@ class NovelArrow implements Plugin {
 
     const novelId = novelPath.replace('novel/', '').replace(/^\//, '');
     
-    const genres: string[] = [];
-    $('meta[property="article:tag"]').each((i, el) => {
-        const tag = $(el).attr('content');
-        if (tag) genres.push(tag);
-    });
+    // Thu thập thể loại (Genre) - Hỗ trợ nhiều loại tag meta
+    let genres = $('meta[name="og:novel:genre"]').attr('content') || 
+                 $('meta[property="og:novel:genre"]').attr('content');
+    
+    if (!genres) {
+        const genreList: string[] = [];
+        $('meta[property="article:tag"]').each((i, el) => {
+            const tag = $(el).attr('content');
+            if (tag) genreList.push(tag);
+        });
+        genres = genreList.join(', ');
+    }
 
     // Thử lấy tóm tắt đầy đủ từ stream JSON nếu meta bị cắt ngắn
     let fullSummary = $('meta[name="description"]').attr('content') || $('meta[property="og:description"]').attr('content');
@@ -76,7 +83,7 @@ class NovelArrow implements Plugin {
               $('meta[property="article:author"]').attr('content'),
       status: ($('meta[name="og:novel:status"]').attr('content') || $('meta[property="og:novel:status"]').attr('content')) === 'Ongoing' ? NovelStatus.Ongoing : NovelStatus.Completed,
       summary: fullSummary,
-      genres: genres.join(', '),
+      genres: genres,
       chapters: [],
     };
 
