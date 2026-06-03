@@ -4,30 +4,15 @@ import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { NovelStatus } from '@libs/novelStatus';
 
-const fwnRegex = new RegExp(
-  [
-    '(?:[𝐟ᵮ𝑓𝒇𝒻𝓯𝕗𝖿𝗳𝙛𝚏ꬵꞙẝ𝖋ⓕｆḟʃբᶠ⒡ſꊰʄ∱ᶂ𝘧]|\\bf)',
-    '[𝚛ꭇᣴℾ𝚪𝛤𝜞𝝘𝞒ⲄГᎱᒥꭈⲅꮁⓡｒŕṙřȑȓṛṝŗгՐɾᥬṟɍʳ⒭ɼѓᴦᶉ𝐫𝑟𝒓𝓇𝓻𝔯𝕣𝖗𝗋𝗿𝘳𝙧ᵲґᵣr]',
-    '[əәⅇꬲꞓ⋴𝛆𝛜𝜀𝜖𝜺𝝐𝝴𝞊𝞮𝟄ⲉꮛ𐐩ꞒⲈ⍷𝑒𝓮𝕖𝖊𝘦𝗲𝗲𝙚𝒆𝔢𝖾𝐞Ҿҿⓔｅ⒠èᧉéᶒêɘἔềếễ૯ǝєεēҽɛểẽḕḗĕėëẻěȅȇẹệȩɇₑęḝḙḛ℮еԑѐӗᥱёἐἑἒἓἕℯe]+',
-    '[𝐰ꝡ𝑤𝒘𝓌𝔀𝕨𝖜𝗐𝘄𝘸𝙬𝚠աẁꮃẃⓦ⍵ŵẇẅẘẉⱳὼὠὡὢὣωὤὥὦὧῲῳῴῶῷⱲѡԝᴡώᾠᾡᾢᾣᾤᾥᾦɯ𝝕𝟉𝞏w]',
-    '[əәⅇꬲꞓ⋴𝛆𝛜𝜀𝜖𝜺𝝐𝝴𝞊𝞮𝟄ⲉꮛ𐐩ꞒⲈ⍷𝑒𝓮𝕖𝖊𝘦𝗲𝗲𝙚𝒆𝔢𝖾𝐞Ҿҿⓔｅ⒠èᧉéᶒêɘἔềếễ૯ǝєεēҽɛểẽḕḗĕėëẻěȅȇẹệȩɇₑęḝḙḛ℮еԑѐӗᥱёἐἑἒἓἕℯe]',
-    '[ꮟᏏ𝐛𝘣𝒷𝔟𝓫𝖇𝖻𝑏𝙗𝕓𝒃𝗯𝚋♭ᑳᒈｂᖚᕹᕺⓑḃḅҍъḇƃɓƅᖯƄЬᑲþƂ⒝ЪᶀᑿᒀᒂᒁᑾьƀҌѢѣᔎb]',
-    '[ոռח𝒏𝓷𝙣𝑛𝖓𝔫𝗇𝗻ᥒⓝήｎǹᴒńñᾗηṅňṇɲņṋṉղຖՌƞŋ⒩ภกɳпŉлԉȠἠἡῃդᾐᾑᾒᾓᾔᾕᾖῄῆῇῂἢἣἤἥἦἧὴήበቡቢባቤብቦȵ𝛈𝜂𝜼𝝶𝞰𝕟延𝐧𝔫ᶇᵰᥥ∩n𝘯𝓃]',
-    '(?:[ంംං૦௦۵ℴ𝑜𝒐ꬽ𝝄𝛔𝜎𝝈𝞂ჿ𝚘০୦ዐ𝛐𝗈𝞼ဝⲟ𝙤၀𐐬𝔬𐓪𝓸🇴⍤○ϙ🅾𝒪𝖮𝟢𝟶𝙾o𝗼𝕠𝜊𝐨𝝾𝞸ᐤｵѳ᧐ᥲðｏఠᦞՓòөӧóºōôǒȏŏồȭṏὄṑṓȯȫ๏ᴏőöѻоዐǭȱ০୦٥౦๐໐οօᴑ०੦ỏơờớỡởợọộǫøǿɵծὀὁόὸόὂὃὅం𝖔ｵⓞ೦൦]|告知)',
-    '[∨⌄\\|ⅴ𝐯𝑣𝒗𝓋𝔳𝕧𝖛ꮩሀⓥｖ𝜐𝝊ṽṿ౮งѵעᴠνטᵥѷ៴ᘁ𝙫𝙫𝛎𝜈𝝂𝝼𝞶𝘷𝘃𝓿v⋁𝗏𝚟]',
-    '[əәⅇꬲꞓ⋴𝛆𝛜𝜀𝜖𝜺𝝐𝝴𝞊𝞮𝟄ⲉꮛ𐐩ꞒⲈ⍷𝑒𝓮𝕖𝖊𝘦𝗲𝗲𝙚𝒆𝔢𝖾𝐞Ҿҿⓔｅ⒠èᧉéᶒêɘἔềếễ૯ǝєεēҽɛểẽḕḗĕėëẻěȅȇẹệȩɇₑęḝḙḛ℮еԑѐӗᥱёἐἑἒἓἕℯeₑ]',
-    '[ⓛｌŀĺľḷḹḷļӀℓḽḻłﾚɭƚɫⱡ\\|\\\\Ɩ⒧ʅǀוןΙІ｜ᶩӏ𝓘𝕀𝖨𝗜𝘐𝐥𝑙𝒍𝓁𝔩𝕝𝖑ލ𝗅𝗹ލ𝗅𝗹ލ𝗅𝗹ލ𝘭𝜤𝝞ı𝚤ɩι𝛊𝜄𝜾𝞲Il𝙡𝓵]',
-    '(?:.?(?:𝝌|ｃ|ⅽ|𝐜|𝑐|𝒄|𝒸|𝓬|𝔠|𝕔|𝖈|𝖈|𝗰|𝘤|𝙘|𝚌|ᴄ|ϲ|ⲥ|с|ꮯ|𐐽|ⲥ|𐐽|ꮯ|ĉ|ｃ|ⓒ|ć|č|ċ|ç|ҁ|ƈ|ḉ|ȼ|ↄ|с|ር|ᴄ|ϲ|ҫ|꒝|ς|ɽ|ϛ|𝙲|ᑦ|᧚|₵|🇨|ᥴ|ᒼ|ⅽ|c)(?:ం|ం|ം|ං|૦|௦|۵|ℴ|𝑜|𝒐|𝒐|ꬽ|𝝄|𝛔|𝜎|𝝈|𝞂|ჿ|𝚘|০|୦|ዐ|𝛐|𝗈|𝞼|ဝ|ⲟ|𝙤|၀|𐐬|𝔬|𐓪|𝓸|🇴|⍤|○|ϙ|🅾|𝒪|𝖮|𝟢|𝟶|𝙾|o|𝗼|𝕠|𝜊|𝐨|𝝾|𝞸|ᐤ|ｵ|ѳ|᧐|ᥲ|ð|ｏ|ఠ|ᦞ|Փ|ò|ө|ӧ|ó|º|ō|ô|ǒ|ȏ|ŏ|ồ|ȭ|ṏ|ὄ|ṑ|ṓ|ȯ|ȫ|๏|ᴏ|ő|ö|ѻ|о|ዐ|ǭ|ȱ|০|୦|٥|౦|告知|๐|໐|ο|օ|ᴑ|०|੦|ỏ|ơ|ờ|ớ|ỡ|ở|ợ|ọ|ộ|ǫ|ø|ǿ|ɵ|ծ|ὀ|ὁ|ό|ὸ|ό|ὂ|ὃ|ὅ|o|ం|𝖔|𝘰|ⓞ|೦|൦)(?:₥|ᵯ|𝖒|𝐦|𝗆|𝔪|𝕞|𝓂|ⓜ|ｍ|ന|ᙢ|൩|ḿ|ṁ|ⅿ|ϻ|ṃ|ጠ|ɱ|៳|ᶆ|𝒎|🇲|𝙢|𝓶|𝚖|𝑚|𝗺|᧕|᧗|m|𝖼|𝛐))?'
-  ].join(''),
-  'gu',
-);
+const fwnRegex =
+  /(?:𝐟|ᵮ|𝑓|𝒇|𝒻|𝓯|𝔣|𝕗|𝖿|𝗳|𝙛|𝚏|ꬵ|ꞙ|ẝ|𝖋|ⓕ|ｆ|ḟ|ʃ|բ|ᶠ|⒡|ſ|ꊰ|ʄ|∱|ᶂ|𝘧|\bf)(?:𝚛|ꭇ|ᣴ|ℾ|𝚪|𝛤|𝜞|𝝘|𝞒|Ⲅ|Г|Ꮁ|ᒥ|ꭈ|ⲅ|ꮁ|ⓡ|ｒ|ŕ|ṙ|ř|ȑ|ȓ|ṛ|ṝ|ŗ|г|Ր|ɾ|ᥬ|ṟ|ɍ|ʳ|⒭|ɼ|ѓ|ᴦ|ᶉ|𝐫|𝑟|𝒓|𝓇|𝓻|𝔯|𝕣|𝖗|𝗋|𝗿|𝘳|𝙧|ᵲ|ґ|ᵣ|r)(?:ə|ә|ⅇ|ꬲ|ꞓ|⋴|𝛆|𝛜|𝜀|𝜖|𝜺|𝝐|𝝴|𝞊|𝞮|𝟄|ⲉ|ꮛ|𐐩|Ꞓ|Ⲉ|⍷|𝑒|𝓮|𝕖|𝖊|𝘦|𝗲|𝚎|𝙚|𝒆|𝔢|𝖾|𝐞|Ҿ|ҿ|ⓔ|ｅ|⒠|è|ᧉ|é|ᶒ|ê|ɘ|ἔ|ề|ế|ễ|૯|ǝ|є|ε|ē|ҽ|ɛ|ể|ẽ|ḕ|ḗ|ĕ|ė|ë|ẻ|ě|ȅ|ȇ|ẹ|ệ|ȩ|ɇ|ₑ|ę|ḝ|ḙ|ḛ|℮|е|ԑ|ѐ|ӗ|ᥱ|ё|ἐ|ἑ|ἒ|ἓ|ἕ|ℯ|e)+(?:𝐰|ꝡ|𝑤|𝒘|𝓌|𝔀|𝔴|𝕨|𝖜|𝗐|𝘄|𝘸|𝙬|𝚠|ա|ẁ|ꮃ|ẃ|ⓦ|⍵|ŵ|ẇ|ẅ|ẘ|ẉ|ⱳ|ὼ|ὠ|ὡ|ὢ|ὣ|ω|ὤ|ὥ|ὦ|ὧ|ῲ|ῳ|ῴ|ῶ|ῷ|Ⱳ|ѡ|ԝ|ᴡ|ώ|ᾠ|ᾡ|ᾡ|ᾢ|ᾣ|ᾤ|ᾥ|ᾦ|ɯ|𝝕|𝟉|𝞏|w)(?:ə|ә|ⅇ|ꬲ|ꞓ|⋴|𝛆|𝛜|𝜀|𝜖|𝜺|𝝐|𝝴|𝞊|𝞮|𝟄|ⲉ|ꮛ|𐐩|Ꞓ|Ⲉ|⍷|𝑒|𝓮|𝕖|𝖊|𝘦|𝗲|𝚎|𝙚|𝒆|𝔢|𝖾|𝐞|Ҿ|ҿ|ⓔ|ｅ|⒠|è|ᧉ|é|ᶒ|ê|ɘ|ἔ|ề|ế|ễ|૯|ǝ|є|ε|ē|ҽ|ɛ|ể|ẽ|ḕ|ḗ|ĕ|ė|ë|ẻ|ě|ȅ|ȇ|ȇ|ẹ|ệ|ȩ|ɇ|ₑ|ę|ḝ|ḙ|ḛ|℮|е|ԑ|ѐ|ӗ|ᥱ|ё|ἐ|ἑ|ἒ|ἓ|ἕ|ℯ|e)(?:ꮟ|Ꮟ|𝐛|𝘣|𝒷|𝔟|𝓫|𝖇|𝖻|𝑏|𝙗|𝕓|𝒃|𝗯|𝚋|♭|ᑳ|ᒈ|ｂ|ᖚ|ᕹ|ᕺ|ⓑ|ḃ|ḅ|ҍ|ъ|ḇ|ƃ|ɓ|ƅ|ᖯ|Ƅ|Ь|ᑲ|þ|Ƃ|⒝|Ъ|ᶀ|ᑿ|ᒀ|ᒂ|ᒁ|ᑾ|ь|ƀ|Ҍ|Ѣ|ѣ|ᔎ |b)(?:ո|ռ|ח|𝒏|𝓷|𝙣|𝑛|𝖓|𝔫|𝗇|𝚗|𝗻|ᥒ|ⓝ|ή|ｎ|ǹ|ᴒ|ń|ñ|ᾗ|η|ṅ|ň|ṇ|ɲ|ņ|ṋ|ṉ|ղ|ຖ|Ռ|ƞ|ŋ|⒩|ภ|ก|ɳ|п|ŉ|л|ԉ|Ƞ|ἠ|ἡ|ῃ|դ|ᾐ|ᾑ|ᾒ|ᾓ|ᾔ|ᾕ|ᾖ|ῄ|ῆ|ῇ|ῂ|ἢ|ἣ|ἤ|ἥ|ἦ|ἧ|ὴ|ή|በ|ቡ|ቢ|ባ|ቤ|ብ|ቦ|ȵ|𝛈|𝜂|𝜼|𝝶|𝞰|𝕟|延|𝐧|𝔫|ᶇ|ᵰ|ᥥ|∩|n)(?:ం|ం|ം|ං|૦|௦|۵|ℴ|𝑜|𝒐|𝒐|ꬽ|𝝄|𝛔|𝜎|𝝈|𝞂|ჿ|𝚘|০|୦|ዐ|𝛐|𝗈|𝞼|ဝ|ⲟ|𝙤|၀|𐐬|𝔬|𐓪|𝓸|🇴|⍤|○|ϙ|🅾|𝒪|𝖮|𝟢|𝟶|𝙾|o|𝗼|𝕠|𝜊|𝐨|𝝾|𝞸|ᐤ|ｵ|ѳ|᧐|ᥲ|ð|ｏ|ఠ|ᦞ|Փ|ò|ө|ӧ|ó|º|ō|ô|ǒ|ȏ|ŏ|ồ|ȭ|ṏ|ὄ|ṑ|ṓ|ȯ|ȫ|๏|ᴏ|ő|ö|ѻ|о|ዐ|ǭ|ȱ|০|୦|٥|౦|告知|๐|໐|ο|օ|ᴑ|०|੦|ỏ|ơ|ờ|ớ|ỡ|ở|ợ|ọ|ộ|ộ|ǫ|ø|ǿ|ɵ|ծ|ὀ|ὁ|ό|ὸ|ό|ὂ|ὃ|ὅ|o)(?:∨|⌄|\\|ⅴ|𝐯|𝑣|𝒗|𝓋|𝔳|𝕧|𝖛|ꮩ|ሀ|ⓥ|ｖ|𝜐|𝝊|ṽ|ṿ|౮|ง|ѵ|ע|ᴠ|ν|ט|ᵥ|ѷ|៴|ᘁ|𝙫|𝙫|𝛎|𝜈|𝝂|𝝼|𝞶|𝘷|𝘃|𝓿|v)(?:ə|ә|ⅇ|ꬲ|ꞓ|⋴|𝛆|𝛜|𝜀|𝜖|𝜺|𝝐|𝝴|𝞊|𝞮|𝟄|ⲉ|ꮛ|𐐩|Ꞓ|Ⲉ|⍷|𝑒|𝓮|𝕖|𝖊|𝘦|𝗲|𝚎|𝙚|𝒆|𝔢|𝖾|𝐞|Ҿ|ҿ|ⓔ|ｅ|⒠|è|ᧉ|é|ᶒ|ê|ɘ|ἔ|ề|ế|ễ|૯|ǝ|є|ε|ē|ҽ|ɛ|ể|ẽ|ḕ|ḗ|ĕ|ė|ë|ẻ|ě|ȅ|ȇ|ẹ|ệ|ȩ|ɇ|ę|ḝ|ḙ|ḛ|℮|е|ԑ|ѐ|ӗ|ᥱ|ё|ἐ|ἑ|ἒ|ἓ|ἕ|ℯ|e)(?:ⓛ|ｌ|ŀ|ĺ|ľ|ḷ|ḹ|ḷ|ļ|Ӏ|ℓ|ḽ|ḻ|ł|ﾚ|ɭ|ƚ|ɫ|ⱡ|\\||\\\\|Ɩ|⒧|ʅ|ǀ|ו|ן|Ι|І|｜|ᶩ|ӏ|𝓘|𝕀|𝖨|𝗜|𝘐|𝐥|𝑙|𝒍|𝓁|𝔩|𝕝|𝖑|ލ|𝗅|𝗹|ލ|𝗅|𝗹|ល|𝚕|𝜤|𝝞|ı|𝚤|ɩ|ι|𝛊|𝜄|𝜾|𝞲|I|l)(?:.?(?:🝌|ｃ|ⅽ|𝐜|𝑐|𝒄|𝒸|𝓬|𝔠|𝕔|𝖈|𝖈|𝗰|𝘤|𝙘|𝚌|ᴄ|ϲ|ⲥ|с|ꮯ|𐐽|ⲥ|𐐽|ꮯ|ĉ|ｃ|ⓒ|ć|č|ċ|ç|ҁ|ƈ|ḉ|ȼ|ↄ|с|ር|ᴄ|ϲ|ҫ|꒝|ς|ɽ|ϛ|𝙲|ᑦ|᧚|𝐜|𝑐|𝒄|𝒸|𝓬|𝔠|𝕔|𝖈|𝖈|𝗰|𝘤|𝙘|𝚌|₵|🇨|ᥴ|ᒼ|ⅽ|c)(?:ం|ం|ം|ං|૦|௦|۵|ℴ|𝑜|𝒐|𝒐|ꬽ|𝝄|𝛔|𝜎|𝝈|𝞂|ჿ|𝚘|০|୦|ዐ|𝗈|𝞼|ဝ|ⲟ|𝙤|၀|𐐬|𝔬|𐓪|𝓸|🇴|⍤|○|ϙ|🅾|𝒪|𝖮|𝟢|𝟶|𝙾|o|𝗼|𝕠|𝜊|𝐨|𝝾|𝞸|ᐤ|ⓞ|ѳ|᧐|ᥲ|ð|ｏ|ఠ|ᦞ|Փ|ò|ө|ӧ|ó|º|ō|ô|ǒ|ȏ|ŏ|ồ|ȭ|ṏ|ὄ|ṑ|ṓ|ȯ|ȫ|๏|ᴏ|ő|ö|ѻ|о|ዐ|ǭ|ȱ|০|୦|٥|౦|告知|๐|໐|ο|օ|ᴑ|०|੦|ỏ|ơ|ờ|ớ|ỡ|ở|ợ|ọ|ộ|ǫ|ø|ǿ|ɵ|ծ|ὀ|ὁ|ό|ὸ|ό|ὂ|ὃ|ὅ|o)(?:₥|ᵯ|𝖒|𝐦|𝗆|𝔪|𝕞|𝕞|𝕞|ⓜ|ｍ|ന|ᙢ|൩|ḿ|ṁ|ⅿ|ϻ|ṃ|ጠ|ɱ|៳|ᶆ|𝒎|🇲|𝙢|𝓶|𝚖|𝑚|𝗺|᧕|᧗|m))?/g;
 
 class NovelBuddy implements Plugin.PluginBase {
   id = 'novelbuddy';
   name = 'NovelBuddy';
   site = 'https://novelbuddy.com/';
   api = 'https://api.novelbuddy.com/';
-  version = '2.1.3';
+  version = '2.1.2';
   icon = 'src/en/novelbuddy/icon.png';
 
   parseNovels(body: Response): Plugin.NovelItem[] {
@@ -82,7 +67,7 @@ class NovelBuddy implements Plugin.PluginBase {
     const body = await response.text();
 
     const scriptMatch = body.match(
-      /<script id="__NEXT_DATA__" type="application\/json">(.*?)<\/script>/,
+      /<script id=\"__NEXT_DATA__\" type=\"application\\/json\">(.*?)<\\/script>/,
     );
     if (!scriptMatch) throw new Error('Could not find __NEXT_DATA__');
 
@@ -113,14 +98,14 @@ class NovelBuddy implements Plugin.PluginBase {
     const summaryStr = initialManga.summary || '';
     if (summaryStr) {
       const $ = parseHTML('<div>' + summaryStr + '</div>');
-      $('br').replaceWith('\n');
-      $('p').before('\n').after('\n\n');
+      $('br').replaceWith('\\n');
+      $('p').before('\\n').after('\\n\\n');
       novel.summary = $('div')
         .text()
-        .split('\n')
+        .split('\\n')
         .map(line => line.trim())
         .filter(line => line.length > 0)
-        .join('\n\n')
+        .join('\\n\\n')
         .trim();
     }
 
@@ -137,264 +122,4 @@ class NovelBuddy implements Plugin.PluginBase {
 
     if (chaptersJson?.success && chaptersJson?.data?.chapters) {
       novel.chapters = chaptersJson.data.chapters
-        .map(chapter => ({
-          name: chapter.name,
-          path:
-            (chapter.url.startsWith('/') ? chapter.url.slice(1) : chapter.url) +
-            `?id=${initialManga.id}&chapterId=${chapter.id}`,
-          releaseTime: chapter.updated_at,
-        }))
-        .reverse();
-    } else if (initialManga.chapters) {
-      novel.chapters = initialManga.chapters
-        .map(chapter => ({
-          name: chapter.name,
-          path: chapter.url.startsWith('/')
-            ? chapter.url.slice(1)
-            : chapter.url,
-          releaseTime: chapter.updatedAt,
-        }))
-        .reverse();
-    }
-
-    return novel;
-  }
-
-  async parseChapter(chapterPath: string): Promise<string> {
-    const novelIdMatch = chapterPath.match(/[?&]id=([^&]+)/);
-    const chapterIdMatch = chapterPath.match(/[?&]chapterId=([^&]+)/);
-
-    let content = '';
-
-    if (novelIdMatch && chapterIdMatch) {
-      const novelId = novelIdMatch[1];
-      const chapterId = chapterIdMatch[1];
-      const apiUrl = `${this.api}titles/${novelId}/chapters/${chapterId}`;
-      const response = await fetchApi(apiUrl);
-      const json = await response.json();
-      content = json?.data?.chapter?.content || '';
-    }
-
-    if (!content) {
-      const result = await fetchApi(this.site + chapterPath);
-      const body = await result.text();
-      const scriptMatch = body.match(
-        /<script id="__NEXT_DATA__" type="application\/json">(.*?)<\/script>/,
-      );
-      if (!scriptMatch) throw new Error('Could not find __NEXT_DATA__');
-
-      const data: ChapterScript = JSON.parse(scriptMatch[1]);
-      const initialChapter = data.props.pageProps.initialChapter;
-      if (!initialChapter) throw new Error('Could not find chapter content');
-      content = initialChapter.content;
-    }
-
-    if (content) {
-      content = content.replace(/&lt;\/?p&gt;/g, '');
-      content = content.replace(
-        /Nov[ᴇe]lFire admin to [^:]+ admin: "[^"]*"\.?/gi,
-        '',
-      );
-      content = content.replace(
-        /[ɴn][ᴇe]ᴡ [ɴn]ᴏᴠ[ᴇe]ʟ ᴄʜᴀᴘᴛ[ᴇe]ʀs ᴀʀ[ᴇe] ᴘᴜʙʟɪsʜ[ᴇe]ᴅ ᴏɴ Nov[ᴇe]lFir[ᴇe]/gi,
-        '',
-      );
-      content = content.replace(
-        /Find authorized novels in Webnovel.*?faster updates, better experience.*?Please click.*?for visiting\./gi,
-        '',
-      );
-      content = content.replace(
-        /Find authorized novels in Webnovel.*?faster updates, better experience.*?Please click www\.webnovel\.com for visiting\./gi,
-        '',
-      );
-      content = content.replace(fwnRegex, '');
-    }
-
-    return content;
-  }
-
-  async searchNovels(
-    searchTerm: string,
-    page: number,
-  ): Promise<Plugin.NovelItem[]> {
-    const params = new URLSearchParams({
-      'q': searchTerm,
-      'limit': '24',
-      'page': page.toString(),
-    });
-    const url = this.api + 'titles/search?' + params.toString();
-    const result = await fetchApi(url);
-    const body = await result.json();
-    return this.parseNovels(body);
-  }
-
-  filters = {
-    orderBy: {
-      value: 'views',
-      label: 'Order by',
-      options: [
-        { label: 'Default Order', value: '' },
-        { label: 'Most Viewed', value: 'views' },
-        { label: 'Latest Updated', value: 'latest' },
-        { label: 'Most Popular', value: 'popular' },
-        { label: 'A-Z', value: 'alphabetical' },
-        { label: 'Highest Rating', value: 'rating' },
-        { label: 'Most Chapters', value: 'chapters' },
-      ],
-      type: FilterTypes.Picker,
-    },
-    keyword: { value: '', label: 'Keywords', type: FilterTypes.TextInput },
-    status: {
-      value: 'all',
-      label: 'Status',
-      options: [
-        { label: 'All', value: 'all' },
-        { label: 'Ongoing', value: 'ongoing' },
-        { label: 'Completed', value: 'completed' },
-        { label: 'Hiatus', value: 'hiatus' },
-        { label: 'Cancelled', value: 'cancelled' },
-      ],
-      type: FilterTypes.Picker,
-    },
-    genre: {
-      value: { include: [], exclude: [] },
-      label: 'Genres (OR, not AND)',
-      options: [
-        { label: 'Action', value: 'action' },
-        { label: 'ActionAdventure', value: 'actionadventure' },
-        { label: 'Adult', value: 'adult' },
-        { label: 'Adventure', value: 'adventure' },
-        { label: 'Comedy', value: 'comedy' },
-        { label: 'Drama', value: 'drama' },
-        { label: 'Eastern', value: 'eastern' },
-        { label: 'Easterni', value: 'easterni' },
-        { label: 'Ecchi', value: 'ecchi' },
-        { label: 'Fan-Fiction', value: 'fan-fiction' },
-        { label: 'Fantasy', value: 'fantasy' },
-        { label: 'Game', value: 'game' },
-        { label: 'Games', value: 'games' },
-        { label: 'Gender Bender', value: 'gender-bender' },
-        { label: 'Harem', value: 'harem' },
-        { label: 'Historical', value: 'historical' },
-        { label: 'Horror', value: 'horror' },
-        { label: 'Isekai', value: 'isekai' },
-        { label: 'Josei', value: 'josei' },
-        { label: 'Lolicon', value: 'lolicon' },
-        { label: 'Magic', value: 'magic' },
-        { label: 'Martial Arts', value: 'martial-arts' },
-        { label: 'Mature', value: 'mature' },
-        { label: 'Mecha', value: 'mecha' },
-        { label: 'Military', value: 'military' },
-        { label: 'Modern Life', value: 'modern-life' },
-        { label: 'Movies', value: 'movies' },
-        { label: 'Mystery', value: 'mystery' },
-        { label: 'Psychologic', value: 'psychologic' },
-        { label: 'Psychological', value: 'psychological' },
-        { label: 'Reincarnatio', value: 'reincarnatio' },
-        { label: 'Reincarnation', value: 'reincarnation' },
-        { label: 'Romanc', value: 'romanc' },
-        { label: 'Romance', value: 'romance' },
-        { label: 'Romance.Adventure', value: 'romance-adventure' },
-        { label: 'RomanceAdventure', value: 'romanceadventure' },
-        { label: 'Romance.Harem', value: 'romance-harem' },
-        { label: 'RomanceHarem', value: 'romanceharem' },
-        { label: 'Romance.Smut', value: 'romance-smut' },
-        { label: 'Romancei', value: 'romancei' },
-        { label: 'Romancem', value: 'romancem' },
-        { label: 'School Life', value: 'school-life' },
-        { label: 'Sci-fi', value: 'sci-fi' },
-        { label: 'Seinen', value: 'seinen' },
-        { label: 'Seinen Wuxia', value: 'seinen-wuxia' },
-        { label: 'Shoujo', value: 'shoujo' },
-        { label: 'Shoujo Ai', value: 'shoujo-ai' },
-        { label: 'Shounen', value: 'shounen' },
-        { label: 'Shounen Ai', value: 'shounen-ai' },
-        { label: 'Slice of Lif', value: 'slice-of-lif' },
-        { label: 'Slice Of Life', value: 'slice-of-life' },
-        { label: 'Slice of Lifel', value: 'slice-of-lifel' },
-        { label: 'Smut', value: 'smut' },
-        { label: 'Sports', value: 'sports' },
-        { label: 'Superna', value: 'superna' },
-        { label: 'Supernatural', value: 'supernatural' },
-        { label: 'System', value: 'system' },
-        { label: 'Thriller', value: 'thriller' },
-        { label: 'Tragedy', value: 'tragedy' },
-        { label: 'Urban', value: 'urban' },
-        { label: 'Urban Life', value: 'urban-life' },
-        { label: 'Wuxia', value: 'wuxia' },
-        { label: 'Xianxia', value: 'xianxia' },
-        { label: 'Xuanhuan', value: 'xuanhuan' },
-        { label: 'Yaoi', value: 'yaoi' },
-        { label: 'Yuri', value: 'yuri' },
-      ],
-      type: FilterTypes.ExcludableCheckboxGroup,
-    },
-    min_ch: {
-      value: '',
-      label: 'Minimum Chapters',
-      type: FilterTypes.TextInput,
-    },
-    max_ch: {
-      label: 'Maximum Chapters',
-      value: '',
-      type: FilterTypes.TextInput,
-    },
-    type: {
-      value: '',
-      label: 'Types',
-      options: [
-        { label: 'All Types', value: '' },
-        { label: 'Japanese comics', value: 'manga' },
-        { label: 'Korean comics', value: 'manhwa' },
-        { label: 'Chinese comics', value: 'manhua' },
-      ],
-      type: FilterTypes.Picker,
-    },
-    demo: {
-      value: [],
-      label: 'Demographics',
-      options: [
-        { label: 'Shounen', value: 'shounen' },
-        { label: 'Shoujo', value: 'shoujo' },
-        { label: 'Seinen', value: 'seinen' },
-        { label: 'Josei', value: 'josei' },
-      ],
-      type: FilterTypes.CheckboxGroup,
-    },
-  } satisfies Filters;
-}
-
-export default new NovelBuddy();
-
-type Response = { data: { items: Items[] } };
-type ChapterResponse = { success: boolean; data?: { chapters?: Items[] } };
-type Items = {
-  id: string;
-  url: string;
-  name: string;
-  alt_name?: string;
-  cover?: string;
-  slug: string;
-  updated_at?: string;
-  updatedAt?: string;
-  cv?: number;
-};
-type NovelScript = { props: { pageProps: { initialManga: Manga } } };
-type Manga = {
-  id: string;
-  url: string;
-  name?: string;
-  altName?: string;
-  cover: string;
-  status: string;
-  ratingStats?: { average: number };
-  summary?: string;
-  artists?: { name: string; slug: string }[];
-  authors?: { name: string; slug: string }[];
-  genres?: { name: string; slug: string }[];
-  chapters?: Items[];
-  cv?: number;
-  content_version?: number;
-};
-type ChapterScript = { props: { pageProps: { initialChapter: Chapter } } };
-type Chapter = { name: string; content: string };
+        .map(chapter => ({\n          name: chapter.name,\n          path:\n            (chapter.url.startsWith('/') ? chapter.url.slice(1) : chapter.url) +\n            `?id=${initialManga.id}&chapterId=${chapter.id}`,\n          releaseTime: chapter.updated_at,\n        }))\n        .reverse();\n    } else if (initialManga.chapters) {\n      novel.chapters = initialManga.chapters\n        .map(chapter => ({\n          name: chapter.name,\n          path: chapter.url.startsWith('/')\n            ? chapter.url.slice(1)\n            : chapter.url,\n          releaseTime: chapter.updatedAt,\n        }))\n        .reverse();\n    }\n\n    return novel;\n  }\n\n  async parseChapter(chapterPath: string): Promise<string> {\n    const novelIdMatch = chapterPath.match(/[?&]id=([^&]+)/);\n    const chapterIdMatch = chapterPath.match(/[?&]chapterId=([^&]+)/);\n\n    let content = '';\n\n    if (novelIdMatch && chapterIdMatch) {\n      const novelId = novelIdMatch[1];\n      const chapterId = chapterIdMatch[1];\n      const apiUrl = `${this.api}titles/${novelId}/chapters/${chapterId}`;\n      const response = await fetchApi(apiUrl);\n      const json = await response.json();\n      content = json?.data?.chapter?.content || '';\n    }\n\n    if (!content) {\n      const result = await fetchApi(this.site + chapterPath);\n      const body = await result.text();\n      const scriptMatch = body.match(\n        /<script id=\"__NEXT_DATA__\" type=\"application\\/json\">(.*?)<\\/script>/,\n      );\n      if (!scriptMatch) throw new Error('Could not find __NEXT_DATA__');\n\n      const data: ChapterScript = JSON.parse(scriptMatch[1]);\n      const initialChapter = data.props.pageProps.initialChapter;\n      if (!initialChapter) throw new Error('Could not find chapter content');\n      content = initialChapter.content;\n    }\n\n    if (content) {\n      content = content.replace(\n        /Find authorized novels in Webnovel.*?faster updates, better experience.*?Please click www\\.webnovel\\.com for visiting\\./gi,\n        '',\n      );\n      content = content.replace(fwnRegex, '');\n    }\n\n    return content;\n  }\n\n  async searchNovels(\n    searchTerm: string,\n    page: number,\n  ): Promise<Plugin.NovelItem[]> {\n    const params = new URLSearchParams({\n      'q': searchTerm,\n      'limit': '24',\n      'page': page.toString(),\n    });\n    const url = this.api + 'titles/search?' + params.toString();\n    const result = await fetchApi(url);\n    const body = await result.json();\n    return this.parseNovels(body);\n  }\n\n  filters = {\n    orderBy: {\n      value: 'views',\n      label: 'Order by',\n      options: [\n        { label: 'Default Order', value: '' },\n        { label: 'Most Viewed', value: 'views' },\n        { label: 'Latest Updated', value: 'latest' },\n        { label: 'Most Popular', value: 'popular' },\n        { label: 'A-Z', value: 'alphabetical' },\n        { label: 'Highest Rating', value: 'rating' },\n        { label: 'Most Chapters', value: 'chapters' },\n      ],\n      type: FilterTypes.Picker,\n    },\n    keyword: { value: '', label: 'Keywords', type: FilterTypes.TextInput },\n    status: {\n      value: 'all',\n      label: 'Status',\n      options: [\n        { label: 'All', value: 'all' },\n        { label: 'Ongoing', value: 'ongoing' },\n        { label: 'Completed', value: 'completed' },\n        { label: 'Hiatus', value: 'hiatus' },\n        { label: 'Cancelled', value: 'cancelled' },\n      ],\n      type: FilterTypes.Picker,\n    },\n    genre: {\n      value: { include: [], exclude: [] },\n      label: 'Genres (OR, not AND)',\n      options: [\n        { label: 'Action', value: 'action' },\n        { label: 'ActionAdventure', value: 'actionadventure' },\n        { label: 'Adult', value: 'adult' },\n        { label: 'Adventure', value: 'adventure' },\n        { label: 'Comedy', value: 'comedy' },\n        { label: 'Drama', value: 'drama' },\n        { label: 'Eastern', value: 'eastern' },\n        { label: 'Easterni', value: 'easterni' },\n        { label: 'Ecchi', value: 'ecchi' },\n        { label: 'Fan-Fiction', value: 'fan-fiction' },\n        { label: 'Fantasy', value: 'fantasy' },\n        { label: 'Game', value: 'game' },\n        { label: 'Games', value: 'games' },\n        { label: 'Gender Bender', value: 'gender-bender' },\n        { label: 'Harem', value: 'harem' },\n        { label: 'Historical', value: 'historical' },\n        { label: 'Horror', value: 'horror' },\n        { label: 'Isekai', value: 'isekai' },\n        { label: 'Josei', value: 'josei' },\n        { label: 'Lolicon', value: 'lolicon' },\n        { label: 'Magic', value: 'magic' },\n        { label: 'Martial Arts', value: 'martial-arts' },\n        { label: 'Mature', value: 'mature' },\n        { label: 'Mecha', value: 'mecha' },\n        { label: 'Military', value: 'military' },\n        { label: 'Modern Life', value: 'modern-life' },\n        { label: 'Movies', value: 'movies' },\n        { label: 'Mystery', value: 'mystery' },\n        { label: 'Psychologic', value: 'psychologic' },\n        { label: 'Psychological', value: 'psychological' },\n        { label: 'Reincarnatio', value: 'reincarnatio' },\n        { label: 'Reincarnation', value: 'reincarnation' },\n        { label: 'Romanc', value: 'romanc' },\n        { label: 'Romance', value: 'romance' },\n        { label: 'Romance.Adventure', value: 'romance-adventure' },\n        { label: 'RomanceAdventure', value: 'romanceadventure' },\n        { label: 'Romance.Harem', value: 'romance-harem' },\n        { label: 'RomanceHarem', value: 'romanceharem' },\n        { label: 'Romance.Smut', value: 'romance-smut' },\n        { label: 'Romancei', value: 'romancei' },\n        { label: 'Romancem', value: 'romancem' },\n        { label: 'School Life', value: 'school-life' },\n        { label: 'Sci-fi', value: 'sci-fi' },\n        { label: 'Seinen', value: 'seinen' },\n        { label: 'Seinen Wuxia', value: 'seinen-wuxia' },\n        { label: 'Shoujo', value: 'shoujo' },\n        { label: 'Shoujo Ai', value: 'shoujo-ai' },\n        { label: 'Shounen', value: 'shounen' },\n        { label: 'Shounen Ai', value: 'shounen-ai' },\n        { label: 'Slice of Lif', value: 'slice-of-lif' },\n        { label: 'Slice Of Life', value: 'slice-of-life' },\n        { label: 'Slice of Lifel', value: 'slice-of-lifel' },\n        { label: 'Smut', value: 'smut' },\n        { label: 'Sports', value: 'sports' },\n        { label: 'Superna', value: 'superna' },\n        { label: 'Supernatural', value: 'supernatural' },\n        { label: 'System', value: 'system' },\n        { label: 'Thriller', value: 'thriller' },\n        { label: 'Tragedy', value: 'tragedy' },\n        { label: 'Urban', value: 'urban' },\n        { label: 'Urban Life', value: 'urban-life' },\n        { label: 'Wuxia', value: 'wuxia' },\n        { label: 'Xianxia', value: 'xianxia' },\n        { label: 'Xuanhuan', value: 'xuanhuan' },\n        { label: 'Yaoi', value: 'yaoi' },\n        { label: 'Yuri', value: 'yuri' },\n      ],\n      type: FilterTypes.ExcludableCheckboxGroup,\n    },\n    min_ch: {\n      value: '',\n      label: 'Minimum Chapters',\n      type: FilterTypes.TextInput,\n    },\n    max_ch: {\n      label: 'Maximum Chapters',\n      value: '',\n      type: FilterTypes.TextInput,\n    },\n    type: {\n      value: '',\n      label: 'Types',\n      options: [\n        { label: 'All Types', value: '' },\n        { label: 'Japanese comics', value: 'manga' },\n        { label: 'Korean comics', value: 'manhwa' },\n        { label: 'Chinese comics', value: 'manhua' },\n      ],\n      type: FilterTypes.Picker,\n    },\n    demo: {\n      value: [],\n      label: 'Demographics',\n      options: [\n        { label: 'Shounen', value: 'shounen' },\n        { label: 'Shoujo', value: 'shoujo' },\n        { label: 'Seinen', value: 'seinen' },\n        { label: 'Josei', value: 'josei' },\n      ],\n      type: FilterTypes.CheckboxGroup,\n    },\n  } satisfies Filters;\n}\n\nexport default new NovelBuddy();\n\ntype Response = { data: { items: Items[] } };\ntype ChapterResponse = { success: boolean; data?: { chapters?: Items[] } };\ntype Items = {\n  id: string;\n  url: string;\n  name: string;\n  alt_name?: string;\n  cover?: string;\n  slug: string;\n  updated_at?: string;\n  updatedAt?: string;\n  cv?: number;\n};\ntype NovelScript = { props: { pageProps: { initialManga: Manga } } };\ntype Manga = {\n  id: string;\n  url: string;\n  name?: string;\n  altName?: string;\n  cover: string;\n  status: string;\n  ratingStats?: { average: number };\n  summary?: string;\n  artists?: { name: string; slug: string }[];\n  authors?: { name: string; slug: string }[];\n  genres?: { name: string; slug: string }[];\n  chapters?: Items[];\n  cv?: number;\n  content_version?: number;\n};\ntype ChapterScript = { props: { pageProps: { initialChapter: Chapter } } };\ntype Chapter = { name: string; content: string };\n
