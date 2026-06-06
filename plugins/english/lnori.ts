@@ -11,10 +11,13 @@ class LnorisPlugin implements Plugin.PluginBase {
   site = 'https://lnori.com/';
   version = '1.0.0';
 
-  async popularNovels(
-    pageNo: number,
-    { filters }: Plugin.PopularNovelsOptions<typeof this.filters>,
-  ): Promise<Plugin.NovelItem[]> {
+  private async getLibraryNovels(): Promise<
+    {
+      novel: Plugin.NovelItem;
+      author: string;
+      tags: string[];
+    }[]
+  > {
     const url = this.site + 'library';
     const body = await fetchText(url);
     const $ = parseHTML(body);
@@ -55,6 +58,15 @@ class LnorisPlugin implements Plugin.PluginBase {
         });
       }
     });
+
+    return parsedList;
+  }
+
+  async popularNovels(
+    pageNo: number,
+    { filters }: Plugin.PopularNovelsOptions<typeof this.filters>,
+  ): Promise<Plugin.NovelItem[]> {
+    const parsedList = await this.getLibraryNovels();
 
     let filteredList = parsedList;
     const selectedGenre = filters?.genre?.value;
@@ -255,46 +267,7 @@ class LnorisPlugin implements Plugin.PluginBase {
     searchTerm: string,
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
-    const url = this.site + 'library';
-    const body = await fetchText(url);
-    const $ = parseHTML(body);
-
-    const parsedList: {
-      novel: Plugin.NovelItem;
-      author: string;
-      tags: string[];
-    }[] = [];
-
-    $('article.card').each((i, el) => {
-      const name = $(el).attr('data-t') || '';
-      const author = $(el).attr('data-a') || '';
-      const tagsAttr = $(el).attr('data-tags') || '';
-      const tags = tagsAttr.split(',').map(t => t.trim().toLowerCase());
-
-      const coverImg = $(el).find('.card-cover img').first();
-      let cover = coverImg.attr('src') || '';
-      if (cover && cover.startsWith('/')) {
-        cover = this.site + cover.substring(1);
-      }
-
-      const link = $(el).find('a.stretched-link').first();
-      let path = link.attr('href') || '';
-      if (path.startsWith('/')) {
-        path = path.substring(1);
-      }
-
-      if (path && name) {
-        parsedList.push({
-          novel: {
-            name,
-            path,
-            cover: cover || defaultCover,
-          },
-          author,
-          tags,
-        });
-      }
-    });
+    const parsedList = await this.getLibraryNovels();
 
     const term = searchTerm.toLowerCase();
     const filteredList = parsedList.filter(item => {
