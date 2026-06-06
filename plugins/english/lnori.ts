@@ -173,31 +173,27 @@ class LnorisPlugin implements Plugin.PluginBase {
       const volHtml = await fetchText(fullVolUrl);
       const $vol = parseHTML(volHtml);
 
-      const tocMap: Record<string, string> = {};
-      $vol('nav.toc-view a[href^="#"], nav#toc-list a[href^="#"]').each(
-        (i, el) => {
-          const href = $vol(el).attr('href');
-          const text = $vol(el).text().trim().replace(/\s+/g, ' ');
-          if (href && text) {
-            tocMap[href.substring(1)] = text;
-          }
-        },
+      const volChapters: Plugin.ChapterItem[] = [];
+      const tocLinks = $vol(
+        'nav.toc-view a[href^="#"], nav#toc-list a[href^="#"]',
       );
 
-      const volChapters: Plugin.ChapterItem[] = [];
-      $vol('section.chapter').each((i, el) => {
-        const id = $vol(el).attr('id');
-        if (id) {
-          const tocTitle = tocMap[id];
-          const h2Title = $vol(el)
+      if (tocLinks.length > 0) {
+        tocLinks.each((i, el) => {
+          const href = $vol(el).attr('href');
+          if (!href) return;
+          const id = href.substring(1);
+          const tocTitle = $vol(el).text().trim().replace(/\s+/g, ' ');
+
+          const section = $vol(`section#${id}`);
+          const h2Title = section
             .find('h2.chapter-title, h2, h3')
             .first()
             .text()
             .trim();
+
           const chapterName =
             tocTitle || h2Title || `Page ${id.replace(/\D/g, '')}`;
-
-          if (!tocTitle && !h2Title) return;
 
           const volTitle = getVolumeName(volUrl, volumeMap[volUrl]);
           let path = volUrl;
@@ -210,8 +206,33 @@ class LnorisPlugin implements Plugin.PluginBase {
             name: `${volTitle} - ${chapterName}`,
             path,
           });
-        }
-      });
+        });
+      } else {
+        $vol('section.chapter').each((i, el) => {
+          const id = $vol(el).attr('id');
+          if (id) {
+            const h2Title = $vol(el)
+              .find('h2.chapter-title, h2, h3')
+              .first()
+              .text()
+              .trim();
+
+            if (!h2Title) return;
+
+            const volTitle = getVolumeName(volUrl, volumeMap[volUrl]);
+            let path = volUrl;
+            if (path.startsWith('/')) {
+              path = path.substring(1);
+            }
+            path = path + '#' + id;
+
+            volChapters.push({
+              name: `${volTitle} - ${h2Title}`,
+              path,
+            });
+          }
+        });
+      }
       return volChapters;
     });
 
@@ -233,6 +254,14 @@ class LnorisPlugin implements Plugin.PluginBase {
     const body = await fetchText(url);
     const $ = parseHTML(body);
 
+    const tocAnchors: string[] = [];
+    $('nav.toc-view a[href^="#"], nav#toc-list a[href^="#"]').each((i, el) => {
+      const href = $(el).attr('href');
+      if (href) {
+        tocAnchors.push(href.substring(1));
+      }
+    });
+
     const chapterSelector = anchor ? `section#${anchor}` : 'section.chapter';
     const section = $(chapterSelector);
 
@@ -240,27 +269,77 @@ class LnorisPlugin implements Plugin.PluginBase {
       throw new Error(`Chapter section not found: ${chapterPath}`);
     }
 
-    const mainContent = section.find('.main').length
-      ? section.find('.main').clone()
-      : section.clone();
+    if (tocAnchors.length > 0 && anchor) {
+      const currentIndex = tocAnchors.indexOf(anchor);
+      const nextAnchor =
+        currentIndex !== -1 && currentIndex + 1 < tocAnchors.length
+          ? tocAnchors[currentIndex + 1]
+          : null;
 
-    mainContent.find('h2, h3, .chapter-title').remove();
+      const pagesContent: string[] = [];
+      let stepSection = section;
 
-    mainContent.find('img').each((i, el) => {
-      const src = $(el).attr('src');
-      if (src && src.startsWith('/')) {
-        $(el).attr('src', this.site.replace(/\/$/, '') + src);
+      while (stepSection.length) {
+        const mainContent = stepSection.find('.main').length
+          ? stepSection.find('.main').clone()
+          : stepSection.clone();
+
+        mainContent.find('h2, h3, .chapter-title').remove();
+
+        mainContent.find('img').each((i, el) => {
+          const src = $(el).attr('src');
+          if (src && src.startsWith('/')) {
+            $(el).attr('src', this.site.replace(/\/$/, '') + src);
+          }
+        });
+
+        mainContent.find('source').each((i, el) => {
+          const srcset = $(el).attr('srcset');
+          if (srcset && srcset.startsWith('/')) {
+            $(el).attr('srcset', this.site.replace(/\/$/, '') + srcset);
+          }
+        });
+
+        const html = mainContent.html();
+        if (html) {
+          pagesContent.push(html);
+        }
+
+        let nextSibling = stepSection.next();
+        while (nextSibling.length && !nextSibling.is('section.chapter')) {
+          nextSibling = nextSibling.next();
+        }
+        stepSection = nextSibling;
+
+        if (nextAnchor && stepSection.attr('id') === nextAnchor) {
+          break;
+        }
       }
-    });
 
-    mainContent.find('source').each((i, el) => {
-      const srcset = $(el).attr('srcset');
-      if (srcset && srcset.startsWith('/')) {
-        $(el).attr('srcset', this.site.replace(/\/$/, '') + srcset);
-      }
-    });
+      return pagesContent.join('\n');
+    } else {
+      const mainContent = section.find('.main').length
+        ? section.find('.main').clone()
+        : section.clone();
 
-    return mainContent.html() || '';
+      mainContent.find('h2, h3, .chapter-title').remove();
+
+      mainContent.find('img').each((i, el) => {
+        const src = $(el).attr('src');
+        if (src && src.startsWith('/')) {
+          $(el).attr('src', this.site.replace(/\/$/, '') + src);
+        }
+      });
+
+      mainContent.find('source').each((i, el) => {
+        const srcset = $(el).attr('srcset');
+        if (srcset && srcset.startsWith('/')) {
+          $(el).attr('srcset', this.site.replace(/\/$/, '') + srcset);
+        }
+      });
+
+      return mainContent.html() || '';
+    }
   }
 
   async searchNovels(
