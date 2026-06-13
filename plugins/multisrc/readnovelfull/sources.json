@@ -73,7 +73,9 @@
     "sourceName": "Novel Bin",
     "options": {
       "latestPage": "sort/latest",
-      "searchPage": "search"
+      "searchPage": "search",
+      "versionIncrements": 1,
+      "customJs": "$('[class*=\"app-promo\"]').remove();"
     }
   },
   {
