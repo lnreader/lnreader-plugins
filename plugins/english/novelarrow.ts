@@ -10,19 +10,9 @@ class NovelArrow implements Plugin.PluginBase {
   site = 'https://novelarrow.com/';
   version = '1.0.0';
 
-  headers = {
-    'Accept':
-      'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-    'User-Agent':
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Referer': 'https://novelarrow.com/',
-  };
-
   async popularNovels(page: number) {
     const url = `${this.site}novels/latest?page=${page}`;
-    const result = await fetchApi(url, { headers: this.headers }).then(res =>
-      res.text(),
-    );
+    const result = await fetchApi(url).then(res => res.text());
     const $ = parseHTML(result);
     const novels: Plugin.NovelItem[] = [];
 
@@ -46,9 +36,7 @@ class NovelArrow implements Plugin.PluginBase {
   async parseNovel(novelPath: string) {
     // Ensure no double slashes in the URL
     const url = this.site + novelPath.replace(/^\//, '');
-    const result = await fetchApi(url, { headers: this.headers }).then(res =>
-      res.text(),
-    );
+    const result = await fetchApi(url).then(res => res.text());
     const $ = parseHTML(result);
 
     const novelId = novelPath.replace('novel/', '').replace(/^\//, '');
@@ -105,7 +93,6 @@ class NovelArrow implements Plugin.PluginBase {
     try {
       const chaptersJson = await fetchApi(chaptersUrl, {
         headers: {
-          ...this.headers,
           'Accept': 'application/json',
         },
       }).then(res => res.json());
@@ -153,7 +140,6 @@ class NovelArrow implements Plugin.PluginBase {
     try {
       const json = await fetchApi(url, {
         headers: {
-          ...this.headers,
           'Accept': 'application/json',
           'x-track-reading-progress': 'false',
         },
@@ -168,9 +154,9 @@ class NovelArrow implements Plugin.PluginBase {
         return json.item.chapterInfo.chapter_content;
       }
     } catch (e) {
-      const result = await fetchApi(`${this.site}${chapterPath}`, {
-        headers: this.headers,
-      }).then(res => res.text());
+      const result = await fetchApi(`${this.site}${chapterPath}`).then(res =>
+        res.text(),
+      );
       const contentRegex = /\\u003ch4\\u003e(.*)\\u003c\/p\\u003e/;
       const match = result.match(contentRegex);
 
@@ -201,9 +187,7 @@ class NovelArrow implements Plugin.PluginBase {
 
   async searchNovels(searchTerm: string, page: number) {
     const url = `${this.site}novels/search?keyword=${encodeURIComponent(searchTerm)}&page=${page}`;
-    const result = await fetchApi(url, { headers: this.headers }).then(res =>
-      res.text(),
-    );
+    const result = await fetchApi(url).then(res => res.text());
     const $ = parseHTML(result);
     const novels: Plugin.NovelItem[] = [];
 
