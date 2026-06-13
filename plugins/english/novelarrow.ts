@@ -71,7 +71,7 @@ class NovelArrow implements Plugin.PluginBase {
         fullSummary = summaryMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
     }
 
-    const novel: any = {
+    const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: $('meta[name="og:novel:novel_name"]').attr('content') || 
             $('meta[property="og:novel:novel_name"]').attr('content') ||
