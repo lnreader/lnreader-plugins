@@ -32,6 +32,10 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      # BƯỚC KIỂM TRA THỦ CÔNG: Xem lệnh gốc của bạn có thực sự tìm ra lỗi không
+      - name: Check ESLint Raw Output
+        run: npm run lint
+
       # Thay vì chạy 'npm run lint', ta dùng reviewdog để chạy eslint
       - name: Run ESLint with Reviewdog
         uses: reviewdog/action-eslint@v1
