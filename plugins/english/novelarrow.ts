@@ -8,7 +8,7 @@ class NovelArrow implements Plugin.PluginBase {
   name = 'Novel Arrow';
   icon = 'https://novelarrow.com/favicon-32.png';
   site = 'https://novelarrow.com/';
-  version = '0.0.1';
+  version = '1.0.0';
 
   // Required headers to bypass Cloudflare and simulate a mobile browser
   headers = {
