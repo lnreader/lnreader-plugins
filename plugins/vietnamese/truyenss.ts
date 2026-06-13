@@ -13,6 +13,7 @@ class TruyenSS implements Plugin.PluginBase {
   icon = 'src/vi/truyenss/icon.png';
   site = 'https://truyenss.com';
   version = '1.0.0';
+  lang ="" ;
 
   imageRequestInit: Plugin.ImageRequestInit = {
     headers: { Referer: this.site + '/' },
