@@ -74,6 +74,7 @@
     "options": {
       "latestPage": "sort/latest",
       "searchPage": "search",
+      "versionIncrements": 1,
       "customJs": "$('[class*=\"app-promo\"]').remove();"
     }
   },
