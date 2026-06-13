@@ -24,7 +24,7 @@ class NovelArrow implements Plugin.PluginBase {
     const url = `${this.site}novels/latest?page=${page}`;
     const result = await fetchApi(url, { headers: this.headers }).then(res => res.text());
     const $ = parseHTML(result);
-    const novels: any[] = [];
+    const novels: Plugin.NovelItem[] = [];
 
     $('article').each((i, el) => {
       const title = $(el).find('h2').text().trim();
