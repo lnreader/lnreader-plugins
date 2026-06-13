@@ -4,8 +4,6 @@ import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { NovelStatus } from '@libs/novelStatus';
 
-console.log(nonexistentVariable);
-
 type SearchedNovel = {
   name: string;
   slug: string;
