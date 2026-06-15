@@ -14,7 +14,6 @@ jobs:
     name: Lint Check
     runs-on: ubuntu-latest
 
-    # BẮT BUỘC: Cấp quyền cho secrets.GITHUB_TOKEN để viết bình luận vào PR
     permissions:
       contents: read
       pull-requests: write
@@ -31,16 +30,11 @@ jobs:
 
       - name: Install Dependencies
         run: npm ci
-      # Thay vì chạy 'npm run lint', ta dùng reviewdog để chạy eslint
       - name: Run ESLint with Reviewdog
         uses: reviewdog/action-eslint@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          # Đưa bình luận vào luồng thảo luận chính (Conversation tab)
           reporter: github-pr-review 
-          # Chạy eslint trên toàn bộ project (tương đương lệnh của bạn)
           eslint_flags: "." 
-          # Giữ là 'false' để nếu chỉ có WARNING thì GitHub vẫn hiện TÍCH XANH (Pass)
-          # Nếu muốn WARNING cũng làm X ĐỎ (Fail) thì đổi thành 'true'
           fail_on_error: false 
           
