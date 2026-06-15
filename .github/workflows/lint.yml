@@ -27,9 +27,6 @@ jobs:
       - name: Get Changed Files
         id: changed-files
         uses: tj-actions/changed-files@v45
-        with:
-          files: |
-            **/*.{js,jsx,ts,tsx}
 
       - name: Setup Node.js
         if: steps.changed-files.outputs.any_changed == 'true'
@@ -49,5 +46,6 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           reporter: github-pr-review 
           eslint_flags: "${{ steps.changed-files.outputs.all_changed_files }}"
+          filter_mode: diff_context 
           fail_on_error: false
           
