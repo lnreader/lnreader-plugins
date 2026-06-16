@@ -12,6 +12,25 @@ const JSON_HEADERS = {
   'Content-Type': 'application/json',
 };
 
+type ApiNovelItem = {
+  title: string;
+  slug: string;
+  cover?: { large?: string };
+};
+
+type ApiNovelDetail = ApiNovelItem & {
+  synopsis?: string;
+  author?: string;
+  status?: string;
+  categories?: { name: string }[];
+};
+
+type ApiChapter = {
+  title?: string;
+  longTitle?: string;
+  slug: string;
+};
+
 // Category IDs from GET /api/categories
 // Format: base64(numeric_id)--hmac_signature
 const CATEGORY_IDS: Record<string, string> = {
@@ -173,7 +192,7 @@ class NovelMania implements Plugin.PluginBase {
       headers: JSON_HEADERS,
     }).then(r => r.json());
 
-    return (json.data ?? []).map((n: any) => ({
+    return (json.data ?? []).map((n: ApiNovelItem) => ({
       name:  n.title,
       cover: n.cover?.large ?? defaultCover,
       path:  `/novels/${n.slug}`,
@@ -187,29 +206,34 @@ class NovelMania implements Plugin.PluginBase {
     const novelJson = await fetchApi(`${API}/novels/${slug}`, {
       headers: JSON_HEADERS,
     }).then(r => r.json());
-    const n = novelJson.data;
+    const n = novelJson.data as ApiNovelDetail;
 
     // Collect all chapters — API paginates (20 items per page)
     const chapters: Plugin.ChapterItem[] = [];
     let page = 1;
-    while (true) {
+    let hasMore = true;
+    while (hasMore) {
       const chapJson = await fetchApi(
         `${API}/novels/${slug}/chapters?page=${page}`,
         { headers: JSON_HEADERS },
       ).then(r => r.json());
 
-      const batch: any[] = chapJson.data ?? [];
-      if (!batch.length) break;
-
-      for (const ch of batch) {
-        chapters.push({
-          name: ch.longTitle || ch.title,
-          path: `/novels/${slug}/capitulos/${ch.slug}`,
-        });
+      const batch: ApiChapter[] = chapJson.data ?? [];
+      if (!batch.length) {
+        hasMore = false;
+      } else {
+        for (const ch of batch) {
+          chapters.push({
+            name: ch.longTitle || ch.title || ch.slug,
+            path: `/novels/${slug}/capitulos/${ch.slug}`,
+          });
+        }
+        if (batch.length < 20) {
+          hasMore = false;
+        } else {
+          page++;
+        }
       }
-
-      if (batch.length < 20) break;
-      page++;
     }
 
     return {
@@ -218,7 +242,7 @@ class NovelMania implements Plugin.PluginBase {
       cover:   n.cover?.large ?? defaultCover,
       summary: cleanSynopsis(n.synopsis ?? ''),
       author:  n.author ?? '',
-      genres:  (n.categories ?? []).map((c: any) => c.name).join(','),
+      genres:  (n.categories ?? []).map((c: { name: string }) => c.name).join(','),
       status:  mapStatus(n.status),
       chapters,
     };
@@ -244,7 +268,7 @@ class NovelMania implements Plugin.PluginBase {
     // \u2013 = em-dash (U+2013); avoid encoding issues by using the code point.
     const longTitleMatch = html.match(/longTitle:"((?:[^"\\]|\\.)*)"/);
     const longTitle = longTitleMatch?.[1] ? decodeJsString(longTitleMatch[1]) : '';
-    let volumeName = longTitle.split(/\s*[\u2013\-]\s*/)[0]?.trim() ?? '';
+    let volumeName = longTitle.split(/\s*[\u2013-]\s*/)[0]?.trim() ?? '';
 
     // --- Fallback: derive volume + short chapter label from og:title meta tag ---
     // og:title format: "Volume 1 – Capítulo 1 – Novel Name"
@@ -252,7 +276,7 @@ class NovelMania implements Plugin.PluginBase {
     if (!longTitle) {
       const ogMatch = html.match(/og:title[^>]*content="([^"]+)"/);
       if (ogMatch?.[1]) {
-        const parts = ogMatch[1].split(/\s*[\u2013\-]\s*/);
+        const parts = ogMatch[1].split(/\s*[\u2013-]\s*/);
         if (parts.length >= 2) {
           volumeName  = parts[0]?.trim() ?? '';
           fallbackTitle = parts[1]?.trim() ?? '';
@@ -319,7 +343,7 @@ class NovelMania implements Plugin.PluginBase {
       headers: JSON_HEADERS,
     }).then(r => r.json());
 
-    return (json.data ?? []).map((n: any) => ({
+    return (json.data ?? []).map((n: ApiNovelItem) => ({
       name:  n.title,
       cover: n.cover?.large ?? defaultCover,
       path:  `/novels/${n.slug}`,
