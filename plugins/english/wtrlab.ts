@@ -8,7 +8,7 @@ class WTRLAB implements Plugin.PagePlugin {
   id = 'WTRLAB';
   name = 'WTR-LAB';
   site = 'https://wtr-lab.com/';
-  version = '1.1.4';
+  version = '1.1.5';
   icon = 'src/en/wtrlab/icon.png';
   sourceLang = 'en/';
   baggage = '';
