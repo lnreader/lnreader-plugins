@@ -32,9 +32,10 @@ if [[ "$1" == "--all-branches" ]]; then
         npm run clean:multisrc
         npm run build:multisrc
         echo "Compiling TypeScript..."
-        npx tsc --project tsconfig.production.json
+        npx tsc --project tsconfig.production.json --outDir ./.js-temp/plugins
         echo "# $branch" >> $GITHUB_STEP_SUMMARY
-        BRANCH=$dist npm run build:manifest -- --only-new 2>> $GITHUB_STEP_SUMMARY
+        BRANCH=$dist COMPILED_DIR=./.js-temp/plugins npm run build:manifest -- --only-new 2>> $GITHUB_STEP_SUMMARY
+        rm -rf .js-temp
         if [ ! -d ".dist" ] || [ -z "$(ls -A .dist)" ]; then
             echo "❌ ERROR: Manifest generation failed - .dist is missing or empty"
             exit 1
