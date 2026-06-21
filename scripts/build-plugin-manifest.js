@@ -25,7 +25,6 @@ const PLUGIN_LINK = `${USER_CONTENT_LINK}/.js/src/plugins`;
 
 const DIST_DIR = '.dist';
 
-let json = [];
 if (!fs.existsSync(DIST_DIR)) {
   fs.mkdirSync(DIST_DIR);
 }
@@ -38,18 +37,20 @@ const pluginsWithFiltersPerLanguage = {};
 const args = process.argv.slice(2);
 let ONLY_NEW = args.includes('--only-new');
 
-let existingPlugins = {};
-if (!fs.existsSync(jsonPath)) ONLY_NEW = false;
-if (ONLY_NEW) {
+const manifestMap = {};
+if (fs.existsSync(jsonPath)) {
   try {
     const existingJson = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
-    json = existingJson;
     for (const plugin of existingJson) {
-      existingPlugins[plugin.id] = plugin;
+      manifestMap[plugin.id] = plugin;
     }
   } catch (e) {
     console.warn('Failed to parse existing plugins.json:', e);
   }
+}
+
+if (Object.keys(manifestMap).length === 0) {
+  ONLY_NEW = false;
 }
 
 // Simple semver comparison: "1.2.3" < "1.2.4"
@@ -85,7 +86,8 @@ const proxy = createRecursiveProxy();
 
 const _require = () => proxy;
 
-const COMPILED_PLUGIN_DIR = './.js/plugins';
+const DEST_PLUGIN_DIR = './.js/plugins';
+const COMPILED_PLUGIN_DIR = process.env.COMPILED_DIR || DEST_PLUGIN_DIR;
 
 for (let language in languages) {
   console.log(
@@ -122,8 +124,8 @@ for (let language in languages) {
     // --only-new logic
     if (
       ONLY_NEW &&
-      existingPlugins[id] &&
-      compareVersions(existingPlugins[id].version, version) >= 0
+      manifestMap[id] &&
+      compareVersions(manifestMap[id].version, version) >= 0
     ) {
       // console.log(`   Skipping ${name} (${id}) - not newer`, '\r🔁');
       return;
@@ -147,7 +149,19 @@ for (let language in languages) {
     } else {
       pluginSet.add(id);
     }
-    json.push(info);
+
+    if (COMPILED_PLUGIN_DIR !== DEST_PLUGIN_DIR) {
+      const destLangPath = path.join(DEST_PLUGIN_DIR, language.toLowerCase());
+      if (!fs.existsSync(destLangPath)) {
+        fs.mkdirSync(destLangPath, { recursive: true });
+      }
+      fs.copyFileSync(
+        path.join(langPath, plugin),
+        path.join(destLangPath, plugin)
+      );
+    }
+
+    manifestMap[id] = info;
 
     pluginsPerLanguage[language] += 1;
     if (filters !== undefined) {
@@ -162,6 +176,8 @@ for (let language in languages) {
     );
   });
 }
+
+const json = Object.values(manifestMap);
 
 json.sort((a, b) => {
   if (a.lang === b.lang) return a.id.localeCompare(b.id);
