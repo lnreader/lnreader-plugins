@@ -20,7 +20,7 @@ class HakoPlugin implements Plugin.PluginBase {
   name = 'Hako';
   icon = 'src/vi/hakolightnovel/icon.png';
   site = 'https://ln.hako.vn';
-  version = '1.1.0';
+  version = '1.1.1';
   parseNovels(url: string) {
     return fetchApi(url)
       .then(res => res.text())
@@ -429,9 +429,17 @@ class HakoPlugin implements Plugin.PluginBase {
               }
             });
 
-            protectedEl.replaceWith(decryptedChunks.join(''));
+            let decryptedHtml = decryptedChunks.join('');
+            decryptedHtml = decryptedHtml.replace(
+              /\[note(\d+)\]/gi,
+              '<span id="anchor-note$1" class="note-icon none-print inline note-tooltip" data-tooltip-content="#note$1 .note-content" data-note-id="note$1"><i class="fas fa-sticky-note"></i></span><a id="anchor-note$1" class="inline-print none" href="#note$1">[note]</a>',
+            );
+
+            protectedEl.replaceWith(decryptedHtml);
           }
         }
+
+        $('a[href^="/truyen/"]').has('img[src*="chapter-banners"]').remove();
 
         return $('#chapter-content').html() || 'Không tìm thấy nội dung';
       });
