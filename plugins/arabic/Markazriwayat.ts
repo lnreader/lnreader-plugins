@@ -19,7 +19,7 @@ const getCheerio = async (url: string, search = false): Promise<CheerioAPI> => {
 class Markazriwayat implements Plugin.PluginBase {
   id = 'markazriwayat';
   name = 'Markazriwayat';
-  version = '3.0.0';
+  version = '3.0.1';
   icon = 'src/ar/markazriwayat/icon.png';
   site = SITE;
 
