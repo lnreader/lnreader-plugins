@@ -327,5 +327,15 @@
       "reverseChapters": true,
       "hasLocked": true
     } 
+  },
+  {
+    "id": "blumeverse",
+    "sourceSite": "https://blume-verse.com/",
+    "sourceName": "BlumeVerse",
+    "options": {
+      "lang": "English",
+      "reverseChapters": true,
+      "hasLocked": true
+    } 
   }
 ]
