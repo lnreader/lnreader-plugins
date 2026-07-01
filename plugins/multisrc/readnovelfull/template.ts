@@ -206,7 +206,11 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
 
       if (pageAsPath) {
         if (pageNo > 1) {
-          url = `${this.site}${basePage}/${pageNo.toString()}`;
+          if (this.options.multiPageChapters) {
+            url = `${this.site}${basePage}/${pageParam}/${pageNo.toString()}`;
+          } else {
+            url = `${this.site}${basePage}/${pageNo.toString()}`;
+          }
         } else {
           url = `${this.site}${basePage}`;
         }
@@ -239,11 +243,14 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
     const authorParts: string[] = [];
     const genreArray: string[] = [];
     const infoParts: string[] = [];
-    const chapters: Plugin.ChapterItem[] = [];
     let novelId: string | null = null;
     let tempChapter: Partial<Plugin.ChapterItem> = {};
     let i = 0;
     let depth: number;
+
+    let isMultiPageSelect = false;
+    let multiPageOptionCount = 0;
+    let chapters: Plugin.ChapterItem[] = [];
 
     const stateStack: ParsingState[] = [ParsingState.Idle];
     const currentState = () => stateStack[stateStack.length - 1];
@@ -335,6 +342,19 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
                 novelPath.replace('.html', `/chapter-${i}.html`);
             }
             break;
+          case 'select':
+            if (
+              this.options.multiPageChapters &&
+              attribs.id === 'indexselect'
+            ) {
+              isMultiPageSelect = true;
+            }
+            break;
+          case 'option':
+            if (isMultiPageSelect && attribs.value) {
+              multiPageOptionCount++;
+            }
+            break;
         }
       },
 
@@ -411,6 +431,9 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
                 break;
             }
             break;
+          case 'select':
+            isMultiPageSelect = false;
+            break;
           default:
             return;
         }
@@ -475,7 +498,135 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
     parser.write(body);
     parser.end();
 
-    if (this.options.noAjax && chapters.length > 0) {
+    let multiPageMaxPage = 1;
+    if (multiPageOptionCount > 1) {
+      multiPageMaxPage = multiPageOptionCount;
+    }
+
+    if (this.options.multiPageChapters && multiPageMaxPage > 1) {
+      chapters.length = 0;
+      const cleanNovelPath = novelPath
+        .replace(/\.html$/, '')
+        .replace(/\/$/, '');
+      const newPageSize = 200;
+
+      const fetchAndParse = async (p: number) => {
+        const ajaxUrl = `${this.site}${cleanNovelPath}?ajax=chapters&page=${p}&pageSize=${newPageSize}`;
+        try {
+          const res = await fetchApi(ajaxUrl);
+          if (res.ok) {
+            const data = await res.json();
+            const html = data.html || '';
+            const pageChapters: Plugin.ChapterItem[] = [];
+            let isParsingChapter = false;
+            let tempAjaxChapter: Partial<Plugin.ChapterItem> = {};
+
+            const pageParser = new Parser({
+              onopentag: (name, attribs) => {
+                if (name === 'a' && attribs.href) {
+                  isParsingChapter = true;
+                  tempAjaxChapter.name = attribs.title || '';
+                  tempAjaxChapter.path = attribs.href.startsWith('/')
+                    ? attribs.href.substring(1)
+                    : attribs.href;
+                }
+              },
+              ontext: data => {
+                const text = data.trim();
+                if (isParsingChapter && text) {
+                  tempAjaxChapter.name = tempAjaxChapter.name
+                    ? tempAjaxChapter.name + text
+                    : text;
+                }
+              },
+              onclosetag: name => {
+                if (name === 'a' && isParsingChapter) {
+                  if (tempAjaxChapter.path) {
+                    pageChapters.push({
+                      name: tempAjaxChapter.name?.trim() || `Chapter`, // Number will be assigned later
+                      path: tempAjaxChapter.path,
+                      releaseTime: null,
+                    });
+                  }
+                  tempAjaxChapter = {};
+                  isParsingChapter = false;
+                }
+              },
+            });
+            pageParser.write(html);
+            pageParser.end();
+            return { pageChapters, totalPage: data.totalPage };
+          } else {
+            throw new Error(`HTTP Error ${res.status}`);
+          }
+        } catch (e) {
+          console.error(
+            `Failed to fetch chapters page ${p} for ${novelPath}`,
+            e,
+          );
+          throw e; // Rethrow to trigger the retry logic
+        }
+      };
+
+      // Fetch page 1 first to determine true max page
+      const firstPageData = await fetchAndParse(1);
+      const allChapters = [...firstPageData.pageChapters];
+      const newMaxPage = firstPageData.totalPage || 1;
+
+      // Fetch remaining pages concurrently in smaller batches with a delay to prevent Cloudflare bans
+      if (newMaxPage > 1) {
+        const batchSize = 3; // Process 3 pages concurrently per chunk
+        for (let i = 2; i <= newMaxPage; i += batchSize) {
+          let chunkSuccess = false;
+          let retries = 0;
+
+          while (!chunkSuccess && retries < 3) {
+            try {
+              const promises = [];
+              for (let p = i; p < i + batchSize && p <= newMaxPage; p++) {
+                promises.push(fetchAndParse(p));
+              }
+
+              const results = await Promise.all(promises);
+              for (const result of results) {
+                allChapters.push(...result.pageChapters);
+              }
+              chunkSuccess = true;
+            } catch (err) {
+              retries++;
+              console.warn(
+                `Rate limit triggered on batch ${i}. Retrying ${retries}/3...`,
+              );
+              if (retries >= 3) {
+                console.error(
+                  `Failed to fetch batch ${i} after 3 retries. Aborting.`,
+                );
+                throw new Error(
+                  'Cloudflare Rate Limit (HTTP 429/503) triggered. Failed to fetch all chapters.',
+                );
+              }
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+          }
+
+          // Proactive delay between batches to keep Cloudflare happy
+          if (i + batchSize <= newMaxPage) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        }
+      }
+
+      // Assign sequential chapter numbers
+      for (let i = 0; i < allChapters.length; i++) {
+        allChapters[i].chapterNumber = i + 1;
+        if (allChapters[i].name === 'Chapter') {
+          allChapters[i].name = `Chapter ${i + 1}`;
+        }
+        chapters.push(allChapters[i]);
+      }
+
+      novel.chapters = chapters;
+    } else if (this.options.noAjax && chapters.length > 0) {
       novel.chapters = chapters;
     } else if (novelId !== null) {
       const chapterListing =
