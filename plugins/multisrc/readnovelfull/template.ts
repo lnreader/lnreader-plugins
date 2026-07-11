@@ -524,6 +524,15 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
         novel.chapters = [];
       } else {
         const ajaxBody = await ajaxResult.text();
+        let ajaxHtml = ajaxBody;
+        try {
+          const json = JSON.parse(ajaxBody);
+          if (typeof json.html === 'string') {
+            ajaxHtml = json.html;
+          }
+        } catch {
+          // eslint
+        }
         const ajaxChapters: Plugin.ChapterItem[] = [];
         let tempAjaxChapter: Partial<Plugin.ChapterItem> = {};
 
@@ -578,7 +587,7 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
           },
         });
 
-        ajaxParser.write(ajaxBody);
+        ajaxParser.write(ajaxHtml);
         ajaxParser.end();
         novel.chapters = ajaxChapters;
       }
