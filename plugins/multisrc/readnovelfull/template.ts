@@ -545,23 +545,15 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
               onopentag: (name, attribs) => {
                 if (name === 'a' && attribs.href) {
                   isParsingChapter = true;
-                  tempAjaxChapter.name = attribs.title || '';
+                  tempAjaxChapter.name = attribs.title || 'Chapter';
                   tempAjaxChapter.path = attribs.href.replace(/^\//, '');
-                }
-              },
-              ontext: data => {
-                const text = data.trim();
-                if (isParsingChapter && text) {
-                  tempAjaxChapter.name = tempAjaxChapter.name
-                    ? tempAjaxChapter.name + text
-                    : text;
                 }
               },
               onclosetag: name => {
                 if (name === 'a' && isParsingChapter) {
                   if (tempAjaxChapter.path) {
                     pageChapters.push({
-                      name: tempAjaxChapter.name?.trim() || `Chapter`,
+                      name: tempAjaxChapter.name?.trim() || 'Chapter',
                       path: tempAjaxChapter.path,
                       releaseTime: null,
                     });
