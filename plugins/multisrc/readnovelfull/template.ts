@@ -25,7 +25,6 @@ type ReadNovelFullOptions = {
   noPages?: string[];
   pageAsPath?: boolean;
   customJs?: string;
-  multiPageChapters?: boolean;
 };
 
 export type ReadNovelFullMetadata = {
@@ -164,22 +163,13 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
       pageAsPath = false,
     } = this.options;
 
-    const genresValue = (filters?.genres?.value ??
-      this.filters?.genres?.value) as string[] | string | undefined;
-    const typeValue = String(
-      filters?.type?.value ?? this.filters?.type?.value ?? '',
-    );
-    const hasGenres = Array.isArray(genresValue)
-      ? genresValue.length > 0
-      : !!genresValue;
-
     // Skip Pagination for FWN & LR
     if (
       pageNo !== 1 &&
       !showLatestNovels &&
-      !hasGenres &&
+      !filters.genres.value.length &&
       noPages.length > 0 &&
-      noPages.includes(typeValue)
+      noPages.includes(filters.type.value)
     ) {
       return [];
     }
@@ -192,14 +182,11 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
 
       if (showLatestNovels) {
         params.append(typeParam, latestPage);
-      } else if (hasGenres) {
+      } else if (filters.genres.value.length) {
         params.append(typeParam, genreParam);
-        params.append(
-          genreKey,
-          Array.isArray(genresValue) ? genresValue.join(',') : genresValue!,
-        );
+        params.append(genreKey, filters.genres.value);
       } else {
-        params.append(typeParam, typeValue);
+        params.append(typeParam, filters.type.value);
       }
 
       // Add language parameter if specified
@@ -213,19 +200,13 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
       // URL structure with path segments
       const basePage = showLatestNovels
         ? latestPage
-        : hasGenres
-          ? Array.isArray(genresValue)
-            ? genresValue.join(',')
-            : genresValue!
-          : typeValue;
+        : filters.genres.value.length
+          ? filters.genres.value
+          : filters.type.value;
 
       if (pageAsPath) {
         if (pageNo > 1) {
-          if (this.options.multiPageChapters) {
-            url = `${this.site}${basePage}/${pageParam}/${pageNo.toString()}`;
-          } else {
-            url = `${this.site}${basePage}/${pageNo.toString()}`;
-          }
+          url = `${this.site}${basePage}/${pageNo.toString()}`;
         } else {
           url = `${this.site}${basePage}`;
         }
@@ -258,14 +239,13 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
     const authorParts: string[] = [];
     const genreArray: string[] = [];
     const infoParts: string[] = [];
+    const chapters: Plugin.ChapterItem[] = [];
     let novelId: string | null = null;
+    let totalChapter: number | null = null;
+    let novelTitle: string | null = null;
     let tempChapter: Partial<Plugin.ChapterItem> = {};
     let i = 0;
     let depth: number;
-
-    let isMultiPageSelect = false;
-    let multiPageOptionCount = 0;
-    const chapters: Plugin.ChapterItem[] = [];
 
     const stateStack: ParsingState[] = [ParsingState.Idle];
     const currentState = () => stateStack[stateStack.length - 1];
@@ -329,6 +309,9 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
 
               if (newState) pushState(newState);
             }
+            if (attribs.class?.includes('disqus')) {
+              novelTitle = attribs['data-disqus-identifier'];
+            }
             break;
           case 'br':
             if (state === ParsingState.Summary) {
@@ -344,6 +327,9 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
             }
             break;
           case 'a':
+            if (attribs.class?.includes('set-case')) {
+              novelId = attribs['data-articleid'];
+            }
             if (state === ParsingState.ChapterList) {
               i++;
               const href = attribs.href;
@@ -357,18 +343,8 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
                 novelPath.replace('.html', `/chapter-${i}.html`);
             }
             break;
-          case 'select':
-            if (
-              this.options.multiPageChapters &&
-              attribs.id === 'indexselect'
-            ) {
-              isMultiPageSelect = true;
-            }
-            break;
-          case 'option':
-            if (isMultiPageSelect && attribs.value) {
-              multiPageOptionCount++;
-            }
+          case 'script':
+            pushState(ParsingState.Hidden);
             break;
         }
       },
@@ -396,6 +372,12 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
           case ParsingState.Status:
             statusParts.push(text);
             break;
+          case ParsingState.Hidden:
+            if (text.includes('window.chapterPagination')) {
+              totalChapter = Number(text.match(/totalChapters:\s*(\d+)/)![1])!;
+            } else if (text.includes('sourceid')) {
+              novelId = text.match(/sourceid=(\d+)/)![1]!;
+            }
         }
       },
 
@@ -446,8 +428,8 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
                 break;
             }
             break;
-          case 'select':
-            isMultiPageSelect = false;
+          case 'script':
+            if (state === ParsingState.Hidden) popState();
             break;
           default:
             return;
@@ -513,126 +495,30 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
     parser.write(body);
     parser.end();
 
-    const multiPageMaxPage = Math.max(1, multiPageOptionCount);
-
-    if (this.options.multiPageChapters && multiPageMaxPage > 1) {
-      // Re-fetch page 1 with max pageSize (200) since default page size is usually 40,
-      // minimizing total requests required to fetch all chapters.
-      chapters.length = 0;
-      const cleanNovelPath = novelPath
-        .replace(/\.html$/, '')
-        .replace(/\/$/, '');
-      const newPageSize = 200;
-
-      const fetchAndParse = async (p: number) => {
-        const ajaxUrl = `${this.site}${cleanNovelPath}?ajax=chapters&page=${p}&pageSize=${newPageSize}`;
-        try {
-          const res = await fetchApi(ajaxUrl, {
-            headers: {
-              'Referer': this.site + novelPath,
-              'X-Requested-With': 'XMLHttpRequest',
-              'Accept': '*/*',
-            },
-          });
-          if (res.ok) {
-            const data = await res.json();
-            const html = data.html || '';
-            const pageChapters: Plugin.ChapterItem[] = [];
-            let isParsingChapter = false;
-            let tempAjaxChapter: Partial<Plugin.ChapterItem> = {};
-
-            const pageParser = new Parser({
-              onopentag: (name, attribs) => {
-                if (name === 'a' && attribs.href) {
-                  isParsingChapter = true;
-                  tempAjaxChapter.name = attribs.title || '';
-                  tempAjaxChapter.path = attribs.href.replace(/^\//, '');
-                }
-              },
-              ontext: data => {
-                const text = data.trim();
-                if (isParsingChapter && text) {
-                  tempAjaxChapter.name = tempAjaxChapter.name
-                    ? tempAjaxChapter.name + text
-                    : text;
-                }
-              },
-              onclosetag: name => {
-                if (name === 'a' && isParsingChapter) {
-                  if (tempAjaxChapter.path) {
-                    pageChapters.push({
-                      name: tempAjaxChapter.name?.trim() || `Chapter`,
-                      path: tempAjaxChapter.path,
-                      releaseTime: null,
-                    });
-                  }
-                  tempAjaxChapter = {};
-                  isParsingChapter = false;
-                }
-              },
-            });
-            pageParser.write(html);
-            pageParser.end();
-            return { pageChapters, totalPage: data.totalPage };
-          } else {
-            throw new Error(`HTTP Error ${res.status}`);
-          }
-        } catch (e) {
-          console.error(
-            `Failed to fetch chapters page ${p} for ${novelPath}`,
-            e,
-          );
-          throw e;
-        }
-      };
-
-      const firstPageData = await fetchAndParse(1);
-      const allChapters = [...firstPageData.pageChapters];
-      const newMaxPage = firstPageData.totalPage || 1;
-
-      if (newMaxPage > 1) {
-        for (let i = 2; i <= newMaxPage; i++) {
-          let chunkSuccess = false;
-          let retries = 0;
-
-          while (!chunkSuccess && retries < 3) {
-            try {
-              const result = await fetchAndParse(i);
-              allChapters.push(...result.pageChapters);
-              chunkSuccess = true;
-            } catch (err) {
-              retries++;
-              await this.sleep(1000);
-            }
-          }
-
-          if (i < newMaxPage) {
-            const randomDelay = Math.floor(Math.random() * 250) + 250; // Random delay between 250ms and 499ms
-            await this.sleep(randomDelay);
-          }
-        }
-      }
-
-      // Assign sequential chapter numbers
-      for (let i = 0; i < allChapters.length; i++) {
-        allChapters[i].chapterNumber = i + 1;
-        if (allChapters[i].name === 'Chapter') {
-          allChapters[i].name = `Chapter ${i + 1}`;
-        }
-        chapters.push(allChapters[i]);
-      }
-
-      novel.chapters = chapters;
-    } else if (this.options.noAjax && chapters.length > 0) {
+    if (this.options.noAjax && chapters.length > 0 && !totalChapter) {
       novel.chapters = chapters;
     } else if (novelId !== null) {
       const chapterListing =
         this.options.chapterListing || 'ajax/chapter-archive';
       const ajaxParam = this.options.chapterParam || 'novelId';
       const params = new URLSearchParams({ [ajaxParam]: novelId });
-      const chaptersUrl = `${this.site}${chapterListing}?${params.toString()}`;
 
-      const ajaxResult = await fetchApi(chaptersUrl);
+      let chaptersUrl: string;
+      let fetchOptions: FetchInit | undefined;
+
+      if (totalChapter) {
+        chaptersUrl = `${this.site}${chapterListing}`;
+        params.set('acode', novelTitle || novelPath.split('/').pop()!);
+        params.set('cid', String(Math.floor(Math.random() * totalChapter)));
+        fetchOptions = {
+          method: 'POST',
+          body: params.toString(),
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        };
+      } else {
+        chaptersUrl = `${this.site}${chapterListing}?${params.toString()}`;
+      }
+      const ajaxResult = await fetchApi(chaptersUrl, fetchOptions);
       if (!ajaxResult.ok) {
         console.error(`Failed to fetch chapters: ${ajaxResult.status}`);
         novel.chapters = [];
