@@ -77,10 +77,10 @@ class FuckNovelpia implements Plugin.PluginBase {
       link += '&page=' + page;
     }
 
-    const genreIncludeParams = filters?.genres_include?.value
+    const genreIncludeParams = (filters?.genres?.value?.include ?? [])
       .map(value => `&genres_include%5B%5D=${value}`)
       .join('');
-    const genreExcludeParams = filters?.genres_exclude?.value
+    const genreExcludeParams = (filters?.genres?.value?.exclude ?? [])
       .map(value => `&genres_exclude%5B%5D=${value}`)
       .join('');
     link +=
@@ -213,7 +213,7 @@ class FuckNovelpia implements Plugin.PluginBase {
     searchTerm: string,
     page: number,
   ): Promise<Plugin.NovelItem[]> {
-    let link = this.site + '?q=' + encodeURIComponent(searchTerm);
+    let link = this.site + '?q=' + searchTerm.replace(/ /g, '+');
 
     if (page > 1) {
       link += '&page=' + page;
@@ -250,9 +250,12 @@ class FuckNovelpia implements Plugin.PluginBase {
       ],
       type: FilterTypes.Picker,
     },
-    genres_include: {
-      label: 'Genres Include',
-      value: [],
+    genres: {
+      label: 'Genres',
+      value: {
+        include: [],
+        exclude: [],
+      },
       options: [
         { label: 'Academy', value: '1' },
         { label: 'Action', value: '2' },
@@ -272,31 +275,7 @@ class FuckNovelpia implements Plugin.PluginBase {
         { label: 'Sports', value: '16' },
         { label: 'Uncategorized', value: '17' },
       ],
-      type: FilterTypes.CheckboxGroup,
-    },
-    genres_exclude: {
-      label: 'Genres Exclude',
-      value: [],
-      options: [
-        { label: 'Academy', value: '1' },
-        { label: 'Action', value: '2' },
-        { label: 'Adventure', value: '3' },
-        { label: 'Fantasy', value: '4' },
-        { label: 'Horror', value: '5' },
-        { label: 'Mystery', value: '6' },
-        { label: 'Romance', value: '7' },
-        { label: 'School', value: '8' },
-        { label: 'Martial', value: '9' },
-        { label: 'Smut', value: '10' },
-        { label: 'Adult', value: '11' },
-        { label: 'Harem', value: '12' },
-        { label: 'Historical', value: '13' },
-        { label: 'Sci-Fi', value: '14' },
-        { label: 'Slice of Life', value: '15' },
-        { label: 'Sports', value: '16' },
-        { label: 'Uncategorized', value: '17' },
-      ],
-      type: FilterTypes.CheckboxGroup,
+      type: FilterTypes.ExcludableCheckboxGroup,
     },
     tags_include_operator: {
       label: 'Include Tags',
