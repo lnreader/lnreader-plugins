@@ -213,7 +213,7 @@ class FuckNovelpia implements Plugin.PluginBase {
     searchTerm: string,
     page: number,
   ): Promise<Plugin.NovelItem[]> {
-    let link = this.site + '?q=' + searchTerm.replace(/ /g, '+');
+    let link = this.site + '?q=' + encodeURIComponent(searchTerm);
 
     if (page > 1) {
       link += '&page=' + page;
