@@ -81,6 +81,10 @@ class FuckNovelpia implements Plugin.PluginBase {
     params.set('status', filters.status.value);
     params.set('language', filters.lang.value);
 
+    if (filters.has_images?.value) {
+      params.set('has_images', '1');
+    }
+
     // Genre filters
     params.set('genre_mode', filters.genres_include_operator.value);
     for (const value of filters.genres?.value?.include ?? []) {
@@ -278,6 +282,11 @@ class FuckNovelpia implements Plugin.PluginBase {
         { label: 'ZH', value: 'zh' },
       ],
       type: FilterTypes.Picker,
+    },
+    has_images: {
+      label: 'Image Chapters',
+      value: false,
+      type: FilterTypes.Switch,
     },
     genres_include_operator: {
       label: 'Include Genres',
