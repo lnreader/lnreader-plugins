@@ -11,7 +11,6 @@ class FuckNovelpia implements Plugin.PluginBase {
   icon = 'src/en/fucknovelpia/icon.png';
   site = 'https://fucknovelpia.com/';
   version = '1.1.0';
-  seen = new Set<string>();
 
   // Returns false once the site has silently clamped us past the real last page.
   hasRequestedPage(cheerio: CheerioAPI, requestedPage: number): boolean {
@@ -25,7 +24,7 @@ class FuckNovelpia implements Plugin.PluginBase {
 
   parseNovelsList(cheerio: CheerioAPI): Plugin.NovelItem[] {
     const novels: Plugin.NovelItem[] = [];
-
+    const seen = new Set<string>();
     cheerio('.card-book a').each((i, el) => {
       const $el = cheerio(el);
 
@@ -33,13 +32,13 @@ class FuckNovelpia implements Plugin.PluginBase {
       if (!href) return;
 
       const path = href.startsWith('/') ? href.slice(1) : href;
-      if (this.seen.has(path)) return;
+      if (seen.has(path)) return;
 
       const img = $el.find('img').attr('src');
       const title =
         $el.find('img').attr('alt') || $el.find('.title').text().trim();
 
-      this.seen.add(path);
+      seen.add(path);
       novels.push({
         path,
         name: title,
