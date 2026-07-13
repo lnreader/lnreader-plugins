@@ -80,6 +80,7 @@ class FuckNovelpia implements Plugin.PluginBase {
 
     params.set('status', filters.status.value);
     params.set('language', filters.lang.value);
+    params.set('read_only', filters.read_only.value);
 
     if (filters.has_images?.value) {
       params.set('has_images', '1');
@@ -230,11 +231,27 @@ class FuckNovelpia implements Plugin.PluginBase {
     searchTerm: string,
     page: number,
   ): Promise<Plugin.NovelItem[]> {
-    let link = this.site + '?q=' + encodeURIComponent(searchTerm);
+    const params = new URLSearchParams();
+
+    params.set('q', searchTerm);
+    params.set('author', '');
+    params.set('uploader', '');
+    params.set('translator_group', '');
+    params.set('country', '');
+    params.set('year_from', '');
+    params.set('year_to', '');
+    params.set('status', '');
+    params.set('language', '');
+    params.set('read_only', 'any');
+    params.set('sort', 'newest');
+    params.set('tag_mode', 'AND');
+    params.set('genre_mode', 'AND');
 
     if (page > 1) {
-      link += '&page=' + page;
+      params.set('page', String(page));
     }
+
+    const link = this.site + 'search.php?' + params.toString();
 
     const result = await fetchApi(link);
     const body = await result.text();
@@ -287,6 +304,16 @@ class FuckNovelpia implements Plugin.PluginBase {
       label: 'Image Chapters',
       value: false,
       type: FilterTypes.Switch,
+    },
+    read_only: {
+      label: 'Read Mode',
+      value: 'and',
+      options: [
+        { label: 'Any', value: 'any' },
+        { label: 'Read Only', value: 'yes' },
+        { label: 'Downloadable', value: 'no' },
+      ],
+      type: FilterTypes.Picker,
     },
     genres_include_operator: {
       label: 'Include Genres',
