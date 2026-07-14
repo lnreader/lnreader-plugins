@@ -1,0 +1,200 @@
+.gitignore
+  019dfecb-e7c6-72a2-83cb-c2983e557de3 17-20
+  019f623a-d38d-7882-a9ec-5a60e484883b 21
+  human 16,18
+package.json
+  human 11
+src/provider/plugin-registry.ts
+  human 1-17
+src/store/pluginStore.ts
+  human 4
+src/provider/plugins.ts
+  human 1
+pnpm-lock.yaml
+  human 1-6528
+src/pages/home.tsx
+  human 9
+plugins/index.ts
+  human 1-511
+scripts/generate-plugin-index.js
+  human 1-28
+---
+{
+  "attestations": [
+    {
+      "entries": [
+        {
+          "accepted_lines": 4,
+          "added_lines": 4,
+          "deleted_lines": 1,
+          "hash": "019dfecb-e7c6-72a2-83cb-c2983e557de3",
+          "lines": "17-20",
+          "overridden_lines": 0
+        },
+        {
+          "accepted_lines": 1,
+          "added_lines": 1,
+          "deleted_lines": 2,
+          "hash": "019f623a-d38d-7882-a9ec-5a60e484883b",
+          "lines": "21",
+          "overridden_lines": 0
+        },
+        {
+          "accepted_lines": 0,
+          "added_lines": 0,
+          "deleted_lines": 2,
+          "hash": "human",
+          "lines": "16,18",
+          "overridden_lines": 0
+        }
+      ],
+      "file": ".gitignore"
+    },
+    {
+      "entries": [
+        {
+          "accepted_lines": 1,
+          "added_lines": 1,
+          "deleted_lines": 1,
+          "hash": "human",
+          "lines": "11",
+          "overridden_lines": 0
+        }
+      ],
+      "file": "package.json"
+    },
+    {
+      "entries": [
+        {
+          "accepted_lines": 17,
+          "added_lines": 17,
+          "deleted_lines": 0,
+          "hash": "human",
+          "lines": "1-17",
+          "overridden_lines": 0
+        }
+      ],
+      "file": "src/provider/plugin-registry.ts"
+    },
+    {
+      "entries": [
+        {
+          "accepted_lines": 1,
+          "added_lines": 1,
+          "deleted_lines": 1,
+          "hash": "human",
+          "lines": "4",
+          "overridden_lines": 0
+        }
+      ],
+      "file": "src/store/pluginStore.ts"
+    },
+    {
+      "entries": [
+        {
+          "accepted_lines": 1,
+          "added_lines": 1,
+          "deleted_lines": 1,
+          "hash": "human",
+          "lines": "1",
+          "overridden_lines": 0
+        }
+      ],
+      "file": "src/provider/plugins.ts"
+    },
+    {
+      "entries": [
+        {
+          "accepted_lines": 6528,
+          "added_lines": 6528,
+          "deleted_lines": 0,
+          "hash": "human",
+          "lines": "1-6528",
+          "overridden_lines": 0
+        }
+      ],
+      "file": "pnpm-lock.yaml"
+    },
+    {
+      "entries": [
+        {
+          "accepted_lines": 1,
+          "added_lines": 1,
+          "deleted_lines": 1,
+          "hash": "human",
+          "lines": "9",
+          "overridden_lines": 0
+        }
+      ],
+      "file": "src/pages/home.tsx"
+    },
+    {
+      "entries": [
+        {
+          "accepted_lines": 0,
+          "added_lines": 0,
+          "deleted_lines": 511,
+          "hash": "human",
+          "lines": "1-511",
+          "overridden_lines": 0
+        }
+      ],
+      "file": "plugins/index.ts"
+    },
+    {
+      "entries": [
+        {
+          "accepted_lines": 0,
+          "added_lines": 0,
+          "deleted_lines": 28,
+          "hash": "human",
+          "lines": "1-28",
+          "overridden_lines": 0
+        }
+      ],
+      "file": "scripts/generate-plugin-index.js"
+    }
+  ],
+  "base_commit_sha": "56757e96d250ec2628dccdda646ea673031532a2",
+  "branch": "master",
+  "commit_sha": "aca30e22bb08658bad3cf8028a9dbfe76572e4f4",
+  "commit_time": "2026-07-15T01:45:39+05:30",
+  "commit_type": "direct_commit",
+  "harness_aidlc_version": "1.4.25",
+  "prompts": {
+    "019dfecb-e7c6-72a2-83cb-c2983e557de3": {
+      "accepted_lines": 4,
+      "agent_id": {
+        "id": "019dfecb-e7c6-72a2-83cb-c2983e557de3",
+        "model": "gpt-5.5",
+        "tool": "codex"
+      },
+      "human_author": "Rajarshee Chatterjee <rajarshee.adm@gmail.com>",
+      "overriden_lines": 0,
+      "total_additions": 4,
+      "total_deletions": 1
+    },
+    "019f623a-d38d-7882-a9ec-5a60e484883b": {
+      "accepted_lines": 1,
+      "agent_id": {
+        "id": "019f623a-d38d-7882-a9ec-5a60e484883b",
+        "model": "gpt-5.6-sol",
+        "tool": "codex"
+      },
+      "human_author": "Rajarshee Chatterjee <rajarshee.adm@gmail.com>",
+      "overriden_lines": 0,
+      "total_additions": 1,
+      "total_deletions": 2
+    },
+    "human": {
+      "accepted_lines": 6549,
+      "agent_id": null,
+      "human_author": "Rajarshee Chatterjee <rajarshee.adm@gmail.com>",
+      "overriden_lines": 0,
+      "total_additions": 6549,
+      "total_deletions": 545
+    }
+  },
+  "repo": "https://github.com/LNReader/lnreader-plugins",
+  "schema_version": "authorship/3.0.0"
+}
