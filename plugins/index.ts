@@ -251,6 +251,7 @@ import p_248 from '@plugins/vietnamese/lightnovelvn';
 import p_249 from '@plugins/vietnamese/LNHako';
 import p_250 from '@plugins/vietnamese/nettruyen';
 import p_251 from '@plugins/vietnamese/truyenss';
+import p_252 from '@plugins/arabic/rewayatfans';
 
 const PLUGINS: Plugin.PluginBase[] = [
   p_0,
@@ -505,5 +506,6 @@ const PLUGINS: Plugin.PluginBase[] = [
   p_249,
   p_250,
   p_251,
+  p_252,
 ];
 export default PLUGINS;
