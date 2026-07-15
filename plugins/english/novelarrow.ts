@@ -8,7 +8,7 @@ class NovelArrow implements Plugin.PluginBase {
   name = 'Novel Arrow';
   icon = 'src/en/novelarrow/icon.png';
   site = 'https://novelarrow.com/';
-  version = '1.0.0';
+  version = '1.0.1';
 
   async popularNovels(page: number) {
     const url = `${this.site}novels/latest?page=${page}`;
@@ -42,9 +42,7 @@ class NovelArrow implements Plugin.PluginBase {
     const novelId = novelPath.replace('novel/', '').replace(/^\//, '');
 
     // Collect genres
-    let genres =
-      $('meta[name="og:novel:genre"]').attr('content') ||
-      $('meta[property="og:novel:genre"]').attr('content');
+    let genres = $('meta[name="og:novel:genre"], meta[property="og:novel:genre"]').attr('content');
 
     if (!genres) {
       const genreList: string[] = [];
@@ -55,33 +53,19 @@ class NovelArrow implements Plugin.PluginBase {
       genres = genreList.join(', ');
     }
 
-    // Attempt to get the full summary from the JSON stream if the meta tag is truncated
-    let fullSummary =
-      $('meta[name="description"]').attr('content') ||
-      $('meta[property="og:description"]').attr('content');
-    const summaryMatch = result.match(/\\?"description\\?":\\?"(.*?)\\?"/);
-    if (summaryMatch && summaryMatch[1].length > (fullSummary?.length || 0)) {
-      fullSummary = summaryMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
-    }
+    // Get the full summary from the paragraphs inside class .site-reading-copy
+    const fullSummary = $('.site-reading-copy p')
+      .map((i, el) => $(el).text().trim())
+      .get()
+      .join('\n\n') || $('.site-reading-copy').text().trim();
 
     const novel: Plugin.SourceNovel = {
       path: novelPath,
-      name:
-        $('meta[name="og:novel:novel_name"]').attr('content') ||
-        $('meta[property="og:novel:novel_name"]').attr('content') ||
-        $('meta[property="og:title"]').attr('content')?.split(' Novel')[0] ||
-        $('h1').first().text().trim(),
-      cover:
-        $('meta[property="og:image"]').attr('content') ||
-        $('meta[name="og:image"]').attr('content'),
-      author:
-        $('meta[name="og:novel:author"]').attr('content') ||
-        $('meta[property="og:novel:author"]').attr('content') ||
-        $('meta[name="author"]').attr('content') ||
-        $('meta[property="article:author"]').attr('content'),
+      name: $('meta[name="og:novel:novel_name"]').attr('content') || $('h1').first().text().trim(),
+      cover: $('meta[property="og:image"]').attr('content'),
+      author: $('meta[name="og:novel:author"]').attr('content') || $('meta[name="author"]').attr('content'),
       status:
-        ($('meta[name="og:novel:status"]').attr('content') ||
-          $('meta[property="og:novel:status"]').attr('content')) === 'Ongoing'
+        $('meta[name="og:novel:status"]').attr('content') === 'Ongoing'
           ? NovelStatus.Ongoing
           : NovelStatus.Completed,
       summary: fullSummary,

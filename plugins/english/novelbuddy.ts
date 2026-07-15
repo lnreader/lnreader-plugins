@@ -10,9 +10,9 @@ const fwnRegex =
 class NovelBuddy implements Plugin.PluginBase {
   id = 'novelbuddy';
   name = 'NovelBuddy';
-  site = 'https://novelbuddy.com/';
-  api = 'https://api.novelbuddy.com/';
-  version = '2.1.2';
+  site = 'https://novelbuddy.me/';
+  api = 'https://api.novelbuddy.me/';
+  version = '2.1.3';
   icon = 'src/en/novelbuddy/icon.png';
 
   parseNovels(body: Response): Plugin.NovelItem[] {

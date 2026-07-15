@@ -13,7 +13,7 @@ const statusKey: Record<number, string> = {
 class RNBH implements Plugin.PluginBase {
   id = 'RNBH.org';
   name = 'RanobeHub';
-  version = '1.0.2';
+  version = '1.0.3';
   site = 'https://ranobehub.org';
   icon = 'src/ru/ranobehub/icon.png';
 
@@ -82,7 +82,11 @@ class RNBH implements Plugin.PluginBase {
       path: novelPath,
       name: data.names.rus || data.names.eng || '',
       cover: data.posters.medium,
-      summary: data.description.trim(),
+      summary: data.description
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/p>/gi, '\n\n')
+        .replace(/<[^>]+>/g, '')
+        .trim(),
       author: data?.authors?.[0]?.name_eng || '',
       status: statusKey[data.status.id] || NovelStatus.Unknown,
     };

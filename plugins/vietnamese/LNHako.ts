@@ -1,5 +1,6 @@
 import { fetchApi } from '@libs/fetch';
 import { Parser } from 'htmlparser2';
+import { load as parseHTML } from 'cheerio';
 import { HTMLParser2Util, Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { FilterTypes, Filters } from '@libs/filterInputs';
@@ -19,7 +20,7 @@ class HakoPlugin implements Plugin.PluginBase {
   name = 'Hako';
   icon = 'src/vi/hakolightnovel/icon.png';
   site = 'https://ln.hako.vn';
-  version = '1.1.0';
+  version = '1.1.1';
   parseNovels(url: string) {
     return fetchApi(url)
       .then(res => res.text())
@@ -223,7 +224,7 @@ class HakoPlugin implements Plugin.PluginBase {
               this.part++;
             }
             this.tempChapter = {
-              path: attribs['href'],
+              path: attribs['href']?.replace(/^(https?:\/\/[^/]+)/, ''),
               name: chapterName,
               page: this.currentVolume,
               chapterNumber: chapterNumber,
@@ -401,12 +402,47 @@ class HakoPlugin implements Plugin.PluginBase {
   parseChapter(chapterPath: string): Promise<string> {
     return fetchApi(this.site + chapterPath)
       .then(res => res.text())
-      .then(
-        html =>
-          html.match(
-            /(<div id="chapter-content".+?>[^]+)<div style="text-align: center;/,
-          )?.[1] || 'Không tìm thấy nội dung',
-      );
+      .then(html => {
+        const $ = parseHTML(html);
+        const protectedEl = $('#chapter-c-protected');
+        if (protectedEl.length) {
+          const s = protectedEl.attr('data-s') || 'none';
+          const k = protectedEl.attr('data-k') || '';
+          let c: string[] = [];
+          try {
+            c = JSON.parse(protectedEl.attr('data-c') || '[]');
+          } catch {
+            // ignore
+          }
+
+          if (Array.isArray(c) && c.length > 0) {
+            c.sort((a, b) => +a.substring(0, 4) - +b.substring(0, 4));
+
+            const decryptedChunks = c.map(chunk => {
+              const ciphertext = chunk.substring(4);
+              if (s === 'xor_shuffle') {
+                return decryptXor(ciphertext, k);
+              } else if (s === 'base64_reverse') {
+                return decryptBase64Reverse(ciphertext);
+              } else {
+                return decryptNone(ciphertext);
+              }
+            });
+
+            let decryptedHtml = decryptedChunks.join('');
+            decryptedHtml = decryptedHtml.replace(
+              /\[note(\d+)\]/gi,
+              '<span id="anchor-note$1" class="note-icon none-print inline note-tooltip" data-tooltip-content="#note$1 .note-content" data-note-id="note$1"><i class="fas fa-sticky-note"></i></span><a id="anchor-note$1" class="inline-print none" href="#note$1">[note]</a>',
+            );
+
+            protectedEl.replaceWith(decryptedHtml);
+          }
+        }
+
+        $('a[href^="/truyen/"]').has('img[src*="chapter-banners"]').remove();
+
+        return $('#chapter-content').html() || 'Không tìm thấy nội dung';
+      });
   }
   searchNovels(
     searchTerm: string,
@@ -493,6 +529,26 @@ class HakoPlugin implements Plugin.PluginBase {
       ],
     },
   } satisfies Filters;
+}
+
+function decodeBase64(str: string): Uint8Array {
+  return Uint8Array.from(atob(str), c => c.charCodeAt(0));
+}
+
+function decryptXor(ciphertext: string, key: string): string {
+  const data = decodeBase64(ciphertext);
+  const keyLen = key.length;
+  const decrypted = data.map((byte, i) => byte ^ key.charCodeAt(i % keyLen));
+  return new TextDecoder('utf-8').decode(decrypted);
+}
+
+function decryptBase64Reverse(ciphertext: string): string {
+  const reversed = ciphertext.split('').reverse().join('');
+  return new TextDecoder('utf-8').decode(decodeBase64(reversed));
+}
+
+function decryptNone(ciphertext: string): string {
+  return new TextDecoder('utf-8').decode(decodeBase64(ciphertext));
 }
 
 export default new HakoPlugin();
