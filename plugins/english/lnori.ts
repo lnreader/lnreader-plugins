@@ -364,9 +364,9 @@ class LnorisPlugin implements Plugin.PluginBase {
       .map(item => item.novel);
   }
 
-  resolveUrl = (path: string, _isNovel?: boolean) => {
-    return new URL(path, this.site).href;
-  };
+  // resolveUrl = (path: string, _isNovel?: boolean) => {
+  //   return new URL(path, this.site).href;
+  // };
 
   filters = {
     sort: {
