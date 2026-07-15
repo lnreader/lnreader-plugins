@@ -241,6 +241,8 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
     const infoParts: string[] = [];
     const chapters: Plugin.ChapterItem[] = [];
     let novelId: string | null = null;
+    let totalChapter: number | null = null;
+    let novelTitle: string | null = null;
     let tempChapter: Partial<Plugin.ChapterItem> = {};
     let i = 0;
     let depth: number;
@@ -307,6 +309,9 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
 
               if (newState) pushState(newState);
             }
+            if (attribs.class?.includes('disqus')) {
+              novelTitle = attribs['data-disqus-identifier'];
+            }
             break;
           case 'br':
             if (state === ParsingState.Summary) {
@@ -322,6 +327,9 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
             }
             break;
           case 'a':
+            if (attribs.class?.includes('set-case')) {
+              novelId = attribs['data-articleid'];
+            }
             if (state === ParsingState.ChapterList) {
               i++;
               const href = attribs.href;
@@ -334,6 +342,9 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
                 href?.substring(1) ||
                 novelPath.replace('.html', `/chapter-${i}.html`);
             }
+            break;
+          case 'script':
+            pushState(ParsingState.Hidden);
             break;
         }
       },
@@ -361,6 +372,12 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
           case ParsingState.Status:
             statusParts.push(text);
             break;
+          case ParsingState.Hidden:
+            if (text.includes('window.chapterPagination')) {
+              totalChapter = Number(text.match(/totalChapters:\s*(\d+)/)![1])!;
+            } else if (text.includes('sourceid')) {
+              novelId = text.match(/sourceid=(\d+)/)![1]!;
+            }
         }
       },
 
@@ -410,6 +427,9 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
                 popState();
                 break;
             }
+            break;
+          case 'script':
+            if (state === ParsingState.Hidden) popState();
             break;
           default:
             return;
@@ -475,21 +495,44 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
     parser.write(body);
     parser.end();
 
-    if (this.options.noAjax && chapters.length > 0) {
+    if (this.options.noAjax && chapters.length > 0 && !totalChapter) {
       novel.chapters = chapters;
     } else if (novelId !== null) {
       const chapterListing =
         this.options.chapterListing || 'ajax/chapter-archive';
       const ajaxParam = this.options.chapterParam || 'novelId';
       const params = new URLSearchParams({ [ajaxParam]: novelId });
-      const chaptersUrl = `${this.site}${chapterListing}?${params.toString()}`;
 
-      const ajaxResult = await fetchApi(chaptersUrl);
+      let chaptersUrl: string;
+      let fetchOptions: FetchInit | undefined;
+
+      if (totalChapter) {
+        chaptersUrl = `${this.site}${chapterListing}`;
+        params.set('acode', novelTitle || novelPath.split('/').pop()!);
+        params.set('cid', String(Math.floor(Math.random() * totalChapter)));
+        fetchOptions = {
+          method: 'POST',
+          body: params.toString(),
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        };
+      } else {
+        chaptersUrl = `${this.site}${chapterListing}?${params.toString()}`;
+      }
+      const ajaxResult = await fetchApi(chaptersUrl, fetchOptions);
       if (!ajaxResult.ok) {
         console.error(`Failed to fetch chapters: ${ajaxResult.status}`);
         novel.chapters = [];
       } else {
         const ajaxBody = await ajaxResult.text();
+        let ajaxHtml = ajaxBody;
+        try {
+          const json = JSON.parse(ajaxBody);
+          if (typeof json.html === 'string') {
+            ajaxHtml = json.html;
+          }
+        } catch {
+          // eslint
+        }
         const ajaxChapters: Plugin.ChapterItem[] = [];
         let tempAjaxChapter: Partial<Plugin.ChapterItem> = {};
 
@@ -544,7 +587,7 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
           },
         });
 
-        ajaxParser.write(ajaxBody);
+        ajaxParser.write(ajaxHtml);
         ajaxParser.end();
         novel.chapters = ajaxChapters;
       }
