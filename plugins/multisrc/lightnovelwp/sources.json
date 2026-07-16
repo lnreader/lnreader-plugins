@@ -317,5 +317,25 @@
       "lang": "English",
       "reverseChapters": true
     }
+  },
+  {
+    "id": "hyacinthbloom",
+    "sourceSite": "https://hyacinthbloom.com/",
+    "sourceName": "Hyacinth in Bloom",
+    "options": {
+      "lang": "English",
+      "reverseChapters": true,
+      "hasLocked": true
+    } 
+  },
+  {
+    "id": "blumeverse",
+    "sourceSite": "https://blume-verse.com/",
+    "sourceName": "BlumeVerse",
+    "options": {
+      "lang": "English",
+      "reverseChapters": true,
+      "hasLocked": true
+    } 
   }
 ]

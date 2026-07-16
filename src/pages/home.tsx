@@ -6,7 +6,7 @@ import PluginHeader from '../components/plugin-header';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 
-import plugins from '@plugins/index';
+import plugins from '@/provider/plugin-registry';
 import { useAppStore } from '@/store';
 import PopularNovelsSection from '@/components/popular-novels';
 import SearchNovelsSection from '@/components/search-novels';

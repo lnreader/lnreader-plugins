@@ -13,6 +13,9 @@ plugins/*/*\[*\]*.ts
 .DS_Store
 dist
 total.svg
-src/plugins/index.ts
 .history
 broken-sites-report.json
+
+.agents/
+.claude/
+.cursor/
