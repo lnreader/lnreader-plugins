@@ -246,6 +246,7 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
     let tempChapter: Partial<Plugin.ChapterItem> = {};
     let i = 0;
     let depth: number;
+    let totalPage = 1;
 
     const stateStack: ParsingState[] = [ParsingState.Idle];
     const currentState = () => stateStack[stateStack.length - 1];
@@ -258,6 +259,9 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
         const state = currentState();
         switch (name) {
           case 'div':
+            if (attribs.id === 'indexListPage') {
+              totalPage = Number(attribs['data-total-page']) || 1;
+            }
             switch (attribs.class) {
               case 'books':
               case 'm-imgtxt':
@@ -496,6 +500,25 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
     parser.end();
 
     if (this.options.noAjax && chapters.length > 0 && !totalChapter) {
+      // Fetch remaining chapter pages if the site paginates them
+      for (let p = 2; p <= totalPage; p++) {
+        const pageUrl = `${this.site}${novelPath}?ajax=chapters&page=${p}`;
+        const pageResult = await fetchApi(pageUrl);
+        if (!pageResult.ok) continue;
+        try {
+          const json = JSON.parse(await pageResult.text());
+          const $ = load(json.html || '');
+          $('a').each((_, el) => {
+            const href = $(el).attr('href');
+            chapters.push({
+              name: $(el).attr('title') || `Chapter ${chapters.length + 1}`,
+              releaseTime: null,
+              chapterNumber: chapters.length + 1,
+              path: href?.substring(1) || '',
+            } as Plugin.ChapterItem);
+          });
+        } catch { /* skip failed page */ }
+      }
       novel.chapters = chapters;
     } else if (novelId !== null) {
       const chapterListing =
