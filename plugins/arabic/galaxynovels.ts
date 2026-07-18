@@ -130,7 +130,8 @@ class GalaxyNovels implements Plugin.PluginBase {
     const $ = loadCheerio(html);
 
     const title = $('h1').first().text().trim();
-    const cover = $('img.wor-cover-img').first().attr('src');
+    const img = $('img.wor-cover-img').first();
+    const cover = img.attr('data-src') || img.attr('src');
     const author = $('p.wor-single-hero__meta-text span').text().trim();
     const summary = $('.wor-single-summary__text').text().trim();
 
