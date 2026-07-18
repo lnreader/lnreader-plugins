@@ -277,6 +277,10 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
             if (!this.options.noAjax && attribs.id === 'rating') {
               novelId = attribs['data-novel-id'];
             }
+            if (attribs.id === 'indexListPage') {
+              novelId = attribs['data-novel-id'];
+              totalChapter = Number(attribs['data-total-chapters']);
+            }
             if (state === ParsingState.Info) depth++;
             break;
           case 'img':
@@ -513,7 +517,10 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
         fetchOptions = {
           method: 'POST',
           body: params.toString(),
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest',
+          },
         };
       } else {
         chaptersUrl = `${this.site}${chapterListing}?${params.toString()}`;
@@ -552,8 +559,10 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
             }
 
             if (chapterHref !== undefined) {
-              const href = new URL(chapterHref, this.site);
-              tempAjaxChapter.path = href.pathname.substring(1);
+              const path = chapterHref.startsWith('/')
+                ? chapterHref.slice(1)
+                : chapterHref.replace(this.site + '/', '');
+              tempAjaxChapter.path = path;
               tempAjaxChapter.name = initialName;
             }
           },
