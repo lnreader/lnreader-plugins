@@ -107,7 +107,7 @@ class GalaxyNovels implements Plugin.PluginBase {
       const href = coverLink.attr('href');
       const img = $el.find('img.wor-cover-img');
       const cover =
-        img.attr('src') || img.attr('data-src') || undefined;
+        img.attr('data-src') || img.attr('src') || undefined;
       const title = $el.find('h3 a').text().trim();
 
       if (!href || !title) return;
