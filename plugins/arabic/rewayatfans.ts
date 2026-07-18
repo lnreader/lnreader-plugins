@@ -3,18 +3,19 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 
 type WPPage = {
-  id: number;
   title: { rendered: string };
   slug: string;
-  link: string;
-  content: { rendered: string };
   date: string;
+  featured_media: number;
+  _embedded?: {
+    'wp:featuredmedia'?: Array<{ source_url: string }>;
+  };
 };
 
 class RewayatFans implements Plugin.PluginBase {
   id = 'rewayatfans';
   name = 'روايات فانز';
-  version = '3.0.0';
+  version = '3.2.0';
   icon = 'src/ar/rewayatfans/icon.png';
   site = 'https://rewayatfans.com/';
 
@@ -30,58 +31,31 @@ class RewayatFans implements Plugin.PluginBase {
     return res.text();
   }
 
+  private getCover(page: WPPage): string {
+    return page._embedded?.['wp:featuredmedia']?.[0]?.source_url || '';
+  }
+
   async popularNovels(
     page: number,
     { showLatestNovels }: Plugin.PopularNovelsOptions,
   ): Promise<Plugin.NovelItem[]> {
-    if (showLatestNovels) {
-      const pages = await this.fetchJson<WPPage[]>(
-        `${this.site}wp-json/wp/v2/pages?per_page=20&page=${page}&orderby=date&order=desc&_fields=slug,title`,
-      );
-      return pages.map(p => ({
-        name: this.extractNovelName(p.title.rendered),
-        path: p.slug,
-        cover: '',
-      }));
-    }
+    const pages = await this.fetchJson<WPPage[]>(
+      `${this.site}wp-json/wp/v2/pages?per_page=20&page=${page}&orderby=date&order=desc&_embed`,
+    );
 
-    const allNovels = await this.getAllNovels();
-    const pageSize = 20;
-    const start = (page - 1) * pageSize;
-    return allNovels.slice(start, start + pageSize);
-  }
-
-  private async getAllNovels(): Promise<Plugin.NovelItem[]> {
     const seen = new Set<string>();
     const novels: Plugin.NovelItem[] = [];
 
-    let pg = 1;
-    let hasMore = true;
-
-    while (hasMore) {
-      const pages = await this.fetchJson<WPPage[]>(
-        `${this.site}wp-json/wp/v2/pages?per_page=100&page=${pg}&_fields=slug,title`,
-      );
-
-      if (pages.length === 0) {
-        hasMore = false;
-        break;
+    for (const page of pages) {
+      const novelName = this.extractNovelName(page.title.rendered);
+      if (novelName && !seen.has(novelName)) {
+        seen.add(novelName);
+        novels.push({
+          name: novelName,
+          path: page.slug,
+          cover: this.getCover(page),
+        });
       }
-
-      for (const page of pages) {
-        const novelName = this.extractNovelName(page.title.rendered);
-        if (novelName && !seen.has(novelName)) {
-          seen.add(novelName);
-          novels.push({
-            name: novelName,
-            path: page.slug,
-            cover: '',
-          });
-        }
-      }
-
-      if (pages.length < 100) hasMore = false;
-      pg++;
     }
 
     return novels;
@@ -95,16 +69,14 @@ class RewayatFans implements Plugin.PluginBase {
     };
 
     const slugBase = novelPath.replace(/\/$/, '').split('/').pop() || novelPath;
-    const searchTerm = slugBase
-      .replace(/-\d+$/, '')
-      .replace(/-/g, ' ');
+    const novelPrefix = slugBase.replace(/-\d+$/, '');
 
     let pg = 1;
     let hasMore = true;
 
     while (hasMore) {
       const pages = await this.fetchJson<WPPage[]>(
-        `${this.site}wp-json/wp/v2/pages?search=${encodeURIComponent(searchTerm)}&per_page=100&page=${pg}&_fields=slug,title,date`,
+        `${this.site}wp-json/wp/v2/pages?search=${encodeURIComponent(novelPrefix.replace(/-/g, ' '))}&per_page=100&page=${pg}&_fields=slug,title,date`,
       );
 
       if (pages.length === 0) {
@@ -113,17 +85,16 @@ class RewayatFans implements Plugin.PluginBase {
       }
 
       for (const page of pages) {
-        const postSlug = page.slug;
-        if (postSlug.startsWith(slugBase.replace(/-\d+$/, ''))) {
+        if (page.slug.startsWith(novelPrefix)) {
           if (!novel.name) {
             novel.name = this.extractNovelName(page.title.rendered);
           }
-          const numMatch = postSlug.match(/(\d+)$/);
+          const numMatch = page.slug.match(/(\d+)$/);
           const chapterNum = numMatch ? parseInt(numMatch[1], 10) : 0;
 
           novel.chapters!.push({
             name: page.title.rendered,
-            path: postSlug,
+            path: page.slug,
             chapterNumber: chapterNum,
             releaseTime: page.date,
           });
@@ -134,11 +105,10 @@ class RewayatFans implements Plugin.PluginBase {
       pg++;
     }
 
-    if (novel.chapters!.length > 0) {
-      novel.chapters!.sort((a, b) => (a.chapterNumber || 0) - (b.chapterNumber || 0));
-      if (!novel.name && novel.chapters!.length > 0) {
-        novel.name = this.extractNovelName(novel.chapters![0].name);
-      }
+    novel.chapters!.sort((a, b) => (a.chapterNumber || 0) - (b.chapterNumber || 0));
+
+    if (!novel.name && novel.chapters!.length > 0) {
+      novel.name = this.extractNovelName(novel.chapters![0].name);
     }
 
     return novel;
@@ -168,7 +138,7 @@ class RewayatFans implements Plugin.PluginBase {
     page: number,
   ): Promise<Plugin.NovelItem[]> {
     const pages = await this.fetchJson<WPPage[]>(
-      `${this.site}wp-json/wp/v2/pages?search=${encodeURIComponent(searchTerm)}&per_page=20&page=${page}&_fields=slug,title`,
+      `${this.site}wp-json/wp/v2/pages?search=${encodeURIComponent(searchTerm)}&per_page=20&page=${page}&_embed`,
     );
 
     const seen = new Set<string>();
@@ -181,7 +151,7 @@ class RewayatFans implements Plugin.PluginBase {
         novels.push({
           name: novelName,
           path: page.slug,
-          cover: '',
+          cover: this.getCover(page),
         });
       }
     }
