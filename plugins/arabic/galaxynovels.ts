@@ -33,7 +33,7 @@ type ChapterContentResponse = {
 class GalaxyNovels implements Plugin.PluginBase {
   id = 'galaxynovels';
   name = 'Galaxy Novels';
-  version = '1.0.0';
+  version = '1.1.0';
   icon = 'src/ar/galaxynovels/icon.png';
   site = 'https://galaxynovels.com/';
 
@@ -165,7 +165,6 @@ class GalaxyNovels implements Plugin.PluginBase {
           path: `${novelPath}chapter-${ch.id}/`,
           chapterNumber: ch.position,
           releaseTime: ch.date_iso?.split('T')[0] || '',
-          page: String(ch.id),
         }));
       } catch {
         // fallback to HTML parsing
@@ -194,7 +193,6 @@ class GalaxyNovels implements Plugin.PluginBase {
           path,
           chapterNumber,
           releaseTime,
-          page: chapterId || '',
         });
       });
     }
