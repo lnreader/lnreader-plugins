@@ -61,6 +61,10 @@ type DataResponse<T> = {
   data: T;
 };
 
+type SearchResponse<T> = {
+  results: T[];
+};
+
 class KonkonPlugin implements Plugin.PluginBase {
   id = 'konkon';
   name = 'Konkon';
@@ -297,16 +301,12 @@ class KonkonPlugin implements Plugin.PluginBase {
     searchTerm: string,
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
-    const response = await this.getJson<DataResponse<NovelSummary[]>>(
-      '/api/public/novels?limit=1000',
+    if (pageNo > 1) return [];
+    const response = await this.getJson<SearchResponse<NovelSummary>>(
+      `/api/public/search?q=${encodeURIComponent(searchTerm.trim())}`,
     );
-    const term = searchTerm.trim().toLowerCase();
-    const start = (pageNo - 1) * this.pageSize;
 
-    return response.data
-      .filter(novel => novel.title.toLowerCase().includes(term))
-      .slice(start, start + this.pageSize)
-      .map(novel => this.toNovelItem(novel));
+    return response.results.map(novel => this.toNovelItem(novel));
   }
 
   resolveUrl = (path: string) => this.site + path;
