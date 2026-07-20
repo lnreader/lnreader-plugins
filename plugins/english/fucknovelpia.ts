@@ -1,4 +1,5 @@
 import { CheerioAPI, load as parseHTML } from 'cheerio';
+import { Parser } from 'htmlparser2';
 import { Plugin } from '@/types/plugin';
 import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
@@ -10,7 +11,7 @@ class FuckNovelpia implements Plugin.PluginBase {
   name = 'FuckNovelpia';
   icon = 'src/en/fucknovelpia/icon.png';
   site = 'https://fucknovelpia.com/';
-  version = '1.1.0';
+  version = '1.1.1';
 
   // Returns false once the site has silently clamped us past the real last page.
   hasRequestedPage(cheerio: CheerioAPI, requestedPage: number): boolean {
@@ -49,6 +50,64 @@ class FuckNovelpia implements Plugin.PluginBase {
     return novels;
   }
 
+  async parseLatestUpdates() {
+    const link = this.site + 'updates.php';
+    const response = await fetchApi(link);
+    const html = await response.text();
+    const novels: Plugin.NovelItem[] = [];
+    let tempNovel: Partial<Plugin.NovelItem> = {};
+    const seen = new Set<string>();
+
+    const stateStack: ParsingState[] = [ParsingState.Idle];
+    const currentState = () => stateStack[stateStack.length - 1];
+    const pushState = (state: ParsingState) => stateStack.push(state);
+    const popState = () =>
+      stateStack.length > 1 ? stateStack.pop() : currentState();
+
+    const parser = new Parser({
+      onopentag: (name, attribs) => {
+        const state = currentState();
+        if (attribs.class === 'updates-list') {
+          pushState(ParsingState.NovelList);
+        }
+
+        if (state === ParsingState.Idle) return;
+
+        switch (name) {
+          case 'a':
+            if (seen.has(attribs.href)) return;
+            seen.add(attribs.href);
+            pushState(ParsingState.Novel);
+            tempNovel.path = attribs.href.substring(1);
+            break;
+          case 'img':
+            tempNovel.cover = attribs.src;
+            tempNovel.name = attribs.alt;
+            break;
+          case 'div':
+            switch (attribs.class) {
+              case 'copy':
+                if (tempNovel.name && tempNovel.path) {
+                  novels.push({ ...tempNovel } as Plugin.NovelItem);
+                  popState();
+                }
+                tempNovel = {};
+                break;
+              case 'install-banner':
+                popState();
+                break;
+            }
+            break;
+        }
+      },
+    });
+
+    parser.write(html);
+    parser.end();
+
+    return novels;
+  }
+
   async popularNovels(
     page: number,
     {
@@ -56,15 +115,14 @@ class FuckNovelpia implements Plugin.PluginBase {
       filters,
     }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
+    if (showLatestNovels) {
+      return this.parseLatestUpdates();
+    }
+
     const params = new URLSearchParams();
 
     params.set('q', '');
-
-    if (showLatestNovels) {
-      params.set('sort', 'latest');
-    } else {
-      params.set('sort', filters.sort.value);
-    }
+    params.set('sort', filters.sort.value);
 
     // Search metadata filters (appears all the time)
     for (const key of [
@@ -672,3 +730,9 @@ class FuckNovelpia implements Plugin.PluginBase {
 }
 
 export default new FuckNovelpia();
+
+enum ParsingState {
+  Idle,
+  Novel,
+  NovelList,
+}
