@@ -87,10 +87,13 @@ class RewayatFans implements Plugin.PluginBase {
     const englishTitle = titleTag.split(/\s+[-–—]\s+/)[0].trim();
     novel.name = englishTitle;
 
+    // Use novel slug as chapter prefix for filtering
+    const slugBase = novelPath.replace(/\/$/, '').split('/').pop() || novelPath;
+    const chapterPrefix = slugBase;
+
     // Search chapters using the English title
     let pg = 1;
     let hasMore = true;
-    let chapterPrefix = '';
 
     while (hasMore) {
       const pages = await this.fetchJson<WPPage[]>(
@@ -102,20 +105,9 @@ class RewayatFans implements Plugin.PluginBase {
         break;
       }
 
-      // On first page, determine chapter prefix from first chapter slug
-      if (!chapterPrefix && pages.length > 0) {
-        for (const page of pages) {
-          const numMatch = page.slug.match(/(\d+)$/);
-          if (numMatch) {
-            chapterPrefix = page.slug.replace(/-\d+$/, '');
-            break;
-          }
-        }
-      }
-
       for (const page of pages) {
-        // Only include chapters that belong to this novel
-        if (chapterPrefix && !page.slug.startsWith(chapterPrefix)) continue;
+        // Only include chapters that belong to this novel by slug prefix
+        if (!page.slug.startsWith(chapterPrefix)) continue;
 
         const numMatch = page.slug.match(/(\d+)$/);
         if (numMatch) {
