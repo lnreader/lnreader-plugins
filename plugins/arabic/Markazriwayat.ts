@@ -1,195 +1,197 @@
 import { load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
-import { Plugin } from '@/types/plugin';
-import { Filters, FilterTypes } from '@libs/filterInputs';
+import { Plugin } from '@libs/types';
 import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
-
-type TheamChapter = {
-  label: string;
-  url: string;
-  num: string;
-  time: string;
-  date: string;
-  views: number;
-  comments: number;
-  early: boolean;
-  ts: number;
-};
-
-type TheamChaptersResponse = {
-  items: TheamChapter[];
-  has_more: boolean;
-};
+import { FilterTypes, Filters } from '@libs/filterInputs';
 
 class Markazriwayat implements Plugin.PluginBase {
   id = 'markazriwayat';
   name = 'مركز الروايات';
-  version = '1.2.0';
+  version = '1.6.0';
   icon = 'src/ar/markazriwayat/icon.png';
   site = 'https://markazriwayat.com/';
-  private restUrl = 'https://markazriwayat.com/wp-json/theam/v1';
 
-  private async fetchJson<T>(url: string): Promise<T> {
-    const res = await fetchApi(url);
+  private UA =
+    'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Mobile Safari/537.36';
+
+  filters: Filters = {
+    order: {
+      type: FilterTypes.Picker,
+      label: 'الترتيب',
+      value: '',
+      options: [
+        { label: 'الأكثر شعبية', value: 'popular' },
+        { label: 'الأحدث', value: 'new' },
+        { label: 'الأعلى تقييماً', value: 'rating' },
+      ],
+    },
+  };
+
+  private async fetchHtml(url: string): Promise<string> {
+    const res = await fetchApi(url, {
+      headers: { 'User-Agent': this.UA },
+    });
     if (!res.ok) throw new Error(`Request failed: ${res.status}`);
-    return res.json() as Promise<T>;
+    return res.text();
   }
 
-  private async fetchCheerio(url: string) {
-    const res = await fetchApi(url);
-    return parseHTML(await res.text());
-  }
-
-  parseNovels($: CheerioAPI): Plugin.NovelItem[] {
+  private parseNovelCards(html: string): Plugin.NovelItem[] {
+    const $ = parseHTML(html);
     const novels: Plugin.NovelItem[] = [];
-    $('a.lib-card, a.novel-card').each((_, el) => {
+    const seen = new Set<string>();
+
+    $('a.lib-card').each((_, el) => {
       const $el = $(el);
-      const name = $el.find('.lib-card__title, .novel-card__title').text().trim();
       const href = $el.attr('href') || '';
-      const img = $el.find('img');
+      const path = href.replace(this.site, '').replace(/\/$/, '');
+      const name = $el.find('.lib-card__title').text().trim();
       const cover =
-        img.attr('data-src') || img.attr('data-lazy-src') || img.attr('src') || defaultCover;
-      if (name && href) {
-        novels.push({
-          name,
-          path: href.replace(this.site, ''),
-          cover,
-        });
+        $el.find('img').attr('data-src') ||
+        $el.find('img').attr('data-defer-src') ||
+        defaultCover;
+
+      if (name && path && !seen.has(path)) {
+        seen.add(path);
+        novels.push({ name, path, cover });
       }
     });
+
     return novels;
   }
 
   async popularNovels(
     page: number,
-    {
-      showLatestNovels,
-      filters,
-    }: Plugin.PopularNovelsOptions<typeof this.filters>,
+    { filters, showLatestNovels }: Plugin.PopularNovelsOptions,
   ): Promise<Plugin.NovelItem[]> {
-    let url = this.site;
+    let url = `${this.site}`;
     if (showLatestNovels) {
       url += 'new/';
-    } else if (filters) {
-      const range = filters.sortOptions?.value || 'week';
-      url += `popular/?range=${range}&page=${page}`;
     } else {
-      url += `popular/?range=week&page=${page}`;
+      const order = filters?.order?.value || 'popular';
+      if (order === 'new') url += 'new/';
+      else if (order === 'rating') url += 'ranking/';
+      else url += 'popular/';
     }
-    const $ = await this.fetchCheerio(url);
-    return this.parseNovels($);
+    if (page > 1) url += `page/${page}/`;
+
+    const html = await this.fetchHtml(url);
+    return this.parseNovelCards(html);
   }
 
-  async parseNovel(novelUrl: string): Promise<Plugin.SourceNovel> {
-    const url = new URL(novelUrl, this.site).toString();
-    const $ = await this.fetchCheerio(url);
+  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+    const html = await this.fetchHtml(`${this.site}${novelPath}`);
+    const $ = parseHTML(html);
 
     const novel: Plugin.SourceNovel = {
-      path: novelUrl,
+      path: novelPath,
       name: $('h1').first().text().trim() || 'Untitled',
-      cover:
-        $('img').first().attr('data-src') ||
-        $('img').first().attr('data-lazy-src') ||
-        $('img').first().attr('src') ||
-        defaultCover,
+      cover: defaultCover,
+      summary: '',
+      author: '',
+      status: NovelStatus.Unknown,
+      genres: '',
       chapters: [],
     };
 
-    const statusEl = $('span.status-pill');
-    if (statusEl.length) {
-      const statusText = statusEl.text().trim();
-      if (statusText.includes('مكتملة')) novel.status = NovelStatus.Completed;
-      else if (statusText.includes('مستمرة')) novel.status = NovelStatus.Ongoing;
-      else if (statusText.includes('متوقفة')) novel.status = NovelStatus.OnHiatus;
-    }
+    // Cover
+    const coverImg = $('img').filter(function () {
+      const src = $(this).attr('data-src') || $(this).attr('src') || '';
+      return src.includes('wp-content/uploads') && !src.includes('cropped-');
+    }).first();
+    novel.cover =
+      coverImg.attr('data-src') ||
+      coverImg.attr('data-defer-src') ||
+      defaultCover;
 
-    const authorEl = $('span:contains("مترجم"), span:contains("المؤلف")');
-    if (authorEl.length) {
-      novel.author = authorEl.text().replace(/.*:/, '').trim();
-    }
+    // Status
+    const statusEl = $('.status-pill').first();
+    const statusClass = statusEl.attr('class') || '';
+    if (statusClass.includes('is-ongoing')) novel.status = NovelStatus.Ongoing;
+    else if (statusClass.includes('is-complete'))
+      novel.status = NovelStatus.Completed;
+    else if (statusClass.includes('is-stopped'))
+      novel.status = NovelStatus.OnHiatus;
 
-    const summaryEl = $('div.summary, .entry-content, .manga-excerpt, p:contains("القصة")');
-    if (summaryEl.length) {
-      novel.summary = summaryEl.text().trim();
-    }
+    // Author
+    const authorLink = $('a[href*="/author/"]').first();
+    if (authorLink.length) novel.author = authorLink.text().trim();
 
-    const genres: string[] = [];
-    $('a[href*="genre"], .genres-content a, .wp-manga-genre a').each((_, el) => {
-      const genre = $(el).text().trim();
-      if (genre) genres.push(genre);
+    // Summary
+    novel.summary = $('#manga-summary').text().trim();
+
+    // Genres
+    const genreParts: string[] = [];
+    $('a.pill, a[href*="/genre/"], a[href*="/tasnif/"]').each((_, el) => {
+      const t = $(el).text().trim();
+      if (t) genreParts.push(t);
     });
-    if (genres.length) novel.genres = genres.join(', ');
+    novel.genres = genreParts.join(', ');
 
-    // Get manga_id from page
-    const mangaId =
-      $('#manga-chapters-list').attr('data-manga-id') ||
-      $('[data-manga-id]').first().attr('data-manga-id') ||
-      '';
-
-    // Load ALL chapters via theam REST API
+    // Chapters: read total from HTML, generate paths directly (fast, no API)
     const chapters: Plugin.ChapterItem[] = [];
 
-    if (mangaId) {
-      let pg = 1;
-      let hasMore = true;
+    const totalText = $('.manga-stat__value').last().text().trim();
+    const totalMatch = totalText.match(/(\d+)/);
+    const totalChapters = totalMatch ? parseInt(totalMatch[1], 10) : 0;
 
-      while (hasMore) {
-        try {
-          const apiUrl = `${this.restUrl}/manga-chapters?manga_id=${mangaId}&order=ASC&page=${pg}&per_page=100`;
-          const data = await this.fetchJson<TheamChaptersResponse>(apiUrl);
+    const firstRow = $('div.ch-row').first();
+    const firstLink = firstRow.find('a').first().attr('href') || '';
+    const firstNum = firstRow.attr('data-ch-num') || '';
 
-          if (data.items && data.items.length > 0) {
-            for (const item of data.items) {
-              const chapterPath = item.url.replace(this.site, '');
-              if (chapterPath) {
-                chapters.push({
-                  name: item.label || `الفصل ${item.num}`,
-                  path: chapterPath,
-                  releaseTime: item.date || item.time || null,
-                  chapterNumber: parseInt(item.num, 10) || chapters.length + 1,
-                });
-              }
-            }
-            hasMore = !!data.has_more && data.items.length === 100;
-            pg++;
-          } else {
-            hasMore = false;
-          }
-        } catch {
-          hasMore = false;
-        }
+    if (totalChapters > 0 && firstLink && firstNum) {
+      const escapedNum = firstNum.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const basePath = firstLink.replace(new RegExp(`${escapedNum}/?$`), '');
+      const basePathRelative = basePath.replace(this.site, '');
+
+      for (let i = 1; i <= totalChapters; i++) {
+        chapters.push({
+          name: `الفصل ${i}`,
+          path: basePathRelative + i + '/',
+          chapterNumber: i,
+        });
       }
-    }
-
-    // Fallback: parse chapters from initial HTML
-    if (chapters.length === 0) {
-      $('div.ch-row').each((i, el) => {
-        const a = $(el).find('a');
-        const name = $(el).find('.ch-title').text().trim() || a.text().trim();
+    } else {
+      $('div.ch-row').each((_, el) => {
+        const a = $(el).find('a').first();
+        const name =
+          $(el).find('.ch-title').text().trim() ||
+          a.attr('aria-label') ||
+          '';
         const href = a.attr('href') || '';
         const date = $(el).find('.ch-date').text().trim();
+        const chNum = $(el).attr('data-ch-num') || '';
         if (name && href) {
           chapters.push({
             name,
             path: href.replace(this.site, ''),
             releaseTime: date || null,
-            chapterNumber: chapters.length + 1,
+            chapterNumber: chNum ? parseInt(chNum, 10) : chapters.length + 1,
           });
         }
       });
     }
 
-    novel.chapters = chapters.sort((a, b) => (a.chapterNumber || 0) - (b.chapterNumber || 0));
+    novel.chapters = chapters;
 
     return novel;
   }
 
-  async parseChapter(chapterUrl: string): Promise<string> {
-    const url = new URL(chapterUrl, this.site).toString();
-    const $ = await this.fetchCheerio(url);
+  async parseChapter(chapterPath: string): Promise<string> {
+    const html = await this.fetchHtml(`${this.site}${chapterPath}`);
+    const $ = parseHTML(html);
+
+    $(
+      'script, style, .sharedaddy, .jp-relatedposts, .wp-block-spacer, .reading-nav, .ads, .advertisement, .nav-links, .comments-area',
+    ).remove();
+
     const content =
-      $('.reading-content, .text-left, .entry-content, .chapter-content').html() || '';
+      $(
+        '.reading-content, .entry-content, .chapter-content, .text-left',
+      )
+        .first()
+        .html() || '';
+
     return content || '<p>المحتوى غير متاح.</p>';
   }
 
@@ -197,24 +199,10 @@ class Markazriwayat implements Plugin.PluginBase {
     searchTerm: string,
     page: number,
   ): Promise<Plugin.NovelItem[]> {
-    const url = `${this.site}page/${page}/?s=${encodeURIComponent(searchTerm)}&post_type=novel,wp-manga`;
-    const $ = await this.fetchCheerio(url);
-    return this.parseNovels($);
+    const url = `${this.site}?s=${encodeURIComponent(searchTerm)}&post_type=wp-manga&page=${page}`;
+    const html = await this.fetchHtml(url);
+    return this.parseNovelCards(html);
   }
-
-  filters = {
-    sortOptions: {
-      value: 'week',
-      label: 'الترتيب حسب',
-      options: [
-        { label: 'الأسبوع', value: 'week' },
-        { label: 'اليوم', value: 'day' },
-        { label: 'الشهر', value: 'month' },
-        { label: 'كل الوقت', value: 'all' },
-      ],
-      type: FilterTypes.Picker,
-    },
-  } satisfies Filters;
 }
 
 export default new Markazriwayat();
