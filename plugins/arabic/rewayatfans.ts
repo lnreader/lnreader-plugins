@@ -80,25 +80,25 @@ class RewayatFans implements Plugin.PluginBase {
       chapters: [],
     };
 
-    const slugBase = novelPath.replace(/\/$/, '').split('/').pop() || novelPath;
+    // Get novel page to find the title
+    const html = await this.fetchHtml(`${this.site}${novelPath}`);
+    const $ = parseHTML(html);
+    const titleTag = $('title').text().trim();
+    novel.name = titleTag.split(/\s+[-–—]\s+/)[0].trim();
 
-    // First get novel title
-    const novelPages = await this.fetchJson<WPPage[]>(
-      `${this.site}wp-json/wp/v2/pages?slug=${encodeURIComponent(slugBase)}&_fields=title`,
-    );
-    if (novelPages.length > 0) {
-      novel.name = this.extractNovelName(novelPages[0].title?.rendered || '');
-    }
+    // Search for the novel's chapters using the title
+    const searchName = novel.name.replace(/\s+\d+$/, '');
+    const searchQuery = searchName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-').toLowerCase();
 
-    // Try fetching chapters in batches by constructing slug patterns
-    // Format: {number}-{novel-slug}
+    // Fetch chapters in batches
     let batchStart = 1;
     const batchSize = 50;
+    let foundEnglishSlug = '';
 
     while (batchStart <= 500) {
       const slugs: string[] = [];
       for (let i = batchStart; i < batchStart + batchSize; i++) {
-        slugs.push(`${i}-${slugBase}`);
+        slugs.push(`${i}-${searchQuery}`);
       }
 
       try {
@@ -106,18 +106,58 @@ class RewayatFans implements Plugin.PluginBase {
           `${this.site}wp-json/wp/v2/pages?slug=${slugs.join(',')}&_fields=slug,title,date`,
         );
 
-        if (pages.length === 0) break;
+        if (pages.length === 0) {
+          // Try to find the English slug from any matching chapter
+          if (!foundEnglishSlug) {
+            // Search by title to find the English slug
+            const titlePages = await this.fetchJson<WPPage[]>(
+              `${this.site}wp-json/wp/v2/pages?search=${encodeURIComponent(searchName)}&per_page=10&_fields=slug,title`,
+            );
+            for (const p of titlePages) {
+              const numMatch = p.slug.match(/^(\d+)-(.+)/);
+              if (numMatch) {
+                foundEnglishSlug = numMatch[2];
+                break;
+              }
+            }
+            if (foundEnglishSlug) {
+              // Retry with the correct slug
+              for (let i = 1; i <= batchSize; i++) {
+                slugs.push(`${i}-${foundEnglishSlug}`);
+              }
+              const retryPages = await this.fetchJson<WPPage[]>(
+                `${this.site}wp-json/wp/v2/pages?slug=${slugs.join(',')}&_fields=slug,title,date`,
+              );
+              for (const page of retryPages) {
+                const numMatch = page.slug.match(/^(\d+)-/);
+                if (numMatch) {
+                  novel.chapters!.push({
+                    name: this.extractChapterNumber(page.title.rendered),
+                    path: page.slug,
+                    chapterNumber: parseInt(numMatch[1], 10),
+                    releaseTime: page.date,
+                  });
+                }
+              }
+              batchStart += batchSize;
+              continue;
+            }
+          }
+          break;
+        }
 
         for (const page of pages) {
           const numMatch = page.slug.match(/^(\d+)-/);
           if (numMatch) {
             const chapterNum = parseInt(numMatch[1], 10);
-            novel.chapters!.push({
-              name: this.extractChapterNumber(page.title.rendered),
-              path: page.slug,
-              chapterNumber: chapterNum,
-              releaseTime: page.date,
-            });
+            if (!novel.chapters!.find(c => c.chapterNumber === chapterNum)) {
+              novel.chapters!.push({
+                name: this.extractChapterNumber(page.title.rendered),
+                path: page.slug,
+                chapterNumber: chapterNum,
+                releaseTime: page.date,
+              });
+            }
           }
         }
 
