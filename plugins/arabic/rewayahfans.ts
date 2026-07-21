@@ -87,7 +87,7 @@ class RewayahFans implements Plugin.PluginBase {
 
     while (hasMore) {
       const pages = await this.fetchJson<WPPage[]>(
-        `${this.site}wp-json/wp/v2/pages?search=${encodeURIComponent(novelPrefix.replace(/-/g, ' '))}&per_page=500&page=${pg}&_fields=slug,title,date`,
+        `${this.site}wp-json/wp/v2/pages?search=${encodeURIComponent(novelPrefix.replace(/-/g, ' '))}&per_page=100&page=${pg}&_fields=slug,title,date`,
       );
 
       if (pages.length === 0) {
@@ -112,7 +112,7 @@ class RewayahFans implements Plugin.PluginBase {
         }
       }
 
-      if (pages.length < 500) hasMore = false;
+      if (pages.length < 100) hasMore = false;
       pg++;
     }
 
