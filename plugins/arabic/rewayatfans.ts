@@ -82,15 +82,12 @@ class RewayatFans implements Plugin.PluginBase {
 
     const slugBase = novelPath.replace(/\/$/, '').split('/').pop() || novelPath;
 
-    // Search chapters using the slug converted to search query
-    const searchQuery = slugBase.replace(/-/g, ' ');
-
     let pg = 1;
     let hasMore = true;
 
     while (hasMore) {
       const pages = await this.fetchJson<WPPage[]>(
-        `${this.site}wp-json/wp/v2/pages?search=${encodeURIComponent(searchQuery)}&per_page=100&page=${pg}&orderby=title&order=asc&_fields=slug,title,date`,
+        `${this.site}wp-json/wp/v2/pages?per_page=100&page=${pg}&orderby=title&order=asc&_fields=slug,title,date`,
       );
 
       if (pages.length === 0) {
