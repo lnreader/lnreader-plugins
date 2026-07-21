@@ -8,7 +8,7 @@ import { FilterTypes, Filters } from '@libs/filterInputs';
 class Markazriwayat implements Plugin.PluginBase {
   id = 'markazriwayat';
   name = 'مركز الروايات';
-  version = '1.6.0';
+  version = '1.7.0';
   icon = 'src/ar/markazriwayat/icon.png';
   site = 'https://markazriwayat.com/';
 
@@ -27,6 +27,14 @@ class Markazriwayat implements Plugin.PluginBase {
       ],
     },
   };
+
+  private async fetchJson<T>(url: string): Promise<T> {
+    const res = await fetchApi(url, {
+      headers: { 'User-Agent': this.UA },
+    });
+    if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+    return res.json() as Promise<T>;
+  }
 
   private async fetchHtml(url: string): Promise<string> {
     const res = await fetchApi(url, {
@@ -77,6 +85,29 @@ class Markazriwayat implements Plugin.PluginBase {
 
     const html = await this.fetchHtml(url);
     return this.parseNovelCards(html);
+  }
+
+  async searchNovels(
+    searchTerm: string,
+    page: number,
+  ): Promise<Plugin.NovelItem[]> {
+    const apiUrl = `${this.site}wp-json/theam/v1/novel-search?term=${encodeURIComponent(searchTerm)}&per_page=20`;
+    const data = await this.fetchJson<{
+      items: Array<{
+        id: number;
+        title: string;
+        link: string;
+        cover: string;
+        genres: string[];
+        chapters_count: number;
+      }>;
+    }>(apiUrl);
+
+    return (data.items || []).map(item => ({
+      name: item.title,
+      path: item.link.replace(this.site, ''),
+      cover: item.cover || defaultCover,
+    }));
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
@@ -193,15 +224,6 @@ class Markazriwayat implements Plugin.PluginBase {
         .html() || '';
 
     return content || '<p>المحتوى غير متاح.</p>';
-  }
-
-  async searchNovels(
-    searchTerm: string,
-    page: number,
-  ): Promise<Plugin.NovelItem[]> {
-    const url = `${this.site}?s=${encodeURIComponent(searchTerm)}&post_type=wp-manga&page=${page}`;
-    const html = await this.fetchHtml(url);
-    return this.parseNovelCards(html);
   }
 }
 
