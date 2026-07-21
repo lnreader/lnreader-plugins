@@ -12,7 +12,7 @@ type WPPage = {
 class RewayatFans implements Plugin.PluginBase {
   id = 'rewayatfans';
   name = 'روايات فانز';
-  version = '7.0.0';
+  version = '8.0.0';
   icon = 'src/ar/rewayatfans/icon.png';
   site = 'https://rewayatfans.com/';
 
@@ -73,28 +73,21 @@ class RewayatFans implements Plugin.PluginBase {
       chapters: [],
     };
 
-    // Get novel page to find the title
+    const slugBase = novelPath.replace(/\/$/, '').split('/').pop() || novelPath;
+
+    // Get novel page to find the title and chapter count
     const html = await this.fetchHtml(`${this.site}${novelPath}`);
     const $ = parseHTML(html);
     const titleTag = $('title').text().trim();
-    const rawName = titleTag.split(/\s+[-–—]\s+/)[0].trim();
-    novel.name = rawName;
+    novel.name = titleTag.split(/\s+[-–—]\s+/)[0].trim();
 
-    // Extract English words from title for search
-    const englishWords = rawName.match(/[a-zA-Z]+/g);
-    const searchQuery = englishWords ? englishWords.join(' ') : rawName;
-
-    if (!searchQuery || searchQuery.length < 3) {
-      return novel;
-    }
-
-    // Search for chapters
+    // Search for chapters by slug
     let pg = 1;
     let hasMore = true;
 
     while (hasMore) {
       const pages = await this.fetchJson<WPPage[]>(
-        `${this.site}wp-json/wp/v2/pages?search=${encodeURIComponent(searchQuery)}&per_page=100&page=${pg}&_fields=slug,title,date`,
+        `${this.site}wp-json/wp/v2/pages?search=${encodeURIComponent(slugBase.replace(/-/g, ' '))}&per_page=100&page=${pg}&_fields=slug,title,date`,
       );
 
       if (pages.length === 0) {
@@ -103,6 +96,9 @@ class RewayatFans implements Plugin.PluginBase {
       }
 
       for (const page of pages) {
+        // Only include chapters that belong to this novel
+        if (!page.slug.endsWith('-' + slugBase)) continue;
+
         const numMatch = page.slug.match(/(\d+)$/);
         if (numMatch) {
           const chapterNum = parseInt(numMatch[1], 10);
