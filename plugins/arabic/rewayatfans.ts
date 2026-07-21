@@ -87,29 +87,39 @@ class RewayatFans implements Plugin.PluginBase {
     const titleTag = $('title').text().trim();
     novel.name = titleTag.split(' - ')[0].trim() || titleTag.split('–')[0].trim();
 
-    const chapterSet = new Set<string>();
+    const slugBase = novelPath.replace(/\/$/, '').split('/').pop() || novelPath;
+    const novelPrefix = slugBase.replace(/-\d+$/, '');
 
-    $('a').each((_, el) => {
-      const href = $(el).attr('href') || '';
-      const text = $(el).text().trim();
+    let pg = 1;
+    let hasMore = true;
 
-      if (!href || !text) return;
-      if (!href.startsWith(this.site)) return;
+    while (hasMore) {
+      const pages = await this.fetchJson<WPPage[]>(
+        `${this.site}wp-json/wp/v2/pages?search=${encodeURIComponent(novelPrefix.replace(/-/g, ' '))}&per_page=100&page=${pg}&orderby=title&order=asc&_fields=slug,title,date`,
+      );
 
-      const chapterPath = href.replace(this.site, '').replace(/\/$/, '');
-      if (chapterPath === novelPath || chapterPath === novelPath.replace(/\/$/, '')) return;
-      if (chapterSet.has(chapterPath)) return;
+      if (pages.length === 0) {
+        hasMore = false;
+        break;
+      }
 
-      const numMatch = text.match(/(\d+)/);
-      if (!numMatch) return;
+      for (const page of pages) {
+        if (page.slug.startsWith(novelPrefix)) {
+          const numMatch = page.slug.match(/(\d+)$/);
+          const chapterNum = numMatch ? parseInt(numMatch[1], 10) : 0;
 
-      chapterSet.add(chapterPath);
-      novel.chapters!.push({
-        name: text,
-        path: chapterPath,
-        chapterNumber: parseInt(numMatch[1], 10),
-      });
-    });
+          novel.chapters!.push({
+            name: page.title.rendered,
+            path: page.slug,
+            chapterNumber: chapterNum,
+            releaseTime: page.date,
+          });
+        }
+      }
+
+      if (pages.length < 100) hasMore = false;
+      pg++;
+    }
 
     novel.chapters!.sort((a, b) => (a.chapterNumber || 0) - (b.chapterNumber || 0));
 
