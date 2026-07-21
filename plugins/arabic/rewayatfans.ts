@@ -82,32 +82,36 @@ class RewayatFans implements Plugin.PluginBase {
 
     const slugBase = novelPath.replace(/\/$/, '').split('/').pop() || novelPath;
 
-    let pg = 1;
-    let hasMore = true;
+    // First get novel title
+    const novelPages = await this.fetchJson<WPPage[]>(
+      `${this.site}wp-json/wp/v2/pages?slug=${encodeURIComponent(slugBase)}&_fields=title`,
+    );
+    if (novelPages.length > 0) {
+      novel.name = this.extractNovelName(novelPages[0].title?.rendered || '');
+    }
 
-    while (hasMore) {
-      const pages = await this.fetchJson<WPPage[]>(
-        `${this.site}wp-json/wp/v2/pages?per_page=100&page=${pg}&orderby=title&order=asc&_fields=slug,title,date`,
-      );
+    // Try fetching chapters in batches by constructing slug patterns
+    // Format: {number}-{novel-slug}
+    let batchStart = 1;
+    const batchSize = 50;
 
-      if (pages.length === 0) {
-        hasMore = false;
-        break;
+    while (batchStart <= 500) {
+      const slugs: string[] = [];
+      for (let i = batchStart; i < batchStart + batchSize; i++) {
+        slugs.push(`${i}-${slugBase}`);
       }
 
-      for (const page of pages) {
-        // Chapter slug format: {number}-{novel-slug}
-        // So we check if slug ends with -{novel-slug}
-        if (!page.slug.endsWith('-' + slugBase)) continue;
+      try {
+        const pages = await this.fetchJson<WPPage[]>(
+          `${this.site}wp-json/wp/v2/pages?slug=${slugs.join(',')}&_fields=slug,title,date`,
+        );
 
-        const numMatch = page.slug.match(/^(\d+)-/);
-        if (numMatch) {
-          const chapterNum = parseInt(numMatch[1], 10);
+        if (pages.length === 0) break;
 
-          if (!novel.chapters!.find(c => c.chapterNumber === chapterNum)) {
-            if (!novel.name) {
-              novel.name = this.extractNovelName(page.title.rendered);
-            }
+        for (const page of pages) {
+          const numMatch = page.slug.match(/^(\d+)-/);
+          if (numMatch) {
+            const chapterNum = parseInt(numMatch[1], 10);
             novel.chapters!.push({
               name: this.extractChapterNumber(page.title.rendered),
               path: page.slug,
@@ -116,10 +120,11 @@ class RewayatFans implements Plugin.PluginBase {
             });
           }
         }
-      }
 
-      if (pages.length < 100) hasMore = false;
-      pg++;
+        batchStart += batchSize;
+      } catch {
+        break;
+      }
     }
 
     novel.chapters!.sort((a, b) => (a.chapterNumber || 0) - (b.chapterNumber || 0));
