@@ -77,11 +77,12 @@ class RewayatFans implements Plugin.PluginBase {
     const html = await this.fetchHtml(`${this.site}${novelPath}`);
     const $ = parseHTML(html);
     const titleTag = $('title').text().trim();
-    novel.name = titleTag.split(/\s+[-–—]\s+/)[0].trim();
+    const rawName = titleTag.split(/\s+[-–—]\s+/)[0].trim();
+    novel.name = rawName;
 
     // Extract English words from title for search
-    const englishWords = novel.name.match(/[a-zA-Z]+/g);
-    const searchQuery = englishWords ? englishWords.join(' ') : novel.name;
+    const englishWords = rawName.match(/[a-zA-Z]+/g);
+    const searchQuery = englishWords ? englishWords.join(' ') : rawName;
 
     if (!searchQuery || searchQuery.length < 3) {
       return novel;
@@ -121,6 +122,13 @@ class RewayatFans implements Plugin.PluginBase {
     }
 
     novel.chapters!.sort((a, b) => (a.chapterNumber || 0) - (b.chapterNumber || 0));
+
+    // Use English name from first chapter if original name is Arabic
+    if (novel.chapters!.length > 0 && !novel.name.match(/[a-zA-Z]{3,}/)) {
+      const firstChapterTitle = novel.chapters![0].name || '';
+      const engName = firstChapterTitle.replace(/\s*\d+.*$/, '').trim();
+      if (engName) novel.name = engName;
+    }
 
     return novel;
   }
