@@ -6,7 +6,7 @@ type WPPage = {
   title: { rendered: string };
   slug: string;
   date: string;
-  featured_media: number;
+  content?: { rendered: string };
   _embedded?: {
     'wp:featuredmedia'?: Array<{ source_url: string }>;
   };
@@ -15,9 +15,11 @@ type WPPage = {
 class RewayahFans implements Plugin.PluginBase {
   id = 'rewayahfans';
   name = 'روايه فانز';
-  version = '4.1.0';
+  version = '5.0.0';
   icon = 'src/ar/rewayahfans/icon.png';
   site = 'https://rewayahfans.net/';
+
+  private allNovels: Plugin.NovelItem[] = [];
 
   private async fetchJson<T>(url: string): Promise<T> {
     const res = await fetchApi(url);
@@ -31,34 +33,44 @@ class RewayahFans implements Plugin.PluginBase {
     return res.text();
   }
 
-  private getCover(page: WPPage): string {
-    return page._embedded?.['wp:featuredmedia']?.[0]?.source_url || '';
+  private async loadAllNovels(): Promise<Plugin.NovelItem[]> {
+    if (this.allNovels.length > 0) return this.allNovels;
+
+    const html = await this.fetchHtml(
+      `${this.site}%d9%82%d8%a7%d8%a6%d9%85%d8%a9-%d8%a7%d9%84%d8%b1%d9%88%d8%a7%d9%8a%d8%a7%d8%aa/`,
+    );
+    const $ = parseHTML(html);
+    const novels: Plugin.NovelItem[] = [];
+    const seen = new Set<string>();
+
+    $('figure.wp-block-image').each((_, el) => {
+      const fig = $(el);
+      const linkEl = fig.find('figcaption a').first();
+      const href = linkEl.attr('href') || fig.find('a').first().attr('href') || '';
+      const name = linkEl.text().trim();
+      const cover = fig.find('img').attr('src') || '';
+
+      if (name && href) {
+        const path = href.replace(this.site, '').replace(/\/$/, '');
+        if (!seen.has(path)) {
+          seen.add(path);
+          novels.push({ name, path, cover });
+        }
+      }
+    });
+
+    this.allNovels = novels;
+    return novels;
   }
 
   async popularNovels(
     page: number,
     { showLatestNovels }: Plugin.PopularNovelsOptions,
   ): Promise<Plugin.NovelItem[]> {
-    const pages = await this.fetchJson<WPPage[]>(
-      `${this.site}wp-json/wp/v2/pages?per_page=20&page=${page}&orderby=date&order=desc&_embed`,
-    );
-
-    const seen = new Set<string>();
-    const novels: Plugin.NovelItem[] = [];
-
-    for (const page of pages) {
-      const novelName = this.extractNovelName(page.title.rendered);
-      if (novelName && !seen.has(novelName)) {
-        seen.add(novelName);
-        novels.push({
-          name: novelName,
-          path: page.slug,
-          cover: this.getCover(page),
-        });
-      }
-    }
-
-    return novels;
+    const allNovels = await this.loadAllNovels();
+    const perPage = 20;
+    const start = (page - 1) * perPage;
+    return allNovels.slice(start, start + perPage);
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
@@ -137,26 +149,14 @@ class RewayahFans implements Plugin.PluginBase {
     searchTerm: string,
     page: number,
   ): Promise<Plugin.NovelItem[]> {
-    const pages = await this.fetchJson<WPPage[]>(
-      `${this.site}wp-json/wp/v2/pages?search=${encodeURIComponent(searchTerm)}&per_page=20&page=${page}&_embed`,
+    const allNovels = await this.loadAllNovels();
+    const lower = searchTerm.toLowerCase();
+    const filtered = allNovels.filter(n =>
+      n.name.toLowerCase().includes(lower),
     );
-
-    const seen = new Set<string>();
-    const novels: Plugin.NovelItem[] = [];
-
-    for (const page of pages) {
-      const novelName = this.extractNovelName(page.title.rendered);
-      if (novelName && !seen.has(novelName)) {
-        seen.add(novelName);
-        novels.push({
-          name: novelName,
-          path: page.slug,
-          cover: this.getCover(page),
-        });
-      }
-    }
-
-    return novels;
+    const perPage = 20;
+    const start = (page - 1) * perPage;
+    return filtered.slice(start, start + perPage);
   }
 
   private extractNovelName(title: string): string {
