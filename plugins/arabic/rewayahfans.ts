@@ -79,42 +79,34 @@ class RewayahFans implements Plugin.PluginBase {
       chapters: [],
     };
 
-    const slugBase = novelPath.replace(/\/$/, '').split('/').pop() || novelPath;
-    const novelPrefix = slugBase.replace(/-\d+$/, '');
+    const html = await this.fetchHtml(`${this.site}${novelPath}`);
+    const $ = parseHTML(html);
 
-    let pg = 1;
-    let hasMore = true;
+    novel.name = $('h1, .entry-title, .post-title').first().text().trim() || '';
 
-    while (hasMore) {
-      const pages = await this.fetchJson<WPPage[]>(
-        `${this.site}wp-json/wp/v2/pages?search=${encodeURIComponent(novelPrefix.replace(/-/g, ' '))}&per_page=100&page=${pg}&_fields=slug,title,date`,
-      );
+    const chapterSet = new Set<string>();
 
-      if (pages.length === 0) {
-        hasMore = false;
-        break;
-      }
+    $('a').each((_, el) => {
+      const href = $(el).attr('href') || '';
+      const text = $(el).text().trim();
 
-      for (const page of pages) {
-        if (page.slug.startsWith(novelPrefix)) {
-          if (!novel.name) {
-            novel.name = this.extractNovelName(page.title.rendered);
-          }
-          const numMatch = page.slug.match(/(\d+)$/);
-          const chapterNum = numMatch ? parseInt(numMatch[1], 10) : 0;
+      if (!href || !text) return;
+      if (!href.startsWith(this.site)) return;
 
-          novel.chapters!.push({
-            name: page.title.rendered,
-            path: page.slug,
-            chapterNumber: chapterNum,
-            releaseTime: page.date,
-          });
-        }
-      }
+      const chapterPath = href.replace(this.site, '').replace(/\/$/, '');
+      if (chapterPath === novelPath || chapterPath === novelPath.replace(/\/$/, '')) return;
+      if (chapterSet.has(chapterPath)) return;
 
-      if (pages.length < 100) hasMore = false;
-      pg++;
-    }
+      const numMatch = text.match(/(\d+)/);
+      if (!numMatch) return;
+
+      chapterSet.add(chapterPath);
+      novel.chapters!.push({
+        name: text,
+        path: chapterPath,
+        chapterNumber: parseInt(numMatch[1], 10),
+      });
+    });
 
     novel.chapters!.sort((a, b) => (a.chapterNumber || 0) - (b.chapterNumber || 0));
 
