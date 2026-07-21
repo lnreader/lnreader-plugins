@@ -80,31 +80,31 @@ class RewayatFans implements Plugin.PluginBase {
       chapters: [],
     };
 
-    const html = await this.fetchHtml(`${this.site}${novelPath}`);
-    const $ = parseHTML(html);
+    // Step 1: Get novel page to find its ID
+    const slug = novelPath.replace(/\/$/, '').split('/').pop() || novelPath;
+    const novelPages = await this.fetchJson<WPPage[]>(
+      `${this.site}wp-json/wp/v2/pages?slug=${slug}&_fields=id,title`,
+    );
 
-    // Get novel name from <title> tag
-    const titleTag = $('title').text().trim();
-    novel.name = titleTag.split(' - ')[0].trim() || titleTag.split('–')[0].trim();
+    if (novelPages.length > 0) {
+      const novelId = novelPages[0].id;
+      novel.name = novelPages[0].title?.rendered || '';
 
-    const slugBase = novelPath.replace(/\/$/, '').split('/').pop() || novelPath;
-    const novelPrefix = slugBase.replace(/-\d+$/, '');
+      // Step 2: Fetch all child pages (chapters) using parent parameter
+      let pg = 1;
+      let hasMore = true;
 
-    let pg = 1;
-    let hasMore = true;
+      while (hasMore) {
+        const childPages = await this.fetchJson<WPPage[]>(
+          `${this.site}wp-json/wp/v2/pages?parent=${novelId}&per_page=100&page=${pg}&orderby=title&order=asc&_fields=slug,title,date`,
+        );
 
-    while (hasMore) {
-      const pages = await this.fetchJson<WPPage[]>(
-        `${this.site}wp-json/wp/v2/pages?search=${encodeURIComponent(novelPrefix.replace(/-/g, ' '))}&per_page=100&page=${pg}&orderby=title&order=asc&_fields=slug,title,date`,
-      );
+        if (childPages.length === 0) {
+          hasMore = false;
+          break;
+        }
 
-      if (pages.length === 0) {
-        hasMore = false;
-        break;
-      }
-
-      for (const page of pages) {
-        if (page.slug.startsWith(novelPrefix)) {
+        for (const page of childPages) {
           const numMatch = page.slug.match(/(\d+)$/);
           const chapterNum = numMatch ? parseInt(numMatch[1], 10) : 0;
 
@@ -115,10 +115,10 @@ class RewayatFans implements Plugin.PluginBase {
             releaseTime: page.date,
           });
         }
-      }
 
-      if (pages.length < 100) hasMore = false;
-      pg++;
+        if (childPages.length < 100) hasMore = false;
+        pg++;
+      }
     }
 
     novel.chapters!.sort((a, b) => (a.chapterNumber || 0) - (b.chapterNumber || 0));
