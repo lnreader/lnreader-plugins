@@ -20,7 +20,7 @@ class RewayatFans implements Plugin.PluginBase {
 
   private async fetchJson<T>(url: string): Promise<T> {
     const res = await fetchApi(url);
-    if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+    if (!res.ok) return [] as unknown as T;
     return res.json() as Promise<T>;
   }
 
