@@ -90,6 +90,7 @@ class RewayatFans implements Plugin.PluginBase {
     // Search chapters using the English title
     let pg = 1;
     let hasMore = true;
+    let chapterPrefix = '';
 
     while (hasMore) {
       const pages = await this.fetchJson<WPPage[]>(
@@ -101,7 +102,21 @@ class RewayatFans implements Plugin.PluginBase {
         break;
       }
 
+      // On first page, determine chapter prefix from first chapter slug
+      if (!chapterPrefix && pages.length > 0) {
+        for (const page of pages) {
+          const numMatch = page.slug.match(/(\d+)$/);
+          if (numMatch) {
+            chapterPrefix = page.slug.replace(/-\d+$/, '');
+            break;
+          }
+        }
+      }
+
       for (const page of pages) {
+        // Only include chapters that belong to this novel
+        if (chapterPrefix && !page.slug.startsWith(chapterPrefix)) continue;
+
         const numMatch = page.slug.match(/(\d+)$/);
         if (numMatch) {
           const chapterNum = parseInt(numMatch[1], 10);
