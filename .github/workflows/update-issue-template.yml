@@ -26,20 +26,20 @@ jobs:
       github.event.workflow_run.event == 'push'
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: master
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Generate Issue Template Options
         run: node ./.github/scripts/generate-issue-template-options.cjs
 
       - name: Create Or Update Pull Request
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           commit-message: 'chore: Update Issue Template Plugin Options [skip ci]'
           branch: 'update-issue-template'
