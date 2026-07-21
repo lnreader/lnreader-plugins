@@ -80,26 +80,17 @@ class RewayatFans implements Plugin.PluginBase {
       chapters: [],
     };
 
-    // Get novel page to find the English title from <title> tag
-    const html = await this.fetchHtml(`${this.site}${novelPath}`);
-    const $ = parseHTML(html);
-    const titleTag = $('title').text().trim();
-    const englishTitle = titleTag.split(/\s+[-–—]\s+/)[0].trim();
-    novel.name = englishTitle;
-
-    // Use novel slug as chapter prefix for filtering
     const slugBase = novelPath.replace(/\/$/, '').split('/').pop() || novelPath;
-    const chapterPrefix = slugBase;
 
-    // Search chapters using just the novel name (without chapter number)
-    const searchName = englishTitle.replace(/\s+\d+$/, '');
+    // Search chapters using the slug converted to search query
+    const searchQuery = slugBase.replace(/-/g, ' ');
 
     let pg = 1;
     let hasMore = true;
 
     while (hasMore) {
       const pages = await this.fetchJson<WPPage[]>(
-        `${this.site}wp-json/wp/v2/pages?search=${encodeURIComponent(searchName)}&per_page=100&page=${pg}&orderby=title&order=asc&_fields=slug,title,date`,
+        `${this.site}wp-json/wp/v2/pages?search=${encodeURIComponent(searchQuery)}&per_page=100&page=${pg}&orderby=title&order=asc&_fields=slug,title,date`,
       );
 
       if (pages.length === 0) {
@@ -108,15 +99,16 @@ class RewayatFans implements Plugin.PluginBase {
       }
 
       for (const page of pages) {
-        // Only include chapters that belong to this novel by slug prefix
-        if (!page.slug.startsWith(chapterPrefix)) continue;
+        if (!page.slug.startsWith(slugBase)) continue;
 
         const numMatch = page.slug.match(/(\d+)$/);
         if (numMatch) {
           const chapterNum = parseInt(numMatch[1], 10);
 
-          // Skip if already added
           if (!novel.chapters!.find(c => c.chapterNumber === chapterNum)) {
+            if (!novel.name) {
+              novel.name = this.extractNovelName(page.title.rendered);
+            }
             novel.chapters!.push({
               name: this.extractChapterNumber(page.title.rendered),
               path: page.slug,
@@ -132,10 +124,6 @@ class RewayatFans implements Plugin.PluginBase {
     }
 
     novel.chapters!.sort((a, b) => (a.chapterNumber || 0) - (b.chapterNumber || 0));
-
-    if (!novel.name && novel.chapters!.length > 0) {
-      novel.name = this.extractNovelName(novel.chapters![0].name);
-    }
 
     return novel;
   }
