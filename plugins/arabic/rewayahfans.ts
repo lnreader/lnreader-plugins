@@ -82,7 +82,9 @@ class RewayahFans implements Plugin.PluginBase {
     const html = await this.fetchHtml(`${this.site}${novelPath}`);
     const $ = parseHTML(html);
 
-    novel.name = $('h1, .entry-title, .post-title').first().text().trim() || '';
+    // Get novel name from <title> tag (format: "Novel Name - الصفحة الرئيسية")
+    const titleTag = $('title').text().trim();
+    novel.name = titleTag.split(' - ')[0].trim() || titleTag.split('–')[0].trim();
 
     const chapterSet = new Set<string>();
 
