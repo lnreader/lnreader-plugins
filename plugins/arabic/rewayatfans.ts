@@ -7,16 +7,12 @@ type WPPage = {
   slug: string;
   date: string;
   content?: { rendered: string };
-  featured_media: number;
-  _embedded?: {
-    'wp:featuredmedia'?: Array<{ source_url: string }>;
-  };
 };
 
 class RewayatFans implements Plugin.PluginBase {
   id = 'rewayatfans';
   name = 'روايات فانز';
-  version = '4.0.0';
+  version = '6.0.0';
   icon = 'src/ar/rewayatfans/icon.png';
   site = 'https://rewayatfans.com/';
 
@@ -66,7 +62,6 @@ class RewayatFans implements Plugin.PluginBase {
 
   async popularNovels(
     page: number,
-    { showLatestNovels }: Plugin.PopularNovelsOptions,
   ): Promise<Plugin.NovelItem[]> {
     const allNovels = await this.loadAllNovels();
     if (page > 1) return [];
@@ -86,85 +81,39 @@ class RewayatFans implements Plugin.PluginBase {
     const titleTag = $('title').text().trim();
     novel.name = titleTag.split(/\s+[-–—]\s+/)[0].trim();
 
-    // Search for the novel's chapters using the title
+    // Search for chapters by title (without page number)
     const searchName = novel.name.replace(/\s+\d+$/, '');
-    const searchQuery = searchName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '-').toLowerCase();
 
-    // Fetch chapters in batches
-    let batchStart = 1;
-    const batchSize = 50;
-    let foundEnglishSlug = '';
+    let pg = 1;
+    let hasMore = true;
 
-    while (batchStart <= 500) {
-      const slugs: string[] = [];
-      for (let i = batchStart; i < batchStart + batchSize; i++) {
-        slugs.push(`${i}-${searchQuery}`);
-      }
+    while (hasMore) {
+      const pages = await this.fetchJson<WPPage[]>(
+        `${this.site}wp-json/wp/v2/pages?search=${encodeURIComponent(searchName)}&per_page=100&page=${pg}&_fields=slug,title,date`,
+      );
 
-      try {
-        const pages = await this.fetchJson<WPPage[]>(
-          `${this.site}wp-json/wp/v2/pages?slug=${slugs.join(',')}&_fields=slug,title,date`,
-        );
-
-        if (pages.length === 0) {
-          // Try to find the English slug from any matching chapter
-          if (!foundEnglishSlug) {
-            // Search by title to find the English slug
-            const titlePages = await this.fetchJson<WPPage[]>(
-              `${this.site}wp-json/wp/v2/pages?search=${encodeURIComponent(searchName)}&per_page=10&_fields=slug,title`,
-            );
-            for (const p of titlePages) {
-              const numMatch = p.slug.match(/^(\d+)-(.+)/);
-              if (numMatch) {
-                foundEnglishSlug = numMatch[2];
-                break;
-              }
-            }
-            if (foundEnglishSlug) {
-              // Retry with the correct slug
-              for (let i = 1; i <= batchSize; i++) {
-                slugs.push(`${i}-${foundEnglishSlug}`);
-              }
-              const retryPages = await this.fetchJson<WPPage[]>(
-                `${this.site}wp-json/wp/v2/pages?slug=${slugs.join(',')}&_fields=slug,title,date`,
-              );
-              for (const page of retryPages) {
-                const numMatch = page.slug.match(/^(\d+)-/);
-                if (numMatch) {
-                  novel.chapters!.push({
-                    name: this.extractChapterNumber(page.title.rendered),
-                    path: page.slug,
-                    chapterNumber: parseInt(numMatch[1], 10),
-                    releaseTime: page.date,
-                  });
-                }
-              }
-              batchStart += batchSize;
-              continue;
-            }
-          }
-          break;
-        }
-
-        for (const page of pages) {
-          const numMatch = page.slug.match(/^(\d+)-/);
-          if (numMatch) {
-            const chapterNum = parseInt(numMatch[1], 10);
-            if (!novel.chapters!.find(c => c.chapterNumber === chapterNum)) {
-              novel.chapters!.push({
-                name: this.extractChapterNumber(page.title.rendered),
-                path: page.slug,
-                chapterNumber: chapterNum,
-                releaseTime: page.date,
-              });
-            }
-          }
-        }
-
-        batchStart += batchSize;
-      } catch {
+      if (pages.length === 0) {
+        hasMore = false;
         break;
       }
+
+      for (const page of pages) {
+        const numMatch = page.slug.match(/(\d+)$/);
+        if (numMatch) {
+          const chapterNum = parseInt(numMatch[1], 10);
+          if (!novel.chapters!.find(c => c.chapterNumber === chapterNum)) {
+            novel.chapters!.push({
+              name: this.extractChapterNumber(page.title.rendered),
+              path: page.slug,
+              chapterNumber: chapterNum,
+              releaseTime: page.date,
+            });
+          }
+        }
+      }
+
+      if (pages.length < 100) hasMore = false;
+      pg++;
     }
 
     novel.chapters!.sort((a, b) => (a.chapterNumber || 0) - (b.chapterNumber || 0));
@@ -178,8 +127,8 @@ class RewayatFans implements Plugin.PluginBase {
     );
 
     const arr = Array.isArray(pages) ? pages : [pages];
-    if (arr.length > 0 && arr[0].content?.rendered) {
-      const $ = parseHTML(arr[0].content.rendered);
+    if (arr.length > 0 && (arr[0] as any).content?.rendered) {
+      const $ = parseHTML((arr[0] as any).content.rendered);
       $('script, style, .sharedaddy, .jp-relatedposts, .wp-block-spacer').remove();
       return $.html();
     }
