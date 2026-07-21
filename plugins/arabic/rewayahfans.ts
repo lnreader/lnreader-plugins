@@ -7,26 +7,29 @@ type WPPage = {
   slug: string;
   date: string;
   content?: { rendered: string };
+  _embedded?: {
+    'wp:featuredmedia'?: Array<{ source_url: string }>;
+  };
 };
 
-class RewayatFans implements Plugin.PluginBase {
-  id = 'rewayatfans';
-  name = 'روايات فانز';
-  version = '8.0.0';
-  icon = 'src/ar/rewayatfans/icon.png';
-  site = 'https://rewayatfans.com/';
+class RewayahFans implements Plugin.PluginBase {
+  id = 'rewayahfans';
+  name = 'روايه فانز';
+  version = '5.0.0';
+  icon = 'src/ar/rewayahfans/icon.png';
+  site = 'https://rewayahfans.net/';
 
   private allNovels: Plugin.NovelItem[] = [];
 
   private async fetchJson<T>(url: string): Promise<T> {
     const res = await fetchApi(url);
-    if (!res.ok) return [] as unknown as T;
+    if (!res.ok) throw new Error(`Request failed: ${res.status}`);
     return res.json() as Promise<T>;
   }
 
   private async fetchHtml(url: string): Promise<string> {
     const res = await fetchApi(url);
-    if (!res.ok) return '';
+    if (!res.ok) throw new Error(`Request failed: ${res.status}`);
     return res.text();
   }
 
@@ -60,7 +63,10 @@ class RewayatFans implements Plugin.PluginBase {
     return novels;
   }
 
-  async popularNovels(page: number): Promise<Plugin.NovelItem[]> {
+  async popularNovels(
+    page: number,
+    { showLatestNovels }: Plugin.PopularNovelsOptions,
+  ): Promise<Plugin.NovelItem[]> {
     const allNovels = await this.loadAllNovels();
     if (page > 1) return [];
     return allNovels;
@@ -73,68 +79,41 @@ class RewayatFans implements Plugin.PluginBase {
       chapters: [],
     };
 
-    try {
-      const slugBase = novelPath.replace(/\/$/, '').split('/').pop() || novelPath;
+    const html = await this.fetchHtml(`${this.site}${novelPath}`);
+    const $ = parseHTML(html);
 
-      // Get novel page to find the title
-      const html = await this.fetchHtml(`${this.site}${novelPath}`);
-      if (!html) return novel;
+    // Get novel name from <title> tag (format: "Novel Name - الصفحة الرئيسية")
+    const titleTag = $('title').text().trim();
+    novel.name = titleTag.split(' - ')[0].trim() || titleTag.split('–')[0].trim();
 
-      const $ = parseHTML(html);
-      const titleTag = $('title').text().trim();
-      novel.name = titleTag.split(/\s+[-–—]\s+/)[0].trim();
+    const chapterSet = new Set<string>();
 
-      // Search for chapters by slug
-      let pg = 1;
-      let consecutiveEmpty = 0;
+    $('a').each((_, el) => {
+      const href = $(el).attr('href') || '';
+      const text = $(el).text().trim();
 
-      while (consecutiveEmpty < 3) {
-        const searchQuery = slugBase.replace(/-/g, ' ');
-        const pages = await this.fetchJson<WPPage[]>(
-          `${this.site}wp-json/wp/v2/pages?search=${encodeURIComponent(searchQuery)}&per_page=100&page=${pg}&_fields=slug,title,date`,
-        );
+      if (!href || !text) return;
+      if (!href.startsWith(this.site)) return;
 
-        if (!Array.isArray(pages) || pages.length === 0) {
-          consecutiveEmpty++;
-          pg++;
-          continue;
-        }
+      const chapterPath = href.replace(this.site, '').replace(/\/$/, '');
+      if (chapterPath === novelPath || chapterPath === novelPath.replace(/\/$/, '')) return;
+      if (chapterSet.has(chapterPath)) return;
 
-        let foundOnPage = 0;
-        for (const page of pages) {
-          if (!page.slug || !page.slug.startsWith(slugBase + '-')) continue;
+      const numMatch = text.match(/(\d+)/);
+      if (!numMatch) return;
 
-          const numMatch = page.slug.match(/(\d+)$/);
-          if (numMatch) {
-            const chapterNum = parseInt(numMatch[1], 10);
-            if (!novel.chapters!.find(c => c.chapterNumber === chapterNum)) {
-              novel.chapters!.push({
-                name: this.extractChapterNumber(page.title.rendered),
-                path: page.slug,
-                chapterNumber: chapterNum,
-                releaseTime: page.date,
-              });
-              foundOnPage++;
-            }
-          }
-        }
-
-        if (foundOnPage === 0) consecutiveEmpty++;
-        else consecutiveEmpty = 0;
-
-        pg++;
-      }
-    } catch {
-      // Ignore errors
-    }
+      chapterSet.add(chapterPath);
+      novel.chapters!.push({
+        name: text,
+        path: chapterPath,
+        chapterNumber: parseInt(numMatch[1], 10),
+      });
+    });
 
     novel.chapters!.sort((a, b) => (a.chapterNumber || 0) - (b.chapterNumber || 0));
 
-    // Use English name from first chapter if original name is Arabic
-    if (novel.chapters!.length > 0 && !novel.name.match(/[a-zA-Z]{3,}/)) {
-      const firstChapterTitle = novel.chapters![0].name || '';
-      const engName = firstChapterTitle.replace(/\s*\d+.*$/, '').trim();
-      if (engName) novel.name = engName;
+    if (!novel.name && novel.chapters!.length > 0) {
+      novel.name = this.extractNovelName(novel.chapters![0].name);
     }
 
     return novel;
@@ -146,9 +125,9 @@ class RewayatFans implements Plugin.PluginBase {
     );
 
     const arr = Array.isArray(pages) ? pages : [pages];
-    if (arr.length > 0 && (arr[0] as any).content?.rendered) {
-      const $ = parseHTML((arr[0] as any).content.rendered);
-      $('script, style, .sharedaddy, .jp-relatedposts, .wp-block-spacer').remove();
+    if (arr.length > 0 && arr[0].content?.rendered) {
+      const $ = parseHTML(arr[0].content.rendered);
+      $('script, style, .sharedaddy, .jp-relatedposts, .wp-block-spacer, .simplefavorite-button').remove();
       return $.html();
     }
 
@@ -177,11 +156,6 @@ class RewayatFans implements Plugin.PluginBase {
     const match = title.match(/^(.+?)\s+\d+$/);
     return match ? match[1].trim() : title.trim();
   }
-
-  private extractChapterNumber(title: string): string {
-    const match = title.match(/(\d+(?:-\d+)?)\s*$/);
-    return match ? match[1] : title.trim();
-  }
 }
 
-export default new RewayatFans();
+export default new RewayahFans();
