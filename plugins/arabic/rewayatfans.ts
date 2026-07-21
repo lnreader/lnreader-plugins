@@ -96,9 +96,11 @@ class RewayatFans implements Plugin.PluginBase {
       }
 
       for (const page of pages) {
-        if (!page.slug.startsWith(slugBase)) continue;
+        // Chapter slug format: {number}-{novel-slug}
+        // So we check if slug ends with -{novel-slug}
+        if (!page.slug.endsWith('-' + slugBase)) continue;
 
-        const numMatch = page.slug.match(/(\d+)$/);
+        const numMatch = page.slug.match(/^(\d+)-/);
         if (numMatch) {
           const chapterNum = parseInt(numMatch[1], 10);
 
