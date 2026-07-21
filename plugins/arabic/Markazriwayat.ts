@@ -28,14 +28,6 @@ class Markazriwayat implements Plugin.PluginBase {
     },
   };
 
-  private async fetchJson<T>(url: string): Promise<T> {
-    const res = await fetchApi(url, {
-      headers: { 'User-Agent': this.UA },
-    });
-    if (!res.ok) throw new Error(`Request failed: ${res.status}`);
-    return res.json() as Promise<T>;
-  }
-
   private async fetchHtml(url: string): Promise<string> {
     const res = await fetchApi(url, {
       headers: { 'User-Agent': this.UA },
@@ -91,23 +83,28 @@ class Markazriwayat implements Plugin.PluginBase {
     searchTerm: string,
     page: number,
   ): Promise<Plugin.NovelItem[]> {
-    const apiUrl = `${this.site}wp-json/theam/v1/novel-search?term=${encodeURIComponent(searchTerm)}&per_page=20`;
-    const data = await this.fetchJson<{
-      items: Array<{
-        id: number;
-        title: string;
-        link: string;
-        cover: string;
-        genres: string[];
-        chapters_count: number;
-      }>;
-    }>(apiUrl);
-
-    return (data.items || []).map(item => ({
-      name: item.title,
-      path: item.link.replace(this.site, ''),
-      cover: item.cover || defaultCover,
-    }));
+    try {
+      const apiUrl = `${this.site}wp-json/theam/v1/novel-search?term=${encodeURIComponent(searchTerm)}&per_page=20`;
+      const res = await fetchApi(apiUrl, {
+        headers: { 'User-Agent': this.UA },
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return (data.items || []).map((item: any) => ({
+        name: item.title,
+        path: item.link.replace(this.site, ''),
+        cover: item.cover || defaultCover,
+      }));
+    } catch {
+      // Fallback: use library search HTML
+      try {
+        const url = `${this.site}library/?search=${encodeURIComponent(searchTerm)}`;
+        const html = await this.fetchHtml(url);
+        return this.parseNovelCards(html);
+      } catch {
+        return [];
+      }
+    }
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
