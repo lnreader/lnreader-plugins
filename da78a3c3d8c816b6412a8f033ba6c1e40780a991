@@ -1,0 +1,170 @@
+.github/workflows/lock.yml
+  019f82a1-3107-7f53-9893-af20b13d2a0d 8-9,18-20,23,26-27
+  human 18,21-22
+.github/workflows/update-issue-template.yml
+  019f82a1-3107-7f53-9893-af20b13d2a0d 29,34,36,42
+  human 29,34,36,42
+.github/workflows/issue_auto_label.yml
+  019f82a1-3107-7f53-9893-af20b13d2a0d 9-10,20-24,28-30,35,46,51,53,58,60,65,77,81-90
+  human 21,26,37,42,44,49,51,56,68,72-76
+.github/workflows/publish-plugins.yml
+  019f82a1-3107-7f53-9893-af20b13d2a0d 13-15,26,31,33,36
+  human 23,28,30,33
+.github/workflows/prettier.yml
+  019f82a1-3107-7f53-9893-af20b13d2a0d 7-9,21-23,26,28,31
+  human 18,21,23-30,33
+.github/workflows/theme_auto_label.yml
+  019f82a1-3107-7f53-9893-af20b13d2a0d 7-9
+---
+{
+  "attestations": [
+    {
+      "entries": [
+        {
+          "accepted_lines": 8,
+          "added_lines": 8,
+          "deleted_lines": 4,
+          "hash": "019f82a1-3107-7f53-9893-af20b13d2a0d",
+          "lines": "8-9,18-20,23,26-27",
+          "overridden_lines": 0
+        },
+        {
+          "accepted_lines": 0,
+          "added_lines": 0,
+          "deleted_lines": 3,
+          "hash": "human",
+          "lines": "18,21-22",
+          "overridden_lines": 0
+        }
+      ],
+      "file": ".github/workflows/lock.yml"
+    },
+    {
+      "entries": [
+        {
+          "accepted_lines": 4,
+          "added_lines": 4,
+          "deleted_lines": 2,
+          "hash": "019f82a1-3107-7f53-9893-af20b13d2a0d",
+          "lines": "29,34,36,42",
+          "overridden_lines": 0
+        },
+        {
+          "accepted_lines": 0,
+          "added_lines": 0,
+          "deleted_lines": 4,
+          "hash": "human",
+          "lines": "29,34,36,42",
+          "overridden_lines": 0
+        }
+      ],
+      "file": ".github/workflows/update-issue-template.yml"
+    },
+    {
+      "entries": [
+        {
+          "accepted_lines": 28,
+          "added_lines": 28,
+          "deleted_lines": 17,
+          "hash": "019f82a1-3107-7f53-9893-af20b13d2a0d",
+          "lines": "9-10,20-24,28-30,35,46,51,53,58,60,65,77,81-90",
+          "overridden_lines": 0
+        },
+        {
+          "accepted_lines": 0,
+          "added_lines": 0,
+          "deleted_lines": 14,
+          "hash": "human",
+          "lines": "21,26,37,42,44,49,51,56,68,72-76",
+          "overridden_lines": 0
+        }
+      ],
+      "file": ".github/workflows/issue_auto_label.yml"
+    },
+    {
+      "entries": [
+        {
+          "accepted_lines": 7,
+          "added_lines": 7,
+          "deleted_lines": 4,
+          "hash": "019f82a1-3107-7f53-9893-af20b13d2a0d",
+          "lines": "13-15,26,31,33,36",
+          "overridden_lines": 0
+        },
+        {
+          "accepted_lines": 0,
+          "added_lines": 0,
+          "deleted_lines": 4,
+          "hash": "human",
+          "lines": "23,28,30,33",
+          "overridden_lines": 0
+        }
+      ],
+      "file": ".github/workflows/publish-plugins.yml"
+    },
+    {
+      "entries": [
+        {
+          "accepted_lines": 9,
+          "added_lines": 9,
+          "deleted_lines": 5,
+          "hash": "019f82a1-3107-7f53-9893-af20b13d2a0d",
+          "lines": "7-9,21-23,26,28,31",
+          "overridden_lines": 0
+        },
+        {
+          "accepted_lines": 0,
+          "added_lines": 0,
+          "deleted_lines": 11,
+          "hash": "human",
+          "lines": "18,21,23-30,33",
+          "overridden_lines": 0
+        }
+      ],
+      "file": ".github/workflows/prettier.yml"
+    },
+    {
+      "entries": [
+        {
+          "accepted_lines": 3,
+          "added_lines": 3,
+          "deleted_lines": 4,
+          "hash": "019f82a1-3107-7f53-9893-af20b13d2a0d",
+          "lines": "7-9",
+          "overridden_lines": 0
+        }
+      ],
+      "file": ".github/workflows/theme_auto_label.yml"
+    }
+  ],
+  "base_commit_sha": "8d4d7f7a96ce2c4f5f502b95b1a7c7cd868d88e2",
+  "branch": "master",
+  "commit_sha": "da78a3c3d8c816b6412a8f033ba6c1e40780a991",
+  "commit_time": "2026-07-21T08:46:17+05:30",
+  "commit_type": "direct_commit",
+  "harness_aidlc_version": "1.4.25",
+  "prompts": {
+    "019f82a1-3107-7f53-9893-af20b13d2a0d": {
+      "accepted_lines": 59,
+      "agent_id": {
+        "id": "019f82a1-3107-7f53-9893-af20b13d2a0d",
+        "model": "gpt-5.6-sol",
+        "tool": "codex"
+      },
+      "human_author": "Rajarshee Chatterjee <rajarshee.adm@gmail.com>",
+      "overriden_lines": 0,
+      "total_additions": 59,
+      "total_deletions": 36
+    },
+    "human": {
+      "accepted_lines": 0,
+      "agent_id": null,
+      "human_author": "Rajarshee Chatterjee <rajarshee.adm@gmail.com>",
+      "overriden_lines": 0,
+      "total_additions": 0,
+      "total_deletions": 36
+    }
+  },
+  "repo": "https://github.com/LNReader/lnreader-plugins",
+  "schema_version": "authorship/3.0.0"
+}
