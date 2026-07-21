@@ -68,9 +68,8 @@ class RewayahFans implements Plugin.PluginBase {
     { showLatestNovels }: Plugin.PopularNovelsOptions,
   ): Promise<Plugin.NovelItem[]> {
     const allNovels = await this.loadAllNovels();
-    const perPage = 20;
-    const start = (page - 1) * perPage;
-    return allNovels.slice(start, start + perPage);
+    if (page > 1) return [];
+    return allNovels;
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
