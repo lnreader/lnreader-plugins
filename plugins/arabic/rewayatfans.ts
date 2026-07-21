@@ -12,7 +12,7 @@ type WPPage = {
 class RewayatFans implements Plugin.PluginBase {
   id = 'rewayatfans';
   name = 'روايات فانز';
-  version = '6.0.0';
+  version = '7.0.0';
   icon = 'src/ar/rewayatfans/icon.png';
   site = 'https://rewayatfans.com/';
 
@@ -60,9 +60,7 @@ class RewayatFans implements Plugin.PluginBase {
     return novels;
   }
 
-  async popularNovels(
-    page: number,
-  ): Promise<Plugin.NovelItem[]> {
+  async popularNovels(page: number): Promise<Plugin.NovelItem[]> {
     const allNovels = await this.loadAllNovels();
     if (page > 1) return [];
     return allNovels;
@@ -81,78 +79,45 @@ class RewayatFans implements Plugin.PluginBase {
     const titleTag = $('title').text().trim();
     novel.name = titleTag.split(/\s+[-–—]\s+/)[0].trim();
 
-    // Search for chapters by title - use only English words without special chars
-    const searchName = novel.name
-      .replace(/[^\w\s]/g, '')  // Remove special characters like '
-      .replace(/\s+\d+$/, '')  // Remove trailing number
-      .trim();
+    // Extract English words from title for search
+    const englishWords = novel.name.match(/[a-zA-Z]+/g);
+    const searchQuery = englishWords ? englishWords.join(' ') : novel.name;
 
-    // If search name is empty (Arabic only), use slug-based approach
-    if (!searchName || searchName.length < 3) {
-      const slugBase = novelPath.replace(/\/$/, '').split('/').pop() || novelPath;
-      // Try to find English slug from search results
-      const titlePages = await this.fetchJson<WPPage[]>(
-        `${this.site}wp-json/wp/v2/pages?search=${encodeURIComponent(slugBase.replace(/-/g, ' '))}&per_page=5&_fields=slug`,
+    if (!searchQuery || searchQuery.length < 3) {
+      return novel;
+    }
+
+    // Search for chapters
+    let pg = 1;
+    let hasMore = true;
+
+    while (hasMore) {
+      const pages = await this.fetchJson<WPPage[]>(
+        `${this.site}wp-json/wp/v2/pages?search=${encodeURIComponent(searchQuery)}&per_page=100&page=${pg}&_fields=slug,title,date`,
       );
-      for (const p of titlePages) {
-        const numMatch = p.slug.match(/^(\d+)-(.+)/);
+
+      if (pages.length === 0) {
+        hasMore = false;
+        break;
+      }
+
+      for (const page of pages) {
+        const numMatch = page.slug.match(/(\d+)$/);
         if (numMatch) {
-          const engSlug = numMatch[2];
-          // Found English slug, search for all chapters
-          let pg = 1;
-          let hasMore = true;
-          while (hasMore) {
-            const pages = await this.fetchJson<WPPage[]>(
-              `${this.site}wp-json/wp/v2/pages?search=${encodeURIComponent(engSlug)}&per_page=100&page=${pg}&_fields=slug,title,date`,
-            );
-            if (pages.length === 0) { hasMore = false; break; }
-            for (const page of pages) {
-              if (!page.slug.endsWith('-' + engSlug)) continue;
-              const numMatch = page.slug.match(/(\d+)$/);
-              if (numMatch) {
-                const chapterNum = parseInt(numMatch[1], 10);
-                if (!novel.chapters!.find(c => c.chapterNumber === chapterNum)) {
-                  novel.chapters!.push({
-                    name: this.extractChapterNumber(page.title.rendered),
-                    path: page.slug,
-                    chapterNumber: chapterNum,
-                    releaseTime: page.date,
-                  });
-                }
-              }
-            }
-            if (pages.length < 100) hasMore = false;
-            pg++;
-          }
-          break;
-        }
-      }
-    } else {
-      // English novel - search directly
-      let pg = 1;
-      let hasMore = true;
-      while (hasMore) {
-        const pages = await this.fetchJson<WPPage[]>(
-          `${this.site}wp-json/wp/v2/pages?search=${encodeURIComponent(searchName)}&per_page=100&page=${pg}&_fields=slug,title,date`,
-        );
-        if (pages.length === 0) { hasMore = false; break; }
-        for (const page of pages) {
-          const numMatch = page.slug.match(/(\d+)$/);
-          if (numMatch) {
-            const chapterNum = parseInt(numMatch[1], 10);
-            if (!novel.chapters!.find(c => c.chapterNumber === chapterNum)) {
-              novel.chapters!.push({
-                name: this.extractChapterNumber(page.title.rendered),
-                path: page.slug,
-                chapterNumber: chapterNum,
-                releaseTime: page.date,
-              });
-            }
+          const chapterNum = parseInt(numMatch[1], 10);
+          if (!novel.chapters!.find(c => c.chapterNumber === chapterNum)) {
+            novel.chapters!.push({
+              name: this.extractChapterNumber(page.title.rendered),
+              path: page.slug,
+              chapterNumber: chapterNum,
+              releaseTime: page.date,
+            });
           }
         }
-        if (pages.length < 100) hasMore = false;
-        pg++;
       }
+
+      if (pages.length < 100) hasMore = false;
+      pg++;
     }
 
     novel.chapters!.sort((a, b) => (a.chapterNumber || 0) - (b.chapterNumber || 0));
