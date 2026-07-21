@@ -97,7 +97,7 @@ class RewayatFans implements Plugin.PluginBase {
 
       for (const page of pages) {
         // Only include chapters that belong to this novel
-        if (!page.slug.endsWith('-' + slugBase)) continue;
+        if (!page.slug.startsWith(slugBase + '-')) continue;
 
         const numMatch = page.slug.match(/(\d+)$/);
         if (numMatch) {
