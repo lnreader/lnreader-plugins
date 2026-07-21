@@ -80,31 +80,24 @@ class RewayatFans implements Plugin.PluginBase {
       chapters: [],
     };
 
-    // Step 1: Get novel page to find its ID
-    const slug = novelPath.replace(/\/$/, '').split('/').pop() || novelPath;
-    const novelPages = await this.fetchJson<WPPage[]>(
-      `${this.site}wp-json/wp/v2/pages?slug=${slug}&_fields=id,title`,
-    );
+    const slugBase = novelPath.replace(/\/$/, '').split('/').pop() || novelPath;
+    const searchQuery = slugBase.replace(/-/g, ' ');
 
-    if (novelPages.length > 0) {
-      const novelId = novelPages[0].id;
-      novel.name = novelPages[0].title?.rendered || '';
+    let pg = 1;
+    let hasMore = true;
 
-      // Step 2: Fetch all child pages (chapters) using parent parameter
-      let pg = 1;
-      let hasMore = true;
+    while (hasMore) {
+      const pages = await this.fetchJson<WPPage[]>(
+        `${this.site}wp-json/wp/v2/pages?search=${encodeURIComponent(searchQuery)}&per_page=100&page=${pg}&orderby=title&order=asc&_fields=slug,title,date`,
+      );
 
-      while (hasMore) {
-        const childPages = await this.fetchJson<WPPage[]>(
-          `${this.site}wp-json/wp/v2/pages?parent=${novelId}&per_page=100&page=${pg}&orderby=title&order=asc&_fields=slug,title,date`,
-        );
+      if (pages.length === 0) {
+        hasMore = false;
+        break;
+      }
 
-        if (childPages.length === 0) {
-          hasMore = false;
-          break;
-        }
-
-        for (const page of childPages) {
+      for (const page of pages) {
+        if (page.slug.startsWith(slugBase.replace(/-\d+$/, ''))) {
           const numMatch = page.slug.match(/(\d+)$/);
           const chapterNum = numMatch ? parseInt(numMatch[1], 10) : 0;
 
@@ -115,16 +108,25 @@ class RewayatFans implements Plugin.PluginBase {
             releaseTime: page.date,
           });
         }
-
-        if (childPages.length < 100) hasMore = false;
-        pg++;
       }
+
+      if (pages.length < 100) hasMore = false;
+      pg++;
     }
 
     novel.chapters!.sort((a, b) => (a.chapterNumber || 0) - (b.chapterNumber || 0));
 
     if (!novel.name && novel.chapters!.length > 0) {
       novel.name = this.extractNovelName(novel.chapters![0].name);
+    }
+
+    if (!novel.name) {
+      const titlePages = await this.fetchJson<WPPage[]>(
+        `${this.site}wp-json/wp/v2/pages?slug=${slugBase}&_fields=title`,
+      );
+      if (titlePages.length > 0) {
+        novel.name = titlePages[0].title?.rendered || '';
+      }
     }
 
     return novel;
