@@ -109,7 +109,7 @@ class RewayatFans implements Plugin.PluginBase {
           // Skip if already added
           if (!novel.chapters!.find(c => c.chapterNumber === chapterNum)) {
             novel.chapters!.push({
-              name: page.title.rendered,
+              name: this.extractChapterNumber(page.title.rendered),
               path: page.slug,
               chapterNumber: chapterNum,
               releaseTime: page.date,
@@ -167,6 +167,11 @@ class RewayatFans implements Plugin.PluginBase {
   private extractNovelName(title: string): string {
     const match = title.match(/^(.+?)\s+\d+$/);
     return match ? match[1].trim() : title.trim();
+  }
+
+  private extractChapterNumber(title: string): string {
+    const match = title.match(/(\d+(?:-\d+)?)\s*$/);
+    return match ? match[1] : title.trim();
   }
 }
 
