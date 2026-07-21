@@ -15,7 +15,7 @@ type WPPage = {
 class RewayatFans implements Plugin.PluginBase {
   id = 'rewayatfans';
   name = 'روايات فانز';
-  version = '4.0.0';
+  version = '4.1.0';
   icon = 'src/ar/rewayatfans/icon.png';
   site = 'https://rewayatfans.com/';
 
@@ -39,29 +39,6 @@ class RewayatFans implements Plugin.PluginBase {
     page: number,
     { showLatestNovels }: Plugin.PopularNovelsOptions,
   ): Promise<Plugin.NovelItem[]> {
-    if (showLatestNovels) {
-      const pages = await this.fetchJson<WPPage[]>(
-        `${this.site}wp-json/wp/v2/pages?per_page=20&page=${page}&orderby=date&order=desc&_embed`,
-      );
-
-      const seen = new Set<string>();
-      const novels: Plugin.NovelItem[] = [];
-
-      for (const p of pages) {
-        const novelName = this.extractNovelName(p.title.rendered);
-        if (novelName && !seen.has(novelName)) {
-          seen.add(novelName);
-          novels.push({
-            name: novelName,
-            path: p.slug,
-            cover: this.getCover(p),
-          });
-        }
-      }
-
-      return novels;
-    }
-
     const listingPath =
       page === 1
         ? `${this.site}%D9%82%D8%A7%D8%A6%D9%85%D8%A9-%D8%A7%D9%84%D8%B1%D9%88%D8%A7%D9%8A%D8%A7%D8%AA/`
