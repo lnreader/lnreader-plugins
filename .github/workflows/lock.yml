@@ -5,6 +5,8 @@ on:
     - cron: '0 0 * * *'
   workflow_dispatch:
 
+permissions: {}
+
 concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: false
@@ -13,10 +15,13 @@ jobs:
   lock:
     name: Lock Inactive Threads
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
     steps:
       - name: Lock Inactive Issues And Pull Requests
-        uses: dessant/lock-threads@v5
+        uses: dessant/lock-threads@89ae32b08ed1a541efecbab17912962a5e38981c # v6.0.2
         with:
           github-token: ${{ github.token }}
-          issue-lock-inactive-days: '2'
-          pr-lock-inactive-days: '2'
+          issue-inactive-days: '2'
+          pr-inactive-days: '2'
