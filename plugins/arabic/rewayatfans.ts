@@ -75,7 +75,7 @@ class RewayatFans implements Plugin.PluginBase {
 
     const slugBase = novelPath.replace(/\/$/, '').split('/').pop() || novelPath;
 
-    // Get novel page to find the title and chapter count
+    // Get novel page to find the title
     const html = await this.fetchHtml(`${this.site}${novelPath}`);
     const $ = parseHTML(html);
     const titleTag = $('title').text().trim();
@@ -84,19 +84,21 @@ class RewayatFans implements Plugin.PluginBase {
     // Search for chapters by slug
     let pg = 1;
     let hasMore = true;
+    let consecutiveEmpty = 0;
 
-    while (hasMore) {
+    while (hasMore && consecutiveEmpty < 3) {
       const pages = await this.fetchJson<WPPage[]>(
         `${this.site}wp-json/wp/v2/pages?search=${encodeURIComponent(slugBase.replace(/-/g, ' '))}&per_page=100&page=${pg}&_fields=slug,title,date`,
       );
 
       if (pages.length === 0) {
-        hasMore = false;
-        break;
+        consecutiveEmpty++;
+        pg++;
+        continue;
       }
 
+      let foundOnPage = 0;
       for (const page of pages) {
-        // Only include chapters that belong to this novel
         if (!page.slug.startsWith(slugBase + '-')) continue;
 
         const numMatch = page.slug.match(/(\d+)$/);
@@ -109,11 +111,14 @@ class RewayatFans implements Plugin.PluginBase {
               chapterNumber: chapterNum,
               releaseTime: page.date,
             });
+            foundOnPage++;
           }
         }
       }
 
-      if (pages.length < 100) hasMore = false;
+      if (foundOnPage === 0) consecutiveEmpty++;
+      else consecutiveEmpty = 0;
+
       pg++;
     }
 
