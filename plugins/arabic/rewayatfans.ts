@@ -15,7 +15,7 @@ type WPPage = {
 class RewayatFans implements Plugin.PluginBase {
   id = 'rewayatfans';
   name = 'روايات فانز';
-  version = '4.1.0';
+  version = '4.2.0';
   icon = 'src/ar/rewayatfans/icon.png';
   site = 'https://rewayatfans.com/';
 
@@ -39,34 +39,24 @@ class RewayatFans implements Plugin.PluginBase {
     page: number,
     { showLatestNovels }: Plugin.PopularNovelsOptions,
   ): Promise<Plugin.NovelItem[]> {
-    const listingPath =
-      page === 1
-        ? `${this.site}%D9%82%D8%A7%D8%A6%D9%85%D8%A9-%D8%A7%D9%84%D8%B1%D9%88%D8%A7%D9%8A%D8%A7%D8%AA/`
-        : `${this.site}%D9%82%D8%A7%D8%A6%D9%85%D8%A9-%D8%A7%D9%84%D8%B1%D9%88%D8%A7%D9%8A%D8%A7%D8%AT/page/${page}/`;
+    const pages = await this.fetchJson<WPPage[]>(
+      `${this.site}wp-json/wp/v2/pages?per_page=20&page=${page}&orderby=date&order=desc&_embed`,
+    );
 
-    const html = await this.fetchHtml(listingPath);
-    const $ = parseHTML(html);
-    const novels: Plugin.NovelItem[] = [];
     const seen = new Set<string>();
+    const novels: Plugin.NovelItem[] = [];
 
-    $('div.entry-content a').each((_, el) => {
-      const href = $(el).attr('href') || '';
-      const name = $(el).text().trim();
-
-      if (
-        name.length > 3 &&
-        href.includes('rewayatfans.com/') &&
-        !name.includes('الرئيسية') &&
-        !name.includes('روايات فانز') &&
-        !name.includes('قائمة الروايات') &&
-        !name.includes('قائمة المكتملة') &&
-        !seen.has(name)
-      ) {
-        seen.add(name);
-        const slug = href.replace(/\/$/, '').split('/').pop() || '';
-        novels.push({ name, path: slug, cover: '' });
+    for (const p of pages) {
+      const novelName = this.extractNovelName(p.title.rendered);
+      if (novelName && !seen.has(novelName)) {
+        seen.add(novelName);
+        novels.push({
+          name: novelName,
+          path: p.slug,
+          cover: this.getCover(p),
+        });
       }
-    });
+    }
 
     return novels;
   }
@@ -79,57 +69,6 @@ class RewayatFans implements Plugin.PluginBase {
     };
 
     const slugBase = novelPath.replace(/\/$/, '').split('/').pop() || novelPath;
-    const isArabic = !/[a-zA-Z]/.test(slugBase);
-
-    if (isArabic) {
-      const html = await this.fetchHtml(`${this.site}${novelPath}/`);
-      const $ = parseHTML(html);
-      novel.name = $('title').text().replace(/\s*[–|].*$/, '').trim();
-
-      const allSlugs = new Set<string>();
-      $('a[href]').each((_, el) => {
-        const href = $(el).attr('href') || '';
-        const match = href.match(
-          /rewayatfans\.com\/([a-z][a-z0-9-]+-\d+)\/?$/,
-        );
-        if (match) {
-          allSlugs.add(match[1]);
-        }
-      });
-
-      const prefixCounts = new Map<string, number>();
-      for (const slug of allSlugs) {
-        const prefix = slug.replace(/-\d+$/, '');
-        prefixCounts.set(prefix, (prefixCounts.get(prefix) || 0) + 1);
-      }
-
-      let bestPrefix = '';
-      let bestCount = 0;
-      for (const [prefix, count] of prefixCounts) {
-        if (count > bestCount) {
-          bestPrefix = prefix;
-          bestCount = count;
-        }
-      }
-
-      for (const slug of allSlugs) {
-        if (slug.startsWith(bestPrefix)) {
-          const numMatch = slug.match(/(\d+)$/);
-          const chapterNum = numMatch ? parseInt(numMatch[1], 10) : 0;
-          novel.chapters!.push({
-            name: `${novel.name} ${chapterNum}`,
-            path: slug,
-            chapterNumber: chapterNum,
-          });
-        }
-      }
-
-      novel.chapters!.sort(
-        (a, b) => (a.chapterNumber || 0) - (b.chapterNumber || 0),
-      );
-      return novel;
-    }
-
     const novelPrefix = slugBase.replace(/-\d+$/, '');
     const searchName = novelPrefix.replace(/-/g, ' ');
 
