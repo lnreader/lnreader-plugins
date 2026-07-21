@@ -82,6 +82,7 @@ class RewayatFans implements Plugin.PluginBase {
 
     const slugBase = novelPath.replace(/\/$/, '').split('/').pop() || novelPath;
     const searchQuery = slugBase.replace(/-/g, ' ');
+    const chapterPrefix = slugBase;
 
     let pg = 1;
     let hasMore = true;
@@ -97,7 +98,7 @@ class RewayatFans implements Plugin.PluginBase {
       }
 
       for (const page of pages) {
-        if (page.slug.startsWith(slugBase.replace(/-\d+$/, ''))) {
+        if (page.slug.startsWith(chapterPrefix)) {
           const numMatch = page.slug.match(/(\d+)$/);
           const chapterNum = numMatch ? parseInt(numMatch[1], 10) : 0;
 
@@ -116,17 +117,8 @@ class RewayatFans implements Plugin.PluginBase {
 
     novel.chapters!.sort((a, b) => (a.chapterNumber || 0) - (b.chapterNumber || 0));
 
-    if (!novel.name && novel.chapters!.length > 0) {
+    if (novel.chapters!.length > 0) {
       novel.name = this.extractNovelName(novel.chapters![0].name);
-    }
-
-    if (!novel.name) {
-      const titlePages = await this.fetchJson<WPPage[]>(
-        `${this.site}wp-json/wp/v2/pages?slug=${slugBase}&_fields=title`,
-      );
-      if (titlePages.length > 0) {
-        novel.name = titlePages[0].title?.rendered || '';
-      }
     }
 
     return novel;
