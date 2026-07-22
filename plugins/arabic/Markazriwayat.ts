@@ -8,7 +8,7 @@ import { FilterTypes, Filters } from '@libs/filterInputs';
 class Markazriwayat implements Plugin.PluginBase {
   id = 'markazriwayat';
   name = 'مركز الروايات';
-  version = '1.7.0';
+  version = '1.0.0';
   icon = 'src/ar/markazriwayat/icon.png';
   site = 'https://markazriwayat.com/';
 
@@ -123,10 +123,12 @@ class Markazriwayat implements Plugin.PluginBase {
     };
 
     // Cover
-    const coverImg = $('img').filter(function () {
-      const src = $(this).attr('data-src') || $(this).attr('src') || '';
-      return src.includes('wp-content/uploads') && !src.includes('cropped-');
-    }).first();
+    const coverImg = $('img')
+      .filter(function () {
+        const src = $(this).attr('data-src') || $(this).attr('src') || '';
+        return src.includes('wp-content/uploads') && !src.includes('cropped-');
+      })
+      .first();
     novel.cover =
       coverImg.attr('data-src') ||
       coverImg.attr('data-defer-src') ||
@@ -183,9 +185,7 @@ class Markazriwayat implements Plugin.PluginBase {
       $('div.ch-row').each((_, el) => {
         const a = $(el).find('a').first();
         const name =
-          $(el).find('.ch-title').text().trim() ||
-          a.attr('aria-label') ||
-          '';
+          $(el).find('.ch-title').text().trim() || a.attr('aria-label') || '';
         const href = a.attr('href') || '';
         const date = $(el).find('.ch-date').text().trim();
         const chNum = $(el).attr('data-ch-num') || '';
@@ -213,10 +213,12 @@ class Markazriwayat implements Plugin.PluginBase {
       'script, style, .sharedaddy, .jp-relatedposts, .wp-block-spacer, .reading-nav, .ads, .advertisement, .nav-links, .comments-area',
     ).remove();
 
+    $(
+      '[style*="display:none"], [style*="display: none"], [hidden], .hidden',
+    ).remove();
+
     const content =
-      $(
-        '.reading-content, .entry-content, .chapter-content, .text-left',
-      )
+      $('.reading-content, .entry-content, .chapter-content, .text-left')
         .first()
         .html() || '';
 
