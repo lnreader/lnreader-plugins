@@ -8,7 +8,7 @@ import { FilterTypes, Filters } from '@libs/filterInputs';
 class Markazriwayat implements Plugin.PluginBase {
   id = 'markazriwayat';
   name = 'مركز الروايات';
-  version = '1.0.0';
+  version = '2.2.1';
   icon = 'src/ar/markazriwayat/icon.png';
   site = 'https://markazriwayat.com/';
 
