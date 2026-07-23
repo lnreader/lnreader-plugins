@@ -1,7 +1,9 @@
-import { fetchText } from '@libs/fetch';
+import { fetchApi } from '@libs/fetch';
+import { storage } from '@libs/storage';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { load as parseHTML } from 'cheerio';
+import { Parser } from 'htmlparser2';
 import { defaultCover } from '@libs/defaultCover';
 
 class LnorisPlugin implements Plugin.PluginBase {
@@ -9,57 +11,112 @@ class LnorisPlugin implements Plugin.PluginBase {
   name = 'LNORI';
   icon = 'src/en/lnori/icon.png';
   site = 'https://lnori.com/';
-  version = '1.0.0';
+  version = '1.1.0';
+  webStorageUtilized = true;
 
-  private async getLibraryNovels(): Promise<
-    {
-      novel: Plugin.NovelItem;
-      author: string;
-      tags: string[];
-    }[]
-  > {
+  pluginSettings = {
+    clearCache: {
+      value: false,
+      label: 'Clear page cache on next page load',
+      type: 'Switch',
+    },
+  };
+
+  private libraryCache: CachedNovel[] | null = null;
+
+  private clearCache() {
+    if (storage.get('clearCache')) {
+      storage.clearAll();
+      this.libraryCache = null;
+      storage.set('clearCache', false);
+    }
+  }
+
+  private async fetchPage(
+    url: string,
+    ttl = 8 * 60 * 60 * 1000,
+  ): Promise<string> {
+    const cached = storage.get<string>(url);
+    if (cached) return cached;
+    const body = await (await fetchApi(url)).text();
+    storage.set(url, body, ttl);
+    return body;
+  }
+
+  private async getLibraryNovels(): Promise<CachedNovel[]> {
+    if (this.libraryCache) return this.libraryCache;
+
     const url = this.site + 'library';
-    const body = await fetchText(url);
-    const $ = parseHTML(body);
+    // library gets 1 hour cache
+    const body = await this.fetchPage(url, 1 * 60 * 60 * 1000);
+    let tempNovel: Partial<Plugin.NovelItem> & {
+      author?: string;
+      tags?: string;
+      year?: string;
+      relevance?: string;
+      volNo?: string;
+    } = {};
+    const novels: CachedNovel[] = [];
 
-    const parsedList: {
-      novel: Plugin.NovelItem;
-      author: string;
-      tags: string[];
-    }[] = [];
+    const stateStack: ParsingState[] = [ParsingState.Idle];
+    const currentState = () => stateStack[stateStack.length - 1];
+    const pushState = (state: ParsingState) => stateStack.push(state);
+    const popState = () =>
+      stateStack.length > 1 ? stateStack.pop() : currentState();
 
-    $('article.card').each((i, el) => {
-      const name = $(el).attr('data-t') || '';
-      const author = $(el).attr('data-a') || '';
-      const tagsAttr = $(el).attr('data-tags') || '';
-      const tags = tagsAttr.split(',').map(t => t.trim().toLowerCase());
-
-      const coverImg = $(el).find('.card-cover img').first();
-      let cover = coverImg.attr('src') || '';
-      if (cover && cover.startsWith('/')) {
-        cover = this.site + cover.substring(1);
-      }
-
-      const link = $(el).find('a.stretched-link').first();
-      let path = link.attr('href') || '';
-      if (path.startsWith('/')) {
-        path = path.substring(1);
-      }
-
-      if (path && name) {
-        parsedList.push({
-          novel: {
-            name,
-            path,
-            cover: cover || defaultCover,
-          },
-          author,
-          tags,
-        });
-      }
+    const parser = new Parser({
+      onopentag: (name, attribs) => {
+        const state = currentState();
+        switch (name) {
+          case 'article': {
+            pushState(ParsingState.Novel);
+            tempNovel.name = attribs['data-t'];
+            tempNovel.author = attribs['data-a'];
+            tempNovel.tags = attribs['data-tags'];
+            tempNovel.year = attribs['data-d'];
+            tempNovel.relevance = attribs['data-rel'];
+            tempNovel.volNo = attribs['data-v'];
+            break;
+          }
+          case 'a':
+            if (state === ParsingState.Novel) {
+              tempNovel.path = attribs.href.substring(1);
+            }
+            break;
+          case 'img':
+            if (state === ParsingState.Novel) {
+              tempNovel.cover = attribs.src;
+              if (tempNovel.path && tempNovel.name) {
+                novels.push({
+                  novel: {
+                    name: tempNovel.name,
+                    path: tempNovel.path,
+                    cover: tempNovel.cover,
+                  },
+                  author: tempNovel.author || '',
+                  tags: tempNovel.tags
+                    ? tempNovel.tags
+                        .split(',')
+                        .map(t => t.trim())
+                        .filter(Boolean)
+                    : [],
+                  year: tempNovel.year,
+                  relevance: tempNovel.relevance,
+                  volNo: tempNovel.volNo,
+                });
+              }
+              tempNovel = {};
+              popState();
+            }
+        }
+      },
     });
 
-    return parsedList;
+    parser.write(body);
+    parser.end();
+
+    this.libraryCache = novels;
+    return novels;
   }
 
   async popularNovels(
@@ -68,175 +125,306 @@ class LnorisPlugin implements Plugin.PluginBase {
   ): Promise<Plugin.NovelItem[]> {
     const parsedList = await this.getLibraryNovels();
 
-    let filteredList = parsedList;
-    const selectedGenre = filters?.genre?.value;
-    if (selectedGenre) {
-      filteredList = filteredList.filter(item =>
-        item.tags.includes(selectedGenre.toLowerCase()),
+    let filtered = [...parsedList];
+
+    const { include = [], exclude = [] } = filters.genre.value;
+    if (include.length || exclude.length) {
+      filtered = filtered.filter(
+        item =>
+          (!include.length || include.some(g => item.tags.includes(g))) &&
+          (!exclude.length || !exclude.some(g => item.tags.includes(g))),
       );
     }
 
-    const selectedSort = filters?.sort?.value;
-    if (selectedSort === 'title-az') {
-      filteredList.sort((a, b) => a.novel.name.localeCompare(b.novel.name));
-    } else if (selectedSort === 'title-za') {
-      filteredList.sort((a, b) => b.novel.name.localeCompare(a.novel.name));
+    const year = filters.year.value;
+    if (year) {
+      filtered = filtered.filter(item => item.year === year);
     }
 
-    const pageSize = 36;
-    const offset = (pageNo - 1) * pageSize;
-    return filteredList
-      .slice(offset, offset + pageSize)
-      .map(item => item.novel);
+    switch (filters.sort.value) {
+      case 'title':
+        filtered.sort((a, b) => a.novel.name.localeCompare(b.novel.name));
+        break;
+      case 'date':
+        filtered.sort(
+          (a, b) => parseInt(b.year || '0', 10) - parseInt(a.year || '0', 10),
+        );
+        break;
+      case 'volumes':
+        filtered.sort(
+          (a, b) => parseInt(b.volNo || '0', 10) - parseInt(a.volNo || '0', 10),
+        );
+        break;
+      case 'relevance':
+        filtered.sort(
+          (a, b) =>
+            parseInt(b.relevance || '0', 10) - parseInt(a.relevance || '0', 10),
+        );
+        break;
+    }
+
+    const novels = filtered.map(item => item.novel);
+    if (filters.reverse.value) novels.reverse();
+    const start = (pageNo - 1) * 36;
+    return novels.slice(start, start + 36);
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const url = this.site + novelPath;
-    const body = await fetchText(url);
-    const $ = parseHTML(body);
+    this.clearCache();
+    const body = await this.fetchPage(this.site + novelPath);
+
+    const genreArray = new Set<string>();
+    const summaryArray: string[] = [];
+    const scriptArray: string[] = [];
+
+    const stateStack: ParsingState[] = [ParsingState.Idle];
+    const currentState = () => stateStack[stateStack.length - 1];
+    const pushState = (s: ParsingState) => stateStack.push(s);
+    const popState = () =>
+      stateStack.length > 1 ? stateStack.pop() : currentState();
 
     const novel: Plugin.SourceNovel = {
       path: novelPath,
-      name: $('.hero-card h1.s-title').text().trim() || 'Untitled',
+      name: '',
+      cover: defaultCover,
+      summary: '',
+      author: '',
+      genres: '',
+      chapters: [],
     };
-
-    const coverUrl = $('.hero-card .cover-wrap img').attr('src');
-    if (coverUrl) {
-      novel.cover = coverUrl.startsWith('/')
-        ? this.site + coverUrl.substring(1)
-        : coverUrl;
-    } else {
-      novel.cover = defaultCover;
-    }
-
-    const dataTagsAttr = $('nav.tags-box.desktop').attr('data-tags');
-    if (dataTagsAttr) {
-      try {
-        const parsedTags = JSON.parse(dataTagsAttr);
-        novel.genres = parsedTags
-          .map((t: { name: string }) => t.name)
-          .join(', ');
-      } catch (e) {
-        // Fallback
-      }
-    }
-
-    if (!novel.genres) {
-      const genres: string[] = [];
-      $('nav.tags-box.desktop a, nav.tags-box a').each((i, el) => {
-        const text = $(el).text().trim();
-        if (text) genres.push(text);
-      });
-      novel.genres = genres.join(', ');
-    }
-
-    const summaryParagraphs: string[] = [];
-    $('section.desc-box p.description').each((i, el) => {
-      const text = $(el).text().trim();
-      if (text) summaryParagraphs.push(text);
-    });
-    novel.summary = summaryParagraphs.join('\n\n');
-
-    novel.author = $('.hero-card p.author').text().trim();
-
-    // Map unique volume URLs
     const volumeMap: Record<string, string> = {};
-    $('a[href^="/book/"]').each((i, el) => {
-      const href = $(el).attr('href');
-      const text = $(el).text().trim().replace(/\s+/g, ' ');
-      if (href) {
-        if (
-          !volumeMap[href] ||
-          (text && text.length > volumeMap[href].length)
-        ) {
-          volumeMap[href] = text;
+    let tempVolume: Partial<VolumeType> = {};
+
+    const parser = new Parser({
+      onopentag: (name, attribs) => {
+        const cls = attribs.class || '';
+        const state = currentState();
+
+        switch (name) {
+          case 'article':
+            switch (cls) {
+              case 'hero-card':
+                pushState(ParsingState.HeroCard);
+                return;
+              case 'card':
+              case 'card.card-loaded':
+              case 'card.card-loaded.popup-left':
+              case 'card.card-loaded.popup-right':
+                pushState(ParsingState.VolArticle);
+                return;
+            }
+            break;
+          case 'img':
+            if (state === ParsingState.HeroCard) {
+              novel.cover = attribs.src;
+            }
+            break;
+          case 'p':
+            if (cls === 'author') {
+              pushState(ParsingState.Author);
+              return;
+            }
+            if (
+              cls?.includes('description') &&
+              state === ParsingState.HeroCard
+            ) {
+              pushState(ParsingState.Description);
+              return;
+            }
+            break;
+          case 'a':
+            if (cls === 'tag') {
+              pushState(ParsingState.Genres);
+              return;
+            }
+            if (state === ParsingState.VolArticle && cls) {
+              tempVolume.href = attribs.href.substring(1);
+              tempVolume.name = attribs['aria-label'];
+            }
+            break;
+          case 'script':
+            if (attribs.type === 'application/ld+json') {
+              pushState(ParsingState.JsonLd);
+              return;
+            }
+            break;
+          case 'footer':
+            if (state === ParsingState.VolArticle) {
+              pushState(ParsingState.VolCardMeta);
+            }
+            break;
+          case 'button':
+            if (state === ParsingState.HeroCard) {
+              novel.name = attribs['data-series-title'];
+            }
+            break;
         }
-      }
+      },
+
+      ontext: text => {
+        switch (currentState()) {
+          case ParsingState.JsonLd:
+            scriptArray.push(text);
+            break;
+          case ParsingState.Author:
+            novel.author = (novel.author || '') + text;
+            break;
+          case ParsingState.Genres:
+            genreArray.add(text);
+            break;
+          case ParsingState.Description:
+            summaryArray.push(text);
+            break;
+          case ParsingState.VolCardMeta:
+            if (text === '.5') {
+              tempVolume.name += '.5';
+            }
+            break;
+        }
+      },
+
+      onclosetag: name => {
+        const state = currentState();
+        switch (name) {
+          case 'script':
+            if (state === ParsingState.JsonLd) popState();
+            break;
+          case 'article':
+            popState();
+            if (tempVolume.href) {
+              volumeMap[tempVolume.href] = tempVolume.name || '';
+            }
+            tempVolume = {};
+            break;
+          case 'footer':
+            if (state === ParsingState.VolCardMeta) popState();
+            break;
+          case 'a':
+            if (state === ParsingState.Genres) popState();
+            break;
+          case 'p':
+            if (
+              state === ParsingState.Author ||
+              state === ParsingState.Description
+            )
+              popState();
+            break;
+        }
+      },
+      onend: () => {
+        // Parse JSON-LD
+        let parsed: {
+          name?: string;
+          image?: string;
+          description?: string;
+          author?: { name?: string } | { name?: string }[];
+          genre?: string;
+          hasPart?: { url?: string; name?: string }[];
+        } = {};
+        try {
+          parsed = JSON.parse(scriptArray.join(''));
+        } catch {
+          // eslint
+        }
+
+        novel.name = novel.name ?? parsed.name ?? 'Untitled';
+        novel.cover = novel.cover ?? parsed.image ?? defaultCover;
+        novel.summary = summaryArray.join('') ?? parsed.description;
+        const authorFromLd = [parsed.author]
+          .flat()
+          .map(a => a?.name)
+          .filter(Boolean)
+          .join(', ');
+        if (authorFromLd) {
+          novel.author = authorFromLd;
+        }
+        novel.genres = parsed.genre || Array.from(genreArray).join(',');
+
+        if (Object.keys(volumeMap).length === 0) {
+          if (parsed.hasPart && Array.isArray(parsed.hasPart)) {
+            for (const part of parsed.hasPart) {
+              if (part?.url) {
+                const volPath = part.url.startsWith(this.site)
+                  ? part.url.slice(this.site.length)
+                  : part.url;
+                volumeMap[volPath] = part.name || '';
+              }
+            }
+          }
+        }
+        for (const key of Object.keys(volumeMap))
+          if (novel.name && volumeMap[key].startsWith(novel.name))
+            volumeMap[key] = '-' + volumeMap[key].slice(novel.name.length);
+      },
     });
 
-    const getVolumeName = (href: string, text: string) => {
-      let cleanText = text.replace(/Start Reading/gi, '').trim();
-      if (!cleanText) {
-        const parts = href.split('/');
-        const slug = parts[parts.length - 1] || parts[parts.length - 2] || '';
-        cleanText = slug
-          .split('-')
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(' ');
-      }
-      return cleanText;
+    parser.write(body);
+    parser.end();
+
+    const getVolumeName = (_href: string, text: string) => {
+      const match = text.match(/(Vol(?:ume)?\.?\s*\d+(?:[-.\s]\d+)?)/i);
+      return match ? match[1] : text;
     };
 
     const volumeUrls = Object.keys(volumeMap);
-    const volumePromises = volumeUrls.map(async volUrl => {
-      const fullVolUrl = this.site.replace(/\/$/, '') + volUrl;
-      const volHtml = await fetchText(fullVolUrl);
-      const $vol = parseHTML(volHtml);
 
-      const volChapters: Plugin.ChapterItem[] = [];
-      const tocLinks = $vol(
-        'nav.toc-view a[href^="#"], nav#toc-list a[href^="#"]',
-      );
-
-      if (tocLinks.length > 0) {
-        tocLinks.each((i, el) => {
-          const href = $vol(el).attr('href');
-          if (!href) return;
-          const id = href.substring(1);
-          const tocTitle = $vol(el).text().trim().replace(/\s+/g, ' ');
-
-          const section = $vol(`section#${id}`);
-          const h2Title = section
-            .find('h2.chapter-title, h2, h3')
-            .first()
-            .text()
-            .trim();
-
-          const chapterName =
-            tocTitle || h2Title || `Page ${id.replace(/\D/g, '')}`;
-
-          const volTitle = getVolumeName(volUrl, volumeMap[volUrl]);
-          let path = volUrl;
-          if (path.startsWith('/')) {
-            path = path.substring(1);
-          }
-          path = path + '#' + id;
-
-          volChapters.push({
-            name: `${volTitle} - ${chapterName}`,
-            path,
-          });
-        });
-      } else {
-        $vol('section.chapter').each((i, el) => {
-          const id = $vol(el).attr('id');
-          if (id) {
-            const h2Title = $vol(el)
-              .find('h2.chapter-title, h2, h3')
-              .first()
-              .text()
-              .trim();
-
-            if (!h2Title) return;
-
-            const volTitle = getVolumeName(volUrl, volumeMap[volUrl]);
-            let path = volUrl;
-            if (path.startsWith('/')) {
-              path = path.substring(1);
-            }
-            path = path + '#' + id;
-
-            volChapters.push({
-              name: `${volTitle} - ${h2Title}`,
-              path,
-            });
-          }
-        });
+    const chapters2D: Plugin.ChapterItem[][] = [];
+    for (const volUrl of volumeUrls) {
+      let volHtml: string;
+      try {
+        volHtml = await this.fetchPage(this.site + volUrl);
+      } catch (err) {
+        throw new Error(
+          `Failed to fetch volume: ${volumeMap[volUrl]} (${volUrl}) — ${String(err)}`,
+        );
       }
-      return volChapters;
-    });
+      const volTitle = getVolumeName(volUrl, volumeMap[volUrl]);
+      const volChapters: Plugin.ChapterItem[] = [];
 
-    const chapters2D = await Promise.all(volumePromises);
+      try {
+        let inTocList = false;
+        const tocParser = new Parser({
+          onopentag: (name, attribs) => {
+            if (name === 'nav' && attribs.id === 'toc-list') {
+              inTocList = true;
+              return;
+            }
+            if (!inTocList) return;
+            if (name === 'a') {
+              const href = attribs.href;
+              if (!href) return;
+              const chapName = attribs.title
+                ? attribs.title.trim().replace(/\s+/g, ' ')
+                : '';
+              volChapters.push({
+                name: `${volTitle} - ${chapName}`,
+                path: volUrl + href,
+              });
+            }
+          },
+          onclosetag: name => {
+            if (!inTocList) return;
+            if (inTocList && name === 'nav') {
+              inTocList = false;
+            }
+          },
+        });
+
+        tocParser.write(volHtml);
+        tocParser.end();
+      } catch (err) {
+        throw new Error(
+          `Failed to parse volume page: ${volumeMap[volUrl]} (${volUrl}) — ${String(err)}`,
+        );
+      }
+
+      if (!volChapters.length) {
+        throw new Error(
+          `No chapters found in volume: ${volumeMap[volUrl]} (${volUrl})`,
+        );
+      }
+      chapters2D.push(volChapters);
+    }
     const chapters = chapters2D.flat();
 
     novel.chapters = chapters.map((chap, idx) => ({
@@ -248,120 +436,46 @@ class LnorisPlugin implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const [pathWithoutAnchor, anchor] = chapterPath.split('#');
-    const url = this.site.replace(/\/$/, '') + '/' + pathWithoutAnchor;
+    const [base, anchor] = chapterPath.split('#');
+    const $ = parseHTML(await this.fetchPage(this.site + base));
 
-    const body = await fetchText(url);
-    const $ = parseHTML(body);
+    $('.chapter-title').remove();
+    const nextId = $(`#toc-list a[href="#${anchor}"]`)
+      .parent()
+      .next()
+      .find('a')
+      .attr('href')
+      ?.slice(1);
+    const allSections = $('section[id*=page]');
+    const start = allSections.index($(`section#${anchor}`));
+    if (start === -1) return '';
 
-    const tocAnchors: string[] = [];
-    $('nav.toc-view a[href^="#"], nav#toc-list a[href^="#"]').each((i, el) => {
-      const href = $(el).attr('href');
-      if (href) {
-        tocAnchors.push(href.substring(1));
-      }
-    });
+    const end = nextId ? allSections.index($(`section#${nextId}`)) : -1;
 
-    const chapterSelector = anchor ? `section#${anchor}` : 'section.chapter';
-    const section = $(chapterSelector);
-
-    if (!section.length) {
-      throw new Error(`Chapter section not found: ${chapterPath}`);
-    }
-
-    if (tocAnchors.length > 0 && anchor) {
-      const currentIndex = tocAnchors.indexOf(anchor);
-      const nextAnchor =
-        currentIndex !== -1 && currentIndex + 1 < tocAnchors.length
-          ? tocAnchors[currentIndex + 1]
-          : null;
-
-      const pagesContent: string[] = [];
-      let stepSection = section;
-
-      while (stepSection.length) {
-        const mainContent = stepSection.find('.main').length
-          ? stepSection.find('.main').clone()
-          : stepSection.clone();
-
-        mainContent.find('h2, h3, .chapter-title').remove();
-
-        mainContent.find('img').each((i, el) => {
-          const src = $(el).attr('src');
-          if (src && src.startsWith('/')) {
-            $(el).attr('src', this.site.replace(/\/$/, '') + src);
-          }
-        });
-
-        mainContent.find('source').each((i, el) => {
-          const srcset = $(el).attr('srcset');
-          if (srcset && srcset.startsWith('/')) {
-            $(el).attr('srcset', this.site.replace(/\/$/, '') + srcset);
-          }
-        });
-
-        const html = mainContent.html();
-        if (html) {
-          pagesContent.push(html);
-        }
-
-        let nextSibling = stepSection.next();
-        while (nextSibling.length && !nextSibling.is('section.chapter')) {
-          nextSibling = nextSibling.next();
-        }
-        stepSection = nextSibling;
-
-        if (nextAnchor && stepSection.attr('id') === nextAnchor) {
-          break;
-        }
-      }
-
-      return pagesContent.join('\n');
-    } else {
-      const mainContent = section.find('.main').length
-        ? section.find('.main').clone()
-        : section.clone();
-
-      mainContent.find('h2, h3, .chapter-title').remove();
-
-      mainContent.find('img').each((i, el) => {
-        const src = $(el).attr('src');
-        if (src && src.startsWith('/')) {
-          $(el).attr('src', this.site.replace(/\/$/, '') + src);
-        }
-      });
-
-      mainContent.find('source').each((i, el) => {
-        const srcset = $(el).attr('srcset');
-        if (srcset && srcset.startsWith('/')) {
-          $(el).attr('srcset', this.site.replace(/\/$/, '') + srcset);
-        }
-      });
-
-      return mainContent.html() || '';
-    }
+    return allSections
+      .slice(start, end !== -1 ? end : allSections.length)
+      .map((_, el) => $(el).html() || '')
+      .get()
+      .join('<hr>');
   }
 
   async searchNovels(
     searchTerm: string,
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
-    const parsedList = await this.getLibraryNovels();
-
     const term = searchTerm.toLowerCase();
-    const filteredList = parsedList.filter(item => {
-      return (
-        item.novel.name.toLowerCase().includes(term) ||
-        item.author.toLowerCase().includes(term) ||
-        item.tags.some(t => t.includes(term))
-      );
-    });
-
-    const pageSize = 36;
-    const offset = (pageNo - 1) * pageSize;
-    return filteredList
-      .slice(offset, offset + pageSize)
+    const parsedList = await this.getLibraryNovels();
+    const filtered = parsedList
+      .filter(
+        item =>
+          item.novel.name.toLowerCase().includes(term) ||
+          item.author.toLowerCase().includes(term) ||
+          item.tags.some(t => t.includes(term)),
+      )
       .map(item => item.novel);
+
+    const start = (pageNo - 1) * 36;
+    return filtered.slice(start, start + 36);
   }
 
   // resolveUrl = (path: string, _isNovel?: boolean) => {
@@ -371,38 +485,219 @@ class LnorisPlugin implements Plugin.PluginBase {
   filters = {
     sort: {
       label: 'Sort By',
-      value: 'popular',
+      value: 'relevance',
       options: [
-        { label: 'Popular (Default)', value: 'popular' },
-        { label: 'Title A-Z', value: 'title-az' },
-        { label: 'Title Z-A', value: 'title-za' },
+        { label: 'Relevance', value: 'relevance' },
+        { label: 'Title', value: 'title' },
+        { label: 'Year Released', value: 'date' },
+        { label: 'Volumes', value: 'volumes' },
       ],
       type: FilterTypes.Picker,
     },
+    reverse: {
+      label: 'Reverse Results',
+      value: false,
+      type: FilterTypes.Switch,
+    },
     genre: {
       label: 'Genre',
-      value: '',
+      value: {
+        include: [],
+        exclude: [],
+      },
       options: [
         { label: 'All', value: '' },
         { label: 'Academy', value: 'academy' },
         { label: 'Action', value: 'action' },
+        { label: 'Adult Protagonist', value: 'adult protagonist' },
         { label: 'Adventure', value: 'adventure' },
+        { label: 'Age Gap', value: 'age gap' },
+        { label: 'Airhead', value: 'airhead' },
+        { label: 'Alchemy', value: 'alchemy' },
+        { label: 'Animals', value: 'animals' },
+        { label: 'Anime Tie-In', value: 'anime tie-in' },
+        { label: 'Aristocracy', value: 'aristocracy' },
+        { label: 'Battle', value: 'battle' },
+        { label: 'Books', value: 'books' },
+        { label: 'Boys Love', value: 'boys love' },
+        { label: 'Business', value: 'business' },
+        { label: 'Camping', value: 'camping' },
+        { label: 'Childhood Friend', value: 'childhood friend' },
+        { label: 'Chinese Ambience', value: 'chinese ambience' },
+        { label: 'Chuunibyou', value: 'chuunibyou' },
+        { label: 'Combat', value: 'combat' },
         { label: 'Comedy', value: 'comedy' },
+        { label: 'Contract Marriage', value: 'contract marriage' },
+        { label: 'Cooking', value: 'cooking' },
+        { label: 'Crime', value: 'crime' },
+        { label: 'Cross-Dressing', value: 'cross-dressing' },
+        { label: 'Dark', value: 'dark' },
+        { label: 'Dark Fantasy', value: 'dark fantasy' },
+        { label: 'Demon Lord', value: 'demon lord' },
+        { label: 'Demons', value: 'demons' },
+        { label: 'Dragons', value: 'dragons' },
         { label: 'Drama', value: 'drama' },
+        { label: 'Dungeon', value: 'dungeon' },
+        { label: 'Dungeon Diving', value: 'dungeon diving' },
+        { label: 'Dystopian', value: 'dystopian' },
+        { label: 'Ecchi', value: 'ecchi' },
+        { label: 'Elf', value: 'elf' },
+        { label: 'Enemies to Lovers', value: 'enemies to lovers' },
+        { label: 'Fairies', value: 'fairies' },
+        { label: 'Familiars', value: 'familiars' },
+        { label: 'Family', value: 'family' },
+        { label: 'Fanservice', value: 'fanservice' },
         { label: 'Fantasy', value: 'fantasy' },
-        { label: 'Harem', value: 'harem' },
-        { label: 'Historical', value: 'historical' },
-        { label: 'Isekai', value: 'isekai' },
-        { label: 'Magic', value: 'magic' },
-        { label: 'Mystery', value: 'mystery' },
-        { label: 'Psychological', value: 'psychological' },
-        { label: 'Reincarnation', value: 'reincarnation' },
-        { label: 'Romance', value: 'romance' },
-        { label: 'Sci-Fi', value: 'sci-fi' },
-        { label: 'Slice of Life', value: 'slice-of-life' },
-        { label: 'Tragedy', value: 'tragedy' },
+        { label: 'Fantasy World', value: 'fantasy world' },
         { label: 'Female Protagonist', value: 'female protagonist' },
+        { label: 'First Person', value: 'first person' },
+        { label: 'Fish Out of Water', value: 'fish out of water' },
+        { label: 'Food', value: 'food' },
+        { label: 'Friendship', value: 'friendship' },
+        { label: 'Futuristic', value: 'futuristic' },
+        { label: 'Game Elements', value: 'game elements' },
+        { label: 'Gamer Protagonist', value: 'gamer protagonist' },
+        { label: 'Gender Bender', value: 'gender bender' },
+        { label: 'Genius', value: 'genius' },
+        { label: 'Girls Love', value: 'girls love' },
+        { label: 'Guns', value: 'guns' },
+        { label: 'Harem', value: 'harem' },
+        { label: 'Heartwarming', value: 'heartwarming' },
+        { label: 'High Fantasy', value: 'high fantasy' },
+        { label: 'High School', value: 'high school' },
+        { label: 'Historical', value: 'historical' },
+        { label: 'Historical Fantasy', value: 'historical fantasy' },
+        { label: 'Horror', value: 'horror' },
+        { label: 'Humor', value: 'humor' },
+        { label: 'Invention', value: 'invention' },
+        { label: 'Isekai', value: 'isekai' },
+        { label: 'Josei', value: 'josei' },
+        { label: 'Knights', value: 'knights' },
+        { label: 'LGBTQ+', value: 'lgbtq' },
+        { label: 'Lighthearted', value: 'lighthearted' },
+        { label: 'Literary', value: 'literary' },
+        { label: 'Magic', value: 'magic' },
+        { label: 'Magic Academy', value: 'magic academy' },
+        { label: 'Magical Weapons', value: 'magical weapons' },
+        { label: 'Maid', value: 'maid' },
         { label: 'Male Protagonist', value: 'male protagonist' },
+        { label: 'Manga Tie-In', value: 'manga tie-in' },
+        { label: 'Marriage', value: 'marriage' },
+        { label: 'Martial Arts', value: 'martial arts' },
+        { label: 'Master and Servant', value: 'master and servant' },
+        { label: 'Mature', value: 'mature' },
+        { label: 'Mecha', value: 'mecha' },
+        { label: 'Medieval', value: 'medieval' },
+        { label: 'Military', value: 'military' },
+        { label: 'Modern Day', value: 'modern day' },
+        { label: 'Moe', value: 'moe' },
+        { label: 'Monster Girls', value: 'monster girls' },
+        { label: 'Monster Taming', value: 'monster taming' },
+        { label: 'Monsters', value: 'monsters' },
+        { label: 'Multiple POV', value: 'multiple pov' },
+        { label: 'Mystery', value: 'mystery' },
+        { label: 'Nobility', value: 'nobility' },
+        { label: 'Not the Hero', value: 'not the hero' },
+        { label: 'OP Power', value: 'op power' },
+        { label: 'OP Protagonist', value: 'op protagonist' },
+        { label: 'Ordinary Protagonist', value: 'ordinary protagonist' },
+        { label: 'Otaku', value: 'otaku' },
+        { label: 'Otome', value: 'otome' },
+        { label: 'Otome Game', value: 'otome game' },
+        { label: 'Overpowered', value: 'overpowered' },
+        { label: 'Paranormal', value: 'paranormal' },
+        { label: 'Past Life', value: 'past life' },
+        { label: 'Period Piece', value: 'period piece' },
+        { label: 'Personal Growth', value: 'personal growth' },
+        { label: 'Political Marriage', value: 'political marriage' },
+        { label: 'Politics', value: 'politics' },
+        { label: 'Princess', value: 'princess' },
+        { label: 'Reincarnation', value: 'reincarnation' },
+        { label: 'Revenge', value: 'revenge' },
+        { label: 'Reverse Harem', value: 'reverse harem' },
+        { label: 'Rewriting History', value: 'rewriting history' },
+        { label: 'Romance', value: 'romance' },
+        { label: 'Romantic Fantasy', value: 'romantic fantasy' },
+        { label: 'RPG', value: 'rpg' },
+        { label: 'Satire', value: 'satire' },
+        { label: 'School', value: 'school' },
+        { label: 'School Life', value: 'school life' },
+        { label: 'Sci-Fi', value: 'sci-fi' },
+        { label: 'Seinen', value: 'seinen' },
+        { label: 'Shoujo', value: 'shoujo' },
+        { label: 'Shounen', value: 'shounen' },
+        { label: 'Slice of Life', value: 'slice of life' },
+        { label: 'Slow Life', value: 'slow life' },
+        { label: 'Snarky Protagonist', value: 'snarky protagonist' },
+        { label: 'Sorcery', value: 'sorcery' },
+        { label: 'Strategy', value: 'strategy' },
+        { label: 'Strong Female Lead', value: 'strong female lead' },
+        { label: 'Supernatural', value: 'supernatural' },
+        { label: 'Superpowers', value: 'superpowers' },
+        { label: 'Survival', value: 'survival' },
+        { label: 'Sword and Sorcery', value: 'sword and sorcery' },
+        { label: 'Thriller', value: 'thriller' },
+        { label: 'Time Travel', value: 'time travel' },
+        { label: 'Tsundere', value: 'tsundere' },
+        { label: 'Underdog', value: 'underdog' },
+        { label: 'Unique Ability', value: 'unique ability' },
+        { label: 'Vampire', value: 'vampire' },
+        { label: 'Video Game', value: 'video game' },
+        { label: 'Video Game Related', value: 'video game related' },
+        { label: 'Video Game Tie-In', value: 'video game tie-in' },
+        { label: 'Villainess', value: 'villainess' },
+        { label: 'Violence', value: 'violence' },
+        { label: 'VRMMO', value: 'vrmmo' },
+        { label: 'War', value: 'war' },
+        { label: 'Weak Protagonist', value: 'weak protagonist' },
+        { label: 'Witch', value: 'witch' },
+        { label: 'Zero to Hero', value: 'zero to hero' },
+      ],
+      type: FilterTypes.ExcludableCheckboxGroup,
+    },
+    year: {
+      label: 'Year',
+      value: '',
+      options: [
+        { label: 'Any', value: '' },
+        { label: '9999', value: '9999' },
+        { label: '2026', value: '2026' },
+        { label: '2025', value: '2025' },
+        { label: '2024', value: '2024' },
+        { label: '2023', value: '2023' },
+        { label: '2022', value: '2022' },
+        { label: '2021', value: '2021' },
+        { label: '2020', value: '2020' },
+        { label: '2019', value: '2019' },
+        { label: '2018', value: '2018' },
+        { label: '2017', value: '2017' },
+        { label: '2016', value: '2016' },
+        { label: '2015', value: '2015' },
+        { label: '2014', value: '2014' },
+        { label: '2013', value: '2013' },
+        { label: '2012', value: '2012' },
+        { label: '2011', value: '2011' },
+        { label: '2010', value: '2010' },
+        { label: '2009', value: '2009' },
+        { label: '2008', value: '2008' },
+        { label: '2007', value: '2007' },
+        { label: '2006', value: '2006' },
+        { label: '2004', value: '2004' },
+        { label: '2003', value: '2003' },
+        { label: '2002', value: '2002' },
+        { label: '2001', value: '2001' },
+        { label: '1999', value: '1999' },
+        { label: '1998', value: '1998' },
+        { label: '1997', value: '1997' },
+        { label: '1996', value: '1996' },
+        { label: '1994', value: '1994' },
+        { label: '1988', value: '1988' },
+        { label: '1987', value: '1987' },
+        { label: '1983', value: '1983' },
+        { label: '1982', value: '1982' },
+        { label: '1980', value: '1980' },
+        { label: '1979', value: '1979' },
+        { label: '1973', value: '1973' },
       ],
       type: FilterTypes.Picker,
     },
@@ -410,3 +705,37 @@ class LnorisPlugin implements Plugin.PluginBase {
 }
 
 export default new LnorisPlugin();
+
+enum ParsingState {
+  Idle,
+  Novel,
+  JsonLd,
+  // parseNovel: novel page HTML fallback states
+  HeroCard,
+  SInfo,
+  CollectTitle,
+  Author,
+  InTagsBox,
+  Genres,
+  DescBox,
+  Description,
+  CoverFigure,
+  VolGrid,
+  VolArticle,
+  VolCardTitle,
+  VolCardMeta,
+}
+
+type CachedNovel = {
+  novel: Plugin.NovelItem;
+  author: string;
+  tags: string[];
+  year?: string;
+  relevance?: string;
+  volNo?: string;
+};
+
+type VolumeType = {
+  href: string;
+  name: string;
+};
