@@ -221,44 +221,78 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       const content = json.content;
 
       if (content) {
-        const parsedContent: Chapter = JSON.parse(content);
-        if (parsedContent.type === 'doc') {
-          return parsedContent.content
-            .map(node => {
-              if (node.type === 'paragraph') {
-                const innerHtml =
-                  node.content
-                    ?.map(c => {
-                      if (c.type === 'text') {
-                        let text = c.text;
-                        if (c.marks) {
-                          for (const mark of c.marks) {
-                            if (mark.type === 'bold') text = `<b>${text}</b>`;
-                            if (mark.type === 'italic') text = `<i>${text}</i>`;
-                            if (mark.type === 'underline')
-                              text = `<u>${text}</u>`;
-                            if (mark.type === 'strike')
-                              text = `<strike>${text}</strike>`;
-                            if (mark.type === 'link')
-                              text = `<a href="${mark.attrs?.href}">${text}</a>`;
+        try {
+          // Attempt 1: Handle legacy stringified TipTap JSON AST schema
+          const parsedContent: Chapter = JSON.parse(content);
+          if (parsedContent.type === 'doc') {
+            return parsedContent.content
+              .map(node => {
+                if (node.type === 'paragraph') {
+                  const innerHtml =
+                    node.content
+                      ?.map(c => {
+                        if (c.type === 'text') {
+                          let text = c.text;
+                          if (c.marks) {
+                            for (const mark of c.marks) {
+                              if (mark.type === 'bold') text = `<b>${text}</b>`;
+                              if (mark.type === 'italic')
+                                text = `<i>${text}</i>`;
+                              if (mark.type === 'underline')
+                                text = `<u>${text}</u>`;
+                              if (mark.type === 'strike')
+                                text = `<strike>${text}</strike>`;
+                              if (mark.type === 'link')
+                                text = `<a href="${mark.attrs?.href}">${text}</a>`;
+                            }
                           }
+                          return text;
                         }
-                        return text;
-                      }
-                      if (c.type === 'hardBreak') return '<br>';
-                      return '';
-                    })
-                    .join('') || '';
-                return `<p>${innerHtml}</p>`;
-              }
-              if (node.type === 'heading') {
-                const level = node.attrs?.level || 1;
-                const innerHtml = node.content?.map(c => c.text).join('') || '';
-                return `<h${level}>${innerHtml}</h${level}>`;
-              }
-              return '';
-            })
-            .join('\n');
+                        if (c.type === 'hardBreak') return '<br>';
+                        return '';
+                      })
+                      .join('') || '';
+                  return `<p>${innerHtml}</p>`;
+                }
+                if (node.type === 'heading') {
+                  const level = node.attrs?.level || 1;
+                  const innerHtml =
+                    node.content?.map(c => c.text).join('') || '';
+                  return `<h${level}>${innerHtml}</h${level}>`;
+                }
+                return '';
+              })
+              .join('\n');
+          }
+        } catch {
+          /**
+           * HTML Response Cleaner:
+           * Fenrir Realm inserts anti-scraping & watermark elements:
+           * 1. Scramble hidden divs (`div[aria-hidden="true"]`)
+           * 2. Inline `<style>` blocks
+           * 3. Reader attributions / Copy references (`.reader-attribution`, `[data-fr-attr]`)
+           */
+          const $ = loadCheerio(content);
+
+          // Remove anti-scraping tags and inline CSS
+          $('div[aria-hidden="true"]').remove();
+          $('p[aria-hidden="true"]').remove();
+          $('.reader-attribution').remove();
+          $('[data-fr-attr]').remove();
+          $('style').remove();
+
+          // Target any remaining text elements containing copy references or bookmarks
+          $('p, div, span, small').each((_, el) => {
+            const text = $(el).text().trim();
+            if (
+              text.startsWith('Copy reference:') ||
+              text.startsWith('Bookmark:')
+            ) {
+              $(el).remove();
+            }
+          });
+
+          return $.html() || content;
         }
       }
     }
@@ -367,7 +401,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   }
 
   // resolveUrl = (path: string, isNovel?: boolean) =>
-  //   this.site + '/series/' + path.split('~~')[0];
+  //    this.site + '/series/' + path.split('~~')[0];
 
   filters = {
     status: {
