@@ -8,7 +8,7 @@ class WTRLAB implements Plugin.PluginBase {
   id = 'WTRLAB';
   name = 'WTR-LAB';
   site = 'https://wtr-lab.com/';
-  version = '1.1.4';
+  version = '1.1.5';
   icon = 'src/en/wtrlab/icon.png';
   sourceLang = 'en/';
   baggage = '';
@@ -341,7 +341,7 @@ class WTRLAB implements Plugin.PluginBase {
         '';
     }
 
-    const urlMatch = novelPath.match(/serie-(\d+)\/([^/]+)/);
+    const urlMatch = novelPath.match(/(?:serie|novel)-?(\d+)\/([^/]+)/);
     if (urlMatch) {
       rawId = parseInt(urlMatch[1]);
       slug = urlMatch[2];
@@ -369,18 +369,17 @@ class WTRLAB implements Plugin.PluginBase {
     }
     let chapters: Plugin.ChapterItem[] = [];
 
-    if (rawId && slug && chapterCount > 0) {
+    if (rawId && slug) {
       try {
-        chapters = await this.fetchAllChapters(rawId, chapterCount, slug);
+        chapters = await this.fetchAllChapters(rawId, slug);
       } catch (error) {
         console.error('Failed to fetch chapters via API:', error);
         chapters = [];
       }
     } else {
-      console.warn('Could not extract rawId, slug, or chapterCount from page', {
+      console.warn('Could not extract rawId or slug from page', {
         rawId,
         slug,
-        chapterCount,
       });
     }
 
@@ -513,7 +512,7 @@ class WTRLAB implements Plugin.PluginBase {
     let chapterNo: number | null = null;
     let loadedCheerio = null;
 
-    const urlMatch = chapterPath.match(/serie-(\d+)\/[^/]+\/chapter-(\d+)/);
+    const urlMatch = chapterPath.match(/(?:serie|novel)-?(\d+)\/[^/]+\/chapter-(\d+)/);
     if (urlMatch) {
       rawId = parseInt(urlMatch[1], 10);
       chapterNo = parseInt(urlMatch[2], 10);
@@ -622,14 +621,14 @@ class WTRLAB implements Plugin.PluginBase {
 
   async fetchAllChapters(
     rawId: number,
-    totalChapters: number,
     slug: string,
   ): Promise<Plugin.ChapterItem[]> {
     const allChapters: Plugin.ChapterItem[] = [];
-    const batchSize = 250;
+    const batchSize = 500;
+    let start = 1;
 
-    for (let start = 1; start <= totalChapters; start += batchSize) {
-      const end = Math.min(start + batchSize - 1, totalChapters);
+    while (true) {
+      const end = start + batchSize - 1;
 
       try {
         const response = await fetchApi(
@@ -644,27 +643,29 @@ class WTRLAB implements Plugin.PluginBase {
         const data = await response.json();
         const chapters = data.chapters ?? data.data?.chapters ?? [];
 
-        if (Array.isArray(chapters)) {
-          const batchChapters: Plugin.ChapterItem[] = chapters.map(
-            (apiChapter: ApiChapter) => ({
-              name: apiChapter.title,
-              path: `${this.sourceLang}serie-${rawId}/${slug}/chapter-${apiChapter.order}`,
-              releaseTime: apiChapter.updated_at?.substring(0, 10),
-              chapterNumber: apiChapter.order,
-            }),
-          );
-
-          allChapters.push(...batchChapters);
-
-          if (chapters.length < batchSize) {
-            break;
-          }
-        } else {
+        if (!Array.isArray(chapters) || chapters.length === 0) {
           break;
         }
+
+        const batchChapters: Plugin.ChapterItem[] = chapters.map(
+          (apiChapter: ApiChapter) => ({
+            name: apiChapter.title || apiChapter.name || `Chapter ${apiChapter.order}`,
+            path: `${this.sourceLang}serie-${rawId}/${slug}/chapter-${apiChapter.order}`,
+            releaseTime: apiChapter.updated_at?.substring(0, 10),
+            chapterNumber: apiChapter.order,
+          }),
+        );
+
+        allChapters.push(...batchChapters);
+
+        if (chapters.length < batchSize) {
+          break;
+        }
+
+        start += batchSize;
       } catch (error) {
         console.error(`Failed to fetch chapters ${start}-${end}:`, error);
-        continue;
+        break;
       }
     }
 
