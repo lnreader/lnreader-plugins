@@ -12,6 +12,8 @@ export type ServerSetting = {
   CLIENT_HOST: string;
   fetchMode: FetchMode;
   cookies?: string;
+  siteCookies?: Record<string, string>;
+  usePerSiteCookies?: boolean;
   disAllowedRequestHeaders: string[];
   disAllowResponseHeaders: string[];
   useUserAgent: boolean;
