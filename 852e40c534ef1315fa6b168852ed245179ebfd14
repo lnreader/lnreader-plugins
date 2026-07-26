@@ -1,0 +1,107 @@
+.github/scripts/add-multisrc-source.cjs
+  s_be588f3c632744::t_2453eacf686335 164-166
+  s_be588f3c632744::t_1f14ec878f5b08 1-88,92-112,115-119,123-155,168-172
+  s_be588f3c632744::t_8d3ec75a0b24a0 89-91
+  s_be588f3c632744::t_e7a3db3a3bdb8b 113-114,156-163,167
+  s_be588f3c632744::t_48ab6f69318c74 120-122
+.github/workflows/theme_auto_label.yml
+  s_be588f3c632744::t_1f14ec878f5b08 20-21,118,131,135,139,143,147-152,156-167,179-202
+  s_be588f3c632744::t_8d3ec75a0b24a0 7,18-19,153-155,168-178
+  human 7-8
+---
+{
+  "attestations": [
+    {
+      "entries": [
+        {
+          "accepted_lines": 3,
+          "added_lines": 3,
+          "deleted_lines": 0,
+          "hash": "s_be588f3c632744::t_2453eacf686335",
+          "lines": "164-166",
+          "overridden_lines": 0
+        },
+        {
+          "accepted_lines": 152,
+          "added_lines": 152,
+          "deleted_lines": 0,
+          "hash": "s_be588f3c632744::t_1f14ec878f5b08",
+          "lines": "1-88,92-112,115-119,123-155,168-172",
+          "overridden_lines": 0
+        },
+        {
+          "accepted_lines": 3,
+          "added_lines": 3,
+          "deleted_lines": 0,
+          "hash": "s_be588f3c632744::t_8d3ec75a0b24a0",
+          "lines": "89-91",
+          "overridden_lines": 0
+        },
+        {
+          "accepted_lines": 11,
+          "added_lines": 11,
+          "deleted_lines": 0,
+          "hash": "s_be588f3c632744::t_e7a3db3a3bdb8b",
+          "lines": "113-114,156-163,167",
+          "overridden_lines": 0
+        },
+        {
+          "accepted_lines": 3,
+          "added_lines": 3,
+          "deleted_lines": 0,
+          "hash": "s_be588f3c632744::t_48ab6f69318c74",
+          "lines": "120-122",
+          "overridden_lines": 0
+        }
+      ],
+      "file": ".github/scripts/add-multisrc-source.cjs"
+    },
+    {
+      "entries": [
+        {
+          "accepted_lines": 49,
+          "added_lines": 49,
+          "deleted_lines": 0,
+          "hash": "s_be588f3c632744::t_1f14ec878f5b08",
+          "lines": "20-21,118,131,135,139,143,147-152,156-167,179-202",
+          "overridden_lines": 0
+        },
+        {
+          "accepted_lines": 17,
+          "added_lines": 17,
+          "deleted_lines": 0,
+          "hash": "s_be588f3c632744::t_8d3ec75a0b24a0",
+          "lines": "7,18-19,153-155,168-178",
+          "overridden_lines": 0
+        },
+        {
+          "accepted_lines": 0,
+          "added_lines": 0,
+          "deleted_lines": 2,
+          "hash": "human",
+          "lines": "7-8",
+          "overridden_lines": 0
+        }
+      ],
+      "file": ".github/workflows/theme_auto_label.yml"
+    }
+  ],
+  "base_commit_sha": "50de627d33742810fc055bd34fb6b696f5ba75b6",
+  "branch": "codex/automate-multisrc-source-prs",
+  "commit_sha": "852e40c534ef1315fa6b168852ed245179ebfd14",
+  "commit_time": "2026-07-26T18:32:11+05:30",
+  "commit_type": "direct_commit",
+  "harness_aidlc_version": "1.4.29",
+  "prompts": {
+    "human": {
+      "accepted_lines": 0,
+      "agent_id": null,
+      "human_author": "Rajarshee Chatterjee <rajarshee.adm@gmail.com>",
+      "overriden_lines": 0,
+      "total_additions": 0,
+      "total_deletions": 2
+    }
+  },
+  "repo": "https://github.com/LNReader/lnreader-plugins",
+  "schema_version": "authorship/3.0.0"
+}
