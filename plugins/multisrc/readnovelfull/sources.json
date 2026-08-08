@@ -10,12 +10,13 @@
   },
   {
     "id": "allnovel",
-    "sourceSite": "https://allnovel.org/",
+    "sourceSite": "https://novelfull.com/",
     "sourceName": "AllNovel",
     "options": {
       "latestPage": "latest-release-novel",
       "searchPage": "search",
-      "chapterListing": "ajax-chapter-option"
+      "chapterListing": "ajax-chapter-option",
+      "versionIncrements": 1
     }
   },
   {
