@@ -608,15 +608,6 @@
     }
   },
   {
-    "id": "massnovel",
-    "sourceSite": "https://massnovel.fr/",
-    "sourceName": "MassNovel",
-    "options": {
-      "lang": "French",
-      "useNewChapterEndpoint": true
-    }
-  },
-  {
     "id": "noicetranslations",
     "sourceSite": "https://noicetranslations.com/",
     "sourceName": "Noice Translations",

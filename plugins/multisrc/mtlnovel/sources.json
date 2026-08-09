@@ -8,14 +8,6 @@
     }
   },
   {
-    "id": "mtlnovel-fr",
-    "sourceSite": "https://fr.mtlnovels.com/",
-    "sourceName": "MTL Novel (FR)",
-    "options": {
-      "lang": "French"
-    }
-  },
-  {
     "id": "mtlnovel-es",
     "sourceSite": "https://es.mtlnovels.com/",
     "sourceName": "MTL Novel (ES)",

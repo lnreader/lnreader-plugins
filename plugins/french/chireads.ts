@@ -2,203 +2,158 @@ import { CheerioAPI, load } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
-import dayjs from 'dayjs';
 import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
+import dayjs from 'dayjs';
 
 class ChireadsPlugin implements Plugin.PluginBase {
   id = 'chireads';
   name = 'Chireads';
   icon = 'src/fr/chireads/icon.png';
   site = 'https://chireads.com';
-  version = '1.0.2';
+  version = '2.0.0';
 
   async getCheerio(url: string): Promise<CheerioAPI> {
     const r = await fetchApi(url, {
-      headers: { 'Accept-Encoding': 'deflate' },
+      headers: {
+        Accept:
+          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Encoding': 'deflate',
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36',
+      },
     });
     const body = await r.text();
-    const $ = load(body);
-    return $;
+    return load(body);
+  }
+
+  private toPath(url?: string): string {
+    if (!url) return '';
+    return url.replace(this.site, '');
+  }
+
+  private parseCards($: CheerioAPI): Plugin.NovelItem[] {
+    const novels: Plugin.NovelItem[] = [];
+    const seen = new Set<string>();
+    $('ul.refresh-card-grid li.refresh-card').each((i, el) => {
+      const novelUrl = $(el).find('.refresh-card-title a').attr('href');
+      if (!novelUrl || seen.has(novelUrl)) return;
+      seen.add(novelUrl);
+      novels.push({
+        name: $(el).find('.refresh-card-title a').text().trim(),
+        cover:
+          $(el).find('.refresh-card-cover img').attr('src') || defaultCover,
+        path: this.toPath(novelUrl),
+      });
+    });
+    return novels;
+  }
+
+  private parseSearchResults($: CheerioAPI): Plugin.NovelItem[] {
+    const novels: Plugin.NovelItem[] = [];
+    const seen = new Set<string>();
+    $('.news-list li').each((i, el) => {
+      const novelUrl =
+        $(el).find('.news-list-tit a').attr('href') ||
+        $(el).find('.news-list-img a').attr('href');
+      if (!novelUrl || seen.has(novelUrl)) return;
+      seen.add(novelUrl);
+      novels.push({
+        name: $(el).find('.news-list-tit a').text().trim(),
+        cover: $(el).find('.news-list-img img').attr('src') || defaultCover,
+        path: this.toPath(novelUrl),
+      });
+    });
+    return novels;
   }
 
   async popularNovels(
     pageNo: number,
     { filters, showLatestNovels }: Plugin.PopularNovelsOptions,
   ): Promise<Plugin.NovelItem[]> {
-    let url = this.site;
-    let tag = 'all';
-    if (showLatestNovels) url += '/category/translatedtales/page/' + pageNo;
-    else {
-      if (
-        filters &&
-        typeof filters.tag.value === 'string' &&
-        filters.tag.value !== 'all'
-      )
-        tag = filters.tag.value;
-      if (tag !== 'all') url += '/tag/' + tag + '/page/' + pageNo;
-      else if (pageNo > 1) return [];
+    if (showLatestNovels) {
+      if (pageNo !== 1) return [];
+      const $ = await this.getCheerio(this.site);
+      const novels: Plugin.NovelItem[] = [];
+      const seen = new Set<string>();
+      $('.dernieres-tabel tbody tr').each((i, el) => {
+        const novelUrl = $(el).find('td').first().find('a').attr('href');
+        if (!novelUrl || seen.has(novelUrl)) return;
+        seen.add(novelUrl);
+        novels.push({
+          name: $(el)
+            .find('td')
+            .first()
+            .find('a')
+            .text()
+            .trim()
+            .replace(/^\[[TO]\]\s*/, ''),
+          cover: defaultCover,
+          path: this.toPath(novelUrl),
+        });
+      });
+      return novels;
     }
-    let $ = await this.getCheerio(url);
+
+    const tag = filters?.tag?.value;
+    const isAll = typeof tag !== 'string' || tag === '' || tag === 'all';
+    const bases = isAll
+      ? ['/category/translatedtales', '/category/original']
+      : [`/tag/${tag}`];
 
     const novels: Plugin.NovelItem[] = [];
-    let novel: Plugin.NovelItem;
-
-    if (showLatestNovels || tag !== 'all') {
-      let loop = 1;
-      if (showLatestNovels) loop = 2;
-      for (let i = 0; i < loop; i++) {
-        if (i === 1)
-          $ = await this.getCheerio(
-            this.site + '/category/original/page/' + pageNo,
-          );
-        let romans = $('.romans-content li');
-        if (!romans.length) romans = $('#content li');
-        romans.each((i, elem) => {
-          const novelName = $(elem)
-            .contents()
-            .find('div')
-            .first()
-            .text()
-            .trim();
-          const novelCover = $(elem)
-            .find('div')
-            .first()
-            .find('img')
-            .attr('src');
-          const novelUrl = $(elem).find('div').first().find('a').attr('href');
-
-          if (novelUrl) {
-            novel = {
-              name: novelName,
-              cover: novelCover,
-              path: novelUrl.replace(this.site, ''),
-            };
-            novels.push(novel);
-          }
-        });
-      }
-    } else {
-      const populaire = $(':contains("Populaire")')
-        .last()
-        .parent()
-        .next()
-        .find('li > div');
-      if (populaire.length === 12) {
-        // pc
-        let novelCover: string | undefined;
-        let novelName: string | undefined;
-        let novelUrl: string | undefined;
-        populaire.each((i, elem) => {
-          if (i % 2 === 0) novelCover = $(elem).find('img').attr('src');
-          else {
-            novelName = $(elem).text().trim();
-            novelUrl = $(elem).find('a').attr('href');
-
-            if (!novelUrl) return;
-
-            novel = {
-              name: novelName,
-              cover: novelCover || defaultCover,
-              path: novelUrl.replace(this.site, ''),
-            };
-
-            novels.push(novel);
-          }
-        });
-      } // mobile
-      else {
-        const imgs = populaire.find('div.popular-list-img img');
-        const txts = populaire.find('div.popular-list-name');
-
-        txts.each((i, elem) => {
-          const novelName = $(elem).text().trim();
-          const novelCover = $(imgs[i]).attr('src');
-          const novelUrl = $(elem).find('a').attr('href');
-
-          if (novelUrl) {
-            novel = {
-              name: novelName,
-              cover: novelCover,
-              path: novelUrl.replace(this.site, ''),
-            };
-            novels.push(novel);
-          }
-        });
+    const seen = new Set<string>();
+    for (const base of bases) {
+      const $ = await this.getCheerio(`${this.site}${base}/page/${pageNo}`);
+      for (const novel of this.parseCards($)) {
+        if (seen.has(novel.path)) continue;
+        seen.add(novel.path);
+        novels.push(novel);
       }
     }
     return novels;
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const novel: Plugin.SourceNovel = { path: novelPath, name: 'Sans titre' };
+    const novel: Plugin.SourceNovel = { path: novelPath, name: '' };
 
     const $ = await this.getCheerio(this.site + novelPath);
 
-    novel.name =
-      $('.inform-product-txt').first().text().trim() ||
-      $('.inform-title').text().trim();
+    novel.name = $('h1.refresh-detail-title').first().text().trim();
     novel.cover =
-      $('.inform-product img').attr('src') ||
-      $('.inform-product-img img').attr('src') ||
+      $('.refresh-detail-cover img').attr('src') ||
+      $('.refresh-detail-cover img').attr('data-src') ||
       defaultCover;
-    novel.summary =
-      $('.inform-inform-txt').text().trim() ||
-      $('.inform-intr-txt').text().trim();
+    novel.summary = $('.refresh-detail-summary-content').text().trim();
 
-    const infos =
-      $('div.inform-product-txt > div.inform-intr-col').text().trim() ||
-      $('div.inform-inform-data > h6').text().trim();
-    if (infos.includes('Auteur : '))
-      novel.author = infos
-        .substring(
-          infos.indexOf('Auteur : ') + 9,
-          infos.indexOf('Statut de Parution : '),
-        )
-        .trim();
-    else if (infos.includes('Fantrad : '))
-      novel.author = infos
-        .substring(
-          infos.indexOf('Fantrad : ') + 10,
-          infos.indexOf('Statut de Parution : '),
-        )
-        .trim();
-    else novel.author = 'Inconnu';
-    switch (
-      infos.substring(infos.indexOf('Statut de Parution : ') + 21).toLowerCase()
-    ) {
-      case 'en pause':
-        novel.status = NovelStatus.OnHiatus;
-        break;
-      case 'complet':
-        novel.status = NovelStatus.Completed;
-        break;
-      default:
-        novel.status = NovelStatus.Ongoing;
-        break;
-    }
+    $('.refresh-detail-meta > div').each((i, el) => {
+      const label = $(el).find('dt').text().trim();
+      const value = $(el).find('dd').text().trim();
+      if (label.includes('Auteur')) novel.author = value;
+      else if (label.includes('Statut')) {
+        const status = value.toLowerCase();
+        if (status.includes('en pause') || status.includes('hiatus'))
+          novel.status = NovelStatus.OnHiatus;
+        else if (status.includes('complet') || status.includes('termin'))
+          novel.status = NovelStatus.Completed;
+        else novel.status = NovelStatus.Ongoing;
+      }
+    });
 
     const chapters: Plugin.ChapterItem[] = [];
-
-    let chapterList = $('.chapitre-table a');
-    if (!chapterList.length) {
-      $('div.inform-annexe-list').first().remove();
-      chapterList = $('.inform-annexe-list').find('a');
-    }
-    chapterList.each((i, elem) => {
-      const chapterName = $(elem).text().trim();
-      const chapterUrl = $(elem).attr('href');
-      const releaseDate = dayjs(
-        chapterUrl?.substring(chapterUrl.length - 11, chapterUrl.length - 1),
-      ).format('DD MMMM YYYY');
-
-      if (chapterUrl) {
-        chapters.push({
-          name: chapterName,
-          releaseTime: releaseDate,
-          path: chapterUrl.replace(this.site, ''),
-        });
-      }
+    $('.refresh-detail-chapter-list a').each((i, el) => {
+      const chapterUrl = $(el).attr('href');
+      if (!chapterUrl) return;
+      const dateMatch = chapterUrl.match(/\/(\d{4})\/(\d{2})\/(\d{2})\/?$/);
+      chapters.push({
+        name: $(el).text().trim(),
+        releaseTime: dateMatch
+          ? dayjs(`${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}`).format(
+              'LL',
+            )
+          : null,
+        path: this.toPath(chapterUrl),
+      });
     });
 
     novel.chapters = chapters;
@@ -219,35 +174,15 @@ class ChireadsPlugin implements Plugin.PluginBase {
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
     if (pageNo !== 1) return [];
-    let novels: Plugin.NovelItem[] = [];
 
-    let i = 1;
-    let finised = false;
-    while (!finised) {
-      await this.popularNovels(i, {
-        showLatestNovels: true,
-        filters: undefined,
-      }).then(res => {
-        if (res.length === 0) finised = true;
-        novels.push(...res);
-      });
-      i++;
-    }
-
-    novels = novels.filter(novel =>
-      novel.name
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .includes(
-          searchTerm
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, ''),
-        ),
+    const $ = await this.getCheerio(
+      `${this.site}/?s=${encodeURIComponent(searchTerm)}`,
     );
 
-    return novels;
+    const cards = this.parseCards($);
+    if (cards.length) return cards;
+
+    return this.parseSearchResults($);
   }
 
   filters = {

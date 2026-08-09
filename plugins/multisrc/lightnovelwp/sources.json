@@ -1,11 +1,12 @@
 [
   {
     "id": "lightnovelfr",
-    "sourceSite": "https://lightnovelfr.com/",
+    "sourceSite": "https://novel-fr.net/",
     "sourceName": "Ligh Novel FR",
     "options": {
       "lang": "French",
-      "reverseChapters": true
+      "reverseChapters": true,
+      "versionIncrements": 1
     }
   },
   {
