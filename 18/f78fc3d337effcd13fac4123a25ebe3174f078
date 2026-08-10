@@ -1,0 +1,26 @@
+scripts/live-check-plugin.js
+  s_c559f611101534::t_e56929882498e5 87
+  s_c559f611101534::t_38e70be7deeee2 321-330,333-334,336,338-340,344-346,351-356,358,361,364,367-370
+  s_c559f611101534::t_2f84cce7fdde22 335
+.github/workflows/plugin-live-check.yml
+  s_c559f611101534::t_b48608f44b25cb 133
+  s_c559f611101534::t_e50748e5c22d26 93-94,96,98
+  s_c559f611101534::t_98f8e291666fb7 90,99-100,102,104,106
+  s_c559f611101534::t_11ec04642b705f 4,14,17-18,24-26,31-37,39,46,70-72,91-92,95,97,101,113-132,134-135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "18f78fc3d337effcd13fac4123a25ebe3174f078",
+  "prompts": {},
+  "sessions": {
+    "s_c559f611101534": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe975-8c10-7d50-99b7-d7341aa61b83",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Rajarshee Chatterjee <rajarshee.adm@gmail.com>"
+    }
+  }
+}
