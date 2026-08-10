@@ -6,12 +6,32 @@ import dayjs from 'dayjs';
 import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
+type CardSelectors = {
+  item: string;
+  titleLink: string;
+  cover: string;
+};
+
+// Grille de cartes des pages catégorie / tag
+const GRID_CARD: CardSelectors = {
+  item: '.refresh-card',
+  titleLink: '.refresh-card-title a',
+  cover: '.refresh-card-cover img',
+};
+
+// Section « Populaire » de la page d'accueil
+const POPULAR_CARD: CardSelectors = {
+  item: '.recommended-list li',
+  titleLink: '.recommended-list-txt a',
+  cover: '.recommended-list-img img',
+};
+
 class ChireadsPlugin implements Plugin.PluginBase {
   id = 'chireads';
   name = 'Chireads';
   icon = 'src/fr/chireads/icon.png';
   site = 'https://chireads.com';
-  version = '1.0.2';
+  version = '1.0.3';
 
   async getCheerio(url: string): Promise<CheerioAPI> {
     const r = await fetchApi(url, {
@@ -22,112 +42,55 @@ class ChireadsPlugin implements Plugin.PluginBase {
     return $;
   }
 
+  parseCards($: CheerioAPI, selectors: CardSelectors): Plugin.NovelItem[] {
+    const novels: Plugin.NovelItem[] = [];
+    $(selectors.item).each((i, elem) => {
+      const link = $(elem).find(selectors.titleLink);
+      const novelName = link.text().trim();
+      const novelUrl = link.attr('href');
+      const novelCover = $(elem).find(selectors.cover).attr('src');
+
+      if (novelUrl) {
+        novels.push({
+          name: novelName,
+          cover: novelCover || defaultCover,
+          path: novelUrl.replace(this.site, ''),
+        });
+      }
+    });
+    return novels;
+  }
+
   async popularNovels(
     pageNo: number,
     { filters, showLatestNovels }: Plugin.PopularNovelsOptions,
   ): Promise<Plugin.NovelItem[]> {
-    let url = this.site;
-    let tag = 'all';
-    if (showLatestNovels) url += '/category/translatedtales/page/' + pageNo;
-    else {
-      if (
-        filters &&
-        typeof filters.tag.value === 'string' &&
-        filters.tag.value !== 'all'
-      )
-        tag = filters.tag.value;
-      if (tag !== 'all') url += '/tag/' + tag + '/page/' + pageNo;
-      else if (pageNo > 1) return [];
+    const tag =
+      filters && typeof filters.tag.value === 'string'
+        ? filters.tag.value
+        : 'all';
+
+    if (showLatestNovels) {
+      // Les deux catégories sont indépendantes : on les récupère en parallèle.
+      const [$trad, $orig] = await Promise.all([
+        this.getCheerio(this.site + '/category/translatedtales/page/' + pageNo),
+        this.getCheerio(this.site + '/category/original/page/' + pageNo),
+      ]);
+      return [
+        ...this.parseCards($trad, GRID_CARD),
+        ...this.parseCards($orig, GRID_CARD),
+      ];
+    } else if (tag !== 'all') {
+      const $ = await this.getCheerio(
+        this.site + '/tag/' + tag + '/page/' + pageNo,
+      );
+      return this.parseCards($, GRID_CARD);
     }
-    let $ = await this.getCheerio(url);
 
-    const novels: Plugin.NovelItem[] = [];
-    let novel: Plugin.NovelItem;
-
-    if (showLatestNovels || tag !== 'all') {
-      let loop = 1;
-      if (showLatestNovels) loop = 2;
-      for (let i = 0; i < loop; i++) {
-        if (i === 1)
-          $ = await this.getCheerio(
-            this.site + '/category/original/page/' + pageNo,
-          );
-        let romans = $('.romans-content li');
-        if (!romans.length) romans = $('#content li');
-        romans.each((i, elem) => {
-          const novelName = $(elem)
-            .contents()
-            .find('div')
-            .first()
-            .text()
-            .trim();
-          const novelCover = $(elem)
-            .find('div')
-            .first()
-            .find('img')
-            .attr('src');
-          const novelUrl = $(elem).find('div').first().find('a').attr('href');
-
-          if (novelUrl) {
-            novel = {
-              name: novelName,
-              cover: novelCover,
-              path: novelUrl.replace(this.site, ''),
-            };
-            novels.push(novel);
-          }
-        });
-      }
-    } else {
-      const populaire = $(':contains("Populaire")')
-        .last()
-        .parent()
-        .next()
-        .find('li > div');
-      if (populaire.length === 12) {
-        // pc
-        let novelCover: string | undefined;
-        let novelName: string | undefined;
-        let novelUrl: string | undefined;
-        populaire.each((i, elem) => {
-          if (i % 2 === 0) novelCover = $(elem).find('img').attr('src');
-          else {
-            novelName = $(elem).text().trim();
-            novelUrl = $(elem).find('a').attr('href');
-
-            if (!novelUrl) return;
-
-            novel = {
-              name: novelName,
-              cover: novelCover || defaultCover,
-              path: novelUrl.replace(this.site, ''),
-            };
-
-            novels.push(novel);
-          }
-        });
-      } // mobile
-      else {
-        const imgs = populaire.find('div.popular-list-img img');
-        const txts = populaire.find('div.popular-list-name');
-
-        txts.each((i, elem) => {
-          const novelName = $(elem).text().trim();
-          const novelCover = $(imgs[i]).attr('src');
-          const novelUrl = $(elem).find('a').attr('href');
-
-          if (novelUrl) {
-            novel = {
-              name: novelName,
-              cover: novelCover,
-              path: novelUrl.replace(this.site, ''),
-            };
-            novels.push(novel);
-          }
-        });
-      }
-    }
-    return novels;
+    // Page d'accueil : section « Populaire » (une seule page)
+    if (pageNo > 1) return [];
+    const $ = await this.getCheerio(this.site);
+    return this.parseCards($, POPULAR_CARD);
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
@@ -136,60 +99,38 @@ class ChireadsPlugin implements Plugin.PluginBase {
     const $ = await this.getCheerio(this.site + novelPath);
 
     novel.name =
-      $('.inform-product-txt').first().text().trim() ||
-      $('.inform-title').text().trim();
-    novel.cover =
-      $('.inform-product img').attr('src') ||
-      $('.inform-product-img img').attr('src') ||
-      defaultCover;
-    novel.summary =
-      $('.inform-inform-txt').text().trim() ||
-      $('.inform-intr-txt').text().trim();
+      $('.refresh-detail-title').first().text().trim() || 'Sans titre';
+    novel.cover = $('.refresh-detail-cover img').attr('src') || defaultCover;
+    novel.summary = $('.refresh-detail-summary-content').text().trim();
 
-    const infos =
-      $('div.inform-product-txt > div.inform-intr-col').text().trim() ||
-      $('div.inform-inform-data > h6').text().trim();
-    if (infos.includes('Auteur : '))
-      novel.author = infos
-        .substring(
-          infos.indexOf('Auteur : ') + 9,
-          infos.indexOf('Statut de Parution : '),
-        )
-        .trim();
-    else if (infos.includes('Fantrad : '))
-      novel.author = infos
-        .substring(
-          infos.indexOf('Fantrad : ') + 10,
-          infos.indexOf('Statut de Parution : '),
-        )
-        .trim();
-    else novel.author = 'Inconnu';
-    switch (
-      infos.substring(infos.indexOf('Statut de Parution : ') + 21).toLowerCase()
-    ) {
-      case 'en pause':
-        novel.status = NovelStatus.OnHiatus;
-        break;
-      case 'complet':
-        novel.status = NovelStatus.Completed;
-        break;
-      default:
-        novel.status = NovelStatus.Ongoing;
-        break;
-    }
+    // Métadonnées : liste de définitions <dt>Libellé</dt><dd>Valeur</dd>
+    let auteur = '';
+    let fantrad = '';
+    let statut = '';
+    $('.refresh-detail-meta > div').each((i, elem) => {
+      const label = $(elem).find('dt').text().trim().toLowerCase();
+      const value = $(elem).find('dd').text().trim();
+      if (label.includes('auteur')) auteur = value;
+      else if (label.includes('fantrad')) fantrad = value;
+      else if (label.includes('statut')) statut = value;
+    });
+    novel.author = auteur || fantrad || 'Inconnu';
+
+    const statutLower = statut.toLowerCase();
+    if (statutLower.includes('pause')) novel.status = NovelStatus.OnHiatus;
+    else if (statutLower.includes('complet'))
+      novel.status = NovelStatus.Completed;
+    else novel.status = NovelStatus.Ongoing;
 
     const chapters: Plugin.ChapterItem[] = [];
 
-    let chapterList = $('.chapitre-table a');
-    if (!chapterList.length) {
-      $('div.inform-annexe-list').first().remove();
-      chapterList = $('.inform-annexe-list').find('a');
-    }
+    const chapterList = $('.refresh-detail-chapter-list li a');
     chapterList.each((i, elem) => {
       const chapterName = $(elem).text().trim();
       const chapterUrl = $(elem).attr('href');
+      // L'URL se termine par la date de publication : .../AAAA/MM/JJ/
       const releaseDate = dayjs(
-        chapterUrl?.substring(chapterUrl.length - 11, chapterUrl.length - 1),
+        chapterUrl?.match(/(\d{4}\/\d{2}\/\d{2})\/?$/)?.[1],
       ).format('DD MMMM YYYY');
 
       if (chapterUrl) {
@@ -255,82 +196,59 @@ class ChireadsPlugin implements Plugin.PluginBase {
       type: FilterTypes.Picker,
       label: 'Tag',
       value: 'all',
+      // prettier-ignore
       options: [
         { label: 'Tous', value: 'all' },
-        { label: 'Arts martiaux', value: 'arts-martiaux' },
-        { label: 'De faible à fort', value: 'de-faible-a-fort' },
-        { label: 'Adapté en manhua', value: 'adapte-en-manhua' },
-        { label: 'Cultivation', value: 'cultivation' },
+        { label: 'Académie', value: 'academie' },
         { label: 'Action', value: 'action' },
-        { label: 'Aventure', value: 'aventure' },
-        { label: 'Monstres', value: 'monstres' },
-        { label: 'Xuanhuan', value: 'xuanhuan' },
-        { label: 'Fantastique', value: 'fantastique' },
-        { label: 'Adapté en Animé', value: 'adapte-en-anime' },
+        { label: 'Adapté en animé', value: 'adapte-en-anime' },
+        { label: 'Adapté en manhua', value: 'adapte-en-manhua' },
+        { label: 'Administrateur de système', value: 'administrateur-de-systeme' },
         { label: 'Alchimie', value: 'alchimie' },
-        { label: 'Éléments de jeux', value: 'elements-de-jeux' },
-        { label: 'Calme Protagoniste', value: 'calme-protagoniste' },
-        {
-          label: 'Protagoniste intelligent',
-          value: 'protagoniste-intelligent',
-        },
-        { label: 'Polygamie', value: 'polygamie' },
-        { label: 'Belle femelle Lea', value: 'belle-femelle-lea' },
-        { label: 'Personnages arrogants', value: 'personnages-arrogants' },
-        { label: 'Système de niveau', value: 'systeme-de-niveau' },
-        { label: 'Cheat', value: 'cheat' },
-        { label: 'Protagoniste génie', value: 'protagoniste-genie' },
-        { label: 'Comédie', value: 'comedie' },
-        { label: 'Gamer', value: 'gamer' },
-        { label: 'Mariage', value: 'mariage' },
-        { label: 'seeking Protag', value: 'seeking-protag' },
-        { label: 'Romance précoce', value: 'romance-precoce' },
-        { label: 'Croissance accélérée', value: 'croissance-acceleree' },
         { label: 'Artefacts', value: 'artefacts' },
-        {
-          label: 'Intelligence artificielle',
-          value: 'intelligence-artificielle',
-        },
+        { label: 'Arts martiaux', value: 'arts-martiaux' },
+        { label: 'Assasins', value: 'assasins' },
+        { label: 'Aventure', value: 'aventure' },
+        { label: 'Beau protagoniste', value: 'beau-protagoniste' },
+        { label: 'Belle femelle Lea', value: 'belle-femelle-lea' },
+        { label: 'Cacher les vraies capacités', value: 'cacher-les-vraies-capacites' },
+        { label: 'Calme protagoniste', value: 'calme-protagoniste' },
+        { label: 'Capacités spéciales', value: 'capacites-speciales' },
+        { label: 'Cheat', value: 'cheat' },
+        { label: 'Comédie', value: 'comedie' },
+        { label: 'Cultivation', value: 'cultivation' },
+        { label: 'Cultivation rapide', value: 'cultivation-rapide' },
+        { label: 'De faible à fort', value: 'de-faible-a-fort' },
+        { label: 'De pauvre à riche', value: 'de-pauvre-a-riche' },
+        { label: 'Démons', value: 'demons' },
+        { label: 'Drame', value: 'drame' },
+        { label: 'Éléments de jeux', value: 'elements-de-jeux' },
+        { label: 'Fantastique', value: 'fantastique' },
+        { label: 'Gamer', value: 'gamer' },
+        { label: 'Harem', value: 'harem' },
+        { label: 'Immortels', value: 'immortels' },
+        { label: 'Intelligence artificielle', value: 'intelligence-artificielle' },
+        { label: 'Joueur', value: 'joueur' },
+        { label: 'Magie', value: 'magie' },
+        { label: 'Mariage', value: 'mariage' },
         { label: 'Mariage arrangé', value: 'mariage-arrange' },
         { label: 'Mature', value: 'mature' },
-        { label: 'Adulte', value: 'adulte' },
-        {
-          label: 'Administrateur de système',
-          value: 'administrateur-de-systeme',
-        },
-        { label: 'Beau protagoniste', value: 'beau-protagoniste' },
-        {
-          label: 'Protagoniste charismatique',
-          value: 'protagoniste-charismatique',
-        },
+        { label: 'Monstres', value: 'monstres' },
+        { label: 'Personnages arrogants', value: 'personnages-arrogants' },
+        { label: 'Polygamie', value: 'polygamie' },
+        { label: 'Protagoniste charismatique', value: 'protagoniste-charismatique' },
+        { label: 'Protagoniste fort dès le départ', value: 'protagoniste-fort-des-le-depart' },
+        { label: 'Protagoniste génie', value: 'protagoniste-genie' },
+        { label: 'Protagoniste intelligent', value: 'protagoniste-intelligent' },
         { label: 'Protagoniste masculin', value: 'protagoniste-masculin' },
-        { label: 'Démons', value: 'demons' },
-        { label: 'Reincarnation', value: 'reincarnation' },
-        { label: 'Académie', value: 'academie' },
-        {
-          label: 'Cacher les vraies capacités',
-          value: 'cacher-les-vraies-capacites',
-        },
-        {
-          label: 'Protagoniste surpuissant',
-          value: 'protagoniste-surpuissant',
-        },
-        { label: 'Joueur', value: 'joueur' },
-        {
-          label: 'Protagoniste fort dès le départ',
-          value: 'protagoniste-fort-des-le-depart',
-        },
-        { label: 'Immortels', value: 'immortels' },
-        { label: 'Cultivation rapide', value: 'cultivation-rapide' },
-        { label: 'Harem', value: 'harem' },
-        { label: 'Assasins', value: 'assasins' },
-        { label: 'De pauvre à riche', value: 'de-pauvre-a-riche' },
-        {
-          label: 'Système de classement de jeux',
-          value: 'systeme-de-classement-de-jeux',
-        },
-        { label: 'Capacités spéciales', value: 'capacites-speciales' },
+        { label: 'Protagoniste surpuissant', value: 'protagoniste-surpuissant' },
+        { label: 'Réincarnation', value: 'reincarnation' },
+        { label: 'Romance précoce', value: 'romance-precoce' },
+        { label: 'Seeking Protag', value: 'seeking-protag' },
+        { label: 'Système de classement de jeux', value: 'systeme-de-classement-de-jeux' },
+        { label: 'Système de niveau', value: 'systeme-de-niveau' },
         { label: 'Vengeance', value: 'vengeance' },
+        { label: 'Xuanhuan', value: 'xuanhuan' },
       ],
     },
   } satisfies Filters;
