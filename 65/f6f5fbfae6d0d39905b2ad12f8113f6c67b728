@@ -1,0 +1,19 @@
+.github/workflows/update-issue-template.yml
+  s_b3311fd28a3787::t_60edef5fd0ca53 40-45,47-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "65f6f5fbfae6d0d39905b2ad12f8113f6c67b728",
+  "prompts": {},
+  "sessions": {
+    "s_b3311fd28a3787": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe0d5-c9b8-7363-90be-c344d30f3a07",
+        "model": "unknown"
+      },
+      "human_author": "Rajarshee Chatterjee <rajarshee.adm@gmail.com>"
+    }
+  }
+}
