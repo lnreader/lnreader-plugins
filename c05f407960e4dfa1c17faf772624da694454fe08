@@ -1,0 +1,38 @@
+.github/workflows/plugin-live-check.yml
+  human 4,14,33,57,74,79
+---
+{
+  "attestations": [
+    {
+      "entries": [
+        {
+          "accepted_lines": 6,
+          "added_lines": 6,
+          "deleted_lines": 61,
+          "hash": "human",
+          "lines": "4,14,33,57,74,79",
+          "overridden_lines": 0
+        }
+      ],
+      "file": ".github/workflows/plugin-live-check.yml"
+    }
+  ],
+  "base_commit_sha": "a55c14864a7e847a7e2f73069762a28cefdffe6a",
+  "branch": "master",
+  "commit_sha": "c05f407960e4dfa1c17faf772624da694454fe08",
+  "commit_time": "2026-08-11T09:58:19+05:30",
+  "commit_type": "direct_commit",
+  "harness_aidlc_version": "1.4.32",
+  "prompts": {
+    "human": {
+      "accepted_lines": 6,
+      "agent_id": null,
+      "human_author": "Rajarshee Chatterjee <rajarshee.adm@gmail.com>",
+      "overriden_lines": 0,
+      "total_additions": 6,
+      "total_deletions": 61
+    }
+  },
+  "repo": "https://github.com/LNReader/lnreader-plugins",
+  "schema_version": "authorship/3.0.0"
+}
