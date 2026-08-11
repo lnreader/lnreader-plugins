@@ -1,7 +1,7 @@
 name: Plugin Live Check
 
 on:
-  pull_request_target:
+  pull_request:
     branches: [master]
   workflow_dispatch:
     inputs:
@@ -11,39 +11,26 @@ on:
         type: string
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-
-permissions: {}
 
 jobs:
   live-check:
     name: Plugin Live Check
     runs-on: ubuntu-latest
 
-    outputs:
-      should_comment: ${{ steps.comment-artifact.outputs.should_comment }}
-
     permissions:
       contents: read
 
     steps:
-      - name: Checkout PR Merge Commit
-        if: github.event_name == 'pull_request_target'
-        uses: actions/checkout@v4
-        with:
-          ref: refs/pull/${{ github.event.pull_request.number }}/merge
-          fetch-depth: 0
-
       - name: Checkout Repository
-        if: github.event_name == 'workflow_dispatch'
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Get Changed Plugin Files
         id: changed-files
-        if: github.event_name == 'pull_request_target'
+        if: github.event_name == 'pull_request'
         uses: tj-actions/changed-files@v45
         with:
           files: |
@@ -67,9 +54,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          # Avoid writing contributor-controlled caches in the base branch's
-          # cache scope when running under pull_request_target.
-          cache: ${{ github.event_name == 'workflow_dispatch' && 'npm' || '' }}
+          cache: 'npm'
 
       - name: Install Dependencies
         if: steps.targets.outputs.files != ''
@@ -86,50 +71,10 @@ jobs:
           node scripts/live-check-plugin.js ${{ steps.targets.outputs.files }} > live-check-output.txt 2>&1
           echo "exit_code=$?" >> "$GITHUB_OUTPUT"
           cat live-check-output.txt
-
-      - name: Prepare PR Comment Artifact
-        id: comment-artifact
-        if: always() && github.event_name == 'pull_request_target'
-        run: |
-          if [ "${{ steps.changed-files.outputs.any_changed }}" = 'true' ] && [ -f live-check-output.txt ]; then
-            echo 'should_comment=true' >> "$GITHUB_OUTPUT"
-          else
-            echo 'should_comment=false' >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Upload PR Comment Artifact
-        if: always() && steps.comment-artifact.outputs.should_comment == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: plugin-live-check-comment
-          path: live-check-output.txt
-          retention-days: 1
+          cat live-check-output.txt >> "$GITHUB_STEP_SUMMARY"
 
       - name: Fail On Real Errors
         if: steps.targets.outputs.files != '' && steps.live-check.outputs.exit_code != '0'
         run: |
-          echo "Live check reported at least one FAIL — see the job log or PR comment above."
+          echo "Live check reported at least one FAIL — see the job log or workflow summary."
           exit 1
-
-  comment:
-    name: Post PR Comment
-    needs: live-check
-    if: always() && github.event_name == 'pull_request_target' && needs.live-check.outputs.should_comment == 'true'
-    runs-on: ubuntu-latest
-
-    permissions:
-      actions: read
-      pull-requests: write
-
-    steps:
-      - name: Download PR Comment Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: plugin-live-check-comment
-
-      - name: Post PR Comment
-        uses: marocchino/sticky-pull-request-comment@v3
-        with:
-          number: ${{ github.event.pull_request.number }}
-          header: plugin-live-check
-          path: live-check-output.txt
