@@ -14,7 +14,8 @@
     "sourceSite": "https://novelphoenix.com/",
     "sourceName": "Novel Phoenix",
     "options": {
-      "lang": "English"
+      "lang": "English",
+      "versionIncrement": 1
     }
   }
 ]
