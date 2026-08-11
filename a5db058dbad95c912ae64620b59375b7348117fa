@@ -1,0 +1,56 @@
+.github/workflows/plugin-live-check.yml
+  s_c559f611101534::t_14ede9ea6c0a27 4,14,33,57
+  s_c559f611101534::t_1c371c3808a873 74,79
+  human 4,14,17-18,24-26,31-37,39,46,70-72,89-106,111,113-135
+---
+{
+  "attestations": [
+    {
+      "entries": [
+        {
+          "accepted_lines": 4,
+          "added_lines": 4,
+          "deleted_lines": 0,
+          "hash": "s_c559f611101534::t_14ede9ea6c0a27",
+          "lines": "4,14,33,57",
+          "overridden_lines": 0
+        },
+        {
+          "accepted_lines": 2,
+          "added_lines": 2,
+          "deleted_lines": 0,
+          "hash": "s_c559f611101534::t_1c371c3808a873",
+          "lines": "74,79",
+          "overridden_lines": 0
+        },
+        {
+          "accepted_lines": 0,
+          "added_lines": 0,
+          "deleted_lines": 61,
+          "hash": "human",
+          "lines": "4,14,17-18,24-26,31-37,39,46,70-72,89-106,111,113-135",
+          "overridden_lines": 0
+        }
+      ],
+      "file": ".github/workflows/plugin-live-check.yml"
+    }
+  ],
+  "base_commit_sha": "a55c14864a7e847a7e2f73069762a28cefdffe6a",
+  "branch": "master",
+  "commit_sha": "a5db058dbad95c912ae64620b59375b7348117fa",
+  "commit_time": "2026-08-11T09:57:45+05:30",
+  "commit_type": "direct_commit",
+  "harness_aidlc_version": "1.4.32",
+  "prompts": {
+    "human": {
+      "accepted_lines": 0,
+      "agent_id": null,
+      "human_author": "Rajarshee Chatterjee <rajarshee.adm@gmail.com>",
+      "overriden_lines": 0,
+      "total_additions": 0,
+      "total_deletions": 61
+    }
+  },
+  "repo": "https://github.com/LNReader/lnreader-plugins",
+  "schema_version": "authorship/3.0.0"
+}
