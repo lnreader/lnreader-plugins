@@ -9,6 +9,8 @@ import { storage } from '@libs/storage';
 
 type LightNovelWPOptions = {
   reverseChapters?: boolean;
+  down?: boolean;
+  downSince?: string;
   lang?: string;
   versionIncrements?: number;
   seriesPath?: string;
