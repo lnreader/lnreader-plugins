@@ -5,20 +5,70 @@ import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 import dayjs from 'dayjs';
 
+const challengeTitles = new Set([
+  'bot verification',
+  'you are being redirected...',
+  'un instant...',
+  'just a moment...',
+  'redirecting...',
+]);
+
+async function fetchCheckedHtml(
+  url: string,
+  init?: Parameters<typeof fetchApi>[1],
+): Promise<string> {
+  const response = await fetchApi(url, init);
+  if (!response.ok)
+    throw new Error(`HTTP ${response.status} while loading ${url}`);
+  const html = await response.text();
+  const title = html
+    .match(/<title[^>]*>(.*?)<\/title>/is)?.[1]
+    ?.replace(/<[^>]+>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+  if (title && challengeTitles.has(title))
+    throw new Error(`Bot challenge while loading ${url}`);
+  return html;
+}
+
 class WuxialnscantradPlugin implements Plugin.PluginBase {
   id = 'wuxialnscantrad';
   name = 'WuxiaLnScantrad';
   icon = 'src/fr/wuxialnscantrad/icon.png';
   site = 'https://wuxialnscantrad.wordpress.com';
-  version = '1.0.0';
+  version = '1.0.4';
+
+  private async findMovedChapter(chapterPath: string): Promise<string | null> {
+    const slug = chapterPath.split('/').filter(Boolean).pop() || '';
+    const match = slug.match(/^(.*?)-chapitre-(\d+)/i);
+    if (!match) return null;
+    const series = match[1].split('-').filter(Boolean).slice(0, 3).join(' ');
+    const query = `${series} chapitre ${match[2]}`;
+    const response = await fetchApi(
+      `https://public-api.wordpress.com/wp/v2/sites/wuxialnscantrad.wordpress.com/search?search=${encodeURIComponent(query)}&type=post&subtype=post&per_page=20`,
+    );
+    if (!response.ok) return null;
+    const results = (await response.json()) as {
+      title?: string;
+      url?: string;
+    }[];
+    const replacement = results.find(result =>
+      new RegExp(`chapitre\\D*${match[2]}(?:\\D|$)`, 'i').test(
+        result.title || '',
+      ),
+    )?.url;
+    if (!replacement) return null;
+    const url = new URL(replacement, this.site);
+    return url.origin === new URL(this.site).origin ? url.toString() : null;
+  }
 
   async getCheerio(url: string): Promise<CheerioAPI> {
-    const r = await fetchApi(url, {
-      headers: { 'Accept-Encoding': 'deflate' },
-    });
-    const body = await r.text();
-    const $ = load(body);
-    return $;
+    return load(
+      await fetchCheckedHtml(url, {
+        headers: { 'Accept-Encoding': 'deflate' },
+      }),
+    );
   }
 
   async popularNovels(pageNo: number): Promise<Plugin.NovelItem[]> {
@@ -41,6 +91,15 @@ class WuxialnscantradPlugin implements Plugin.PluginBase {
         novels.push(novel);
       }
     });
+    await Promise.all(
+      novels.map(async item => {
+        const detail = await this.getCheerio(this.site + item.path);
+        item.cover =
+          detail('.entry-content p strong img').first().attr('src') ||
+          detail('.entry-content p img').first().attr('src') ||
+          defaultCover;
+      }),
+    );
     return novels;
   }
 
@@ -66,16 +125,17 @@ class WuxialnscantradPlugin implements Plugin.PluginBase {
 
     const pathChapter = $('.entry-content ul').first().children('li');
     const chapters: Plugin.ChapterItem[] = [];
+    const chapterPaths = new Set<string>();
     pathChapter.each((i, elem) => {
       const chapterName = $(elem).text().trim();
       const chapterUrl = $(elem).find('a').attr('href');
       if (chapterUrl && chapterUrl.includes(this.site) && chapterName) {
         const pathchapter = chapterUrl.replace(this.site, '');
-        // we do not take the paths already present
-        if (!chapters.some(chap => chap.path === pathchapter)) {
+        if (!chapterPaths.has(pathchapter)) {
+          chapterPaths.add(pathchapter);
           const releaseDate = dayjs(
             chapterUrl?.substring(this.site.length + 1, this.site.length + 11),
-          ).format('DD MMMM YYYY');
+          ).format('YYYY-MM-DD');
           chapters.push({
             name: chapterName,
             path: pathchapter,
@@ -149,12 +209,21 @@ class WuxialnscantradPlugin implements Plugin.PluginBase {
       case 'Terminé':
         return NovelStatus.Completed;
       default:
-        return NovelStatus.Ongoing;
+        return NovelStatus.Unknown;
     }
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const $ = await this.getCheerio(this.site + chapterPath);
+    const options = { headers: { 'Accept-Encoding': 'deflate' } };
+    let body: string;
+    try {
+      body = await fetchCheckedHtml(this.site + chapterPath, options);
+    } catch (error) {
+      const replacement = await this.findMovedChapter(chapterPath);
+      if (!replacement) throw error;
+      body = await fetchCheckedHtml(replacement, options);
+    }
+    const $ = load(body);
 
     let contenuHtml = '';
     $('.entry-content')
@@ -172,6 +241,12 @@ class WuxialnscantradPlugin implements Plugin.PluginBase {
           contenuHtml += $.html(this);
         }
       });
+    const parsedContent = load(contenuHtml);
+    if (
+      parsedContent.text().replace(/\s+/g, ' ').trim().length < 200 &&
+      !parsedContent('img').length
+    )
+      throw new Error('No readable chapter content found');
     return contenuHtml;
   }
 
