@@ -19,7 +19,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
     if: |
       github.repository == 'LNReader/lnreader-plugins' &&
       github.event.workflow_run.conclusion == 'success' &&
@@ -38,16 +37,15 @@ jobs:
       - name: Generate Issue Template Options
         run: node ./.github/scripts/generate-issue-template-options.cjs
 
-      - name: Create Or Update Pull Request
-        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
-        with:
-          commit-message: 'chore: Update Issue Template Plugin Options [skip ci]'
-          branch: 'update-issue-template'
-          title: 'chore: Update Issue Template Plugin Options [skip ci]'
-          body: |
-            Updates the issue template with the latest plugin dropdown options.
+      - name: Commit And Push Changes
+        run: |
+          if git diff --quiet -- .github/ISSUE_TEMPLATE/report_issue.yml .github/scripts/keys.json; then
+            echo "No issue template changes to commit." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
 
-            This PR is automatically generated after plugins are published.
-          labels: 'bot'
-          base: 'master'
-          delete-branch: true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/ISSUE_TEMPLATE/report_issue.yml .github/scripts/keys.json
+          git commit -m "chore: Update Issue Template Plugin Options [skip ci]"
+          git push origin HEAD:master

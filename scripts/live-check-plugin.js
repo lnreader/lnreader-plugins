@@ -84,6 +84,7 @@ async function bundlePlugin(pluginPath) {
     format: 'cjs',
     target: 'node22',
     write: false,
+    logLevel: 'silent',
     alias: {
       '@libs': path.join(REPO_ROOT, 'src/libs'),
       '@': path.join(REPO_ROOT, 'src'),
@@ -317,35 +318,57 @@ async function checkPlugin(pluginPath) {
   return result;
 }
 
+function escapeMarkdown(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('`', '&#96;')
+    .replaceAll('|', '\\|')
+    .replace(/\r?\n/g, '<br>');
+}
+
 function printReport(results) {
   let hasFail = false;
+  let hasInconclusive = false;
+
+  console.log('## Plugin Live Check');
+
   for (const result of results) {
-    console.log('\n' + '='.repeat(80));
-    console.log(result.pluginPath);
-    console.log('='.repeat(80));
+    console.log(`\n### \`${escapeMarkdown(result.pluginPath)}\``);
+    console.log('\n| Check | Result | Details |');
+    console.log('| --- | --- | --- |');
 
     if (result.loadError) {
       hasFail = true;
-      console.log(`  BUNDLE/LOAD FAIL — ${result.loadError}`);
+      console.log(
+        `| \`bundle/load\` | ❌ FAIL | ${escapeMarkdown(result.loadError)} |`,
+      );
       continue;
     }
 
     for (const step of result.steps) {
-      const icon =
-        step.status === 'PASS' ? '✓' : step.status === 'FAIL' ? '✗' : '~';
+      const resultLabel =
+        step.status === 'PASS'
+          ? '✅ PASS'
+          : step.status === 'FAIL'
+            ? '❌ FAIL'
+            : '⚠️ INCONCLUSIVE';
       console.log(
-        `  ${icon} ${step.status.padEnd(12)} ${step.name} — ${step.detail}`,
+        `| \`${escapeMarkdown(step.name)}\` | ${resultLabel} | ${escapeMarkdown(step.detail)} |`,
       );
       if (step.status === 'FAIL') hasFail = true;
+      if (step.status === 'INCONCLUSIVE') hasInconclusive = true;
     }
   }
-  console.log('\n' + '='.repeat(80));
+
   console.log(
     hasFail
-      ? 'RESULT: FAIL (at least one step failed)'
-      : 'RESULT: OK (no hard failures)',
+      ? '\n**Result: ❌ Failed — at least one check failed.**'
+      : hasInconclusive
+        ? '\n**Result: ⚠️ Inconclusive — no hard failures.**'
+        : '\n**Result: ✅ Passed — all checks succeeded.**',
   );
-  console.log('='.repeat(80));
   return hasFail;
 }
 

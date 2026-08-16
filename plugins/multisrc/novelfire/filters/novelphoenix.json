@@ -1,9 +1,82 @@
 {
   "filters": {
+    "sort": {
+      "label": "Sort Results By",
+      "value": "rank-top",
+      "options": [
+        {
+          "label": "Last Updated (Newest)",
+          "value": "date"
+        },
+        {
+          "label": "Rank (Top)",
+          "value": "rank-top"
+        },
+        {
+          "label": "Rating Score (Top)",
+          "value": "rating-score-top"
+        },
+        {
+          "label": "Review Count (Most)",
+          "value": "review"
+        },
+        {
+          "label": "Comment Count (Most)",
+          "value": "comment"
+        },
+        {
+          "label": "Bookmark Count (Most)",
+          "value": "bookmark"
+        },
+        {
+          "label": "Today Views (Most)",
+          "value": "today-view"
+        },
+        {
+          "label": "Monthly Views (Most)",
+          "value": "monthly-view"
+        },
+        {
+          "label": "Total Views (Most)",
+          "value": "total-view"
+        },
+        {
+          "label": "Chapter Count (Most)",
+          "value": "chapter-count-most"
+        },
+        {
+          "label": "Title (A>Z)",
+          "value": "abc"
+        },
+        {
+          "label": "Title (Z>A)",
+          "value": "cba"
+        }
+      ],
+      "type": "Picker"
+    },
+    "status": {
+      "label": "Translation Status",
+      "value": "-1",
+      "options": [
+        {
+          "label": "All",
+          "value": "-1"
+        },
+        {
+          "label": "Completed",
+          "value": "1"
+        },
+        {
+          "label": "Ongoing",
+          "value": "0"
+        }
+      ],
+      "type": "Picker"
+    },
     "language": {
       "label": "Language",
       "value": [],
-
       "options": [
         {
           "label": "Chinese Novel",
@@ -42,7 +115,6 @@
     "genres": {
       "label": "Genres",
       "value": [],
-
       "options": [
         {
           "label": "Action",
@@ -274,7 +346,6 @@
     "chapters": {
       "label": "Chapters",
       "value": "0",
-
       "options": [
         {
           "label": "All",
@@ -310,7 +381,6 @@
     "rating_operator": {
       "label": "Rating (Min/Max)",
       "value": "min",
-
       "options": [
         {
           "label": "min",
@@ -326,7 +396,6 @@
     "rating": {
       "label": "Rating",
       "value": "0",
-
       "options": [
         {
           "label": "none",
@@ -355,86 +424,9 @@
       ],
       "type": "Picker"
     },
-    "status": {
-      "label": "Translation Status",
-      "value": "-1",
-
-      "options": [
-        {
-          "label": "All",
-          "value": "-1"
-        },
-        {
-          "label": "Completed",
-          "value": "1"
-        },
-        {
-          "label": "Ongoing",
-          "value": "0"
-        }
-      ],
-      "type": "Picker"
-    },
-    "sort": {
-      "label": "Sort Results By",
-      "value": "date",
-
-      "options": [
-        {
-          "label": "Last Updated (Newest)",
-          "value": "date"
-        },
-        {
-          "label": "Rank (Top)",
-          "value": "rank-top"
-        },
-        {
-          "label": "Rating Score (Top)",
-          "value": "rating-score-top"
-        },
-        {
-          "label": "Review Count (Most)",
-          "value": "review"
-        },
-        {
-          "label": "Comment Count (Most)",
-          "value": "comment"
-        },
-        {
-          "label": "Bookmark Count (Most)",
-          "value": "bookmark"
-        },
-        {
-          "label": "Today Views (Most)",
-          "value": "today-view"
-        },
-        {
-          "label": "Monthly Views (Most)",
-          "value": "monthly-view"
-        },
-        {
-          "label": "Total Views (Most)",
-          "value": "total-view"
-        },
-        {
-          "label": "Chapter Count (Most)",
-          "value": "chapter-count-most"
-        },
-        {
-          "label": "Title (A>Z)",
-          "value": "abc"
-        },
-        {
-          "label": "Title (Z>A)",
-          "value": "cba"
-        }
-      ],
-      "type": "Picker"
-    },
     "tagcon": {
       "label": "Tags (And/Or)",
       "value": "and",
-
       "options": [
         {
           "label": "AND",
