@@ -59,7 +59,7 @@ class NovelFrancePlugin implements Plugin.PluginBase {
   name = 'NovelFrance';
   icon = 'src/fr/novelfrance/icon.png';
   site = 'https://novelfrance.fr/';
-  version = '1.0.0';
+  version = '1.0.1';
 
   private async fetchJson<T>(url: string): Promise<T> {
     const r = await fetchApi(url);
@@ -205,9 +205,14 @@ class NovelFrancePlugin implements Plugin.PluginBase {
     if (title) parts.push(`<h1>${this.escapeHtml(title)}</h1>`);
 
     for (const p of data.paragraphs || []) {
-      if (title && p.index === 0) continue;
       const content = (p.content || '').trim();
       if (!content) continue;
+
+      // Si le paragraphe d'index 0 est une répétition exacte du titre du chapitre, on l'ignore
+      if (title && p.index === 0 && content.toLowerCase() === title.trim().toLowerCase()) {
+        continue;
+      }
+
       parts.push(`<p>${this.escapeHtml(content)}</p>`);
     }
 

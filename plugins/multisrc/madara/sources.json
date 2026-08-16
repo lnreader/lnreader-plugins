@@ -651,5 +651,14 @@
       "useNewChapterEndpoint": true,
       "versionIncrements": 2
     }
+  },
+  {
+    "id": "novelnice",
+    "sourceSite": "https://novelnice.com/",
+    "sourceName": "Novel Nice",
+    "options": {
+      "lang": "English",
+      "useNewChapterEndpoint": true
+    }
   }
 ]

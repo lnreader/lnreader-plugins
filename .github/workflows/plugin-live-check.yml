@@ -1,0 +1,80 @@
+name: Plugin Live Check
+
+on:
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      plugin_path:
+        description: 'Plugin file(s) to check (space-separated relative paths)'
+        required: true
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  live-check:
+    name: Plugin Live Check
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get Changed Plugin Files
+        id: changed-files
+        if: github.event_name == 'pull_request'
+        uses: tj-actions/changed-files@v45
+        with:
+          files: |
+            plugins/**/*.ts
+          files_ignore: |
+            plugins/**/*\[*\]*.ts
+            plugins/multisrc/**
+
+      - name: Determine Targets
+        id: targets
+        if: github.event_name == 'workflow_dispatch' || steps.changed-files.outputs.any_changed == 'true'
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "files=${{ inputs.plugin_path }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "files=${{ steps.changed-files.outputs.all_changed_files }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Node.js
+        if: steps.targets.outputs.files != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        if: steps.targets.outputs.files != ''
+        run: npm ci
+
+      # Multisrc-generated files (plugins/**/*[...].ts) are excluded above.
+      # They're produced from plugins/multisrc/*/template.ts + sources.json,
+      # not hand-authored, so testing the generator is out of scope here.
+      - name: Run Live Check
+        id: live-check
+        if: steps.targets.outputs.files != ''
+        run: |
+          set +e
+          node scripts/live-check-plugin.js ${{ steps.targets.outputs.files }} > live-check-output.txt 2>&1
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          cat live-check-output.txt
+          cat live-check-output.txt >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail On Real Errors
+        if: steps.targets.outputs.files != '' && steps.live-check.outputs.exit_code != '0'
+        run: |
+          echo "Live check reported at least one FAIL — see the job log or workflow summary."
+          exit 1

@@ -10,7 +10,7 @@ Community-driven plugin repository for [LNReader](https://github.com/LNReader/ln
 
 ## Quick Start
 
-**Prerequisites:** Node.js >= 22 
+**Prerequisites:** Node.js >= 22
 
 ```bash
 npm install
@@ -22,6 +22,7 @@ npm run dev:start
 - **[Quick Start Guide](./docs/quickstart.md)** - Create your first plugin
 - **[Plugin Development](./docs/docs.md)** - Complete API reference
 - **[Testing Guide](./docs/website-tutorial.md)** - Test plugins using the web interface
+- **[Live Check](./docs/testing.md)** - Required `npm run check:plugin` check before opening a PR
 - **[Komga Plugin](./docs/komga-plugin.md)** - Self-hosted server integration
 
 ## Testing Methods

@@ -5,20 +5,46 @@ import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 import dayjs from 'dayjs';
 
+const challengeTitles = new Set([
+  'bot verification',
+  'you are being redirected...',
+  'un instant...',
+  'just a moment...',
+  'redirecting...',
+]);
+
+async function fetchCheckedHtml(
+  url: string,
+  init?: Parameters<typeof fetchApi>[1],
+): Promise<string> {
+  const response = await fetchApi(url, init);
+  if (!response.ok)
+    throw new Error(`HTTP ${response.status} while loading ${url}`);
+  const html = await response.text();
+  const title = html
+    .match(/<title[^>]*>(.*?)<\/title>/is)?.[1]
+    ?.replace(/<[^>]+>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+  if (title && challengeTitles.has(title))
+    throw new Error(`Bot challenge while loading ${url}`);
+  return html;
+}
+
 class HarkenEliwoodPlugin implements Plugin.PluginBase {
   id = 'harkeneliwood';
   name = 'HarkenEliwood';
   icon = 'src/fr/harkeneliwood/icon.png';
   site = 'https://harkeneliwood.wordpress.com';
-  version = '1.0.0';
+  version = '1.0.3';
 
   async getCheerio(url: string): Promise<CheerioAPI> {
-    const r = await fetchApi(url, {
-      headers: { 'Accept-Encoding': 'deflate' },
-    });
-    const body = await r.text();
-    const $ = load(body);
-    return $;
+    return load(
+      await fetchCheckedHtml(url, {
+        headers: { 'Accept-Encoding': 'deflate' },
+      }),
+    );
   }
 
   async popularNovels(pageNo: number): Promise<Plugin.NovelItem[]> {
@@ -43,6 +69,14 @@ class HarkenEliwoodPlugin implements Plugin.PluginBase {
           novels.push(novel);
         }
       });
+    await Promise.all(
+      novels.map(async item => {
+        const detail = await this.getCheerio(this.site + item.path);
+        item.cover =
+          detail('#content .entry-content p img').first().attr('src') ||
+          defaultCover;
+      }),
+    );
     return novels;
   }
 
@@ -58,7 +92,7 @@ class HarkenEliwoodPlugin implements Plugin.PluginBase {
       $('#content .entry-content p img').first().attr('src') || defaultCover;
     novel.summary = this.getSummary($('#content .entry-content').text());
     novel.author = this.getAuthor($('#content .entry-content').text());
-    novel.status = NovelStatus.Ongoing;
+    novel.status = NovelStatus.Unknown;
     const chapters: Plugin.ChapterItem[] = [];
     $('#content .entry-content p a').each((i, elem) => {
       const chapterName = $(elem).text().trim();
@@ -67,7 +101,7 @@ class HarkenEliwoodPlugin implements Plugin.PluginBase {
       if (chapterUrl && chapterUrl.includes(this.site) && chapterName) {
         const releaseDate = dayjs(
           chapterUrl?.substring(this.site.length + 1, this.site.length + 11),
-        ).format('DD MMMM YYYY');
+        ).format('YYYY-MM-DD');
         chapters.push({
           name: chapterName,
           path: chapterUrl.replace(this.site, ''),
@@ -133,6 +167,7 @@ class HarkenEliwoodPlugin implements Plugin.PluginBase {
     const $ = await this.getCheerio(this.site + chapterPath);
     const title = $('h1.entry-title');
     const chapter = $('div.entry-content');
+    chapter.find('script, style, ins, iframe, .ads').remove();
     return (title.html() || '') + (chapter.html() || '');
   }
 

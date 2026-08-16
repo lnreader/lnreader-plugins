@@ -23,6 +23,7 @@
     "format": "prettier --write \"./**/*.{js,ts}\"",
     "format:check": "prettier --check \"./**/*.{js,ts}\"",
     "check:sites": "node scripts/check-plugin-sites.js",
+    "check:plugin": "node scripts/live-check-plugin.js",
     "prepare": "husky"
   },
   "author": "LNReader",
@@ -70,6 +71,7 @@
     "dayjs": "^1.11.13",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
+    "esbuild": "^0.25.3",
     "globals": "^15.6.0",
     "htmlparser2": "^9.1.0",
     "http-proxy": "^1.18.1",

@@ -19,7 +19,7 @@ class TemplatePlugin implements Plugin.PluginBase {
   filters: Filters | undefined = undefined;
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
-  //flag indicates whether access to LocalStorage, SesesionStorage is required.
+  // Flag indicating whether access to localStorage/sessionStorage is required.
   webStorageUtilized?: boolean;
 
   async popularNovels(
@@ -45,8 +45,8 @@ class TemplatePlugin implements Plugin.PluginBase {
       name: 'Untitled',
     };
 
-    // TODO: get here data from the site and
-    // un-comment and fill-in the relevant fields
+    // TODO: fetch the novel's data from the site, then
+    // un-comment and fill in the relevant fields below
 
     // novel.name = '';
     // novel.artist = '';
@@ -58,9 +58,9 @@ class TemplatePlugin implements Plugin.PluginBase {
 
     const chapters: Plugin.ChapterItem[] = [];
 
-    // TODO: here parse the chapter list
+    // TODO: parse the chapter list here
 
-    // TODO: add each chapter to the list using
+    // TODO: add each chapter to `chapters`, e.g.:
     const chapter: Plugin.ChapterItem = {
       name: '',
       path: '',

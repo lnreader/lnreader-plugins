@@ -1,0 +1,21 @@
+[
+  {
+    "id": "novelfire",
+    "sourceSite": "https://novelfire.net/",
+    "sourceName": "Novel Fire",
+    "options": {
+      "lang": "English",
+      "minorVer": 4,
+      "versionIncrement": 3
+    }
+  },
+  {
+    "id": "novelphoenix",
+    "sourceSite": "https://novelphoenix.com/",
+    "sourceName": "Novel Phoenix",
+    "options": {
+      "lang": "English",
+      "versionIncrement": 1
+    }
+  }
+]

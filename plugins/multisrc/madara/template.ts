@@ -304,6 +304,30 @@ export class MadaraPlugin implements Plugin.PluginBase {
         method: 'POST',
         referrer: this.site + novelPath,
       }).then((res: Response) => res.text());
+
+      const $firstPage = parseHTML(html);
+      const pageLinks = $firstPage('.pagination a[data-page]');
+      if (pageLinks.length > 0) {
+        const maxPage = Math.max(
+          ...pageLinks
+            .map((_, el) =>
+              parseInt($firstPage(el).attr('data-page') || '1', 10),
+            )
+            .get(),
+        );
+        const lastHref = pageLinks.last().attr('href') || '';
+        const queryIndex = lastHref.indexOf('?');
+        if (queryIndex !== -1) {
+          const queryTemplate = lastHref.slice(queryIndex).replace(/\d+$/, '');
+          for (let page = 2; page <= maxPage; page++) {
+            const pageHtml = await fetchApi(
+              this.site + novelPath + 'ajax/chapters/' + queryTemplate + page,
+              { method: 'POST', referrer: this.site + novelPath },
+            ).then((res: Response) => res.text());
+            if (pageHtml && pageHtml !== '0') html += pageHtml;
+          }
+        }
+      }
     } else {
       const novelId =
         loadedCheerio('.rating-post-id').attr('value') ||

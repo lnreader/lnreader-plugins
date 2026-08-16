@@ -1,0 +1,448 @@
+{
+  "filters": {
+    "sort": {
+      "label": "Sort Results By",
+      "value": "rank-top",
+      "options": [
+        {
+          "label": "Last Updated (Newest)",
+          "value": "date"
+        },
+        {
+          "label": "Rank (Top)",
+          "value": "rank-top"
+        },
+        {
+          "label": "Rating Score (Top)",
+          "value": "rating-score-top"
+        },
+        {
+          "label": "Review Count (Most)",
+          "value": "review"
+        },
+        {
+          "label": "Comment Count (Most)",
+          "value": "comment"
+        },
+        {
+          "label": "Bookmark Count (Most)",
+          "value": "bookmark"
+        },
+        {
+          "label": "Today Views (Most)",
+          "value": "today-view"
+        },
+        {
+          "label": "Monthly Views (Most)",
+          "value": "monthly-view"
+        },
+        {
+          "label": "Total Views (Most)",
+          "value": "total-view"
+        },
+        {
+          "label": "Chapter Count (Most)",
+          "value": "chapter-count-most"
+        },
+        {
+          "label": "Title (A>Z)",
+          "value": "abc"
+        },
+        {
+          "label": "Title (Z>A)",
+          "value": "cba"
+        }
+      ],
+      "type": "Picker"
+    },
+    "status": {
+      "label": "Translation Status",
+      "value": "-1",
+      "options": [
+        {
+          "label": "All",
+          "value": "-1"
+        },
+        {
+          "label": "Completed",
+          "value": "1"
+        },
+        {
+          "label": "Ongoing",
+          "value": "0"
+        }
+      ],
+      "type": "Picker"
+    },
+    "language": {
+      "label": "Language",
+      "value": [],
+      "options": [
+        {
+          "label": "Chinese Novel",
+          "value": "1"
+        },
+        {
+          "label": "Japanese Novel",
+          "value": "3"
+        },
+        {
+          "label": "English Novel",
+          "value": "4"
+        }
+      ],
+      "type": "Checkbox"
+    },
+    "genre_operator": {
+      "label": "Genres (And/Or/Exclude)",
+      "value": "and",
+      "options": [
+        {
+          "label": "AND",
+          "value": "and"
+        },
+        {
+          "label": "OR",
+          "value": "or"
+        },
+        {
+          "label": "EXCLUDE",
+          "value": "exclude"
+        }
+      ],
+      "type": "Picker"
+    },
+    "genres": {
+      "label": "Genres",
+      "value": [],
+      "options": [
+        {
+          "label": "Action",
+          "value": "3"
+        },
+        {
+          "label": "Adult",
+          "value": "28"
+        },
+        {
+          "label": "Adventure",
+          "value": "4"
+        },
+        {
+          "label": "Anime",
+          "value": "46"
+        },
+        {
+          "label": "Arts",
+          "value": "47"
+        },
+        {
+          "label": "Comedy",
+          "value": "5"
+        },
+        {
+          "label": "Drama",
+          "value": "24"
+        },
+        {
+          "label": "Eastern",
+          "value": "44"
+        },
+        {
+          "label": "Ecchi",
+          "value": "26"
+        },
+        {
+          "label": "Fan-fiction",
+          "value": "48"
+        },
+        {
+          "label": "Fantasy",
+          "value": "6"
+        },
+        {
+          "label": "Game",
+          "value": "19"
+        },
+        {
+          "label": "Gender Bender",
+          "value": "25"
+        },
+        {
+          "label": "Harem",
+          "value": "7"
+        },
+        {
+          "label": "Historical",
+          "value": "12"
+        },
+        {
+          "label": "Horror",
+          "value": "37"
+        },
+        {
+          "label": "Isekai",
+          "value": "49"
+        },
+        {
+          "label": "Josei",
+          "value": "2"
+        },
+        {
+          "label": "Lgbt+",
+          "value": "45"
+        },
+        {
+          "label": "Magic",
+          "value": "50"
+        },
+        {
+          "label": "Magical realism",
+          "value": "51"
+        },
+        {
+          "label": "Manhua",
+          "value": "52"
+        },
+        {
+          "label": "Martial Arts",
+          "value": "15"
+        },
+        {
+          "label": "Mature",
+          "value": "8"
+        },
+        {
+          "label": "Mecha",
+          "value": "34"
+        },
+        {
+          "label": "Military",
+          "value": "53"
+        },
+        {
+          "label": "Modern life",
+          "value": "54"
+        },
+        {
+          "label": "Movies",
+          "value": "55"
+        },
+        {
+          "label": "Mystery",
+          "value": "16"
+        },
+        {
+          "label": "Other",
+          "value": "64"
+        },
+        {
+          "label": "Psychological",
+          "value": "9"
+        },
+        {
+          "label": "Realistic fiction",
+          "value": "56"
+        },
+        {
+          "label": "Reincarnation",
+          "value": "43"
+        },
+        {
+          "label": "Romance",
+          "value": "1"
+        },
+        {
+          "label": "School Life",
+          "value": "21"
+        },
+        {
+          "label": "Sci-fi",
+          "value": "20"
+        },
+        {
+          "label": "Seinen",
+          "value": "10"
+        },
+        {
+          "label": "Shoujo",
+          "value": "38"
+        },
+        {
+          "label": "Shoujo ai",
+          "value": "57"
+        },
+        {
+          "label": "Shounen",
+          "value": "17"
+        },
+        {
+          "label": "Shounen Ai",
+          "value": "39"
+        },
+        {
+          "label": "Slice of Life",
+          "value": "13"
+        },
+        {
+          "label": "Smut",
+          "value": "29"
+        },
+        {
+          "label": "Sports",
+          "value": "42"
+        },
+        {
+          "label": "Supernatural",
+          "value": "18"
+        },
+        {
+          "label": "System",
+          "value": "58"
+        },
+        {
+          "label": "Tragedy",
+          "value": "32"
+        },
+        {
+          "label": "Urban",
+          "value": "63"
+        },
+        {
+          "label": "Urban life",
+          "value": "59"
+        },
+        {
+          "label": "Video games",
+          "value": "60"
+        },
+        {
+          "label": "War",
+          "value": "61"
+        },
+        {
+          "label": "Wuxia",
+          "value": "31"
+        },
+        {
+          "label": "Xianxia",
+          "value": "23"
+        },
+        {
+          "label": "Xuanhuan",
+          "value": "22"
+        },
+        {
+          "label": "Yaoi",
+          "value": "14"
+        },
+        {
+          "label": "Yuri",
+          "value": "62"
+        }
+      ],
+      "type": "Checkbox"
+    },
+    "chapters": {
+      "label": "Chapters",
+      "value": "0",
+      "options": [
+        {
+          "label": "All",
+          "value": "0"
+        },
+        {
+          "label": "<50",
+          "value": "1,49"
+        },
+        {
+          "label": "50-100",
+          "value": "50,100"
+        },
+        {
+          "label": "100-200",
+          "value": "100,200"
+        },
+        {
+          "label": "200-500",
+          "value": "200,500"
+        },
+        {
+          "label": "500-1000",
+          "value": "500,1000"
+        },
+        {
+          "label": ">1000",
+          "value": "1001,1000000"
+        }
+      ],
+      "type": "Picker"
+    },
+    "rating_operator": {
+      "label": "Rating (Min/Max)",
+      "value": "min",
+      "options": [
+        {
+          "label": "min",
+          "value": "min"
+        },
+        {
+          "label": "max",
+          "value": "max"
+        }
+      ],
+      "type": "Picker"
+    },
+    "rating": {
+      "label": "Rating",
+      "value": "0",
+      "options": [
+        {
+          "label": "none",
+          "value": "0"
+        },
+        {
+          "label": "1",
+          "value": "1"
+        },
+        {
+          "label": "2",
+          "value": "2"
+        },
+        {
+          "label": "3",
+          "value": "3"
+        },
+        {
+          "label": "4",
+          "value": "4"
+        },
+        {
+          "label": "5",
+          "value": "5"
+        }
+      ],
+      "type": "Picker"
+    },
+    "tagcon": {
+      "label": "Tags (And/Or)",
+      "value": "and",
+      "options": [
+        {
+          "label": "AND",
+          "value": "and"
+        },
+        {
+          "label": "OR",
+          "value": "or"
+        }
+      ],
+      "type": "Picker"
+    },
+    "author": {
+      "label": "Author",
+      "value": "",
+      "type": "Text"
+    }
+  }
+}
