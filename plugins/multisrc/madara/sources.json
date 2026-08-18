@@ -660,5 +660,14 @@
       "lang": "English",
       "useNewChapterEndpoint": true
     }
+  },
+  {
+    "id": "novelshort",
+    "sourceSite": "https://novel-short.com/",
+    "sourceName": "Novel Short",
+    "options": {
+      "lang": "English",
+      "useNewChapterEndpoint": true
+    }
   }
 ]
