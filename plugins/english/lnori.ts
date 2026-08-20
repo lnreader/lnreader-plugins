@@ -9,7 +9,7 @@ class LnorisPlugin implements Plugin.PluginBase {
   name = 'LNORI';
   icon = 'src/en/lnori/icon.png';
   site = 'https://lnori.com/';
-  version = '1.0.0';
+  version = '1.0.1';
 
   private async getLibraryNovels(): Promise<
     {
@@ -168,9 +168,21 @@ class LnorisPlugin implements Plugin.PluginBase {
     };
 
     const volumeUrls = Object.keys(volumeMap);
-    const volumePromises = volumeUrls.map(async volUrl => {
-      const fullVolUrl = this.site.replace(/\/$/, '') + volUrl;
-      const volHtml = await fetchText(fullVolUrl);
+
+    /**
+     * Volume pages weigh ~0.5MB each and a long series has dozens, so
+     * building the chapter list used to download and fully parse ~15MB at
+     * once — about a minute of blank screen on a phone, and one failed
+     * request failed the whole novel. The chapter names live in the page's
+     * <nav> table of contents, which is a few KB: parse just that when it
+     * can name every chapter, and fall back to the full page when it
+     * cannot. Volumes are fetched a few at a time for the same reason.
+     */
+    const parseVolume = (
+      volUrl: string,
+      volHtml: string,
+      isTocOnly: boolean,
+    ): Plugin.ChapterItem[] | null => {
       const $vol = parseHTML(volHtml);
 
       const volChapters: Plugin.ChapterItem[] = [];
@@ -179,11 +191,19 @@ class LnorisPlugin implements Plugin.PluginBase {
       );
 
       if (tocLinks.length > 0) {
+        let needFullPage = false;
         tocLinks.each((i, el) => {
           const href = $vol(el).attr('href');
           if (!href) return;
           const id = href.substring(1);
           const tocTitle = $vol(el).text().trim().replace(/\s+/g, ' ');
+
+          // A nameless TOC entry falls back to the chapter's own heading,
+          // which only the full page has.
+          if (isTocOnly && !tocTitle) {
+            needFullPage = true;
+            return false;
+          }
 
           const section = $vol(`section#${id}`);
           const h2Title = section
@@ -207,6 +227,13 @@ class LnorisPlugin implements Plugin.PluginBase {
             path,
           });
         });
+        if (needFullPage) {
+          return null;
+        }
+      } else if (isTocOnly) {
+        // No anchors in the TOC — chapters can only come from the page's
+        // sections.
+        return null;
       } else {
         $vol('section.chapter').each((i, el) => {
           const id = $vol(el).attr('id');
@@ -234,9 +261,40 @@ class LnorisPlugin implements Plugin.PluginBase {
         });
       }
       return volChapters;
-    });
+    };
 
-    const chapters2D = await Promise.all(volumePromises);
+    const sliceToc = (html: string): string | undefined => {
+      const start = html.search(
+        /<nav[^>]*(?:class="[^"]*\btoc-view\b|id="toc-list")/,
+      );
+      if (start === -1) return undefined;
+      const end = html.indexOf('</nav>', start);
+      if (end === -1) return undefined;
+      return html.slice(start, end + '</nav>'.length);
+    };
+
+    const CONCURRENT_VOLUMES = 4;
+    const chapters2D: Plugin.ChapterItem[][] = [];
+    for (let i = 0; i < volumeUrls.length; i += CONCURRENT_VOLUMES) {
+      const batch = volumeUrls.slice(i, i + CONCURRENT_VOLUMES);
+      const results = await Promise.all(
+        batch.map(async volUrl => {
+          const fullVolUrl = this.site.replace(/\/$/, '') + volUrl;
+          const volHtml = await fetchText(fullVolUrl);
+
+          const toc = sliceToc(volHtml);
+          if (toc) {
+            const fromToc = parseVolume(volUrl, toc, true);
+            if (fromToc) {
+              return fromToc;
+            }
+          }
+          return parseVolume(volUrl, volHtml, false) ?? [];
+        }),
+      );
+      chapters2D.push(...results);
+    }
+
     const chapters = chapters2D.flat();
 
     novel.chapters = chapters.map((chap, idx) => ({
