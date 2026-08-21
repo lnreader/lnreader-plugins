@@ -74,7 +74,7 @@ class Novel7sPlugin implements Plugin.PluginBase {
   icon = 'src/en/novel7s/icon.png';
   site = 'https://novel7s.com';
   rest = `${this.site}/wp-json/wp/v2`;
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters = {
     sort: {
