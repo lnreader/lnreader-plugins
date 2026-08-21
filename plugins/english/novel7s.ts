@@ -235,7 +235,7 @@ class Novel7sPlugin implements Plugin.PluginBase {
       if (!text) continue;
 
       // If it ends like a complete sentence, keep separate
-      if (/[.!?…]["'"']?$/.test(text)) continue;
+      if (/[.!?…]["'”’»]?$/.test(text)) continue;
 
       $(current).append(' ');
       $(current).append($(next).contents());
