@@ -33,6 +33,19 @@ class RewayahFans implements Plugin.PluginBase {
     return res.text();
   }
 
+  private normalizeUrl(url: string): string {
+    if (!url) return '';
+    const decoded = url
+      .replace(/&amp;/g, '&')
+      .replace(/&#038;/g, '&')
+      .trim();
+    if (decoded.startsWith('http')) return decoded;
+    if (decoded.startsWith('//')) return `https:${decoded}`;
+    if (decoded.startsWith('/'))
+      return `${this.site}${decoded.replace(/^\//, '')}`;
+    return `${this.site}${decoded}`;
+  }
+
   private async loadAllNovels(): Promise<Plugin.NovelItem[]> {
     if (this.allNovels.length > 0) return this.allNovels;
 
@@ -49,14 +62,18 @@ class RewayahFans implements Plugin.PluginBase {
       const href =
         linkEl.attr('href') || fig.find('a').first().attr('href') || '';
       const name = linkEl.text().trim();
-      const cover = fig.find('img').attr('src') || '';
-      const decodedCover = cover.replace(/&#038;/g, '&').replace(/&amp;/g, '&');
+      const cover = this.normalizeUrl(
+        fig.find('img').attr('data-src') ||
+          fig.find('img').attr('data-lazy-src') ||
+          fig.find('img').attr('src') ||
+          '',
+      );
 
       if (name && href) {
         const path = href.replace(this.site, '').replace(/\/$/, '');
         if (!seen.has(path)) {
           seen.add(path);
-          novels.push({ name, path, cover: decodedCover });
+          novels.push({ name, path, cover });
         }
       }
     });
@@ -67,7 +84,6 @@ class RewayahFans implements Plugin.PluginBase {
 
   async popularNovels(
     page: number,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _options: Plugin.PopularNovelsOptions,
   ): Promise<Plugin.NovelItem[]> {
     const allNovels = await this.loadAllNovels();
@@ -99,7 +115,19 @@ class RewayahFans implements Plugin.PluginBase {
     novel.name = this.extractNovelName(novel.name);
 
     const ogImage = $('meta[property="og:image"]').attr('content') || '';
-    novel.cover = ogImage || '';
+    novel.cover = this.normalizeUrl(ogImage);
+
+    if (!novel.cover) {
+      const coverImg = $('img')
+        .filter(function () {
+          const src = $(this).attr('data-src') || $(this).attr('src') || '';
+          return src.includes('wp-content/uploads');
+        })
+        .first();
+      novel.cover = this.normalizeUrl(
+        coverImg.attr('data-src') || coverImg.attr('src') || '',
+      );
+    }
 
     const summaryParts: string[] = [];
     let inStory = false;
