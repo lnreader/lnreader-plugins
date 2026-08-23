@@ -452,7 +452,7 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
 
     if (chapterText.length === 0) {
       throw new Error(
-        `Chapter content container (#content) not found for ${chapterPath} — possible transient fetch issue.`,
+        `Chapter content container (#content) not found for ${chapterPath} — possible transient fetch issue. Retry`,
       );
     }
 
