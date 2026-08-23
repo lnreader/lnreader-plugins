@@ -445,73 +445,36 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    console.log(`[NovelFire] >>> parseChapter ENTERED for: ${chapterPath}`);
     const url = this.site + chapterPath;
-    const retryCount = 4;
-    const sleepTime = 2; // seconds between retries
+    const loadedCheerio = await this.getCheerio(url, false);
 
-    let lastError: unknown;
+    const chapterText = loadedCheerio('#content');
 
-    for (let attempt = 0; attempt < retryCount; attempt++) {
-      try {
-        const loadedCheerio = await this.getCheerio(url, false);
-        const chapterText = loadedCheerio('#content');
+    if (chapterText.length === 0) {
+      throw new Error(
+        `Chapter content container (#content) not found for ${chapterPath} — possible transient fetch issue.`,
+      );
+    }
 
-        if (chapterText.length === 0) {
-          throw new NovelFireEmptyContentError(
-            `#content not found (attempt ${attempt + 1}/${retryCount})`,
-          );
-        }
-
-        const odds = chapterText.find(
-          ':not(p, h1, span, i, b, u, img, a, div, strong)',
-        );
-        for (const ele of odds.toArray()) {
-          const tag = ele.name.toString();
-          if (tag.length > 5 && tag.substring(0, 1) == 'nf') {
-            loadedCheerio(ele).remove();
-          }
-        }
-
-        const html = chapterText.html()?.replace(/&nbsp;/g, ' ');
-
-        if (!html || html.trim().length === 0) {
-          throw new NovelFireEmptyContentError(
-            `#content was empty after parsing (attempt ${attempt + 1}/${retryCount})`,
-          );
-        }
-
-        return html;
-      } catch (err) {
-        lastError = err;
-
-        if (err instanceof NovelFireEmptyContentError) {
-          if (attempt < retryCount - 1) {
-            console.warn(
-              `[${chapterPath}] Chapter content missing, retrying in ${sleepTime}s... (${attempt + 1}/${retryCount})`,
-            );
-            await new Promise(resolve => setTimeout(resolve, sleepTime * 1000));
-            continue;
-          } else {
-            console.warn(
-              `[${chapterPath}] Chapter content still missing after ${retryCount} attempts, giving up.`,
-            );
-          }
-        } else {
-          // Non-retryable error (network failure, Cloudflare block, etc.) - fail immediately
-          console.warn(
-            `[${chapterPath}] parseChapter failed with non-retryable error: ${
-              err instanceof Error ? err.message : String(err)
-            }`,
-          );
-          throw err;
-        }
+    const odds = chapterText.find(
+      ':not(p, h1, span, i, b, u, img, a, div, strong)',
+    );
+    for (const ele of odds.toArray()) {
+      const tag = ele.name.toString();
+      if (tag.length > 5 && tag.substring(0, 1) == 'nf') {
+        loadedCheerio(ele).remove();
       }
     }
 
-    throw lastError instanceof Error
-      ? lastError
-      : new Error('Chapter content could not be loaded after retries.');
+    const html = chapterText.html()?.replace(/&nbsp;/g, ' ');
+
+    if (!html || html.trim().length === 0) {
+      throw new Error(
+        `Chapter content was empty after parsing for ${chapterPath}.`,
+      );
+    }
+
+    return html;
   }
 
   async searchNovels(
@@ -551,13 +514,5 @@ class NovelFireAjaxNotFound extends Error {
   constructor(message = 'Novel Fire says its Ajax interface is not found') {
     super(message);
     this.name = 'NovelFireAjaxError';
-  }
-}
-
-// Custom error for when chapter content couldn't be found (triggers a retry in parseChapter)
-class NovelFireEmptyContentError extends Error {
-  constructor(message = 'Novel Fire chapter content was empty or missing') {
-    super(message);
-    this.name = 'NovelFireEmptyContentError';
   }
 }
