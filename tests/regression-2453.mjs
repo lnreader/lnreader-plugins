@@ -8,11 +8,12 @@
 //
 //   node tests/regression-2453.mjs
 //
-// No npm dependencies. Uses node:fs and node:child_process only.
+// No npm dependencies. Uses node:fs, node:url and node:path only.
 //
-// RED baseline at base commit e1dcd06 (before the fix): T1 fails (no
-// .broken.ts file), T4 fails (content checks on a missing file). After the
-// fix: all four checks pass.
+// RED baseline at base commit e1dcd06 (before the fix): T1 retired file
+// present, T1 original file absent, T3 no other plugin claims RNBH.org
+// and T4 content checks on a missing file all FAIL; T2x2 pass (exclusions
+// already in the tsconfigs). After the fix: all six checks pass.
 
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
