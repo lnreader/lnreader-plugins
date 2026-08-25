@@ -67,12 +67,20 @@ const result = await esbuild.build({
     '@': path.join(REPO_ROOT, 'src'),
   },
 });
+// Write -> require -> always unlink: if anything between the write and the
+// cleanup throws (esbuild output, bad module), try/finally still removes the
+// temp bundle, which .gitignore does NOT cover ('.js' there is a literal
+// basename and this file is .cjs).
 const tmpFile = path.join(REPO_ROOT, 'regression-bundle.cjs');
-fs.writeFileSync(tmpFile, result.outputFiles[0].text, 'utf8');
-const require = createRequire(import.meta.url);
-const mod = require(tmpFile);
-const plugin = mod.default ?? mod;
-fs.unlinkSync(tmpFile);
+let plugin;
+try {
+  fs.writeFileSync(tmpFile, result.outputFiles[0].text, 'utf8');
+  const require = createRequire(import.meta.url);
+  const mod = require(tmpFile);
+  plugin = mod.default ?? mod;
+} finally {
+  fs.unlinkSync(tmpFile);
+}
 
 // --- URL-matched fixture stub with Cloudflare emulation (403 when no UA) ---
 // `calls` records every init for REQ-1; `denyAll` lets C-2 force the 403 mode
@@ -132,7 +140,7 @@ try {
     `FAIL  N-5 parseNovel genres: 22 items, starts with أكشن  -- parseNovel threw: ${err.message}`,
   );
   console.log(
-    `FAIL  N-6 parseNovel chapters: 5 items, /chapter-\d+/  -- parseNovel threw: ${err.message}`,
+    `FAIL  N-6 parseNovel chapters: 5 items, /chapter-\\d+/  -- parseNovel threw: ${err.message}`,
   );
   failures += 6;
 }
