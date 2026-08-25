@@ -8,7 +8,7 @@ class WTRLAB implements Plugin.PluginBase {
   id = 'WTRLAB';
   name = 'WTR-LAB';
   site = 'https://wtr-lab.com/';
-  version = '1.1.5';
+  version = '1.1.6';
   icon = 'src/en/wtrlab/icon.png';
   sourceLang = 'en/';
   baggage = '';
@@ -72,7 +72,7 @@ class WTRLAB implements Plugin.PluginBase {
     }
 
     if (filters.min_chapters.value) {
-      params.append('minc', filters.min_chapters.value);
+      params.append('count_value', filters.min_chapters.value);
     }
     if (filters.min_rating.value) {
       params.append('minr', filters.min_rating.value);
@@ -512,7 +512,9 @@ class WTRLAB implements Plugin.PluginBase {
     let chapterNo: number | null = null;
     let loadedCheerio = null;
 
-    const urlMatch = chapterPath.match(/(?:serie|novel)-?(\d+)\/[^/]+\/chapter-(\d+)/);
+    const urlMatch = chapterPath.match(
+      /(?:serie|novel)-?(\d+)\/[^/]+\/chapter-(\d+)/,
+    );
     if (urlMatch) {
       rawId = parseInt(urlMatch[1], 10);
       chapterNo = parseInt(urlMatch[2], 10);
