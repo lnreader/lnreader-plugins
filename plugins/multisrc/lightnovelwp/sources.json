@@ -73,7 +73,9 @@
     "sourceName": "Novels Paradise",
     "options": {
       "lang": "Arabic",
-      "reverseChapters": true
+      "reverseChapters": true,
+      "down": true,
+      "downSince": 1756224000000
     }
   },
   {
