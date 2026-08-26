@@ -56,9 +56,8 @@
       "noAjax": true,
       "noPages": ["sort/most-popular"],
       "pageAsPath": true,
-      "chapterListing": "api/chapterlist.php",
-      "chapterParam": "aid",
-      "versionIncrements": 2
+      "chapterListPaginated": true,
+      "versionIncrements": 3
     }
   },
   {
