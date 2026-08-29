@@ -15,7 +15,14 @@ export const generateAll = function () {
       source.filters = JSON.parse(filters).filters;
     }
     console.log(
-      `[madara] Generating: ${source.id}${' '.repeat(20 - source.id.length)} ${source.filters ? '🔎with filters🔍' : '🚫no filters🚫'}`,
+      '[madara] Generating:',
+      source.id.padEnd(20),
+      source.options?.down
+        ? '🔽site is down🔽'
+        : source.filters
+          ? '🔎with filters🔍'
+          : '🚫 no filters 🚫',
+      source.options?.downSince ? `since: ${source.options?.downSince}` : '',
     );
     return generator(source);
   });
@@ -35,5 +42,6 @@ export default plugin;
     lang: source.options?.lang || 'English',
     filename: source.sourceName.replace(/[^\w]/g, ''),
     pluginScript,
+    down: source.options?.down,
   };
 };
