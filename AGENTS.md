@@ -128,3 +128,15 @@ works because target-site markup and network defenses change independently of th
   `Closes #123`).
 - Before handing off an existing-plugin change, confirm that its version was incremented and report
   any live checks that were inconclusive because of network or anti-bot behavior.
+
+## Commit messages
+
+Use Conventional Commits: `type(scope): description`
+
+- type: feat (new plugin), fix (bug fix), perf, chore, docs, refactor
+- scope: language/plugin folder, e.g. `madara`, `english/novel7s`, `ar/rewayahfans`
+- Lowercase type, imperative mood ("add" not "added"/"adds")
+
+Examples:
+- feat(madara): add new source
+- fix(lnori): correct chapter list parsing
