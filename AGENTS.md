@@ -140,3 +140,7 @@ Use Conventional Commits: `type(scope): description`
 Examples:
 - feat(<generator>): add new source
 - fix(<language>/<plugin>): correct chapter list parsing
+
+If a commit or PR was authored (fully or partly) by an AI agent, note that in the commit message
+(e.g. a `Co-Authored-By:` trailer) or the PR description so reviewers know to weight their review
+accordingly.
