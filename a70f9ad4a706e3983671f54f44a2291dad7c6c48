@@ -1,0 +1,38 @@
+AGENTS.md
+  s_aefe4ae4532d26::t_7539b6c84afffb 1-95,97-114,117-130
+  s_aefe4ae4532d26::t_37a868bc159008 96,115-116
+---
+{
+  "attestations": [
+    {
+      "entries": [
+        {
+          "accepted_lines": 127,
+          "added_lines": 127,
+          "deleted_lines": 0,
+          "hash": "s_aefe4ae4532d26::t_7539b6c84afffb",
+          "lines": "1-95,97-114,117-130",
+          "overridden_lines": 0
+        },
+        {
+          "accepted_lines": 3,
+          "added_lines": 3,
+          "deleted_lines": 0,
+          "hash": "s_aefe4ae4532d26::t_37a868bc159008",
+          "lines": "96,115-116",
+          "overridden_lines": 0
+        }
+      ],
+      "file": "AGENTS.md"
+    }
+  ],
+  "base_commit_sha": "fec0bfa790bcb44eb49593b688ca3e13af372157",
+  "branch": "master",
+  "commit_sha": "a70f9ad4a706e3983671f54f44a2291dad7c6c48",
+  "commit_time": "2026-09-01T19:16:04+05:30",
+  "commit_type": "direct_commit",
+  "harness_aidlc_version": "1.4.32",
+  "prompts": {},
+  "repo": "https://github.com/LNReader/lnreader-plugins",
+  "schema_version": "authorship/3.0.0"
+}
