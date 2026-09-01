@@ -134,9 +134,9 @@ works because target-site markup and network defenses change independently of th
 Use Conventional Commits: `type(scope): description`
 
 - type: feat (new plugin), fix (bug fix), perf, chore, docs, refactor
-- scope: language/plugin folder, e.g. `madara`, `english/novel7s`, `ar/rewayahfans`
+- scope: language/plugin folder, e.g. `<language>`, `<language>/<plugin>`
 - Lowercase type, imperative mood ("add" not "added"/"adds")
 
 Examples:
-- feat(madara): add new source
-- fix(lnori): correct chapter list parsing
+- feat(<generator>): add new source
+- fix(<language>/<plugin>): correct chapter list parsing
