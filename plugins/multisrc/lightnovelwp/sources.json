@@ -44,7 +44,9 @@
     "sourceName": "Baca Light Novel",
     "options": {
       "lang": "Indonesian",
-      "reverseChapters": true
+      "reverseChapters": true,
+      "down": true,
+      "downSince": 1787666612560
     }
   },
   {
