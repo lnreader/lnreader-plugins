@@ -137,7 +137,8 @@
     "options": {
       "useNewChapterEndpoint": true,
       "lang": "Arabic",
-      "customJs": "chapterText.find('span[style*=\"opacity: 0; position: fixed;\"],[role=\"presentation\"]').remove();"
+      "versionIncrements": 1,
+      "customJs": "chapterText.find('[data-nosnippet], style, script, input, .nhv-reader-store-promo').remove();"
     }
   },
   {

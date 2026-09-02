@@ -197,6 +197,14 @@ export default tseslint.config(
     },
   },
   {
+    files: ['**/*.mjs'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
+  {
     files: ['**/fictioneer/custom/*/*.js'],
     rules: {
       'no-undef': 'off',

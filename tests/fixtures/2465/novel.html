@@ -1,0 +1,3504 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script>
+      (function () {
+        var siteDefault = "calm";
+        var allowed = ['dark', 'light', 'soft', 'beige', 'rose', 'calm'];
+        try {
+          var choice = localStorage.getItem('nhv_site_appearance_v1') || siteDefault;
+          if (choice === 'system') {
+            choice = siteDefault;
+            localStorage.setItem('nhv_site_appearance_v1', choice);
+          }
+          if (allowed.indexOf(choice) === -1) choice = siteDefault;
+          var resolved = choice;
+          var lightThemes = ['light', 'beige', 'rose', 'calm'];
+          var scheme = lightThemes.indexOf(resolved) !== -1 ? 'light' : 'dark';
+          var cardView = localStorage.getItem('nhv_home_new_releases_view_v1') || 'site';
+          if (['site', 'list', 'grid'].indexOf(cardView) === -1) cardView = 'site';
+          document.documentElement.setAttribute('data-nhv-theme', resolved);
+          document.documentElement.setAttribute('data-nhv-theme-choice', choice);
+          document.documentElement.setAttribute('data-nhv-color-scheme', scheme);
+          document.documentElement.setAttribute('data-nhv-card-view', cardView);
+        } catch (e) {
+          var defaultLight = ['light', 'beige', 'rose', 'calm'].indexOf(siteDefault) !== -1;
+          document.documentElement.setAttribute('data-nhv-theme', siteDefault);
+          document.documentElement.setAttribute('data-nhv-theme-choice', siteDefault);
+          document.documentElement.setAttribute('data-nhv-color-scheme', defaultLight ? 'light' : 'dark');
+          document.documentElement.setAttribute('data-nhv-card-view', 'site');
+        }
+      }());
+    </script>
+    <link rel="profile" href="https://gmpg.org/xfn/11">
+    <link rel="pingback" href="https://cenele.com/xmlrpc.php">
+
+	
+
+	<title>الخلود الملعون &#8211; فضاء الروايات</title>
+<meta name='robots' content='max-image-preview:large' />
+<link rel="alternate" type="application/rss+xml" title="فضاء الروايات &laquo; الخلاصة" href="https://cenele.com/feed/" />
+<link rel="alternate" type="application/rss+xml" title="فضاء الروايات &laquo; خلاصة التعليقات" href="https://cenele.com/comments/feed/" />
+<style id="nhv-abg-runtime-css">html.nhv-abg-is-open,
+body.nhv-abg-is-open{overflow:hidden!important}
+
+.nhv-abg-overlay[hidden]{display:none!important}
+.nhv-abg-overlay{
+  position:fixed;
+  z-index:2147483600;
+  inset:0;
+  display:grid;
+  place-items:center;
+  box-sizing:border-box;
+  padding:clamp(12px,3vw,34px);
+  opacity:0;
+  visibility:hidden;
+  transition:opacity .2s ease,visibility .2s ease;
+  font-family:inherit;
+}
+.nhv-abg-overlay.is-visible{opacity:1;visibility:visible}
+.nhv-abg-backdrop{
+  position:absolute;
+  inset:0;
+  background:rgba(5,7,14,.76);
+  -webkit-backdrop-filter:blur(8px);
+  backdrop-filter:blur(8px);
+}
+.nhv-abg-card{
+  --nhv-abg-accent:var(--nhv-accent-color,#7c5cff);
+  --nhv-abg-accent-rgb:var(--nhv-accent-rgb,124 92 255);
+  position:relative;
+  z-index:1;
+  width:min(100%,650px);
+  max-height:min(90vh,760px);
+  overflow:auto;
+  box-sizing:border-box;
+  padding:clamp(24px,4vw,42px);
+  border:1px solid rgb(var(--nhv-abg-accent-rgb)/.34);
+  border-radius:clamp(21px,3vw,30px);
+  background:
+    radial-gradient(circle at 92% 0%,rgb(var(--nhv-abg-accent-rgb)/.20),transparent 34%),
+    radial-gradient(circle at 5% 100%,rgb(var(--nhv-abg-accent-rgb)/.09),transparent 32%),
+    var(--nhv-card-bg,var(--nhv-surface,#121628));
+  box-shadow:var(--nhv-page-shadow,0 28px 85px rgba(0,0,0,.42));
+  color:var(--nhv-page-text,#f7f7ff);
+  text-align:center;
+  overscroll-behavior:contain;
+}
+.nhv-abg-icon{
+  display:grid;
+  place-items:center;
+  width:66px;
+  height:66px;
+  margin:0 auto 14px;
+  border:1px solid rgb(var(--nhv-abg-accent-rgb)/.32);
+  border-radius:22px;
+  background:rgb(var(--nhv-abg-accent-rgb)/.13);
+  color:var(--nhv-abg-accent);
+  box-shadow:0 13px 30px rgb(var(--nhv-abg-accent-rgb)/.17);
+}
+.nhv-abg-icon svg{width:34px;height:34px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nhv-abg-eyebrow{display:block;margin-bottom:8px;color:var(--nhv-abg-accent);font-size:11px;font-weight:950;letter-spacing:.13em}
+.nhv-abg-card h2{margin:0;color:var(--nhv-page-text,#f7f7ff);font-size:clamp(23px,4vw,34px);font-weight:950;line-height:1.42}
+.nhv-abg-message{max-width:570px;margin:14px auto 0;color:var(--nhv-page-muted,#b9b8c7);font-size:clamp(13px,2vw,15px);line-height:1.95}
+.nhv-abg-advice{
+  display:flex;
+  align-items:center;
+  gap:13px;
+  margin:20px 0 0;
+  padding:14px 16px;
+  border:1px solid var(--nhv-page-border,rgba(255,255,255,.10));
+  border-radius:17px;
+  background:var(--nhv-subtle-bg,rgba(255,255,255,.055));
+  text-align:start;
+}
+.nhv-abg-advice p{margin:0;color:var(--nhv-page-text,#f7f7ff);font-size:12px;font-weight:750;line-height:1.75}
+.nhv-abg-chrome{
+  position:relative;
+  flex:0 0 34px;
+  width:34px;
+  height:34px;
+  border-radius:50%;
+  background:conic-gradient(#e94235 0 33%,#fabb05 0 66%,#34a853 0);
+  box-shadow:0 5px 14px rgba(0,0,0,.16);
+}
+.nhv-abg-chrome:before{content:"";position:absolute;inset:9px;border:3px solid #fff;border-radius:50%;background:#4285f4}
+.nhv-abg-status{min-height:22px;margin:14px 0 0;color:var(--nhv-page-muted,#b9b8c7);font-size:12px;font-weight:800;line-height:1.7}
+.nhv-abg-status.is-blocked{color:#e9a2a2}.nhv-abg-status.is-checking{color:var(--nhv-abg-accent)}.nhv-abg-status.is-success{color:#43bd7d}
+.nhv-abg-actions{display:flex;justify-content:center;gap:9px;flex-wrap:wrap;margin-top:16px}
+.nhv-abg-actions button,
+.nhv-abg-actions a,
+.nhv-abg-close{
+  appearance:none;
+  border:0;
+  font:inherit;
+  cursor:pointer;
+}
+.nhv-abg-recheck,
+.nhv-abg-store,
+.nhv-abg-dismiss{
+  min-width:150px;
+  min-height:46px;
+  padding:10px 19px;
+  border-radius:14px!important;
+  font-size:13px!important;
+  font-weight:900!important;
+  transition:transform .16s ease,opacity .16s ease,box-shadow .16s ease;
+  text-align:center;
+  text-decoration:none!important;
+}
+.nhv-abg-recheck{background:var(--nhv-abg-accent)!important;color:#fff!important;box-shadow:0 10px 24px rgb(var(--nhv-abg-accent-rgb)/.26)}
+.nhv-abg-recheck:hover{transform:translateY(-1px);box-shadow:0 14px 30px rgb(var(--nhv-abg-accent-rgb)/.32)}
+.nhv-abg-recheck:disabled{cursor:wait;opacity:.68}
+.nhv-abg-recheck.is-loading:before{content:"";display:inline-block;width:12px;height:12px;margin-inline-end:7px;border:2px solid rgba(255,255,255,.45);border-top-color:#fff;border-radius:50%;vertical-align:-2px;animation:nhv-abg-spin .75s linear infinite}
+.nhv-abg-store{display:inline-flex;align-items:center;justify-content:center;border:1px solid rgb(var(--nhv-abg-accent-rgb)/.42)!important;background:rgb(var(--nhv-abg-accent-rgb)/.11)!important;color:var(--nhv-abg-accent)!important}
+.nhv-abg-store:before{content:"♛";margin-inline-end:7px;font-size:16px;line-height:1}
+.nhv-abg-store:hover{transform:translateY(-1px);background:rgb(var(--nhv-abg-accent-rgb)/.17)!important;box-shadow:0 10px 24px rgb(var(--nhv-abg-accent-rgb)/.16)}
+.nhv-abg-store[hidden]{display:none!important}
+.nhv-abg-dismiss{border:1px solid var(--nhv-page-border,rgba(255,255,255,.12))!important;background:var(--nhv-subtle-bg,rgba(255,255,255,.055))!important;color:var(--nhv-page-text,#f7f7ff)!important}
+.nhv-abg-mode-warning .nhv-abg-dismiss{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  flex-basis:100%;
+  max-width:330px;
+  border-color:rgb(var(--nhv-abg-accent-rgb)/.32)!important;
+  background:rgb(var(--nhv-abg-accent-rgb)/.08)!important;
+}
+.nhv-abg-mode-warning .nhv-abg-dismiss:before{content:"✓";display:inline-grid;place-items:center;width:20px;height:20px;margin-inline-end:8px;border-radius:7px;background:rgb(var(--nhv-abg-accent-rgb)/.16);color:var(--nhv-abg-accent);font-size:12px;font-weight:950}
+.nhv-abg-mode-warning .nhv-abg-dismiss:hover{transform:translateY(-1px);background:rgb(var(--nhv-abg-accent-rgb)/.14)!important;box-shadow:0 10px 24px rgb(var(--nhv-abg-accent-rgb)/.13)}
+.nhv-abg-close{
+  position:absolute;
+  top:13px;
+  inset-inline-end:13px;
+  display:grid;
+  place-items:center;
+  width:35px;
+  height:35px;
+  border:1px solid var(--nhv-page-border,rgba(255,255,255,.12));
+  border-radius:12px;
+  background:var(--nhv-subtle-bg,rgba(255,255,255,.055));
+  color:var(--nhv-page-text,#f7f7ff);
+  font-size:24px;
+  line-height:1;
+}
+.nhv-abg-mode-strict .nhv-abg-close,
+.nhv-abg-mode-strict .nhv-abg-dismiss{display:none!important}
+@keyframes nhv-abg-spin{to{transform:rotate(360deg)}}
+
+html[data-nhv-color-scheme="light"] .nhv-abg-backdrop{background:rgba(31,27,39,.55)}
+html[data-nhv-color-scheme="light"] .nhv-abg-card{background:radial-gradient(circle at 92% 0%,rgb(var(--nhv-abg-accent-rgb)/.13),transparent 34%),var(--nhv-card-bg,var(--nhv-surface,#fff));color:var(--nhv-page-text,#272231)}
+html[data-nhv-color-scheme="light"] .nhv-abg-status.is-blocked{color:#9e3535}
+
+@media (max-width:600px){
+  .nhv-abg-overlay{align-items:center;padding:12px}
+  .nhv-abg-backdrop{-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px)}
+  .nhv-abg-card{width:100%;max-height:calc(100dvh - 24px);padding:25px 17px 20px;border-radius:22px}
+  .nhv-abg-icon{width:56px;height:56px;border-radius:18px}.nhv-abg-icon svg{width:29px;height:29px}
+  .nhv-abg-message{font-size:13px;line-height:1.85}
+  .nhv-abg-advice{align-items:flex-start;padding:12px}.nhv-abg-advice p{font-size:11px}
+  .nhv-abg-actions{display:grid;grid-template-columns:1fr;width:100%}
+  .nhv-abg-recheck,.nhv-abg-store,.nhv-abg-dismiss{width:100%;min-width:0}
+}
+
+@media (prefers-reduced-motion:reduce){.nhv-abg-overlay,.nhv-abg-recheck{transition:none!important}.nhv-abg-recheck.is-loading:before{animation-duration:1.4s}}
+</style><script data-cfasync="false" id="nhv-abg-runtime">
+window.NHVAdblockGuard={"mode":"warning","delay":1600,"galaksionEnabled":true,"galaksionStrict":true,"lifecycleRecheck":true,"debug":true,"zoneIds":["110690","121712","130660","92869"],"baitUrl":"https:\/\/cenele.com\/wp-content\/plugins\/ad blocker\/assets\/ads\/advertisement.js","controlUrl":"https:\/\/cenele.com\/wp-includes\/images\/blank.gif","title":"\u0645\u0627\u0646\u0639 \u0627\u0644\u0625\u0639\u0644\u0627\u0646\u0627\u062a \u064a\u0645\u0646\u0639 \u0627\u0633\u062a\u0645\u0631\u0627\u0631 \u0627\u0644\u0645\u0648\u0642\u0639","message":"\u0639\u0637\u0651\u0644 \u0645\u0627\u0646\u0639 \u0627\u0644\u0625\u0639\u0644\u0627\u0646\u0627\u062a \u0648\u0623\u064a Private DNS \u0623\u0648 DNS \u064a\u062d\u062c\u0628 \u0627\u0644\u0625\u0639\u0644\u0627\u0646\u0627\u062a\u060c \u062b\u0645 \u0627\u0636\u063a\u0637 \u00ab\u0623\u0639\u062f \u0627\u0644\u0641\u062d\u0635\u00bb. \u0627\u0644\u0625\u0639\u0644\u0627\u0646\u0627\u062a \u062a\u0633\u0627\u0639\u062f\u0646\u0627 \u0639\u0644\u0649 \u062a\u063a\u0637\u064a\u0629 \u062a\u0643\u0627\u0644\u064a\u0641 \u0627\u0644\u062e\u0648\u0627\u062f\u0645 \u0648\u0627\u0633\u062a\u0645\u0631\u0627\u0631 \u062a\u0648\u0641\u064a\u0631 \u0627\u0644\u0641\u0635\u0648\u0644.","advice":"\u0644\u062a\u062c\u0631\u0628\u0629 \u0623\u0641\u0636\u0644 \u062f\u0648\u0646 \u0645\u0634\u0627\u0643\u0644 \u0623\u0648 \u0625\u0632\u0639\u0627\u062c \u0645\u0646 \u0625\u0636\u0627\u0641\u0627\u062a \u0627\u0644\u062d\u062c\u0628\u060c \u0627\u0633\u062a\u0639\u0645\u0644 \u0645\u062a\u0635\u0641\u062d Google Chrome \u0627\u0644\u0639\u0627\u062f\u064a \u062f\u0648\u0646 \u0625\u0636\u0627\u0641\u0627\u062a AdBlock \u0623\u0648 \u0645\u0627\u0646\u0639 \u0625\u0639\u0644\u0627\u0646\u0627\u062a.","recheckLabel":"\u0623\u0639\u062f \u0627\u0644\u0641\u062d\u0635","closeLabel":"\u0625\u063a\u0644\u0627\u0642 \u0627\u0644\u062a\u0646\u0628\u064a\u0647 \u0648\u0625\u0643\u0645\u0627\u0644 \u0627\u0644\u062a\u0635\u0641\u062d","storeEnabled":true,"storeLabel":"\u0639\u0636\u0648\u064a\u0629 \u0628\u062f\u0648\u0646 \u0625\u0639\u0644\u0627\u0646\u0627\u062a","storeUrl":"https:\/\/cenele.com\/store\/?nhv_store=vip","forceBlocked":false};(function () {
+  'use strict';
+
+  var cfg = window.NHVAdblockGuard || null;
+  if (!cfg) return;
+
+  var zoneIds = (cfg.zoneIds || []).map(function (value) { return String(value || '').trim(); }).filter(function (value) {
+    return /^\d{3,20}$/.test(value);
+  });
+  var zoneStates = Object.create(null);
+  var knownSources = Object.create(null);
+  var cspZones = Object.create(null);
+  var usesWeakSet = typeof WeakSet === 'function';
+  var watchedScripts = usesWeakSet ? new WeakSet() : [];
+  var mutationObserver = null;
+  var overlay = null;
+  var warningDismissed = false;
+  var detectionRunning = null;
+  var lifecycleRunning = false;
+  var startedAt = Date.now();
+  var lastLifecycleCheck = 0;
+
+  function debug(label, value) {
+    if (!cfg.debug || !window.console || typeof window.console.info !== 'function') return;
+    window.console.info('[NHV Guard] ' + label, value);
+  }
+
+  function token() {
+    try {
+      var bytes = new Uint32Array(2);
+      window.crypto.getRandomValues(bytes);
+      return bytes[0].toString(36) + bytes[1].toString(36);
+    } catch (ignore) {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2);
+    }
+  }
+
+  function wait(ms) {
+    return new Promise(function (resolve) { window.setTimeout(resolve, ms); });
+  }
+
+  function withNonce(value, name) {
+    try {
+      var url = new URL(String(value || ''), window.location.href);
+      url.searchParams.set(name || 'nhv_guard', token());
+      return url.href;
+    } catch (ignore) {
+      return '';
+    }
+  }
+
+  function zoneFromSource(source) {
+    if (!cfg.galaksionEnabled || !source || !zoneIds.length) return '';
+    var candidate = '';
+    try {
+      var url = new URL(String(source), window.location.href);
+      candidate = url.pathname + url.search;
+    } catch (ignore) {
+      candidate = String(source);
+    }
+    for (var i = 0; i < zoneIds.length; i++) {
+      var id = zoneIds[i];
+      if (new RegExp('(^|[^0-9])' + id + '([^0-9]|$)').test(candidate)) return id;
+    }
+    return '';
+  }
+
+  function stateFor(zone) {
+    if (!zoneStates[zone]) zoneStates[zone] = { seen: false, loaded: false, failed: false, source: '' };
+    return zoneStates[zone];
+  }
+
+  function wasWatched(node) {
+    if (usesWeakSet) {
+      if (watchedScripts.has(node)) return true;
+      watchedScripts.add(node);
+      return false;
+    }
+    if (watchedScripts.indexOf(node) !== -1) return true;
+    watchedScripts.push(node);
+    return false;
+  }
+
+  function recordScript(node) {
+    if (!node || node.nodeType !== 1 || String(node.tagName || '').toLowerCase() !== 'script') return;
+    var source = node.src || node.getAttribute('src') || '';
+    var zone = zoneFromSource(source);
+    if (!zone) return;
+    var state = stateFor(zone);
+    state.seen = true;
+    state.source = source;
+    knownSources[zone] = source;
+    if (wasWatched(node)) return;
+    node.addEventListener('load', function () {
+      state.loaded = true;
+      state.failed = false;
+    }, { once: true });
+    node.addEventListener('error', function () {
+      if (!cspZones[zone]) state.failed = true;
+    }, { once: true });
+  }
+
+  function scanScripts(root) {
+    if (!root) return;
+    recordScript(root);
+    if (root.querySelectorAll) Array.prototype.forEach.call(root.querySelectorAll('script[src]'), recordScript);
+  }
+
+  function captureResourceEvent(event, failed) {
+    var target = event && event.target;
+    if (!target || String(target.tagName || '').toLowerCase() !== 'script') return;
+    var source = target.src || target.getAttribute('src') || '';
+    var zone = zoneFromSource(source);
+    if (!zone) return;
+    var state = stateFor(zone);
+    state.seen = true;
+    state.source = source;
+    knownSources[zone] = source;
+    if (failed) {
+      if (!cspZones[zone]) state.failed = true;
+    } else {
+      state.loaded = true;
+      state.failed = false;
+    }
+  }
+
+  document.addEventListener('load', function (event) { captureResourceEvent(event, false); }, true);
+  document.addEventListener('error', function (event) { captureResourceEvent(event, true); }, true);
+  document.addEventListener('securitypolicyviolation', function (event) {
+    var zone = zoneFromSource(event && event.blockedURI ? event.blockedURI : '');
+    if (zone) cspZones[zone] = true;
+  }, true);
+
+  if (window.MutationObserver && document.documentElement) {
+    mutationObserver = new MutationObserver(function (records) {
+      records.forEach(function (record) {
+        Array.prototype.forEach.call(record.addedNodes || [], scanScripts);
+      });
+    });
+    mutationObserver.observe(document.documentElement, { childList: true, subtree: true });
+  }
+  scanScripts(document);
+
+  function loadControl() {
+    return new Promise(function (resolve) {
+      if (!cfg.controlUrl) { resolve(true); return; }
+      var image = new Image();
+      var finished = false;
+      var timer = window.setTimeout(function () { finish(false); }, 2600);
+      function finish(ok) {
+        if (finished) return;
+        finished = true;
+        window.clearTimeout(timer);
+        image.onload = image.onerror = null;
+        resolve(!!ok);
+      }
+      image.onload = function () { finish(true); };
+      image.onerror = function () { finish(false); };
+      image.src = withNonce(cfg.controlUrl, 'nhv_guard_control');
+    });
+  }
+
+  function loadLocalBait() {
+    return new Promise(function (resolve) {
+      if (!cfg.baitUrl) { resolve(false); return; }
+      var before = Number(window.__NHV_ADVERTISEMENT_BAIT_COUNT__ || 0);
+      var script = document.createElement('script');
+      var finished = false;
+      var timer = window.setTimeout(function () { finish(false); }, 2800);
+      function finish(ok) {
+        if (finished) return;
+        finished = true;
+        window.clearTimeout(timer);
+        if (script.parentNode) script.parentNode.removeChild(script);
+        resolve(!!ok);
+      }
+      script.async = true;
+      script.setAttribute('data-cfasync', 'false');
+      script.src = withNonce(cfg.baitUrl, 'nhv_guard_bait');
+      script.onload = function () {
+        finish(Number(window.__NHV_ADVERTISEMENT_BAIT_COUNT__ || 0) > before);
+      };
+      script.onerror = function () { finish(false); };
+      (document.head || document.documentElement).appendChild(script);
+    });
+  }
+
+  function createCosmeticBaits() {
+    if (!document.body) return [];
+    var nonce = token();
+    var definitions = [
+      { id: 'adsbox-' + nonce, classes: 'adsbox' },
+      { id: 'ad-banner-' + nonce, classes: 'ad-banner ad-placement' },
+      { id: 'pub-' + nonce, classes: 'pub_300x250 text-ad' }
+    ];
+    return definitions.map(function (definition, index) {
+      var node = document.createElement('div');
+      node.id = definition.id;
+      node.className = definition.classes;
+      node.setAttribute('aria-hidden', 'true');
+      node.setAttribute('data-ad-slot', 'probe-' + index);
+      node.style.cssText = 'position:fixed!important;left:-10000px!important;top:-10000px!important;width:' + (4 + index) + 'px!important;height:' + (4 + index) + 'px!important;min-width:' + (4 + index) + 'px!important;min-height:' + (4 + index) + 'px!important;pointer-events:none!important;overflow:hidden!important;';
+      document.body.appendChild(node);
+      return node;
+    });
+  }
+
+  function cosmeticBlocked(nodes) {
+    var hidden = 0;
+    (nodes || []).forEach(function (node) {
+      if (!node || !node.isConnected) { hidden++; return; }
+      try {
+        var style = window.getComputedStyle(node);
+        if (style.display === 'none' || style.visibility === 'hidden' || parseFloat(style.opacity || '1') === 0 || node.offsetWidth < 2 || node.offsetHeight < 2) hidden++;
+      } catch (ignore) {
+        hidden++;
+      }
+    });
+    return { blocked: hidden >= 2, hidden: hidden, tested: (nodes || []).length };
+  }
+
+  function removeCosmeticBaits(nodes) {
+    (nodes || []).forEach(function (node) {
+      if (node && node.parentNode) node.parentNode.removeChild(node);
+    });
+  }
+
+  function zoneSummary() {
+    var summary = { seen: 0, loaded: 0, failed: 0, sources: 0 };
+    Object.keys(zoneStates).forEach(function (zone) {
+      var state = zoneStates[zone];
+      if (state.seen) summary.seen++;
+      if (state.loaded) summary.loaded++;
+      if (state.failed && !state.loaded && !cspZones[zone]) summary.failed++;
+      if (knownSources[zone] && !cspZones[zone]) summary.sources++;
+    });
+    return summary;
+  }
+
+  function probeSource(source, zone) {
+    if (!window.fetch || !source) return Promise.resolve({ ok: false, ignored: true, zone: zone });
+    var controller = window.AbortController ? new AbortController() : null;
+    var timer = controller ? window.setTimeout(function () { controller.abort(); }, 3500) : 0;
+    return window.fetch(withNonce(source, 'nhv_guard_zone'), {
+      method: 'GET',
+      mode: 'no-cors',
+      cache: 'no-store',
+      credentials: 'omit',
+      redirect: 'follow',
+      referrerPolicy: 'no-referrer',
+      signal: controller ? controller.signal : undefined
+    }).then(function () {
+      if (timer) window.clearTimeout(timer);
+      return { ok: true, ignored: false, zone: zone };
+    }).catch(function () {
+      if (timer) window.clearTimeout(timer);
+      return { ok: false, ignored: !!cspZones[zone], zone: zone };
+    });
+  }
+
+  function probeKnownSources(force) {
+    var empty = { confirmed: false, tested: 0, failed: 0, ignored: 0 };
+    if (!cfg.galaksionEnabled || !force || !window.fetch) return Promise.resolve(empty);
+    var entries = Object.keys(knownSources).filter(function (zone) {
+      return knownSources[zone] && !cspZones[zone];
+    }).slice(0, 3);
+    if (entries.length < 2) return Promise.resolve(empty);
+    return Promise.all(entries.map(function (zone) { return probeSource(knownSources[zone], zone); })).then(function (results) {
+      var usable = results.filter(function (result) { return !result.ignored; });
+      var failed = usable.filter(function (result) { return !result.ok; }).length;
+      return {
+        confirmed: usable.length >= 2 && failed === usable.length,
+        tested: usable.length,
+        failed: failed,
+        ignored: results.length - usable.length
+      };
+    });
+  }
+
+  function collectSignals(options) {
+    options = options || {};
+    var baits = createCosmeticBaits();
+    return Promise.all([loadControl(), loadLocalBait(), wait(160)]).then(function (values) {
+      var control = !!values[0];
+      var baitLoaded = !!values[1];
+      var cosmetic = cosmeticBlocked(baits);
+      removeCosmeticBaits(baits);
+      var zones = zoneSummary();
+      var shouldProbe = !!options.forceProvider || zones.failed >= 2;
+      return probeKnownSources(shouldProbe).then(function (provider) {
+        var online = navigator.onLine !== false;
+        var result = {
+          control: control,
+          online: online,
+          localScript: control && online && !baitLoaded,
+          cosmetic: cosmetic.blocked,
+          cosmeticHidden: cosmetic.hidden,
+          zones: zones,
+          provider: provider
+        };
+        debug('signals', result);
+        return result;
+      });
+    }).catch(function (error) {
+      removeCosmeticBaits(baits);
+      throw error;
+    });
+  }
+
+  function isSuspicious(result) {
+    if (!result) return false;
+    return !!result.localScript || !!result.cosmetic || (!!cfg.galaksionStrict && !!result.provider.confirmed);
+  }
+
+  function confirmBlocked(first, forceProvider) {
+    if (!isSuspicious(first)) return Promise.resolve({ blocked: false, reason: [], first: first, second: null });
+    return wait(560).then(function () {
+      return collectSignals({ forceProvider: !!forceProvider || !!first.provider.confirmed || first.zones.failed >= 2 });
+    }).then(function (second) {
+      var reasons = [];
+      if (first.localScript && second.localScript) reasons.push('local-bait');
+      if (first.cosmetic && second.cosmetic) reasons.push('cosmetic-bait');
+      if (cfg.galaksionStrict && first.provider.confirmed && second.provider.confirmed) reasons.push('galaksion-network');
+      var verdict = { blocked: reasons.length > 0, reason: reasons, first: first, second: second };
+      window.NHVAdblockGuardDebug = verdict;
+      debug('verdict', verdict);
+      return verdict;
+    });
+  }
+
+  function runDetection(forceProvider) {
+    if (detectionRunning) return detectionRunning;
+    detectionRunning = collectSignals({ forceProvider: !!forceProvider }).then(function (first) {
+      return confirmBlocked(first, !!forceProvider);
+    }).then(function (verdict) {
+      detectionRunning = null;
+      return verdict;
+    }).catch(function (error) {
+      detectionRunning = null;
+      debug('error', error);
+      throw error;
+    });
+    return detectionRunning;
+  }
+
+  function buildOverlay() {
+    if (overlay || !document.body) return overlay;
+    overlay = document.createElement('div');
+    overlay.className = 'nhv-abg-overlay nhv-abg-mode-' + (cfg.mode === 'warning' ? 'warning' : 'strict');
+    overlay.hidden = true;
+    overlay.setAttribute('dir', 'rtl');
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'nhv-abg-title');
+    overlay.innerHTML = '<div class="nhv-abg-backdrop" aria-hidden="true"></div><section class="nhv-abg-card"><button class="nhv-abg-close" type="button" aria-label="إغلاق">×</button><div class="nhv-abg-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.2 8.3-8 10-4.8-1.7-8-5-8-10V6z"/><path d="m9 9 6 6M15 9l-6 6"/></svg></div><span class="nhv-abg-eyebrow">ADBLOCK GUARD</span><h2 id="nhv-abg-title"></h2><p class="nhv-abg-message"></p><div class="nhv-abg-advice"><span class="nhv-abg-chrome" aria-hidden="true"></span><p></p></div><p class="nhv-abg-status" role="status" aria-live="polite"></p><div class="nhv-abg-actions"><button class="nhv-abg-recheck" type="button"></button><a class="nhv-abg-store" rel="noopener"></a><button class="nhv-abg-dismiss" type="button"></button></div></section>';
+    overlay.querySelector('#nhv-abg-title').textContent = cfg.title || 'مانع الإعلانات يمنع استمرار الموقع';
+    overlay.querySelector('.nhv-abg-message').textContent = cfg.message || '';
+    overlay.querySelector('.nhv-abg-advice p').textContent = cfg.advice || '';
+    overlay.querySelector('.nhv-abg-recheck').textContent = cfg.recheckLabel || 'أعد الفحص';
+    overlay.querySelector('.nhv-abg-dismiss').textContent = cfg.closeLabel || 'إغلاق التنبيه وإكمال التصفح';
+    var storeButton = overlay.querySelector('.nhv-abg-store');
+    if (cfg.storeEnabled && cfg.storeUrl) {
+      storeButton.href = cfg.storeUrl;
+      storeButton.textContent = cfg.storeLabel || 'عضوية بدون إعلانات';
+    } else {
+      storeButton.hidden = true;
+    }
+    document.body.appendChild(overlay);
+    overlay.querySelector('.nhv-abg-recheck').addEventListener('click', recheck);
+    overlay.querySelector('.nhv-abg-dismiss').addEventListener('click', dismissWarning);
+    overlay.querySelector('.nhv-abg-close').addEventListener('click', dismissWarning);
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && cfg.mode === 'warning' && overlay && !overlay.hidden) dismissWarning();
+    });
+    return overlay;
+  }
+
+  function setStatus(text, type) {
+    var box = buildOverlay();
+    if (!box) return;
+    var status = box.querySelector('.nhv-abg-status');
+    status.textContent = text || '';
+    status.className = 'nhv-abg-status' + (type ? ' is-' + type : '');
+  }
+
+  function showOverlay() {
+    if (warningDismissed) return;
+    var box = buildOverlay();
+    if (!box) return;
+    box.hidden = false;
+    window.requestAnimationFrame(function () { box.classList.add('is-visible'); });
+    document.documentElement.classList.add('nhv-abg-is-open');
+    document.body.classList.add('nhv-abg-is-open');
+    setStatus('عطّل مانع الإعلانات أو DNS ثم اضغط «' + (cfg.recheckLabel || 'أعد الفحص') + '».', 'blocked');
+    window.setTimeout(function () {
+      var button = box.querySelector('.nhv-abg-recheck');
+      if (button) button.focus();
+    }, 120);
+  }
+
+  function hideOverlay() {
+    if (!overlay) return;
+    overlay.classList.remove('is-visible');
+    document.documentElement.classList.remove('nhv-abg-is-open');
+    document.body.classList.remove('nhv-abg-is-open');
+    window.setTimeout(function () {
+      if (overlay && !overlay.classList.contains('is-visible')) overlay.hidden = true;
+    }, 220);
+  }
+
+  function dismissWarning() {
+    if (cfg.mode !== 'warning') return;
+    warningDismissed = true;
+    hideOverlay();
+  }
+
+  function recheck() {
+    var box = buildOverlay();
+    var button = box.querySelector('.nhv-abg-recheck');
+    if (cfg.forceBlocked) {
+      setStatus('هذه معاينة إدارية للنافذة.', 'checking');
+      return;
+    }
+    button.disabled = true;
+    button.classList.add('is-loading');
+    setStatus('جارٍ إعادة فحص مستقلة…', 'checking');
+    runDetection(true).then(function (verdict) {
+      button.disabled = false;
+      button.classList.remove('is-loading');
+      if (verdict.blocked) {
+        setStatus('ما زالت دلائل حجب الإعلانات موجودة.', 'blocked');
+      } else {
+        setStatus('نجح الفحص. شكرًا لدعم استمرار الموقع.', 'success');
+        window.setTimeout(hideOverlay, 650);
+      }
+    }).catch(function () {
+      button.disabled = false;
+      button.classList.remove('is-loading');
+      setStatus('تعذر التأكد من النتيجة، لن نمنع التصفح بسبب خطأ الشبكة.', 'success');
+      window.setTimeout(hideOverlay, 900);
+    });
+  }
+
+  function checkAndShow(forceProvider) {
+    return runDetection(!!forceProvider).then(function (verdict) {
+      if (verdict.blocked) showOverlay();
+      return verdict;
+    }).catch(function () { return { blocked: false, reason: ['unknown'] }; });
+  }
+
+  function lifecycleCheck() {
+    var now = Date.now();
+    if (!cfg.lifecycleRecheck || cfg.forceBlocked || warningDismissed || document.hidden || lifecycleRunning || now - startedAt < 10000 || now - lastLifecycleCheck < 60000) return;
+    lifecycleRunning = true;
+    lastLifecycleCheck = now;
+    wait(160).then(function () { return checkAndShow(false); }).then(function () {
+      lifecycleRunning = false;
+    }).catch(function () {
+      lifecycleRunning = false;
+    });
+  }
+
+  function initialCheck() {
+    if (cfg.forceBlocked) { showOverlay(); return; }
+    wait(Math.max(700, parseInt(cfg.delay, 10) || 1600)).then(function () {
+      return checkAndShow(false);
+    });
+    window.setTimeout(function () {
+      if (warningDismissed || (overlay && !overlay.hidden)) return;
+      // A second page-load check is needed only for strict Galaksion/DNS
+      // evidence because those asynchronous tags may arrive late. The normal
+      // local detector has already completed and should not repeat requests.
+      var zones = zoneSummary();
+      if (cfg.galaksionStrict && zones.seen >= 2) checkAndShow(false);
+      if (mutationObserver) { mutationObserver.disconnect(); mutationObserver = null; }
+    }, 7000);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialCheck, { once: true });
+  else initialCheck();
+  window.addEventListener('pageshow', function (event) { if (event.persisted) lifecycleCheck(); });
+  window.addEventListener('focus', lifecycleCheck, { passive: true });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) lifecycleCheck(); }, { passive: true });
+})();
+</script>
+<link rel="alternate" type="application/rss+xml" title="فضاء الروايات &laquo; الخلود الملعون خلاصة التعليقات" href="https://cenele.com/cont/cursed-imm/feed/" />
+<style id="wp-img-auto-sizes-contain-inline-css">
+img:is([sizes=auto i],[sizes^="auto," i]){contain-intrinsic-size:3000px 1500px}
+/*# sourceURL=wp-img-auto-sizes-contain-inline-css */
+</style>
+<style id="wp-block-library-inline-css">
+:root{--wp-block-synced-color:#7a00df;--wp-block-synced-color--rgb:122,0,223;--wp-bound-block-color:var(--wp-block-synced-color);--wp-editor-canvas-background:#ddd;--wp-admin-theme-color:#007cba;--wp-admin-theme-color--rgb:0,124,186;--wp-admin-theme-color-darker-10:#006ba1;--wp-admin-theme-color-darker-10--rgb:0,107,160.5;--wp-admin-theme-color-darker-20:#005a87;--wp-admin-theme-color-darker-20--rgb:0,90,135;--wp-admin-border-width-focus:2px}@media (min-resolution:192dpi){:root{--wp-admin-border-width-focus:1.5px}}.wp-element-button{cursor:pointer}:root .has-very-light-gray-background-color{background-color:#eee}:root .has-very-dark-gray-background-color{background-color:#313131}:root .has-very-light-gray-color{color:#eee}:root .has-very-dark-gray-color{color:#313131}:root .has-vivid-green-cyan-to-vivid-cyan-blue-gradient-background{background:linear-gradient(135deg,#00d084,#0693e3)}:root .has-purple-crush-gradient-background{background:linear-gradient(135deg,#34e2e4,#4721fb 50%,#ab1dfe)}:root .has-hazy-dawn-gradient-background{background:linear-gradient(135deg,#faaca8,#dad0ec)}:root .has-subdued-olive-gradient-background{background:linear-gradient(135deg,#fafae1,#67a671)}:root .has-atomic-cream-gradient-background{background:linear-gradient(135deg,#fdd79a,#004a59)}:root .has-nightshade-gradient-background{background:linear-gradient(135deg,#330968,#31cdcf)}:root .has-midnight-gradient-background{background:linear-gradient(135deg,#020381,#2874fc)}:root{--wp--preset--font-size--normal:16px;--wp--preset--font-size--huge:42px}.has-regular-font-size{font-size:1em}.has-larger-font-size{font-size:2.625em}.has-normal-font-size{font-size:var(--wp--preset--font-size--normal)}.has-huge-font-size{font-size:var(--wp--preset--font-size--huge)}:root .has-text-align-center{text-align:center}:root .has-text-align-left{text-align:left}:root .has-text-align-right{text-align:right}.has-fit-text{white-space:nowrap!important}#end-resizable-editor-section{display:none}.aligncenter{clear:both}.items-justified-left{justify-content:flex-start}.items-justified-center{justify-content:center}.items-justified-right{justify-content:flex-end}.items-justified-space-between{justify-content:space-between}.screen-reader-text{word-wrap:normal!important;border:0;clip-path:inset(50%);height:1px;margin:-1px;overflow:hidden;padding:0;position:absolute;width:1px;word-break:normal!important}.screen-reader-text:focus{background-color:#ddd;clip-path:none;color:#444;display:block;font-size:1em;height:auto;left:5px;line-height:normal;padding:15px 23px 14px;text-decoration:none;top:5px;width:auto;z-index:100000}html :where(.has-border-color){border-style:solid}html :where([style^=border-color],[style*=";border-color"],[style*="; border-color"]){border-style:solid}html :where([style^=border-top-color],[style*=";border-top-color"],[style*="; border-top-color"]){border-top-style:solid}html :where([style^=border-right-color],[style*=";border-right-color"],[style*="; border-right-color"]){border-right-style:solid}html :where([style^=border-bottom-color],[style*=";border-bottom-color"],[style*="; border-bottom-color"]){border-bottom-style:solid}html :where([style^=border-left-color],[style*=";border-left-color"],[style*="; border-left-color"]){border-left-style:solid}html :where([style^=border-width],[style*=";border-width"],[style*="; border-width"]){border-style:solid}html :where([style^=border-top-width],[style*=";border-top-width"],[style*="; border-top-width"]){border-top-style:solid}html :where([style^=border-right-width],[style*=";border-right-width"],[style*="; border-right-width"]){border-right-style:solid}html :where([style^=border-bottom-width],[style*=";border-bottom-width"],[style*="; border-bottom-width"]){border-bottom-style:solid}html :where([style^=border-left-width],[style*=";border-left-width"],[style*="; border-left-width"]){border-left-style:solid}html :where(img[class*=wp-image-]){height:auto;max-width:100%}:where(figure){margin:0 0 1em}html :where(.is-position-sticky){--wp-admin--admin-bar--position-offset:var(--wp-admin--admin-bar--height,0px)}@media screen and (max-width:600px){html :where(.is-position-sticky){--wp-admin--admin-bar--position-offset:0px}}
+
+/*# sourceURL=/wp-includes/css/dist/block-library/common.min.css */
+</style>
+<style id="classic-theme-styles-inline-css">
+/*! This file is auto-generated */
+.wp-block-button__link{color:#fff;background-color:#32373c;border-radius:9999px;box-shadow:none;text-decoration:none;padding:calc(.667em + 2px) calc(1.333em + 2px);font-size:1.125em}.wp-block-file__button{background:#32373c;color:#fff;text-decoration:none}
+/*# sourceURL=/wp-includes/css/classic-themes.min.css */
+</style>
+
+
+<link rel="preload" as="style" href="https://cenele.com/wp-content/plugins/madara-shortcodes/shortcodes/css/shortcodes.css?ver=7.1" onload="this.onload=null;this.rel='stylesheet'" media="all">
+<noscript><link rel="stylesheet" href="https://cenele.com/wp-content/plugins/madara-shortcodes/shortcodes/css/shortcodes.css?ver=7.1" media="all"></noscript><link rel='stylesheet' id='nhv-xpl-front-css' href='https://cenele.com/wp-content/plugins/xp%20levels/assets/css/nhv-xpl-front.css?ver=0.4.2-local' media='all' />
+<link rel='stylesheet' id='rspc-front-css' href='https://cenele.com/wp-content/plugins/comments-rsp/assets/front.css?ver=0.8.4' media='all' />
+<link rel='stylesheet' id='nhv-gems-boost-css' href='https://cenele.com/wp-content/plugins/spur%20plugin/assets/gems.css?ver=1786074970' media='all' />
+<link rel='stylesheet' id='bootstrap-css' href='https://cenele.com/wp-content/themes/madara/css/bootstrap.min.css?ver=4.3.1' media='all' />
+<link rel="preload" as="style" href="https://cenele.com/wp-content/themes/madara/js/slick/slick.css?ver=1.9.0" onload="this.onload=null;this.rel='stylesheet'" media="all">
+<noscript><link rel="stylesheet" href="https://cenele.com/wp-content/themes/madara/js/slick/slick.css?ver=1.9.0" media="all"></noscript><link rel="preload" as="style" href="https://cenele.com/wp-content/themes/madara/js/slick/slick-theme.css?ver=7.1" onload="this.onload=null;this.rel='stylesheet'" media="all">
+<noscript><link rel="stylesheet" href="https://cenele.com/wp-content/themes/madara/js/slick/slick-theme.css?ver=7.1" media="all"></noscript><link rel='stylesheet' id='madara-css-css' href='https://cenele.com/wp-content/themes/madara/style.css?ver=2.2.7.1' media='all' />
+<style id="madara-css-inline-css">
+:root{ --madara-main-color: #eb3349; }
+			#pageloader.spinners{
+				position:fixed;
+				top:0;
+				left:0;
+				width:100%;
+				height:100%;
+				z-index:99999;
+				background:#222
+			}
+		
+			p.madara-unyson{
+				color: #FF0000;
+			}
+		
+			.table.table-hover.list-bookmark tr:last-child td{
+				text-align: center;
+			}
+		#adminmenu .wp-submenu li.current { display: none !important;}.show_tgmpa_version{ float: right; padding: 0em 1.5em 0.5em 0; }.tgmpa > h2{ font-size: 23px; font-weight: 400; line-height: 29px; margin: 0; padding: 9px 15px 4px 0;}.update-php{ width: 100%; height: 98%; min-height: 850px; padding-top: 1px; }.c-blog-post .entry-content .entry-content_wrap .read-container img.alignleft { margin: 10px 30px 10px 0 !important; } .c-blog-post .entry-content .entry-content_wrap .read-container img.alignright { margin: 10px 0px 10px 30px !important; } .read-container i.fas.fa-spinner.fa-spin{ font-size: 31px; color: #888; }.c-blog-post .entry-content .entry-content_wrap .read-container img{ cursor : pointer; }.choose-avatar .loading-overlay {
+			position: absolute;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: 0;
+			background-color: rgba(255, 255, 255, 0.72);
+			z-index: 1;
+			display: none;
+		}
+
+		.choose-avatar .loading-overlay i.fas.fa-spinner {
+			font-size: 40px;
+			color: #ec3348;
+		}
+
+		.choose-avatar .loading-overlay .loading-icon {
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%,-50%);
+		}
+
+		.choose-avatar.uploading .loading-overlay {
+			display: block;
+		}.site-header .c-sub-header-nav .entry-header {
+			display: none;
+			margin-bottom: 15px;
+		}
+
+		.site-header .c-sub-header-nav.sticky .entry-header {
+			display: block;
+		}
+
+		.site-header .c-sub-header-nav.hide-sticky-menu.sticky .c-sub-nav_wrap{
+			display:none;
+		}
+		.site-header .c-sub-header-nav.hide-sticky-menu .entry-header{
+			margin-top:15px;
+		}
+		@media (max-width: 480px) {.c-blog-post .entry-content .entry-content_wrap .reading-content{margin-left:-15px;margin-right:-15px}}
+
+/*# sourceURL=madara-css-inline-css */
+</style>
+<link rel='stylesheet' id='madara-css-child-css' href='https://cenele.com/wp-content/themes/madara-child-novel/style.css?ver=1787198136' media='all' />
+<link rel='stylesheet' id='fontawesome-css' href='https://cenele.com/wp-content/themes/madara/app/lib/fontawesome/web-fonts-with-css/css/all.min.css?ver=5.15.3' media='all' />
+<link rel='stylesheet' id='madara-icons-css' href='https://cenele.com/wp-content/themes/madara/css/fonts/ct-icon/ct-icon.css?ver=7.1' media='all' />
+<link rel="preload" as="style" href="https://cenele.com/wp-content/themes/madara/css/loaders.min.css?ver=7.1" onload="this.onload=null;this.rel='stylesheet'" media="all">
+<noscript><link rel="stylesheet" href="https://cenele.com/wp-content/themes/madara/css/loaders.min.css?ver=7.1" media="all"></noscript><link rel='stylesheet' id='orw-ads-for-all-css' href='https://cenele.com/wp-content/themes/madara-child-novel/assets/css/orw-ads-for-all.css?ver=1787198136' media='all' />
+<link rel='stylesheet' id='nhv-global-css' href='https://cenele.com/wp-content/themes/madara-child-novel/assets/css/nhv-global.css?ver=1787198136' media='all' />
+<link rel='stylesheet' id='nhv-novel-single-v2-css' href='https://cenele.com/wp-content/themes/madara-child-novel/assets/css/nhv-novel-single-v2.css?ver=1787198136' media='all' />
+<link rel="preload" as="style" href="https://cenele.com/wp-content/themes/madara-child-novel/assets/css/nhv-comments.css?ver=1787198136" onload="this.onload=null;this.rel='stylesheet'" media="all">
+<noscript><link rel="stylesheet" href="https://cenele.com/wp-content/themes/madara-child-novel/assets/css/nhv-comments.css?ver=1787198136" media="all"></noscript><link rel='stylesheet' id='nhv-header-css' href='https://cenele.com/wp-content/themes/madara-child-novel/assets/css/nhv-header.css?ver=1787198136' media='all' />
+<link rel='stylesheet' id='nhv-novel-wiki-css' href='https://cenele.com/wp-content/plugins/novel-wiki/assets/css/public.css?ver=1786114754' media='all' />
+<script type="text/javascript">
+            window._nslDOMReady = (function () {
+                const executedCallbacks = new Set();
+            
+                return function (callback) {
+                    /**
+                    * Third parties might dispatch DOMContentLoaded events, so we need to ensure that we only run our callback once!
+                    */
+                    if (executedCallbacks.has(callback)) return;
+            
+                    const wrappedCallback = function () {
+                        if (executedCallbacks.has(callback)) return;
+                        executedCallbacks.add(callback);
+                        callback();
+                    };
+            
+                    if (document.readyState === "complete" || document.readyState === "interactive") {
+                        wrappedCallback();
+                    } else {
+                        document.addEventListener("DOMContentLoaded", wrappedCallback);
+                    }
+                };
+            })();
+        </script><script id="jquery-core-js" src="https://cenele.com/wp-includes/js/jquery/jquery.min.js?ver=3.7.1"></script>
+<script id="jquery-migrate-js" src="https://cenele.com/wp-includes/js/jquery/jquery-migrate.min.js?ver=3.4.1"></script>
+<link rel="https://api.w.org/" href="https://cenele.com/wp-json/" /><link rel="EditURI" type="application/rsd+xml" title="RSD" href="https://cenele.com/xmlrpc.php?rsd" />
+<meta name="generator" content="WordPress 7.1" />
+<link rel="canonical" href="https://cenele.com/cont/cursed-imm/" />
+<link rel='shortlink' href='https://cenele.com/?p=115579' />
+<style type="text/css">body.manga-page:not(.reading-manga) .profile-manga {
+			background: linear-gradient(180deg, rgba(70, 41, 51, .9) 0, #000 100%) !important;
+		}body[data-font="reading-font-0"] .reading-content {font-family: Helvetica, sans-serif}body[data-font="reading-font-1"] .reading-content {font-family: "Times New Roman", serif}</style><link rel="icon" href="https://cenele.com/wp-content/uploads/2026/08/cropped-فضاء-روايات-32x32.png" sizes="32x32" />
+<link rel="icon" href="https://cenele.com/wp-content/uploads/2026/08/cropped-فضاء-روايات-192x192.png" sizes="192x192" />
+<link rel="apple-touch-icon" href="https://cenele.com/wp-content/uploads/2026/08/cropped-فضاء-روايات-180x180.png" />
+<meta name="msapplication-TileImage" content="https://cenele.com/wp-content/uploads/2026/08/cropped-فضاء-روايات-270x270.png" />
+
+<!-- ORW Header Global Code -->
+<script data-cfasync="false" async type="text/javascript" src="//rl.gasparmocha.com/rKOmZ3mv3iGFTd6WD/110690"></script>
+<script data-cfasync="false" async type="text/javascript" src="//issuedkuvasz.com/gOWLvn0rbNXjO/121712"></script>
+<script data-cfasync="false" async type="text/javascript" src="//sorbetbungler.com/gnMVVXhItQXBM/130660"></script>
+<script data-cfasync="false" async type="text/javascript" src="//trudgerexcused.com/g16byBTbxkUl763Y/92869"></script>
+<style type="text/css">div.nsl-container[data-align="left"] {
+    text-align: left;
+}
+
+div.nsl-container[data-align="center"] {
+    text-align: center;
+}
+
+div.nsl-container[data-align="right"] {
+    text-align: right;
+}
+
+
+div.nsl-container div.nsl-container-buttons a[data-plugin="nsl"] {
+    text-decoration: none;
+    box-shadow: none;
+    border: 0;
+}
+
+div.nsl-container .nsl-container-buttons {
+    display: flex;
+    padding: 5px 0;
+}
+
+div.nsl-container.nsl-container-block .nsl-container-buttons {
+    display: inline-grid;
+    grid-template-columns: minmax(145px, auto);
+}
+
+div.nsl-container-block-fullwidth .nsl-container-buttons {
+    flex-flow: column;
+    align-items: center;
+}
+
+div.nsl-container-block-fullwidth .nsl-container-buttons a,
+div.nsl-container-block .nsl-container-buttons a {
+    flex: 1 1 auto;
+    display: block;
+    margin: 5px 0;
+    width: 100%;
+}
+
+div.nsl-container-inline {
+    margin: -5px;
+    text-align: left;
+}
+
+div.nsl-container-inline .nsl-container-buttons {
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+div.nsl-container-inline .nsl-container-buttons a {
+    margin: 5px;
+    display: inline-block;
+}
+
+div.nsl-container-grid .nsl-container-buttons {
+    flex-flow: row;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+div.nsl-container-grid .nsl-container-buttons a {
+    flex: 1 1 auto;
+    display: block;
+    margin: 5px;
+    max-width: 280px;
+    width: 100%;
+}
+
+@media only screen and (min-width: 650px) {
+    div.nsl-container-grid .nsl-container-buttons a {
+        width: auto;
+    }
+}
+
+div.nsl-container .nsl-button {
+    cursor: pointer;
+    vertical-align: top;
+    border-radius: 4px;
+}
+
+div.nsl-container .nsl-button-default {
+    color: #fff;
+    display: flex;
+}
+
+div.nsl-container .nsl-button-icon {
+    display: inline-block;
+}
+
+div.nsl-container .nsl-button-svg-container {
+    flex: 0 0 auto;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+}
+
+div.nsl-container svg {
+    height: 24px;
+    width: 24px;
+    vertical-align: top;
+}
+
+div.nsl-container .nsl-button-default div.nsl-button-label-container {
+    margin: 0 24px 0 12px;
+    padding: 10px 0;
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 20px;
+    letter-spacing: .25px;
+    overflow: hidden;
+    text-align: center;
+    text-overflow: clip;
+    white-space: nowrap;
+    flex: 1 1 auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-transform: none;
+    display: inline-block;
+}
+
+div.nsl-container .nsl-button-google[data-skin="light"] {
+    box-shadow: inset 0 0 0 1px #747775;
+    color: #1f1f1f;
+}
+
+div.nsl-container .nsl-button-google[data-skin="dark"] {
+    box-shadow: inset 0 0 0 1px #8E918F;
+    color: #E3E3E3;
+}
+
+div.nsl-container .nsl-button-google[data-skin="neutral"] {
+    color: #1F1F1F;
+}
+
+div.nsl-container .nsl-button-google div.nsl-button-label-container {
+    font-family: "Roboto Medium", Roboto, Helvetica, Arial, sans-serif;
+}
+
+div.nsl-container .nsl-button-apple .nsl-button-svg-container {
+    padding: 0 6px;
+}
+
+div.nsl-container .nsl-button-apple .nsl-button-svg-container svg {
+    height: 40px;
+    width: auto;
+}
+
+div.nsl-container .nsl-button-apple[data-skin="light"] {
+    color: #000;
+    box-shadow: 0 0 0 1px #000;
+}
+
+div.nsl-container .nsl-button-facebook[data-skin="white"] {
+    color: #000;
+    box-shadow: inset 0 0 0 1px #000;
+}
+
+div.nsl-container .nsl-button-facebook[data-skin="light"] {
+    color: #1877F2;
+    box-shadow: inset 0 0 0 1px #1877F2;
+}
+
+div.nsl-container .nsl-button-spotify[data-skin="white"] {
+    color: #191414;
+    box-shadow: inset 0 0 0 1px #191414;
+}
+
+div.nsl-container .nsl-button-apple div.nsl-button-label-container {
+    font-size: 17px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+}
+
+div.nsl-container .nsl-button-slack div.nsl-button-label-container {
+    font-size: 17px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+}
+
+div.nsl-container .nsl-button-slack[data-skin="light"] {
+    color: #000000;
+    box-shadow: inset 0 0 0 1px #DDDDDD;
+}
+
+div.nsl-container .nsl-button-tiktok[data-skin="light"] {
+    color: #161823;
+    box-shadow: 0 0 0 1px rgba(22, 24, 35, 0.12);
+}
+
+
+div.nsl-container .nsl-button-kakao {
+    color: rgba(0, 0, 0, 0.85);
+}
+
+.nsl-clear {
+    clear: both;
+}
+
+.nsl-container {
+    clear: both;
+}
+
+.nsl-disabled-provider .nsl-button {
+    filter: grayscale(1);
+    opacity: 0.8;
+}
+
+/*Button align start*/
+
+div.nsl-container-inline[data-align="left"] .nsl-container-buttons {
+    justify-content: flex-start;
+}
+
+div.nsl-container-inline[data-align="center"] .nsl-container-buttons {
+    justify-content: center;
+}
+
+div.nsl-container-inline[data-align="right"] .nsl-container-buttons {
+    justify-content: flex-end;
+}
+
+
+div.nsl-container-grid[data-align="left"] .nsl-container-buttons {
+    justify-content: flex-start;
+}
+
+div.nsl-container-grid[data-align="center"] .nsl-container-buttons {
+    justify-content: center;
+}
+
+div.nsl-container-grid[data-align="right"] .nsl-container-buttons {
+    justify-content: flex-end;
+}
+
+div.nsl-container-grid[data-align="space-around"] .nsl-container-buttons {
+    justify-content: space-around;
+}
+
+div.nsl-container-grid[data-align="space-between"] .nsl-container-buttons {
+    justify-content: space-between;
+}
+
+/* Button align end*/
+
+/* Redirect */
+
+#nsl-redirect-overlay {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    z-index: 1000000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    backdrop-filter: blur(1px);
+    background-color: RGBA(0, 0, 0, .32);;
+}
+
+#nsl-redirect-overlay-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: white;
+    padding: 30px;
+    border-radius: 10px;
+}
+
+#nsl-redirect-overlay-spinner {
+    content: '';
+    display: block;
+    margin: 20px;
+    border: 9px solid RGBA(0, 0, 0, .6);
+    border-top: 9px solid #fff;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1px RGBA(0, 0, 0, .6), 0 0 0 1px RGBA(0, 0, 0, .6);
+    width: 40px;
+    height: 40px;
+    animation: nsl-loader-spin 2s linear infinite;
+}
+
+@keyframes nsl-loader-spin {
+    0% {
+        transform: rotate(0deg)
+    }
+    to {
+        transform: rotate(360deg)
+    }
+}
+
+#nsl-redirect-overlay-title {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    font-size: 18px;
+    font-weight: bold;
+    color: #3C434A;
+}
+
+#nsl-redirect-overlay-text {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    text-align: center;
+    font-size: 14px;
+    color: #3C434A;
+}
+
+/* Redirect END*/</style><style type="text/css">/* Notice fallback */
+#nsl-notices-fallback {
+    position: fixed;
+    right: 10px;
+    top: 10px;
+    z-index: 10000;
+}
+
+.admin-bar #nsl-notices-fallback {
+    top: 42px;
+}
+
+#nsl-notices-fallback > div {
+    position: relative;
+    background: #fff;
+    border-left: 4px solid #fff;
+    box-shadow: 0 1px 1px 0 rgba(0, 0, 0, .1);
+    margin: 5px 15px 2px;
+    padding: 1px 20px;
+}
+
+#nsl-notices-fallback > div.error {
+    display: block;
+    border-left-color: #dc3232;
+}
+
+#nsl-notices-fallback > div.updated {
+    display: block;
+    border-left-color: #46b450;
+}
+
+#nsl-notices-fallback p {
+    margin: .5em 0;
+    padding: 2px;
+}
+
+#nsl-notices-fallback > div:after {
+    position: absolute;
+    right: 5px;
+    top: 5px;
+    content: '\00d7';
+    display: block;
+    height: 16px;
+    width: 16px;
+    line-height: 16px;
+    text-align: center;
+    font-size: 20px;
+    cursor: pointer;
+}</style><style id="wp-custom-css">
+
+
+
+
+
+
+
+
+/* === Global Notice background – match site gradients exactly === */
+.nhv-global-notice{
+    position: relative;
+    z-index: 5;
+    background: transparent !important;
+}
+
+.nhv-global-notice::before{
+    content: "";
+    position: absolute;
+    inset: -14px 0;
+    z-index: -1;
+
+    background:
+        radial-gradient(1200px 800px at 70% 12%, rgba(120, 92, 255, .16), transparent 60%),
+        radial-gradient(900px 650px at 25% 25%, rgba(170, 150, 255, .10), transparent 62%),
+        linear-gradient(180deg, rgba(9, 10, 24, .94), rgba(6, 7, 18, .98)) !important;
+}
+
+
+
+@media (max-width: 768px){
+  body.reading-manga 
+  #manga-reading-nav-foot 
+  .manga-nav 
+  .c-selectpicker.selectpicker_chapter{
+    flex-basis: 2px !important;
+  }
+}
+
+
+
+
+
+/* ===== Mobile fix: clean & centered selects ===== */
+@media (max-width: 768px){
+
+  /* الحاوية */
+  body.reading-manga #manga-reading-nav-foot .manga-nav .select-view{
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 12px !important;
+  }
+
+  /* Volume */
+  body.reading-manga #manga-reading-nav-foot 
+  .manga-nav .c-selectpicker.selectpicker_volume{
+    width: 200px !important;
+    max-width: 200px !important;
+    margin: 0 auto !important;
+  }
+
+  /* Chapter */
+  body.reading-manga #manga-reading-nav-foot 
+  .manga-nav .c-selectpicker.selectpicker_chapter{
+    width: 240px !important;
+    max-width: 240px !important;
+    margin: 0 auto !important;
+  }
+
+  /* select نفسه */
+  body.reading-manga #manga-reading-nav-foot 
+  .manga-nav .c-selectpicker select{
+    width: 100% !important;
+    height: 44px !important;
+    line-height: 44px !important;
+    padding: 0 42px 0 14px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ===== Desktop only: force enlarge novel cover (based on nh-thumb) ===== */
+@media (min-width: 1025px){
+
+  /* حاوية الرابط */
+  .manga-chapters-listing td.title .nh-thumb{
+    display: inline-block;
+    width: 200px;
+  }
+
+  /* الصورة نفسها */
+  .manga-chapters-listing td.title .nh-thumb img.wp-post-image{
+    width: 190px !important;     /* أعرض */
+    height: 200px !important;    /* أطول قليلاً */
+    max-width: none !important;
+    object-fit: cover !important;
+    border-radius: 12px;
+  }
+
+}
+/* اخفِ عداد المشاهدات داخل Latest Updates فقط */
+.manga-chapters-listing .view { display:none !important; }
+
+.heading-view-all {
+    display: none !important;
+}
+
+
+
+
+/* Profile background (كما طلبت) */ body.manga-page:not(.reading-manga) .profile-manga{ background: linear-gradient(180deg, rgb(34 20 73 / 60%) 0, #000 100%) !important; } 
+
+
+/* 2) زر Bookmark: نفس الهوية البنفسجية + بوردر غامق */
+
+body.manga-page:not(.reading-manga) .profile-manga .manga-actions .bookmark-btn .wp-manga-action-button, body.manga-page:not(.reading-manga) .profile-manga .manga-actions .bookmark-btn a.wp-manga-action-button, body.manga-page:not(.reading-manga) .profile-manga .manga-actions a.wp-manga-action-button { background: linear-gradient(180deg, rgba(120, 92, 255, .95) 0%, rgba(74, 52, 200, .95) 100%) !important; color: #fff !important; border: 1px solid rgba(0,0,0,.55) !important;
+	
+/* بدل الأصفر */ 
+	
+box-shadow: 0 10px 22px rgba(0,0,0,.40) !important; } 
+
+
+/* kill any border / shadow that may be drawing yellow */
+
+body.manga-page:not(.reading-manga) .profile-manga .manga-actions #init-links a, body.manga-page:not(.reading-manga) .profile-manga .manga-actions .bookmark-btn, body.manga-page:not(.reading-manga) .profile-manga .manga-actions .bookmark-btn *{ border-color: transparent !important; box-shadow: none !important; }
+
+/* Read First / Read Last (and same class button) */ 
+
+body.manga-page:not(.reading-manga) .profile-manga .manga-actions #init-links a.c-btn.c-btn_style-1, body.manga-page:not(.reading-manga) .profile-manga .manga-actions #init-links a.btn-read-first, body.manga-page:not(.reading-manga) .profile-manga .manga-actions #init-links a.btn-read-last{ background: linear-gradient(180deg, rgba(120, 92, 255, .95) 0%, rgba(74, 52, 200, .95) 100%) !important; color: #fff !important; border: 0 !important; 
+	
+
+/* هذا هو "الإطار الأسود" الحقيقي بدل الأصفر */ 
+	
+	box-shadow: inset 0 0 0 1px rgba(0,0,0,.65), 0 10px 22px rgba(0,0,0,.35) !important;
+	
+	
+	
+	
+	
+
+
+</style>
+					<script type="application/ld+json">
+						{
+							"@context": "http://schema.org",
+							"@type": "Article",
+							"mainEntityOfPage": {
+								"@type": "WebPage",
+								"@id": "https://google.com/article"
+							},
+							"headline": "الخلود الملعون",
+							"image": {
+								"@type": "ImageObject",
+								"url": "https://cenele.com/wp-content/uploads/2026/08/054a13f9-d244-4526-be08-c81e56043b41.webp",
+								"height": 391,
+								"width": 696							},
+							"datePublished": "2026-08-24 20:00:30",
+							"dateModified": "2026-08-25 00:07:38",
+							"author": {
+								"@type": "Person",
+								"name": "لست اجتماعياً"
+							},
+							"publisher": {
+								"@type": "Organization",
+								"name": "فضاء الروايات",
+								"logo": {
+									"@type": "ImageObject",
+									"url": "https://cenele.com/wp-content/uploads/2026/08/لوغو-فضاء-الروايات.png"
+								}
+							},
+							"description": "توفي جاكوب ستيف، وهو رجل مسن، عن عمر يناهز 116 عامًا بعد أن عاش حياة كاملة. لكن يعقوب كان لديه دائماً جانب مظلم، كان يكبته ويخفيه عن الآخرين. لكن في السنوات الأخيرة من حياته، عندما أصبح الموت أمراً لا مفر منه، أدرك..."
+						}
+					</script>
+				<meta property="og:type" content="article"/>
+<meta property="og:image" content="https://cenele.com/wp-content/uploads/2026/08/054a13f9-d244-4526-be08-c81e56043b41.webp"/>
+<meta property="og:site_name" content="فضاء الروايات"/>
+<meta property="fb:app_id" content="" />
+<meta property="og:title" content="الخلود الملعون"/>
+<meta property="og:url" content="https://cenele.com/cont/cursed-imm/"/>
+<meta property="og:description" content="توفي جاكوب ستيف، وهو رجل مسن، عن عمر يناهز 116 عامًا بعد أن عاش حياة كاملة. لكن يعقوب كان لديه دائماً جانب مظلم، كان يكبته ويخفيه عن الآخرين. لكن في السنوات الأخيرة من حياته، عندما أصبح الموت أمراً لا مفر منه، أدرك..."/>
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:site" content="@فضاء الروايات" />
+<meta name="twitter:title" content="الخلود الملعون" />
+<meta name="twitter:description" content="توفي جاكوب ستيف، وهو رجل مسن، عن عمر يناهز 116 عامًا بعد أن عاش حياة كاملة. لكن يعقوب كان لديه دائماً جانب مظلم، كان يكبته ويخفيه عن الآخرين. لكن في السنوات الأخيرة من حياته، عندما أصبح الموت أمراً لا مفر منه، أدرك..." />
+<meta name="twitter:url" content="https://cenele.com/cont/cursed-imm/" />
+<meta name="twitter:image" content="https://cenele.com/wp-content/uploads/2026/08/054a13f9-d244-4526-be08-c81e56043b41.webp" />
+<meta name="description" content="توفي جاكوب ستيف، وهو رجل مسن، عن عمر يناهز 116 عامًا بعد أن عاش حياة كاملة. لكن يعقوب كان لديه دائماً جانب مظلم، كان يكبته ويخفيه عن الآخرين. لكن في السنوات الأخيرة من حياته، عندما أصبح الموت أمراً لا مفر منه، أدرك..." /><meta name="generator" content="Powered by Madara - A powerful manga, novel theme from Mangabooth.com" />
+			<style>
+			@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Special+Gothic+Expanded+One&family=Winky+Rough:ital,wght@0,300..900;1,300..900&display=swap');
+			</style>
+			
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-GW8RRR8EP1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-GW8RRR8EP1');
+</script>
+
+<meta name="mnd-ver" content="tfkj0t3urmnuxdebtijbow" />
+
+
+<script 
+  src="https://www.paypal.com/sdk/js?client-id=BAA9RCjI1Y3ksWCCeNGyVFmFPSTUgN3ExHVfDiq3uL6pVAsU4icqJ4cI-ghei0dXFVAI9SFXpR6EToyFi0&components=hosted-buttons&disable-funding=venmo&currency=USD">
+</script>
+
+
+
+<script async data-cfasync="false" src="https://cdn.pubfuture-ad.com/v2/unit/pt.js" type="text/javascript"></script>
+
+
+<meta name="f77a8be03830b9598794da5b22d5f29979ca3fee" content="f77a8be03830b9598794da5b22d5f29979ca3fee" />
+
+<meta name="referrer" content="no-referrer-when-downgrade" />
+
+<meta name="purpleads-verification" content="a2e5c8db7306149fa6b588b4"/>
+<link rel='stylesheet' id='nhv-ts-gate-css' href='https://cenele.com/wp-content/plugins/nhv-turnstile-gate/assets/nhv-ts-gate.css?ver=1.0.7' media='all' />
+
+</head>
+
+<body class="rtl wp-singular wp-manga-template-default single single-wp-manga postid-115579 wp-embed-responsive wp-theme-madara wp-child-theme-madara-child-novel wp-manga-page manga-page page header-style-1 text-ui-light">
+<script>
+  (function () {
+    var light = document.documentElement.getAttribute('data-nhv-color-scheme') === 'light';
+    document.body.classList.toggle('text-ui-dark', light);
+    document.body.classList.toggle('text-ui-light', !light);
+  }());
+</script>
+<!-- NHV Clean Custom Header -->
+<header class="nhv-header" role="banner" aria-label="ترويسة الموقع">
+  <div class="nhv-header__inner">
+    <div class="nhv-header__tools">
+      <button class="nhv-header__toggle" type="button" aria-label="فتح القائمة" aria-controls="nhv-drawer" aria-expanded="false">
+        <span class="nhv-header__bars" aria-hidden="true"></span>
+      </button>
+
+      <a class="nhv-header__action nhv-header__account" href="https://cenele.com/user/" aria-label="تسجيل الدخول أو إنشاء حساب" title="تسجيل الدخول">
+        <span class="nhv-header__user-icon" aria-hidden="true"></span>
+      </a>
+
+      <button class="nhv-header__action nhv-header__appearance-toggle" type="button" aria-label="مظهر الموقع" title="مظهر الموقع" aria-controls="nhv-appearance-modal" aria-haspopup="dialog" aria-expanded="false">
+        <span class="nhv-header__appearance-icon" aria-hidden="true"></span>
+      </button>
+    </div>
+
+    <a class="nhv-header__logo" href="https://cenele.com/">
+      <img src="https://cenele.com/wp-content/uploads/2026/08/لوغو-فضاء-الروايات.png" alt="فضاء الروايات" loading="eager" decoding="async" />
+    </a>
+</div>
+</header>
+
+<div id="nhv-appearance-modal" class="nhv-appearance" hidden aria-hidden="true">
+  <button class="nhv-appearance__backdrop" type="button" data-nhv-appearance-close tabindex="-1" aria-label="إغلاق إعدادات المظهر"></button>
+  <section class="nhv-appearance__dialog" role="dialog" aria-modal="true" aria-labelledby="nhv-appearance-title" dir="rtl">
+    <div class="nhv-appearance__head">
+      <div>
+        <span class="nhv-appearance__eyebrow">تخصيص سريع</span>
+        <h2 id="nhv-appearance-title">مظهر الموقع</h2>
+      </div>
+      <button class="nhv-appearance__close" type="button" data-nhv-appearance-close aria-label="إغلاق">×</button>
+    </div>
+
+    <p class="nhv-appearance__intro">اختر المظهر الأنسب لك. سيُحفظ اختيارك على هذا الجهاز تلقائيًا.</p>
+
+    <div class="nhv-appearance__choices" role="group" aria-label="اختيار مظهر الموقع">
+      <button class="nhv-appearance__choice" type="button" data-nhv-theme-choice="dark" aria-pressed="false">
+        <span class="nhv-appearance__preview nhv-appearance__preview--dark" aria-hidden="true"><i></i></span>
+        <span><strong>ليل فضاء</strong><small>الداكن البنفسجي الأصلي</small></span>
+        <i class="nhv-appearance__check" aria-hidden="true"></i>
+      </button>
+      <button class="nhv-appearance__choice" type="button" data-nhv-theme-choice="light" aria-pressed="false">
+        <span class="nhv-appearance__preview nhv-appearance__preview--light" aria-hidden="true"><i></i></span>
+        <span><strong>نور صافي</strong><small>أبيض هادئ وواضح</small></span>
+        <i class="nhv-appearance__check" aria-hidden="true"></i>
+      </button>
+      <button class="nhv-appearance__choice" type="button" data-nhv-theme-choice="soft" aria-pressed="false">
+        <span class="nhv-appearance__preview nhv-appearance__preview--soft" aria-hidden="true"><i></i></span>
+        <span><strong>أسود مخملي</strong><small>أسود أخف وأقل زرقة</small></span>
+        <i class="nhv-appearance__check" aria-hidden="true"></i>
+      </button>
+      <button class="nhv-appearance__choice" type="button" data-nhv-theme-choice="beige" aria-pressed="false">
+        <span class="nhv-appearance__preview nhv-appearance__preview--beige" aria-hidden="true"><i></i></span>
+        <span><strong>ورق دافئ</strong><small>بيج مريح للعين</small></span>
+        <i class="nhv-appearance__check" aria-hidden="true"></i>
+      </button>
+      <button class="nhv-appearance__choice" type="button" data-nhv-theme-choice="rose" aria-pressed="false">
+        <span class="nhv-appearance__preview nhv-appearance__preview--rose" aria-hidden="true"><i></i></span>
+        <span><strong>زهرة القمر</strong><small>وردي وليلكي ناعم</small></span>
+        <i class="nhv-appearance__check" aria-hidden="true"></i>
+      </button>
+      <button class="nhv-appearance__choice" type="button" data-nhv-theme-choice="calm" aria-pressed="false">
+        <span class="nhv-appearance__preview nhv-appearance__preview--calm" aria-hidden="true"><i></i></span>
+        <span><strong>سكون</strong><small>دافئ منخفض الوهج للقراءة الطويلة</small></span>
+        <i class="nhv-appearance__check" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div class="nhv-appearance__section nhv-appearance__cache">
+      <div class="nhv-appearance__section-head">
+        <strong>مسح كاش الموقع</strong>
+        <small>استخدمه عند ظهور تصميم قديم أو مشكلة مؤقتة. لن يتم تسجيل خروجك.</small>
+      </div>
+      <button class="nhv-appearance__cache-button" type="button" data-nhv-clear-cache>
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M20 12a8 8 0 1 1-2.34-5.66L20 8"></path>
+          <path d="M20 3v5h-5"></path>
+        </svg>
+        <span>
+          <strong>تنظيف وإعادة تحميل</strong>
+          <small data-nhv-cache-status>يمسح الملفات المؤقتة الخاصة بالموقع فقط</small>
+        </span>
+      </button>
+    </div>
+
+
+    <div class="nhv-appearance__section">
+      <div class="nhv-appearance__section-head">
+        <strong>كروت آخر الإصدارات</strong>
+        <small>اختر طريقة عرضها في الصفحة الرئيسية</small>
+      </div>
+      <div class="nhv-appearance__view-options" role="group" aria-label="طريقة عرض آخر الإصدارات">
+        <button type="button" data-nhv-card-view="site" aria-pressed="false">حسب الموقع</button>
+        <button type="button" data-nhv-card-view="list" aria-pressed="false">قائمة</button>
+        <button type="button" data-nhv-card-view="grid" aria-pressed="false">مربعة</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div
+  id="nhv-drawer"
+  class="nhv-drawer"
+  aria-hidden="true"
+  data-nhv-track-url="https://cenele.com/wp-admin/admin-ajax.php"
+  data-nhv-track-nonce="ea942dccde"
+>
+  <div class="nhv-drawer__backdrop" tabindex="-1" aria-hidden="true"></div>
+  <aside class="nhv-drawer__panel" role="dialog" aria-modal="true" aria-label="القائمة">
+    <div class="nhv-drawer__top">
+      <div>
+        <p class="nhv-drawer__eyebrow">فضاء الروايات</p>
+        <p class="nhv-drawer__title">القائمة</p>
+      </div>
+      <button class="nhv-drawer__close" type="button" aria-label="إغلاق">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+
+          <section class="nhv-drawer-guest">
+        <div class="nhv-drawer-guest__intro">
+          <span class="nhv-drawer-guest__icon"><svg class="nhv-drawer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg></span>
+          <div>
+            <strong>مرحبًا بك</strong>
+            <small>سجّل دخولك لمزامنة المفضلة والخبرة والتعليقات.</small>
+          </div>
+        </div>
+        <div class="nhv-drawer__auth">
+          <a class="nhv-drawer-auth__button is-primary" href="https://cenele.com/user/?action=login">
+            <svg class="nhv-drawer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M13 4h5a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5"/></svg>            <span><strong>تسجيل الدخول</strong><small>إلى حسابك</small></span>
+          </a>
+          <a class="nhv-drawer-auth__button" href="https://cenele.com/user/?action=register">
+            <svg class="nhv-drawer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 21a6 6 0 0 1 12 0"/><path d="M18 8v6M15 11h6"/></svg>            <span><strong>إنشاء حساب</strong><small>حساب جديد</small></span>
+          </a>
+        </div>
+      </section>
+    
+          <section class="nhv-drawer-links" aria-labelledby="nhv-drawer-links-title">
+        <div class="nhv-drawer-section-title">
+          <strong id="nhv-drawer-links-title">روابط سريعة</strong>
+          <small>اختصارات مختارة</small>
+        </div>
+        <div class="nhv-drawer-links__grid">
+                      <a
+              class="nhv-drawer-link is-store"
+              href="https://cenele.com/store/?nhv_store=vip"
+                                        >
+              <span class="nhv-drawer-link__icon"><svg class="nhv-drawer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9h14l-1 12H6z"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/><path d="M4 9h16"/></svg></span>
+              <span><strong>المتجر وعضوية VIP</strong><small>الجواهر ومزايا العضوية</small></span>
+            </a>
+                      <a
+              class="nhv-drawer-link is-google"
+              href="https://play.google.com/store/apps/details?id=com.fadariwyat.cenele"
+              data-nhv-drawer-track="google_play"              target="_blank" rel="noopener noreferrer"            >
+              <span class="nhv-drawer-link__icon"><svg class="nhv-drawer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m5 3 11 9L5 21z"/><path d="m5 3 8 9-8 9"/><path d="M13 12h3"/></svg></span>
+              <span><strong>تطبيق أندرويد</strong><small>Google Play</small></span>
+            </a>
+                      <a
+              class="nhv-drawer-link is-apple"
+              href="https://cenele.com/ios-app/"
+              data-nhv-drawer-track="apple_store"              target="_blank" rel="noopener noreferrer"            >
+              <span class="nhv-drawer-link__icon"><svg class="nhv-drawer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15.4 5.1c.8-1 1.3-2.2 1.2-3.4-1.2.1-2.5.8-3.3 1.7-.7.8-1.3 2.1-1.2 3.3 1.3.1 2.5-.6 3.3-1.6z"/><path d="M19.8 17.2c-.5 1.1-.8 1.6-1.5 2.6-1 1.4-2.3 3.1-4 3.1-1.5 0-1.9-1-3.9-1s-2.5 1-4 1c-1.6 0-2.8-1.5-3.8-2.9C-.2 16 0 11.3 1.4 9.2 2.4 7.7 4 6.8 5.6 6.8c1.7 0 2.8 1 4.2 1 1.3 0 2.2-1 4.1-1 1.4 0 2.9.8 3.9 2-3.4 1.9-2.9 6.7 2 8.4z" transform="translate(2 0) scale(.82)"/></svg></span>
+              <span><strong>تطبيق آيفون</strong><small>App Store</small></span>
+            </a>
+                      <a
+              class="nhv-drawer-link is-facebook"
+              href="https://www.facebook.com/rriwyat"
+                            target="_blank" rel="noopener noreferrer"            >
+              <span class="nhv-drawer-link__icon"><svg class="nhv-drawer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 8h3V4h-3c-3.3 0-5 2-5 5v3H6v4h3v6h4v-6h3.2l.8-4h-4V9c0-.7.3-1 1-1z"/></svg></span>
+              <span><strong>فيسبوك</strong><small>تابع صفحتنا</small></span>
+            </a>
+                      <a
+              class="nhv-drawer-link is-twitter"
+              href="https://x.com/RiwyatSpace"
+                            target="_blank" rel="noopener noreferrer"            >
+              <span class="nhv-drawer-link__icon"><svg class="nhv-drawer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l16 16M20 4 4 20"/><path d="M8.5 4H4l11.5 16H20z"/></svg></span>
+              <span><strong>تويتر / X</strong><small>آخر الأخبار</small></span>
+            </a>
+                      <a
+              class="nhv-drawer-link is-discord"
+              href="https://discord.com/invite/fd-lrwyt-838739703258939422"
+                            target="_blank" rel="noopener noreferrer"            >
+              <span class="nhv-drawer-link__icon"><svg class="nhv-drawer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 6.5A13 13 0 0 1 12 5.7a13 13 0 0 1 4.5.8c1.7 2.5 2.6 5.2 2.5 8-1.7 2-3.5 3-5.2 3.6l-.9-1.3M10.9 16.8l-.8 1.3c-1.8-.6-3.5-1.6-5.2-3.6-.1-2.8.8-5.5 2.5-8"/><circle cx="9.5" cy="12.5" r=".8" fill="currentColor" stroke="none"/><circle cx="14.5" cy="12.5" r=".8" fill="currentColor" stroke="none"/></svg></span>
+              <span><strong>ديسكورد</strong><small>انضم إلى مجتمعنا</small></span>
+            </a>
+                      <a
+              class="nhv-drawer-link is-telegram"
+              href="https://t.me/riwyats"
+                            target="_blank" rel="noopener noreferrer"            >
+              <span class="nhv-drawer-link__icon"><svg class="nhv-drawer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 17-7-4 16-5-5-3 3v-5z"/><path d="m8 13 8-6-5 8"/></svg></span>
+              <span><strong>تليغرام</strong><small>تابع قناتنا</small></span>
+            </a>
+                      <a
+              class="nhv-drawer-link is-library"
+              href="https://cenele.com/cont/"
+                                        >
+              <span class="nhv-drawer-link__icon"><svg class="nhv-drawer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v16H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H13v16h4.5a2.5 2.5 0 0 1 2.5 2.5z"/></svg></span>
+              <span><strong>مكتبة الروايات</strong><small>تصفّح جميع الروايات</small></span>
+            </a>
+                      <a
+              class="nhv-drawer-link is-wiki"
+              href="https://cenele.com/novel-wiki/"
+                                        >
+              <span class="nhv-drawer-link__icon"><svg class="nhv-drawer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.4 2.5 3.6 5.5 3.6 9S14.4 18.5 12 21M12 3C9.6 5.5 8.4 8.5 8.4 12S9.6 18.5 12 21"/></svg></span>
+              <span><strong>موسوعة الروايات</strong><small>معلومات وتفاصيل عالم الروايات</small></span>
+            </a>
+                      <a
+              class="nhv-drawer-link is-characters"
+              href="https://cenele.com/characters/"
+                                        >
+              <span class="nhv-drawer-link__icon"><svg class="nhv-drawer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21h16M5 21v-5h4v5M10 21V10h4v11M15 21v-8h4v8"/><path d="m12 3 .9 1.8 2 .3-1.45 1.4.35 2-1.8-.95-1.8.95.35-2-1.45-1.4 2-.3z"/></svg></span>
+              <span><strong>ترتيب أشهر الشخصيات</strong><small>اكتشف الشخصيات الأكثر شهرة</small></span>
+            </a>
+                      <a
+              class="nhv-drawer-link is-custom"
+              href="https://cenele.com/cont-artist/"
+                                        >
+              <span class="nhv-drawer-link__icon"><svg class="nhv-drawer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1"/><path d="M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1"/></svg></span>
+              <span><strong>فرق الترجمة</strong><small>رابط من إدارة الموقع</small></span>
+            </a>
+                  </div>
+      </section>
+    
+    <nav class="nhv-drawer__nav" role="navigation" aria-label="روابط الموقع">
+      <div class="nhv-drawer-section-title">
+        <strong>صفحات الموقع</strong>
+        <small>المزيد من الروابط</small>
+      </div>
+      <ul id="menu-footer-menu" class="nhv-drawer__menu"><li id="menu-item-94215" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-94215"><a href="https://cenele.com/noadsall/">العضوية VIP (بدون إعلانات)</a></li>
+<li id="menu-item-99698" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-99698"><a href="https://cenele.com/rspuser/">إعدادات التعليقات</a></li>
+<li id="menu-item-94216" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-94216"><a href="https://cenele.com/cont/">مكتبة الروايات</a></li>
+<li id="menu-item-94217" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-94217"><a href="https://cenele.com/cont-genre/%d9%85%d9%83%d8%aa%d9%85%d9%84%d8%a9/">الروايات المكتملة</a></li>
+<li id="menu-item-113303" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-113303"><a href="https://cenele.com/translator-dashboard/">لوحة تحكم المترجم</a></li>
+<li id="menu-item-108844" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-108844"><a href="https://cenele.com/dmca/">dmca</a></li>
+<li id="menu-item-80" class="menu-item menu-item-type-custom menu-item-object-custom menu-item-80"><a href="https://cenele.com/privacy-policy/">سياسة الخصوصية</a></li>
+</ul>    </nav>
+
+      </aside>
+</div>
+
+
+<div class="wrap">
+    <div class="body-wrap">
+		        
+			
+			
+				        <div class="site-content">
+        
+<main class="nhv-novel" data-nhv-novel-v2 dir="rtl">
+	<div class="nhv-novel__inner">
+		<article class="nhv-novel-hero post-115579 wp-manga type-wp-manga status-publish has-post-thumbnail hentry wp-manga-tag-2722 wp-manga-tag-901 wp-manga-tag-2730 wp-manga-tag-1010 wp-manga-tag-2804 wp-manga-tag-2803 wp-manga-author-im-not-social wp-manga-artist-im-not-social wp-manga-genre-2 wp-manga-genre-2065 wp-manga-genre-418 wp-manga-genre-16 wp-manga-genre-2733 wp-manga-genre-36 wp-manga-genre-25 wp-manga-genre-41 wp-manga-genre-2694 wp-manga-genre-27">
+			<div class="nhv-novel-cover">
+				<img width="642" height="1024" src="https://cenele.com/wp-content/uploads/2026/08/054a13f9-d244-4526-be08-c81e56043b41-642x1024.webp" class="attachment-large size-large wp-post-image" alt="الخلود الملعون" loading="eager" fetchpriority="high" decoding="async" srcset="https://cenele.com/wp-content/uploads/2026/08/054a13f9-d244-4526-be08-c81e56043b41-642x1024.webp 642w, https://cenele.com/wp-content/uploads/2026/08/054a13f9-d244-4526-be08-c81e56043b41-188x300.webp 188w, https://cenele.com/wp-content/uploads/2026/08/054a13f9-d244-4526-be08-c81e56043b41-768x1225.webp 768w, https://cenele.com/wp-content/uploads/2026/08/054a13f9-d244-4526-be08-c81e56043b41-963x1536.webp 963w, https://cenele.com/wp-content/uploads/2026/08/054a13f9-d244-4526-be08-c81e56043b41.webp 993w" sizes="(max-width: 642px) 100vw, 642px" />			</div>
+
+			<div class="nhv-novel-hero__content">
+				<div class="nhv-novel-headline">
+											<span class="nhv-novel-kicker">Cursed Immortality</span>
+					
+					<h1 class="nhv-novel-title">الخلود الملعون</h1>
+
+											<div class="nhv-novel-genres" aria-label="تصنيفات الرواية">
+															<a href="https://cenele.com/cont-genre/%d8%a3%d9%83%d8%b4%d9%86/">أكشن</a>
+															<a href="https://cenele.com/cont-genre/%d8%a8%d8%b7%d9%84-%d8%b4%d8%b1%d9%8a%d8%b1/">بطل شرير</a>
+															<a href="https://cenele.com/cont-genre/%d8%ae%d9%8a%d8%a7%d9%84/">خيال</a>
+															<a href="https://cenele.com/cont-genre/%d8%b1%d8%b9%d8%a8/">رعب</a>
+															<a href="https://cenele.com/cont-genre/%d8%b3%d8%ad%d8%b1/">سحر</a>
+															<a href="https://cenele.com/cont-genre/%d8%b4%d8%b1%d9%8a%d8%ad%d8%a9-%d8%ad%d9%8a%d8%a7%d8%a9/">شريحة حياة</a>
+															<a href="https://cenele.com/cont-genre/%d8%ba%d9%85%d9%88%d8%b6/">غموض</a>
+															<a href="https://cenele.com/cont-genre/%d9%82%d9%88%d9%89-%d8%ae%d8%a7%d8%b1%d9%82%d8%a9/">قوى خارقة</a>
+															<a href="https://cenele.com/cont-genre/%d9%85%d8%b8%d9%84%d9%85%d8%a9/">مظلمة</a>
+															<a href="https://cenele.com/cont-genre/%d9%86%d9%81%d8%b3%d9%8a/">نفسي</a>
+													</div>
+									</div>
+
+				<div class="nhv-novel-meta">
+											<div><span><svg class="nhv-inline-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11v16H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H13v16h4.5a2.5 2.5 0 0 1 2.5 2.5z"/></svg> النوع</span><strong>إنجليزية</strong></div>
+																<div class="nhv-novel-status is-ongoing"><span><svg class="nhv-inline-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg> الحالة</span><strong>مستمرة</strong></div>
+										<div><span><svg class="nhv-inline-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h12M8 12h12M8 18h12"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></svg> الفصول</span><strong>3</strong></div>
+					<div><span><svg class="nhv-inline-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="2.5"/></svg> المشاهدات</span><strong>44</strong></div>
+											<div><span><svg class="nhv-inline-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3"/><path d="M5 21a7 7 0 0 1 14 0"/></svg> المؤلف</span><strong><a href="https://cenele.com/cont-author/im-not-social/" rel="tag">I'm not social</a></strong></div>
+																<div>
+							<span><svg class="nhv-inline-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h9M8.5 3v2M6 5c.5 4 3 6 6 7M11 5c-.5 4-3 6-6 7"/><path d="m14 21 3.5-8 3.5 8M15.3 18h4.4"/></svg> المترجم</span>
+							<strong>
+								<a href="https://cenele.com/cont-artist/im-not-social/">I&#039;m not social</a>							</strong>
+						</div>
+									</div>
+
+				<div class="nhv-novel-integrations">
+							<section class="nhv-gems-box" data-manga-id="115579" data-nonce="" data-store-url="https://cenele.com/store/?nhv_store=gems" data-main-metric="total">
+			<div class="nhv-gems-box__main">
+				<div class="nhv-gems-box__stat">
+					<span class="nhv-gem-icon" aria-hidden="true"></span>
+					<div>
+						<span class="nhv-gems-total" hidden>0</span>
+						<strong class="nhv-gems-main-value">0</strong>
+						<span class="nhv-gems-main-label">جوهرة في خزنة الرواية</span>
+					</div>
+				</div>
+				<div class="nhv-gems-box__month">
+					<span>0</span>
+					<small>هذا الشهر</small>
+				</div>
+				<button type="button" class="nhv-gems-open">
+					<span class="nhv-gems-open__text"><span>تعزيز الرواية</span></span>
+					<b aria-hidden="true">+</b>
+				</button>
+			</div>
+			<div class="nhv-gems-modal" hidden>
+				<div class="nhv-gems-modal__panel" role="dialog" aria-modal="true" aria-label="تعزيز الرواية">
+					<button type="button" class="nhv-gems-close" aria-label="إغلاق">×</button>
+					<h3><span class="nhv-gem-icon nhv-gem-icon--mini" aria-hidden="true"></span><span>تعزيز رواية الخلود الملعون</span></h3>
+					<p class="nhv-gems-modal__intro"><span class="nhv-gems-blood-icon" aria-hidden="true"></span>عزز هذه الرواية بالجواهر حتى يزيد تنزيل فصولها أو تقوم بإحياء ترجمة الرواية إن كانت متوقفة.</p>
+										<div class="nhv-gems-modal-stats">
+						<div>
+							<span>خزنة الرواية</span>
+							<strong class="nhv-gems-value"><span class="nhv-gem-icon nhv-gem-icon--mini" aria-hidden="true"></span><span><span class="nhv-gems-modal-total">0</span> جوهرة</span></strong>
+						</div>
+						<div>
+							<span>هذا الشهر</span>
+							<strong class="nhv-gems-value"><span class="nhv-gem-icon nhv-gem-icon--mini" aria-hidden="true"></span><span><span class="nhv-gems-modal-month">0</span> جوهرة</span></strong>
+						</div>
+					</div>
+					<div class="nhv-gems-balance">
+						<span>رصيدك الحالي</span>
+						<strong class="nhv-gems-value"><span class="nhv-gem-icon nhv-gem-icon--mini" aria-hidden="true"></span><span><span class="nhv-gems-balance-value">0</span> جوهرة</span></strong>
+					</div>
+										<label class="nhv-gems-amount">
+						<span class="nhv-gems-field-label"><span class="nhv-gem-icon nhv-gem-icon--mini" aria-hidden="true"></span>عدد الجواهر</span>
+						<input type="number" min="1" max="100000" step="1" value="10">
+					</label>
+							<div class="nhv-gems-quick" aria-label="مبالغ تعزيز سريعة">
+							<button type="button" class="nhv-gems-quick-button" data-amount="50">50</button>
+							<button type="button" class="nhv-gems-quick-button" data-amount="100">100</button>
+							<button type="button" class="nhv-gems-quick-button" data-amount="500">500</button>
+						<button type="button" class="nhv-gems-quick-button nhv-gems-quick-all" data-all="1" data-balance="0"  disabled='disabled'>الكل</button>
+		</div>
+							<div class="nhv-gems-actions">
+						<button type="button" class="nhv-gems-submit">إضافة التعزيز</button>
+						<a class="nhv-gems-store" href="https://cenele.com/store/?nhv_store=gems">شراء جواهر</a>
+					</div>
+					<div class="nhv-gems-message" aria-live="polite"></div>
+				</div>
+			</div>
+		</section>
+						<div class="nhv-simple-rating" data-post-id="115579" data-rated="0" data-user-rating="0" data-error="تعذر حفظ التقييم الآن" data-done="تم حفظ تقييمك" data-updated="تم تحديث تقييمك" data-unchanged="هذا هو تقييمك الحالي" data-login-required="1" data-login-message="يجب تسجيل الدخول أو إنشاء حساب للتقييم">
+			<div class="nhv-simple-rating__summary">
+				<div class="nhv-simple-rating__meta">
+					<span class="nhv-simple-rating__metric nhv-simple-rating__metric--avg">
+						<span class="nhv-simple-rating__metric-label">التقييم العام</span>
+						<span class="nhv-simple-rating__avg">7.9</span>
+						<span class="nhv-simple-rating__outof">/ 10</span>
+					</span>
+					<span class="nhv-simple-rating__metric">
+						<span class="nhv-simple-rating__metric-label">عدد المقيمين</span>
+						<span class="nhv-simple-rating__count">15</span>
+					</span>
+					<span class="nhv-simple-rating__metric">
+						<span class="nhv-simple-rating__metric-label">تقييمك</span>
+						<span class="nhv-simple-rating__your">غير محدد</span>
+					</span>
+				</div>
+			</div>
+			<div class="nhv-simple-rating__choices" role="group" aria-label="تقييم الرواية من 10">
+									<button type="button" class="nhv-simple-rating__option" data-value="1" aria-pressed="false">
+						<span class="nhv-simple-rating__star" aria-hidden="true">&#9733;</span>
+						<span class="nhv-simple-rating__value">1</span>
+					</button>
+									<button type="button" class="nhv-simple-rating__option" data-value="2" aria-pressed="false">
+						<span class="nhv-simple-rating__star" aria-hidden="true">&#9733;</span>
+						<span class="nhv-simple-rating__value">2</span>
+					</button>
+									<button type="button" class="nhv-simple-rating__option" data-value="3" aria-pressed="false">
+						<span class="nhv-simple-rating__star" aria-hidden="true">&#9733;</span>
+						<span class="nhv-simple-rating__value">3</span>
+					</button>
+									<button type="button" class="nhv-simple-rating__option" data-value="4" aria-pressed="false">
+						<span class="nhv-simple-rating__star" aria-hidden="true">&#9733;</span>
+						<span class="nhv-simple-rating__value">4</span>
+					</button>
+									<button type="button" class="nhv-simple-rating__option" data-value="5" aria-pressed="false">
+						<span class="nhv-simple-rating__star" aria-hidden="true">&#9733;</span>
+						<span class="nhv-simple-rating__value">5</span>
+					</button>
+									<button type="button" class="nhv-simple-rating__option" data-value="6" aria-pressed="false">
+						<span class="nhv-simple-rating__star" aria-hidden="true">&#9733;</span>
+						<span class="nhv-simple-rating__value">6</span>
+					</button>
+									<button type="button" class="nhv-simple-rating__option" data-value="7" aria-pressed="false">
+						<span class="nhv-simple-rating__star" aria-hidden="true">&#9733;</span>
+						<span class="nhv-simple-rating__value">7</span>
+					</button>
+									<button type="button" class="nhv-simple-rating__option" data-value="8" aria-pressed="false">
+						<span class="nhv-simple-rating__star" aria-hidden="true">&#9733;</span>
+						<span class="nhv-simple-rating__value">8</span>
+					</button>
+									<button type="button" class="nhv-simple-rating__option" data-value="9" aria-pressed="false">
+						<span class="nhv-simple-rating__star" aria-hidden="true">&#9733;</span>
+						<span class="nhv-simple-rating__value">9</span>
+					</button>
+									<button type="button" class="nhv-simple-rating__option" data-value="10" aria-pressed="false">
+						<span class="nhv-simple-rating__star" aria-hidden="true">&#9733;</span>
+						<span class="nhv-simple-rating__value">10</span>
+					</button>
+							</div>
+			<div class="nhv-simple-rating__message" aria-live="polite">يجب تسجيل الدخول أو إنشاء حساب للتقييم</div>
+		</div>
+						</div>
+			</div>
+
+			<div class="nhv-novel-actions">
+				<a
+	href="https://cenele.com/cont/cursed-imm/%d9%85%d8%a7-%d8%a8%d8%b9%d8%af-%d8%a7%d9%84%d9%81%d9%86%d8%a7%d8%a1/%d8%a7%d9%84%d9%81%d8%b5%d9%84-1/"
+	class="nhv-novel-action nhv-novel-action--reading"
+	data-nhv-novel-continue="https://cenele.com/cont/cursed-imm/"
+	data-nhv-start-url="https://cenele.com/cont/cursed-imm/%d9%85%d8%a7-%d8%a8%d8%b9%d8%af-%d8%a7%d9%84%d9%81%d9%86%d8%a7%d8%a1/%d8%a7%d9%84%d9%81%d8%b5%d9%84-1/"
+>
+	<svg class="nhv-inline-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M7 5v14"/><path d="m18 6-7 6 7 6z"/></svg>	<span><b data-nhv-reading-label>ابدأ القراءة</b><small data-nhv-reading-detail>من الفصل الأول</small></span>
+</a>
+					<span
+						class="nhv-novel-bookmark"
+						data-nhv-favorite-count="0"
+						data-nhv-favorite-state="0"
+					>
+						<div class="action_icon"><script type="text/javascript"> var requireLogin2BookMark = true; </script><a href="#" class="wp-manga-action-button" data-action="bookmark" data-post="115579" data-chapter="" data-page="1" title="المفضلة"><i class="icon ion-ios-bookmark"></i></a></div><div class="action_detail"><span>إضافة للمفضلة</span></div>						<span class="nhv-novel-bookmark__label" aria-live="polite">
+							<svg class="nhv-inline-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"/></svg>							<b data-nhv-favorite-label>المفضلة</b>
+							<small data-nhv-favorite-total>0 قارئ</small>
+						</span>
+					</span>
+								</div>
+		</article>
+
+		<section class="nhv-novel-recent" aria-labelledby="nhv-novel-recent-title">
+		<div class="nhv-novel-recent__head">
+			<div>
+				<span>أحدث الإضافات</span>
+				<h2 id="nhv-novel-recent-title">آخر 8 فصول</h2>
+			</div>
+			<a href="#novel-chapters" data-nhv-open-chapters>عرض قائمة الفصول</a>
+		</div>
+		<ul class="nhv-novel-chapters-list nhv-novel-recent__list">
+							<li data-chapter-id="88957" class="wp-manga-chapter">
+					<a href="https://cenele.com/cont/cursed-imm/%d9%85%d8%a7-%d8%a8%d8%b9%d8%af-%d8%a7%d9%84%d9%81%d9%86%d8%a7%d8%a1/%d8%a7%d9%84%d9%81%d8%b5%d9%84-3/">
+						الفصل 3													<span class="nhv-chapter-name">حشرة العاصفة الدموية</span>
+											</a>
+					<span class="nhv-chapter-views">
+						<i class="fa fa-eye" aria-hidden="true"></i>
+						<span class="nhv-view-count">2</span>
+					</span>
+											<span class="chapter-release-date">منذ 7 ساعات</span>
+									</li>
+							<li data-chapter-id="88956" class="wp-manga-chapter">
+					<a href="https://cenele.com/cont/cursed-imm/%d9%85%d8%a7-%d8%a8%d8%b9%d8%af-%d8%a7%d9%84%d9%81%d9%86%d8%a7%d8%a1/%d8%a7%d9%84%d9%81%d8%b5%d9%84-2/">
+						الفصل 2													<span class="nhv-chapter-name">صدمة الواقع</span>
+											</a>
+					<span class="nhv-chapter-views">
+						<i class="fa fa-eye" aria-hidden="true"></i>
+						<span class="nhv-view-count">3</span>
+					</span>
+											<span class="chapter-release-date">منذ 7 ساعات</span>
+									</li>
+							<li data-chapter-id="88955" class="wp-manga-chapter">
+					<a href="https://cenele.com/cont/cursed-imm/%d9%85%d8%a7-%d8%a8%d8%b9%d8%af-%d8%a7%d9%84%d9%81%d9%86%d8%a7%d8%a1/%d8%a7%d9%84%d9%81%d8%b5%d9%84-1/">
+						الفصل 1													<span class="nhv-chapter-name">أمنية الخلود</span>
+											</a>
+					<span class="nhv-chapter-views">
+						<i class="fa fa-eye" aria-hidden="true"></i>
+						<span class="nhv-view-count">6</span>
+					</span>
+											<span class="chapter-release-date">منذ 7 ساعات</span>
+									</li>
+					</ul>
+	</section>
+		<nav class="nhv-novel-tabs" role="tablist" aria-label="محتوى الرواية">
+			<button class="is-active" type="button" role="tab" aria-selected="true" aria-controls="nhv-novel-panel" data-nhv-section="summary">القصة</button>
+			<button type="button" role="tab" aria-selected="false" aria-controls="nhv-novel-panel" data-nhv-section="chapters">قائمة الفصول</button>
+			<button type="button" role="tab" aria-selected="false" aria-controls="nhv-novel-panel" data-nhv-section="comments">التعليقات</button>
+			<button type="button" role="tab" aria-selected="false" aria-controls="nhv-novel-panel" data-nhv-section="characters">الشخصيات</button>
+		</nav>
+
+		<section id="nhv-novel-panel" class="nhv-novel-panel" data-nhv-section-panel data-nhv-initial-section="summary" aria-live="polite">
+			<div class="nhv-novel-section-head nhv-novel-section-head--story">
+			<h2>قصة رواية الخلود الملعون</h2>
+		</div>
+		<div class="nhv-novel-synopsis"><h2>رواية الخلود الملعون</h2>
+<p>توفي جاكوب ستيف، وهو رجل مسن، عن عمر يناهز 116 عامًا بعد أن عاش حياة كاملة.</p>
+<p>لكن يعقوب كان لديه دائماً جانب مظلم، كان يكبته ويخفيه عن الآخرين.</p>
+<p>لكن في السنوات الأخيرة من حياته، عندما أصبح الموت أمراً لا مفر منه، أدرك أنه لا جدوى من امتلاك الثروة أو المعرفة أو الرغبات إذا لم يكن بإمكانك أن تعيش حياة تستمتع بها.</p>
+<p>لقد أصبح مهووساً بالخلود الأسطوري وكرس ما تبقى من حياته لإطالة عمره الزائل، لكنه فشل كأي شخص آخر.</p>
+<p>ومع ذلك، حصل بطريقة غامضة على فرصة أخرى في الحياة ووجد طريقة أدت إلى الخلود الأسطوري.</p>
+<p>لكنه حُذِّر أيضاً من أن الطريق المؤدي إليه مليء بالدماء والظلام!</p>
+<p>في النهاية، اختار يعقوب ذلك على أي حال دون وجود طريقة للعودة، وكانت هذه أيضًا بداية معاناته ورحلته البشعة والوحشية نحو &#8220;الخلود&#8221; الذي كان يريده بشدة!</p>
+<h3>رواية Cursed Immortality</h3>
+</div>
+		<div class="nhv-novel-support nhv-novel-support--gifts"><section class="nhv-gems-gift-box" data-manga-id="115579" data-store-url="https://cenele.com/store/?nhv_store=gems">
+			<div class="nhv-gems-gift-box__copy">
+				<span class="nhv-gems-gift-box__icon" aria-hidden="true">🎁</span>
+				<div>
+					<small>هدية للمترجم</small>
+					<strong>عبّر عن دعمك لهذه الرواية</strong>
+					<p>تدخل هديتك خزينة الرواية ويحصل مترجمها على قيمتها كاملة.</p>
+				</div>
+			</div>
+			<button type="button" class="nhv-gems-gift-open">اختيار هدية</button>
+			<div class="nhv-gems-modal nhv-gems-gift-modal" hidden>
+				<div class="nhv-gems-modal__panel nhv-gems-gift-modal__panel" role="dialog" aria-modal="true" aria-label="إهداء المترجم">
+					<button type="button" class="nhv-gems-close" aria-label="إغلاق">×</button>
+					<h3><span aria-hidden="true">🎁</span><span>اختر هديتك للمترجم</span></h3>
+					<p class="nhv-gems-modal__intro">قيمة الهدية تُضاف كاملة إلى خزينة الرواية، ويحصل مترجمها على قيمتها كاملة دون تطبيق نسبة الرتبة.</p>
+					<div class="nhv-gems-balance">
+						<span>رصيدك الحالي</span>
+						<strong class="nhv-gems-value"><span class="nhv-gem-icon nhv-gem-icon--mini" aria-hidden="true"></span><span><span class="nhv-gems-balance-value">—</span> جوهرة</span></strong>
+					</div>
+					<div class="nhv-gems-gift-grid" role="list" aria-label="الهدايا المتاحة">
+													<button type="button" class="nhv-gems-gift-option" data-gift-key="sweet" data-gift-amount="10" role="listitem">
+								<span class="nhv-gems-gift-option__icon" aria-hidden="true">🍬</span>
+								<strong>حلوى</strong>
+								<small><span class="nhv-gem-icon nhv-gem-icon--mini" aria-hidden="true"></span>10 جوهرة</small>
+							</button>
+													<button type="button" class="nhv-gems-gift-option" data-gift-key="coffee" data-gift-amount="50" role="listitem">
+								<span class="nhv-gems-gift-option__icon" aria-hidden="true">☕</span>
+								<strong>كوب قهوة</strong>
+								<small><span class="nhv-gem-icon nhv-gem-icon--mini" aria-hidden="true"></span>50 جوهرة</small>
+							</button>
+													<button type="button" class="nhv-gems-gift-option" data-gift-key="pizza" data-gift-amount="100" role="listitem">
+								<span class="nhv-gems-gift-option__icon" aria-hidden="true">🍕</span>
+								<strong>بيتزا</strong>
+								<small><span class="nhv-gem-icon nhv-gem-icon--mini" aria-hidden="true"></span>100 جوهرة</small>
+							</button>
+													<button type="button" class="nhv-gems-gift-option" data-gift-key="car" data-gift-amount="250" role="listitem">
+								<span class="nhv-gems-gift-option__icon" aria-hidden="true">🚗</span>
+								<strong>سيارة</strong>
+								<small><span class="nhv-gem-icon nhv-gem-icon--mini" aria-hidden="true"></span>250 جوهرة</small>
+							</button>
+													<button type="button" class="nhv-gems-gift-option" data-gift-key="jet_duck" data-gift-amount="1000" role="listitem">
+								<span class="nhv-gems-gift-option__icon" aria-hidden="true">🦆</span>
+								<strong>بطة نفاثة</strong>
+								<small><span class="nhv-gem-icon nhv-gem-icon--mini" aria-hidden="true"></span>1٬000 جوهرة</small>
+							</button>
+													<button type="button" class="nhv-gems-gift-option" data-gift-key="lion" data-gift-amount="2500" role="listitem">
+								<span class="nhv-gems-gift-option__icon" aria-hidden="true">🦁</span>
+								<strong>أسد</strong>
+								<small><span class="nhv-gem-icon nhv-gem-icon--mini" aria-hidden="true"></span>2٬500 جوهرة</small>
+							</button>
+													<button type="button" class="nhv-gems-gift-option" data-gift-key="immortal_pill" data-gift-amount="5000" role="listitem">
+								<span class="nhv-gems-gift-option__icon" aria-hidden="true">🔮</span>
+								<strong>حبة الخلود</strong>
+								<small><span class="nhv-gem-icon nhv-gem-icon--mini" aria-hidden="true"></span>5٬000 جوهرة</small>
+							</button>
+											</div>
+					<div class="nhv-gems-actions nhv-gems-gift-actions">
+						<a class="nhv-gems-store" href="https://cenele.com/store/?nhv_store=gems">شراء جواهر</a>
+					</div>
+					<div class="nhv-gems-message" aria-live="polite"></div>
+				</div>
+			</div>
+		</section></div><div class="nhv-novel-tags" data-nhv-tags><a href="https://cenele.com/cont-tag/%d8%a5%d9%86%d8%ac%d9%84%d9%8a%d8%b2%d9%8a%d8%a9/">إنجليزية</a><a href="https://cenele.com/cont-tag/%d8%a7%d9%83%d8%b4%d9%86/">اكشن</a><a href="https://cenele.com/cont-tag/%d8%ae%d9%8a%d8%a7%d9%84/">خيال</a><a href="https://cenele.com/cont-tag/%d8%ba%d9%85%d9%88%d8%b6/">غموض</a><a href="https://cenele.com/cont-tag/%d9%82%d9%88%d9%8a-%d8%ae%d8%a7%d8%b1%d9%82%d8%a9/">قوي خارقة</a><a href="https://cenele.com/cont-tag/%d9%85%d8%b8%d9%84%d9%85%d8%a9/" data-nhv-tag-extra hidden>مظلمة</a><button type="button" class="nhv-novel-tags__toggle" data-nhv-tags-toggle data-more-label="إظهار المزيد" data-less-label="إظهار أقل" aria-expanded="false">إظهار المزيد</button></div>		</section>
+
+					<div class="nhv-novel-recommendations"></div>
+			</div>
+</main>
+
+        </div><!-- <div class="site-content"> -->
+
+		
+			
+		
+        <footer class="site-footer">
+
+						
+			
+            <div class="bottom-footer">
+                <div class="container">
+                    <div class="row">
+                        <div class="col-md-12">
+							
+							<div class="nav-footer"><ul class="list-inline font-nav"><li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-94215"><a href="https://cenele.com/noadsall/">العضوية VIP (بدون إعلانات)</a></li>
+<li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-99698"><a href="https://cenele.com/rspuser/">إعدادات التعليقات</a></li>
+<li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-94216"><a href="https://cenele.com/cont/">مكتبة الروايات</a></li>
+<li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-94217"><a href="https://cenele.com/cont-genre/%d9%85%d9%83%d8%aa%d9%85%d9%84%d8%a9/">الروايات المكتملة</a></li>
+<li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-113303"><a href="https://cenele.com/translator-dashboard/">لوحة تحكم المترجم</a></li>
+<li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-108844"><a href="https://cenele.com/dmca/">dmca</a></li>
+<li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-80"><a href="https://cenele.com/privacy-policy/">سياسة الخصوصية</a></li>
+</ul></div>
+                            <div class="copyright">
+								<p>جميع الحقوق محفوظة لأصحابها -فضاء الروايات 2026-</p>                            </div>
+                            
+                                                    </div>
+                    </div>
+                </div>
+            </div>
+
+        </footer>
+		
+		
+        </div> <!-- class="wrap" --></div> <!-- class="body-wrap" -->
+
+	
+<script type="speculationrules">
+{"prefetch":[{"source":"document","where":{"and":[{"href_matches":"/*"},{"not":{"href_matches":["/wp-*.php","/wp-admin/*","/wp-content/uploads/*","/wp-content/*","/wp-content/plugins/*","/wp-content/themes/madara-child-novel/*","/wp-content/themes/madara/*","/*\\?(.+)"]}},{"not":{"selector_matches":"a[rel~=\"nofollow\"]"}},{"not":{"selector_matches":".no-prefetch, .no-prefetch a"}}]},"eagerness":"conservative"}]}
+</script>
+
+<!-- Modal -->
+<div class="wp-manga-section">
+    <input type="hidden" name="bookmarking" value="0"/>
+    <div class="modal fade" id="form-login" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <div id="login" class="login">
+                        <h3>
+                            <a href="https://cenele.com/" title="فضاء الروايات" tabindex="-1">Sign in</a>
+                        </h3>
+                        <p class="message login"></p>
+						<meta name='robots' content='max-image-preview:large' />
+<style id="global-styles-inline-css">
+:root{--wp--preset--aspect-ratio--square: 1;--wp--preset--aspect-ratio--4-3: 4/3;--wp--preset--aspect-ratio--3-4: 3/4;--wp--preset--aspect-ratio--3-2: 3/2;--wp--preset--aspect-ratio--2-3: 2/3;--wp--preset--aspect-ratio--16-9: 16/9;--wp--preset--aspect-ratio--9-16: 9/16;--wp--preset--color--black: #000000;--wp--preset--color--cyan-bluish-gray: #abb8c3;--wp--preset--color--white: #ffffff;--wp--preset--color--pale-pink: #f78da7;--wp--preset--color--vivid-red: #cf2e2e;--wp--preset--color--luminous-vivid-orange: #ff6900;--wp--preset--color--luminous-vivid-amber: #fcb900;--wp--preset--color--light-green-cyan: #7bdcb5;--wp--preset--color--vivid-green-cyan: #00d084;--wp--preset--color--pale-cyan-blue: #8ed1fc;--wp--preset--color--vivid-cyan-blue: #0693e3;--wp--preset--color--vivid-purple: #9b51e0;--wp--preset--gradient--vivid-cyan-blue-to-vivid-purple: linear-gradient(135deg,rgb(6,147,227) 0%,rgb(155,81,224) 100%);--wp--preset--gradient--light-green-cyan-to-vivid-green-cyan: linear-gradient(135deg,rgb(122,220,180) 0%,rgb(0,208,130) 100%);--wp--preset--gradient--luminous-vivid-amber-to-luminous-vivid-orange: linear-gradient(135deg,rgb(252,185,0) 0%,rgb(255,105,0) 100%);--wp--preset--gradient--luminous-vivid-orange-to-vivid-red: linear-gradient(135deg,rgb(255,105,0) 0%,rgb(207,46,46) 100%);--wp--preset--gradient--very-light-gray-to-cyan-bluish-gray: linear-gradient(135deg,rgb(238,238,238) 0%,rgb(169,184,195) 100%);--wp--preset--gradient--cool-to-warm-spectrum: linear-gradient(135deg,rgb(74,234,220) 0%,rgb(151,120,209) 20%,rgb(207,42,186) 40%,rgb(238,44,130) 60%,rgb(251,105,98) 80%,rgb(254,248,76) 100%);--wp--preset--gradient--blush-light-purple: linear-gradient(135deg,rgb(255,206,236) 0%,rgb(152,150,240) 100%);--wp--preset--gradient--blush-bordeaux: linear-gradient(135deg,rgb(254,205,165) 0%,rgb(254,45,45) 50%,rgb(107,0,62) 100%);--wp--preset--gradient--luminous-dusk: linear-gradient(135deg,rgb(255,203,112) 0%,rgb(199,81,192) 50%,rgb(65,88,208) 100%);--wp--preset--gradient--pale-ocean: linear-gradient(135deg,rgb(255,245,203) 0%,rgb(182,227,212) 50%,rgb(51,167,181) 100%);--wp--preset--gradient--electric-grass: linear-gradient(135deg,rgb(202,248,128) 0%,rgb(113,206,126) 100%);--wp--preset--gradient--midnight: linear-gradient(135deg,rgb(2,3,129) 0%,rgb(40,116,252) 100%);--wp--preset--font-size--small: 13px;--wp--preset--font-size--medium: 20px;--wp--preset--font-size--large: 36px;--wp--preset--font-size--x-large: 42px;--wp--preset--spacing--20: 0.44rem;--wp--preset--spacing--30: 0.67rem;--wp--preset--spacing--40: 1rem;--wp--preset--spacing--50: 1.5rem;--wp--preset--spacing--60: 2.25rem;--wp--preset--spacing--70: 3.38rem;--wp--preset--spacing--80: 5.06rem;--wp--preset--shadow--natural: 6px 6px 9px rgba(0, 0, 0, 0.2);--wp--preset--shadow--deep: 12px 12px 50px rgba(0, 0, 0, 0.4);--wp--preset--shadow--sharp: 6px 6px 0px rgba(0, 0, 0, 0.2);--wp--preset--shadow--outlined: 6px 6px 0px -3px rgb(255, 255, 255), 6px 6px rgb(0, 0, 0);--wp--preset--shadow--crisp: 6px 6px 0px rgb(0, 0, 0);}.wp-block-button{--wp--preset--dimension--25: 25%;--wp--preset--dimension--50: 50%;--wp--preset--dimension--75: 75%;--wp--preset--dimension--100: 100%;}:where(body) { margin: 0; }:where(.is-layout-flex){gap: 0.5em;}:where(.is-layout-grid){gap: 0.5em;}body .is-layout-flex{display: flex;}.is-layout-flex{flex-wrap: wrap;align-items: center;}.is-layout-flex > :is(*, div){margin: 0;}body .is-layout-grid{display: grid;}.is-layout-grid > :is(*, div){margin: 0;}body{padding-top: 0px;padding-right: 0px;padding-bottom: 0px;padding-left: 0px;}:root :where(.wp-element-button, .wp-block-button__link){background-color: #32373c;border-width: 0;color: #fff;font-family: inherit;font-size: inherit;font-style: inherit;font-weight: inherit;letter-spacing: inherit;line-height: inherit;padding-top: calc(0.667em + 2px);padding-right: calc(1.333em + 2px);padding-bottom: calc(0.667em + 2px);padding-left: calc(1.333em + 2px);text-decoration: none;text-transform: inherit;}.has-black-color{color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-color{color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-color{color: var(--wp--preset--color--white) !important;}.has-pale-pink-color{color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-color{color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-color{color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-color{color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-color{color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-color{color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-color{color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-color{color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-color{color: var(--wp--preset--color--vivid-purple) !important;}.has-black-background-color{background-color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-background-color{background-color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-background-color{background-color: var(--wp--preset--color--white) !important;}.has-pale-pink-background-color{background-color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-background-color{background-color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-background-color{background-color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-background-color{background-color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-background-color{background-color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-background-color{background-color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-background-color{background-color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-background-color{background-color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-background-color{background-color: var(--wp--preset--color--vivid-purple) !important;}.has-black-border-color{border-color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-border-color{border-color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-border-color{border-color: var(--wp--preset--color--white) !important;}.has-pale-pink-border-color{border-color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-border-color{border-color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-border-color{border-color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-border-color{border-color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-border-color{border-color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-border-color{border-color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-border-color{border-color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-border-color{border-color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-border-color{border-color: var(--wp--preset--color--vivid-purple) !important;}.has-vivid-cyan-blue-to-vivid-purple-gradient-background{background: var(--wp--preset--gradient--vivid-cyan-blue-to-vivid-purple) !important;}.has-light-green-cyan-to-vivid-green-cyan-gradient-background{background: var(--wp--preset--gradient--light-green-cyan-to-vivid-green-cyan) !important;}.has-luminous-vivid-amber-to-luminous-vivid-orange-gradient-background{background: var(--wp--preset--gradient--luminous-vivid-amber-to-luminous-vivid-orange) !important;}.has-luminous-vivid-orange-to-vivid-red-gradient-background{background: var(--wp--preset--gradient--luminous-vivid-orange-to-vivid-red) !important;}.has-very-light-gray-to-cyan-bluish-gray-gradient-background{background: var(--wp--preset--gradient--very-light-gray-to-cyan-bluish-gray) !important;}.has-cool-to-warm-spectrum-gradient-background{background: var(--wp--preset--gradient--cool-to-warm-spectrum) !important;}.has-blush-light-purple-gradient-background{background: var(--wp--preset--gradient--blush-light-purple) !important;}.has-blush-bordeaux-gradient-background{background: var(--wp--preset--gradient--blush-bordeaux) !important;}.has-luminous-dusk-gradient-background{background: var(--wp--preset--gradient--luminous-dusk) !important;}.has-pale-ocean-gradient-background{background: var(--wp--preset--gradient--pale-ocean) !important;}.has-electric-grass-gradient-background{background: var(--wp--preset--gradient--electric-grass) !important;}.has-midnight-gradient-background{background: var(--wp--preset--gradient--midnight) !important;}.has-small-font-size{font-size: var(--wp--preset--font-size--small) !important;}.has-medium-font-size{font-size: var(--wp--preset--font-size--medium) !important;}.has-large-font-size{font-size: var(--wp--preset--font-size--large) !important;}.has-x-large-font-size{font-size: var(--wp--preset--font-size--x-large) !important;}
+/*# sourceURL=global-styles-inline-css */
+</style>
+<link rel="icon" href="https://cenele.com/wp-content/uploads/2026/08/cropped-فضاء-روايات-32x32.png" sizes="32x32" />
+<link rel="icon" href="https://cenele.com/wp-content/uploads/2026/08/cropped-فضاء-روايات-192x192.png" sizes="192x192" />
+<link rel="apple-touch-icon" href="https://cenele.com/wp-content/uploads/2026/08/cropped-فضاء-روايات-180x180.png" />
+<meta name="msapplication-TileImage" content="https://cenele.com/wp-content/uploads/2026/08/cropped-فضاء-روايات-270x270.png" />
+<style type="text/css">div.nsl-container[data-align="left"] {
+    text-align: left;
+}
+
+div.nsl-container[data-align="center"] {
+    text-align: center;
+}
+
+div.nsl-container[data-align="right"] {
+    text-align: right;
+}
+
+
+div.nsl-container div.nsl-container-buttons a[data-plugin="nsl"] {
+    text-decoration: none;
+    box-shadow: none;
+    border: 0;
+}
+
+div.nsl-container .nsl-container-buttons {
+    display: flex;
+    padding: 5px 0;
+}
+
+div.nsl-container.nsl-container-block .nsl-container-buttons {
+    display: inline-grid;
+    grid-template-columns: minmax(145px, auto);
+}
+
+div.nsl-container-block-fullwidth .nsl-container-buttons {
+    flex-flow: column;
+    align-items: center;
+}
+
+div.nsl-container-block-fullwidth .nsl-container-buttons a,
+div.nsl-container-block .nsl-container-buttons a {
+    flex: 1 1 auto;
+    display: block;
+    margin: 5px 0;
+    width: 100%;
+}
+
+div.nsl-container-inline {
+    margin: -5px;
+    text-align: left;
+}
+
+div.nsl-container-inline .nsl-container-buttons {
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+div.nsl-container-inline .nsl-container-buttons a {
+    margin: 5px;
+    display: inline-block;
+}
+
+div.nsl-container-grid .nsl-container-buttons {
+    flex-flow: row;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+div.nsl-container-grid .nsl-container-buttons a {
+    flex: 1 1 auto;
+    display: block;
+    margin: 5px;
+    max-width: 280px;
+    width: 100%;
+}
+
+@media only screen and (min-width: 650px) {
+    div.nsl-container-grid .nsl-container-buttons a {
+        width: auto;
+    }
+}
+
+div.nsl-container .nsl-button {
+    cursor: pointer;
+    vertical-align: top;
+    border-radius: 4px;
+}
+
+div.nsl-container .nsl-button-default {
+    color: #fff;
+    display: flex;
+}
+
+div.nsl-container .nsl-button-icon {
+    display: inline-block;
+}
+
+div.nsl-container .nsl-button-svg-container {
+    flex: 0 0 auto;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+}
+
+div.nsl-container svg {
+    height: 24px;
+    width: 24px;
+    vertical-align: top;
+}
+
+div.nsl-container .nsl-button-default div.nsl-button-label-container {
+    margin: 0 24px 0 12px;
+    padding: 10px 0;
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 20px;
+    letter-spacing: .25px;
+    overflow: hidden;
+    text-align: center;
+    text-overflow: clip;
+    white-space: nowrap;
+    flex: 1 1 auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-transform: none;
+    display: inline-block;
+}
+
+div.nsl-container .nsl-button-google[data-skin="light"] {
+    box-shadow: inset 0 0 0 1px #747775;
+    color: #1f1f1f;
+}
+
+div.nsl-container .nsl-button-google[data-skin="dark"] {
+    box-shadow: inset 0 0 0 1px #8E918F;
+    color: #E3E3E3;
+}
+
+div.nsl-container .nsl-button-google[data-skin="neutral"] {
+    color: #1F1F1F;
+}
+
+div.nsl-container .nsl-button-google div.nsl-button-label-container {
+    font-family: "Roboto Medium", Roboto, Helvetica, Arial, sans-serif;
+}
+
+div.nsl-container .nsl-button-apple .nsl-button-svg-container {
+    padding: 0 6px;
+}
+
+div.nsl-container .nsl-button-apple .nsl-button-svg-container svg {
+    height: 40px;
+    width: auto;
+}
+
+div.nsl-container .nsl-button-apple[data-skin="light"] {
+    color: #000;
+    box-shadow: 0 0 0 1px #000;
+}
+
+div.nsl-container .nsl-button-facebook[data-skin="white"] {
+    color: #000;
+    box-shadow: inset 0 0 0 1px #000;
+}
+
+div.nsl-container .nsl-button-facebook[data-skin="light"] {
+    color: #1877F2;
+    box-shadow: inset 0 0 0 1px #1877F2;
+}
+
+div.nsl-container .nsl-button-spotify[data-skin="white"] {
+    color: #191414;
+    box-shadow: inset 0 0 0 1px #191414;
+}
+
+div.nsl-container .nsl-button-apple div.nsl-button-label-container {
+    font-size: 17px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+}
+
+div.nsl-container .nsl-button-slack div.nsl-button-label-container {
+    font-size: 17px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+}
+
+div.nsl-container .nsl-button-slack[data-skin="light"] {
+    color: #000000;
+    box-shadow: inset 0 0 0 1px #DDDDDD;
+}
+
+div.nsl-container .nsl-button-tiktok[data-skin="light"] {
+    color: #161823;
+    box-shadow: 0 0 0 1px rgba(22, 24, 35, 0.12);
+}
+
+
+div.nsl-container .nsl-button-kakao {
+    color: rgba(0, 0, 0, 0.85);
+}
+
+.nsl-clear {
+    clear: both;
+}
+
+.nsl-container {
+    clear: both;
+}
+
+.nsl-disabled-provider .nsl-button {
+    filter: grayscale(1);
+    opacity: 0.8;
+}
+
+/*Button align start*/
+
+div.nsl-container-inline[data-align="left"] .nsl-container-buttons {
+    justify-content: flex-start;
+}
+
+div.nsl-container-inline[data-align="center"] .nsl-container-buttons {
+    justify-content: center;
+}
+
+div.nsl-container-inline[data-align="right"] .nsl-container-buttons {
+    justify-content: flex-end;
+}
+
+
+div.nsl-container-grid[data-align="left"] .nsl-container-buttons {
+    justify-content: flex-start;
+}
+
+div.nsl-container-grid[data-align="center"] .nsl-container-buttons {
+    justify-content: center;
+}
+
+div.nsl-container-grid[data-align="right"] .nsl-container-buttons {
+    justify-content: flex-end;
+}
+
+div.nsl-container-grid[data-align="space-around"] .nsl-container-buttons {
+    justify-content: space-around;
+}
+
+div.nsl-container-grid[data-align="space-between"] .nsl-container-buttons {
+    justify-content: space-between;
+}
+
+/* Button align end*/
+
+/* Redirect */
+
+#nsl-redirect-overlay {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    z-index: 1000000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    backdrop-filter: blur(1px);
+    background-color: RGBA(0, 0, 0, .32);;
+}
+
+#nsl-redirect-overlay-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: white;
+    padding: 30px;
+    border-radius: 10px;
+}
+
+#nsl-redirect-overlay-spinner {
+    content: '';
+    display: block;
+    margin: 20px;
+    border: 9px solid RGBA(0, 0, 0, .6);
+    border-top: 9px solid #fff;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1px RGBA(0, 0, 0, .6), 0 0 0 1px RGBA(0, 0, 0, .6);
+    width: 40px;
+    height: 40px;
+    animation: nsl-loader-spin 2s linear infinite;
+}
+
+@keyframes nsl-loader-spin {
+    0% {
+        transform: rotate(0deg)
+    }
+    to {
+        transform: rotate(360deg)
+    }
+}
+
+#nsl-redirect-overlay-title {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    font-size: 18px;
+    font-weight: bold;
+    color: #3C434A;
+}
+
+#nsl-redirect-overlay-text {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    text-align: center;
+    font-size: 14px;
+    color: #3C434A;
+}
+
+/* Redirect END*/</style>						                <style type="text/css">
+                    body.login div#login h1 a {
+                        background-image: url(https://cenele.com/wp-content/uploads/2026/08/لوغو-فضاء-الروايات.png);
+                        width: 320px;
+                        height: 120px;
+                        background-size: auto;
+                        background-position: center;
+                    }
+                </style>
+									                        <form name="loginform" id="loginform" method="post">
+                            <p>
+                                <label>Username or Email Address *                                    <br> <input type="text" name="log" class="input user_login" value="" size="20">
+                                </label>
+                            </p>
+                            <p>
+                                <label>Password *                                    <br> <input type="password" autocomplete="" name="pwd" class="input user_pass" value="" size="20">
+                                </label>
+                            </p>
+                            <p>
+								<div class="nhv-ts-formbox"><div class="nhv-ts-widget"><div class="cf-turnstile" data-sitekey="0x4AAAAAACjmn3qm6d1qGDkD" data-theme="auto" data-size="normal" data-action="wordpress-login"></div></div></div><div id="nsl-custom-login-form-main"><div class="nsl-container nsl-container-block" data-align="left"><div class="nsl-container-buttons"><a href="https://cenele.com/wp-login.php?loginSocial=google&#038;redirect=https%3A%2F%2Fcenele.com%2Fcont%2Fcursed-imm%2F" rel="nofollow" aria-label="Continue with &lt;b&gt;Google&lt;/b&gt;" data-plugin="nsl" data-action="connect" data-provider="google" data-popupwidth="600" data-popupheight="600"><div class="nsl-button nsl-button-default nsl-button-google" data-skin="light" style="background-color:#fff;"><div class="nsl-button-svg-container"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="#4285F4" d="M20.64 12.2045c0-.6381-.0573-1.2518-.1636-1.8409H12v3.4814h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2581h2.9087c1.7018-1.5668 2.6836-3.874 2.6836-6.615z"></path><path fill="#34A853" d="M12 21c2.43 0 4.4673-.806 5.9564-2.1805l-2.9087-2.2581c-.8059.54-1.8368.859-3.0477.859-2.344 0-4.3282-1.5831-5.036-3.7104H3.9574v2.3318C5.4382 18.9832 8.4818 21 12 21z"></path><path fill="#FBBC05" d="M6.964 13.71c-.18-.54-.2822-1.1168-.2822-1.71s.1023-1.17.2823-1.71V7.9582H3.9573A8.9965 8.9965 0 0 0 3 12c0 1.4523.3477 2.8268.9573 4.0418L6.964 13.71z"></path><path fill="#EA4335" d="M12 6.5795c1.3214 0 2.5077.4541 3.4405 1.346l2.5813-2.5814C16.4632 3.8918 14.426 3 12 3 8.4818 3 5.4382 5.0168 3.9573 7.9582L6.964 10.29C7.6718 8.1627 9.6559 6.5795 12 6.5795z"></path></svg></div><div class="nsl-button-label-container">Continue with <b>Google</b></div></div></a></div></div></div><script type="text/javascript">
+    window._nslDOMReady(function () {
+        var container = document.getElementById('nsl-custom-login-form-main'),
+            form = document.querySelector('#loginform,#registerform,#front-login-form,#setupform');
+
+        if (!form) {
+            form = container.closest('form');
+            if (!form) {
+                form = container.parentNode;
+            }
+        }
+
+        var innerContainer = container.querySelector('.nsl-container');
+        if (innerContainer) {
+            innerContainer.classList.add('nsl-container-login-layout-below');
+            innerContainer.style.display = 'block';
+        }
+
+        var jetpackSSO = document.getElementById('jetpack-sso-wrap');
+        if (jetpackSSO) {
+            form = jetpackSSO;
+        } else {
+            if (form.parentNode.classList.contains('tml')) {
+                form = form.parentNode;
+            }
+        }
+
+        form.appendChild(container);
+
+    });
+</script>
+<style type="text/css">
+    #nsl-custom-login-form-main .nsl-container {
+        display: none;
+    }
+
+    #nsl-custom-login-form-main .nsl-container-login-layout-below {
+        clear: both;
+        padding: 20px 0 0;
+    }
+
+    .login form {
+        padding-bottom: 20px;
+    }
+
+    #nsl-custom-login-form-jetpack-sso .nsl-container-login-layout-below {
+        clear: both;
+        padding: 0 0 20px;
+    }
+</style>                                
+                            </p>
+                            <p class="forgetmenot">
+                                <label>
+                                    <input name="rememberme" type="checkbox" id="rememberme" value="forever">Remember Me                                 </label>
+                            </p>
+                            <p class="submit">
+								<input type="submit" name="wp-submit" class="button button-primary button-large wp-submit" value="Log In">                                <input type="hidden" name="redirect_to" value="https://cenele.com/wp-admin/">
+                                <input type="hidden" name="testcookie" value="1">
+                            </p>
+                        </form>
+                        <p class="nav">
+                            <a href="javascript:avoid(0)" class="to-reset">Lost your password?</a>
+                        </p>
+                        <p class="backtoblog">
+                            <a href="javascript:void(0)">&larr; Back to فضاء الروايات</a>
+                        </p>
+                    </div>
+                </div>
+                <div class="modal-footer"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="form-sign-up" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <div id="sign-up" class="login">
+                        <h3>
+                            <a href="https://cenele.com/" title="فضاء الروايات" tabindex="-1">Sign Up</a>
+                        </h3>
+                        <p class="message register">Register For This Site.</p>
+                        <form name="registerform" id="registerform" novalidate="novalidate">
+                            <p>
+                                <label>Username *                                    <br>
+                                    <input type="text" name="user_sign-up" class="input user_login" value="" size="20">
+                                </label>
+                            </p>
+                            <p>
+                                <label>Email Address *                                    <br>
+                                    <input type="email" name="email_sign-up" class="input user_email" value="" size="20">
+                                </label>
+                            </p>
+                            <p>
+                                <label>Password *<br>
+                                    <input type="password" name="pass_sign-up" autocomplete="" class="input user_pass" value="" size="25">
+                                </label>
+                            </p>
+                            <p class="action">
+								<div class="nhv-ts-formbox"><div class="nhv-ts-widget"><div class="cf-turnstile" data-sitekey="0x4AAAAAACjmn3qm6d1qGDkD" data-theme="auto" data-size="normal" data-action="wordpress-register"></div></div></div><style type="text/css">div.nsl-container[data-align="left"] {
+    text-align: left;
+}
+
+div.nsl-container[data-align="center"] {
+    text-align: center;
+}
+
+div.nsl-container[data-align="right"] {
+    text-align: right;
+}
+
+
+div.nsl-container div.nsl-container-buttons a[data-plugin="nsl"] {
+    text-decoration: none;
+    box-shadow: none;
+    border: 0;
+}
+
+div.nsl-container .nsl-container-buttons {
+    display: flex;
+    padding: 5px 0;
+}
+
+div.nsl-container.nsl-container-block .nsl-container-buttons {
+    display: inline-grid;
+    grid-template-columns: minmax(145px, auto);
+}
+
+div.nsl-container-block-fullwidth .nsl-container-buttons {
+    flex-flow: column;
+    align-items: center;
+}
+
+div.nsl-container-block-fullwidth .nsl-container-buttons a,
+div.nsl-container-block .nsl-container-buttons a {
+    flex: 1 1 auto;
+    display: block;
+    margin: 5px 0;
+    width: 100%;
+}
+
+div.nsl-container-inline {
+    margin: -5px;
+    text-align: left;
+}
+
+div.nsl-container-inline .nsl-container-buttons {
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+div.nsl-container-inline .nsl-container-buttons a {
+    margin: 5px;
+    display: inline-block;
+}
+
+div.nsl-container-grid .nsl-container-buttons {
+    flex-flow: row;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+div.nsl-container-grid .nsl-container-buttons a {
+    flex: 1 1 auto;
+    display: block;
+    margin: 5px;
+    max-width: 280px;
+    width: 100%;
+}
+
+@media only screen and (min-width: 650px) {
+    div.nsl-container-grid .nsl-container-buttons a {
+        width: auto;
+    }
+}
+
+div.nsl-container .nsl-button {
+    cursor: pointer;
+    vertical-align: top;
+    border-radius: 4px;
+}
+
+div.nsl-container .nsl-button-default {
+    color: #fff;
+    display: flex;
+}
+
+div.nsl-container .nsl-button-icon {
+    display: inline-block;
+}
+
+div.nsl-container .nsl-button-svg-container {
+    flex: 0 0 auto;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+}
+
+div.nsl-container svg {
+    height: 24px;
+    width: 24px;
+    vertical-align: top;
+}
+
+div.nsl-container .nsl-button-default div.nsl-button-label-container {
+    margin: 0 24px 0 12px;
+    padding: 10px 0;
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 20px;
+    letter-spacing: .25px;
+    overflow: hidden;
+    text-align: center;
+    text-overflow: clip;
+    white-space: nowrap;
+    flex: 1 1 auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-transform: none;
+    display: inline-block;
+}
+
+div.nsl-container .nsl-button-google[data-skin="light"] {
+    box-shadow: inset 0 0 0 1px #747775;
+    color: #1f1f1f;
+}
+
+div.nsl-container .nsl-button-google[data-skin="dark"] {
+    box-shadow: inset 0 0 0 1px #8E918F;
+    color: #E3E3E3;
+}
+
+div.nsl-container .nsl-button-google[data-skin="neutral"] {
+    color: #1F1F1F;
+}
+
+div.nsl-container .nsl-button-google div.nsl-button-label-container {
+    font-family: "Roboto Medium", Roboto, Helvetica, Arial, sans-serif;
+}
+
+div.nsl-container .nsl-button-apple .nsl-button-svg-container {
+    padding: 0 6px;
+}
+
+div.nsl-container .nsl-button-apple .nsl-button-svg-container svg {
+    height: 40px;
+    width: auto;
+}
+
+div.nsl-container .nsl-button-apple[data-skin="light"] {
+    color: #000;
+    box-shadow: 0 0 0 1px #000;
+}
+
+div.nsl-container .nsl-button-facebook[data-skin="white"] {
+    color: #000;
+    box-shadow: inset 0 0 0 1px #000;
+}
+
+div.nsl-container .nsl-button-facebook[data-skin="light"] {
+    color: #1877F2;
+    box-shadow: inset 0 0 0 1px #1877F2;
+}
+
+div.nsl-container .nsl-button-spotify[data-skin="white"] {
+    color: #191414;
+    box-shadow: inset 0 0 0 1px #191414;
+}
+
+div.nsl-container .nsl-button-apple div.nsl-button-label-container {
+    font-size: 17px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+}
+
+div.nsl-container .nsl-button-slack div.nsl-button-label-container {
+    font-size: 17px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+}
+
+div.nsl-container .nsl-button-slack[data-skin="light"] {
+    color: #000000;
+    box-shadow: inset 0 0 0 1px #DDDDDD;
+}
+
+div.nsl-container .nsl-button-tiktok[data-skin="light"] {
+    color: #161823;
+    box-shadow: 0 0 0 1px rgba(22, 24, 35, 0.12);
+}
+
+
+div.nsl-container .nsl-button-kakao {
+    color: rgba(0, 0, 0, 0.85);
+}
+
+.nsl-clear {
+    clear: both;
+}
+
+.nsl-container {
+    clear: both;
+}
+
+.nsl-disabled-provider .nsl-button {
+    filter: grayscale(1);
+    opacity: 0.8;
+}
+
+/*Button align start*/
+
+div.nsl-container-inline[data-align="left"] .nsl-container-buttons {
+    justify-content: flex-start;
+}
+
+div.nsl-container-inline[data-align="center"] .nsl-container-buttons {
+    justify-content: center;
+}
+
+div.nsl-container-inline[data-align="right"] .nsl-container-buttons {
+    justify-content: flex-end;
+}
+
+
+div.nsl-container-grid[data-align="left"] .nsl-container-buttons {
+    justify-content: flex-start;
+}
+
+div.nsl-container-grid[data-align="center"] .nsl-container-buttons {
+    justify-content: center;
+}
+
+div.nsl-container-grid[data-align="right"] .nsl-container-buttons {
+    justify-content: flex-end;
+}
+
+div.nsl-container-grid[data-align="space-around"] .nsl-container-buttons {
+    justify-content: space-around;
+}
+
+div.nsl-container-grid[data-align="space-between"] .nsl-container-buttons {
+    justify-content: space-between;
+}
+
+/* Button align end*/
+
+/* Redirect */
+
+#nsl-redirect-overlay {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    z-index: 1000000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    backdrop-filter: blur(1px);
+    background-color: RGBA(0, 0, 0, .32);;
+}
+
+#nsl-redirect-overlay-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: white;
+    padding: 30px;
+    border-radius: 10px;
+}
+
+#nsl-redirect-overlay-spinner {
+    content: '';
+    display: block;
+    margin: 20px;
+    border: 9px solid RGBA(0, 0, 0, .6);
+    border-top: 9px solid #fff;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1px RGBA(0, 0, 0, .6), 0 0 0 1px RGBA(0, 0, 0, .6);
+    width: 40px;
+    height: 40px;
+    animation: nsl-loader-spin 2s linear infinite;
+}
+
+@keyframes nsl-loader-spin {
+    0% {
+        transform: rotate(0deg)
+    }
+    to {
+        transform: rotate(360deg)
+    }
+}
+
+#nsl-redirect-overlay-title {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    font-size: 18px;
+    font-weight: bold;
+    color: #3C434A;
+}
+
+#nsl-redirect-overlay-text {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    text-align: center;
+    font-size: 14px;
+    color: #3C434A;
+}
+
+/* Redirect END*/</style><div id="nsl-custom-login-form-1"><div class="nsl-container nsl-container-block" data-align="left"><div class="nsl-container-buttons"><a href="https://cenele.com/wp-login.php?loginSocial=google&#038;redirect=https%3A%2F%2Fcenele.com%2Fcont%2Fcursed-imm%2F" rel="nofollow" aria-label="Continue with &lt;b&gt;Google&lt;/b&gt;" data-plugin="nsl" data-action="connect" data-provider="google" data-popupwidth="600" data-popupheight="600"><div class="nsl-button nsl-button-default nsl-button-google" data-skin="light" style="background-color:#fff;"><div class="nsl-button-svg-container"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="#4285F4" d="M20.64 12.2045c0-.6381-.0573-1.2518-.1636-1.8409H12v3.4814h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2581h2.9087c1.7018-1.5668 2.6836-3.874 2.6836-6.615z"></path><path fill="#34A853" d="M12 21c2.43 0 4.4673-.806 5.9564-2.1805l-2.9087-2.2581c-.8059.54-1.8368.859-3.0477.859-2.344 0-4.3282-1.5831-5.036-3.7104H3.9574v2.3318C5.4382 18.9832 8.4818 21 12 21z"></path><path fill="#FBBC05" d="M6.964 13.71c-.18-.54-.2822-1.1168-.2822-1.71s.1023-1.17.2823-1.71V7.9582H3.9573A8.9965 8.9965 0 0 0 3 12c0 1.4523.3477 2.8268.9573 4.0418L6.964 13.71z"></path><path fill="#EA4335" d="M12 6.5795c1.3214 0 2.5077.4541 3.4405 1.346l2.5813-2.5814C16.4632 3.8918 14.426 3 12 3 8.4818 3 5.4382 5.0168 3.9573 7.9582L6.964 10.29C7.6718 8.1627 9.6559 6.5795 12 6.5795z"></path></svg></div><div class="nsl-button-label-container">Continue with <b>Google</b></div></div></a></div></div></div><script type="text/javascript">
+    window._nslDOMReady(function () {
+        var container = document.getElementById('nsl-custom-login-form-1'),
+            form = container.closest('form');
+
+        var innerContainer = container.querySelector('.nsl-container');
+        if (innerContainer) {
+            innerContainer.classList.add('nsl-container-embedded-login-layout-below');
+            innerContainer.style.display = 'block';
+        }
+
+        form.appendChild(container);
+    });
+</script>
+<style type="text/css">
+    
+    #nsl-custom-login-form-1 .nsl-container {
+        display: none;
+    }
+
+    #nsl-custom-login-form-1 .nsl-container-embedded-login-layout-below {
+        clear: both;
+        padding: 20px 0 0;
+    }
+
+    .login form {
+        padding-bottom: 20px;
+    }</style>
+                            </p>
+
+                            <input type="hidden" name="redirect_to" value="">
+                            <p class="submit">
+                                <input type="submit" name="wp-submit" class="button button-primary button-large wp-submit" value="Register">
+                            </p>
+                        </form>
+                        <p class="nav">
+                            <a href="javascript:void(0)" class="to-login">Log in</a>
+                            |
+                            <a href="javascript:void(0)" class="to-reset">Lost your password?</a>
+                        </p>
+                        <p class="backtoblog">
+                            <a href="javascript:void(0)">&larr; Back to فضاء الروايات</a>
+                        </p>
+                    </div>
+                </div>
+                <div class="modal-footer"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="form-reset" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <div id="reset" class="login">
+                        <h3>
+                            <a href="javascript:void(0)" class="to-reset">Lost your password?</a>
+                        </h3>
+                        <p class="message reset">Please enter your username or email address. You will receive a link to create a new password via email.</p>
+                        <form name="resetform" id="resetform" method="post">
+                            <p>
+                                <label>Username or Email Address                                    <br>
+                                    <input type="text" name="user_reset" id="user_reset" class="input" value="" size="20">
+                                </label>
+                            </p>
+                                                        <p class="submit">
+                                <input type="submit" name="wp-submit" class="button button-primary button-large wp-submit" value="Get New Password">
+                                <input type="hidden" name="testcookie" value="1">
+                            </p>
+                        </form>
+                        <p>
+                            <a class="backtoblog" href="javascript:void(0)">&larr; Back to  فضاء الروايات</a>
+                        </p>
+                    </div>
+                </div>
+                <div class="modal-footer"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+                                    var gRecaptchas = document.getElementsByClassName('g-recaptcha');
+                                    for (let i = 0; i < gRecaptchas.length; i++) {
+                                        gRecaptchas[i].setAttribute('data-callback', 'wpMangaSubmitSwitch');
+                                        gRecaptchas[i].setAttribute('data-expired-callback', 'wpMangaSubmitSwitch');
+                                        gRecaptchas[i].setAttribute('data-error', 'wpMangaSubmitSwitch');
+                                    }
+                                </script>
+</div>
+<script id="wp-manga-single-js-js-extra">
+var wpMangaSingle = {"ajax_url":"https://cenele.com/wp-admin/admin-ajax.php","home_url":"https://cenele.com"};
+//# sourceURL=wp-manga-single-js-js-extra
+</script>
+<script id="wp-manga-single-js-js" src="https://cenele.com/wp-content/plugins/madara-core/assets/js/manga-single.js?ver=7.1"></script>
+<script id="rspc-cookie-cleanup-js-extra">
+var RSPCCookieCleanup = {"path":"/","domain":""};
+//# sourceURL=rspc-cookie-cleanup-js-extra
+</script>
+<script id="rspc-cookie-cleanup-js" src="https://cenele.com/wp-content/plugins/comments-rsp/assets/cookie-cleanup.js?ver=0.8.4"></script>
+<script id="rspc-front-js-extra">
+var RSPC = {"ajaxUrl":"https://cenele.com/wp-admin/admin-ajax.php","nonce":"0c1de8f0f1","isLogged":"","perPage":"10","popularWindow":"50","context":{"entityKey":"novel:115579","postId":115579,"contextPath":"cont/cursed-imm/"},"vipPromoText":"\u0627\u0634\u062a\u0631\u0643 \u0641\u064a VIP \u0648\u0623\u062d\u0635\u0644 \u0639\u0644\u0649 \u0627\u0645\u0643\u0627\u0646\u064a\u0629 \u0631\u0641\u0639 \u0635\u0648\u0631 \u0644\u0627\u0646\u0647\u0627\u0626\u064a \u0628\u0627\u0644\u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0649 \u0627\u0633\u062a\u0639\u0645\u0627\u0644 \u0644\u0627\u0646\u0647\u0627\u0626\u064a \u0644\u0643\u0644 \u0633\u064a\u062a\u064a\u0643\u0631\u0632 , \u062d\u0630\u0641 \u0643\u0644 \u0625\u0639\u0644\u0627\u0646\u0627\u062a \u0648 \u0627\u0637\u0627\u0631 \u0630\u0647\u0628\u064a \u0644\u062a\u0639\u0644\u064a\u0642\u0643 \u0648 \u0627\u0645\u0643\u0627\u0646\u064a\u0629 \u062a\u0639\u062f\u064a\u0644 \u062a\u0639\u0644\u064a\u0642\u0627\u062a\u0643 \u0641\u064a \u0627\u064a \u0648\u0642\u062a \u0648\u0648\u0635\u0644 \u0645\u0628\u0643\u0631 \u0644\u0644\u0641\u0635\u0648\u0644.","vipUpgradeUrl":"https://cenele.com/noadsall/","upload":{"enabled":false,"maxKb":1014,"maxFiles":1},"collapse":{"enabled":false,"remember":true},"banner":{"enabled":false},"strings":{"sending":"\u062c\u0627\u0631\u064a \u0627\u0644\u0625\u0631\u0633\u0627\u0644...","sent_pending":"\u062a\u0645 \u0625\u0631\u0633\u0627\u0644 \u062a\u0639\u0644\u064a\u0642\u0643 \u0648\u0647\u0648 \u0628\u0627\u0646\u062a\u0638\u0627\u0631 \u0645\u0648\u0627\u0641\u0642\u0629 \u0627\u0644\u0625\u062f\u0627\u0631\u0629.","sent_ok":"\u062a\u0645 \u0627\u0644\u0646\u0634\u0631.","error":"\u062d\u062f\u062b \u062e\u0637\u0623. \u064a\u0631\u062c\u0649 \u0627\u0644\u0645\u062d\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062e\u0631\u0649.","name_required":"\u064a\u0631\u062c\u0649 \u0625\u062f\u062e\u0627\u0644 \u0627\u0644\u0627\u0633\u0645.","comment_required":"\u064a\u0631\u062c\u0649 \u0643\u062a\u0627\u0628\u0629 \u062a\u0639\u0644\u064a\u0642.","reply_required":"\u064a\u0631\u062c\u0649 \u0643\u062a\u0627\u0628\u0629 \u0631\u062f.","load_more":"\u0639\u0631\u0636 \u0627\u0644\u0645\u0632\u064a\u062f","show_comments":"\u0639\u0631\u0636 \u0627\u0644\u062a\u0639\u0644\u064a\u0642\u0627\u062a","hide_comments":"\u0625\u062e\u0641\u0627\u0621 \u0627\u0644\u062a\u0639\u0644\u064a\u0642\u0627\u062a","loading_comments":"\u062c\u0627\u0631\u064a \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u062a\u0639\u0644\u064a\u0642\u0627\u062a...","image_too_large":"\u062d\u062c\u0645 \u0627\u0644\u0635\u0648\u0631\u0629 \u0643\u0628\u064a\u0631 \u062c\u062f\u064b\u0627.","image_not_allowed":"\u0631\u0641\u0639 \u0627\u0644\u0635\u0648\u0631 \u063a\u064a\u0631 \u0645\u062a\u0627\u062d \u0644\u0647\u0630\u0627 \u0627\u0644\u062d\u0633\u0627\u0628.","image_daily_limit":"\u062a\u0645 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0627\u0644\u062d\u062f \u0627\u0644\u064a\u0648\u0645\u064a \u0644\u0644\u0635\u0648\u0631.","spoiler_label":"\u062d\u0631\u0642","add_image":"\u0625\u0636\u0627\u0641\u0629 \u0635\u0648\u0631\u0629","show_image":"\u0625\u0638\u0647\u0627\u0631 \u0627\u0644\u0635\u0648\u0631\u0629","hide_image":"\u0625\u062e\u0641\u0627\u0621 \u0627\u0644\u0635\u0648\u0631\u0629","notifications":"\u0627\u0644\u062a\u0646\u0628\u064a\u0647\u0627\u062a","notifications_empty":"\u0644\u0627 \u062a\u0648\u062c\u062f \u062a\u0646\u0628\u064a\u0647\u0627\u062a \u062d\u0627\u0644\u064a\u0627\u064b.","notifications_loading":"\u062c\u0627\u0631\u064a \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u062a\u0646\u0628\u064a\u0647\u0627\u062a...","notifications_more":"\u0639\u0631\u0636 \u0627\u0644\u0645\u0632\u064a\u062f","notifications_delete_all":"\u062d\u0630\u0641 \u0643\u0644 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062a","notifications_confirm_delete_all":"\u0647\u0644 \u062a\u0631\u064a\u062f \u062d\u0630\u0641 \u0643\u0644 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062a\u061f"}};
+//# sourceURL=rspc-front-js-extra
+</script>
+<script id="rspc-front-js" src="https://cenele.com/wp-content/plugins/comments-rsp/assets/front.js?ver=0.8.4"></script>
+<script id="nhv-gems-boost-js-extra">
+var nhvGemsBoost = {"ajaxUrl":"https://cenele.com/wp-admin/admin-ajax.php","restUrl":"https://cenele.com/wp-json/cenele-gems/v1/","restNonce":"2c5148770b","giftNonce":"","balance":"0","loginMessage":"\u0633\u062c\u0644 \u0627\u0644\u062f\u062e\u0648\u0644 \u0623\u0648\u0644\u0627 \u062d\u062a\u0649 \u062a\u0633\u062a\u0637\u064a\u0639 \u062a\u0639\u0632\u064a\u0632 \u0627\u0644\u0631\u0648\u0627\u064a\u0629."};
+//# sourceURL=nhv-gems-boost-js-extra
+</script>
+<script id="nhv-gems-boost-js" src="https://cenele.com/wp-content/plugins/spur%20plugin/assets/gems.js?ver=1786074970"></script>
+<script id="madara-js-child-novelhub-js-extra">
+var novelhub_obj = {"ajax_url":"https://cenele.com/wp-admin/admin-ajax.php","nonce":"ef7e185f66","user_id":"0","is_logged":"0","messages":{"read_less":"Read Less","read_more":"Read More"}};
+//# sourceURL=madara-js-child-novelhub-js-extra
+</script>
+<script id="madara-js-child-novelhub-js" defer src="https://cenele.com/wp-content/themes/madara-child-novel/js/child-novelhub.js?ver=1787198136"></script>
+<script id="trending-manga-widget-js-extra">
+var ajax_object = {"ajax_url":"https://cenele.com/wp-admin/admin-ajax.php","nonce":"24156d836f"};
+//# sourceURL=trending-manga-widget-js-extra
+</script>
+<script id="trending-manga-widget-js" src="https://cenele.com/wp-content/themes/madara-child-novel/js/trending-manga-widget.js"></script>
+<script async data-wp-strategy="async" fetchpriority="low" id="comment-reply-js" src="https://cenele.com/wp-includes/js/comment-reply.min.js?ver=7.1"></script>
+<script id="madara-core-js" src="https://cenele.com/wp-content/themes/madara/js/core.js?ver=7.1"></script>
+<script id="bootstrap-js" src="https://cenele.com/wp-content/themes/madara/js/bootstrap.min.js?ver=4.6.0"></script>
+<script id="shuffle-js" src="https://cenele.com/wp-content/themes/madara/js/shuffle.min.js?ver=5.3.0"></script>
+<script id="imagesloaded-js" src="https://cenele.com/wp-includes/js/imagesloaded.min.js?ver=5.0.0"></script>
+<script id="aos-js" src="https://cenele.com/wp-content/themes/madara/js/aos.js?ver=7.1"></script>
+<script id="madara-js-js-extra">
+var madara = {"ajaxurl":"https://cenele.com/wp-admin/admin-ajax.php","query_vars":{"page":0,"manga-core":"cursed-imm","post_type":"wp-manga","name":"cursed-imm","error":"","m":"","p":0,"post_parent":"","subpost":"","subpost_id":"","attachment":"","attachment_id":0,"pagename":"","page_id":0,"second":"","minute":"","hour":"","day":0,"monthnum":0,"year":0,"w":0,"category_name":"","tag":"","cat":"","tag_id":"","author":"","author_name":"","feed":"","tb":"","paged":0,"meta_key":"","meta_value":"","preview":"","s":"","sentence":"","title":"","fields":"all","menu_order":"","embed":"","category__in":[],"category__not_in":[],"category__and":[],"post__in":[],"post__not_in":[],"post_name__in":[],"tag__in":[],"tag__not_in":[],"tag__and":[],"tag_slug__in":[],"tag_slug__and":[],"post_parent__in":[],"post_parent__not_in":[],"author__in":[],"author__not_in":[],"search_columns":[],"ignore_sticky_posts":false,"suppress_filters":false,"cache_results":true,"update_post_term_cache":true,"update_menu_item_cache":false,"lazy_load_term_meta":true,"update_post_meta_cache":true,"posts_per_page":12,"nopaging":false,"comments_per_page":"20","no_found_rows":false,"order":"DESC"},"current_url":"https://cenele.com/cont/cursed-imm"};
+var single_manga_show_more = {"show_more":"Show more  ","show_less":"Show less  "};
+//# sourceURL=madara-js-js-extra
+</script>
+<script id="madara-js-js" src="https://cenele.com/wp-content/themes/madara/js/template.js?ver=2.2.5.3"></script>
+<script id="madara-ajax-js" src="https://cenele.com/wp-content/themes/madara/js/ajax.js?ver=7.1"></script>
+<script id="orw-ads-for-all-js-extra">
+var orwAdsForAllConfig = {"delaySeconds":"20","repeatHours":"24","version":"7","ajaxUrl":"https://cenele.com/wp-admin/admin-ajax.php","nonce":"30c1da72c6","pollId":"","pollCookie":""};
+//# sourceURL=orw-ads-for-all-js-extra
+</script>
+<script id="orw-ads-for-all-js" src="https://cenele.com/wp-content/themes/madara-child-novel/assets/js/orw-ads-for-all.js?ver=1787198136"></script>
+<script id="nhv-simple-rating-js-extra">
+var nhvSimpleRating = {"ajaxurl":"https://cenele.com/wp-admin/admin-ajax.php","nonce":"7d43399c0b"};
+//# sourceURL=nhv-simple-rating-js-extra
+</script>
+<script id="nhv-simple-rating-js" src="https://cenele.com/wp-content/themes/madara-child-novel/assets/js/nhv-simple-rating.js?ver=1787198136"></script>
+<script id="nhv-header-js-extra">
+var nhv_header_obj = {"user_id":"0","is_logged":"0"};
+//# sourceURL=nhv-header-js-extra
+</script>
+<script id="nhv-header-js" defer src="https://cenele.com/wp-content/themes/madara-child-novel/assets/js/nhv-header.js?ver=1787198136"></script>
+<script id="wp-manga-login-ajax-js-extra">
+var wpMangaLogin = {"admin_ajax":"https://cenele.com/wp-admin/admin-ajax.php","home_url":"https://cenele.com","nonce":"fb01eb2105","messages":{"please_enter_username":"Please enter username","please_enter_password":"Please enter password","invalid_username_or_password":"Invalid username or password","server_error":"Server Error!","username_or_email_cannot_be_empty":"Username or Email cannot be empty","please_fill_all_fields":"Please fill in all password fields.","password_cannot_less_than_12":"Password cannot have less than 12 characters","password_doesnot_match":"Password does not match. Please try again.","username_cannot_empty":"Username cannot be empty","email_cannot_empty":"Email cannot be empty","password_cannot_empty":"Password cannot be empty"}};
+//# sourceURL=wp-manga-login-ajax-js-extra
+</script>
+<script id="wp-manga-login-ajax-js" src="https://cenele.com/wp-content/plugins/madara-core/assets/js/login.js?ver=1.7.2"></script>
+<script id="nhv-novel-wiki-js-extra">
+var nhvNovelWiki = {"ajaxUrl":"https://cenele.com/wp-admin/admin-ajax.php","nonce":"78a5df0cfd","loading":"\u062c\u0627\u0631\u064d \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0642\u0633\u0645\u2026","error":"\u062a\u0639\u0630\u0631 \u062a\u062d\u0645\u064a\u0644 \u0647\u0630\u0627 \u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u0622\u0646.","likeAction":"nhv_wiki_character_like","likeNonce":"2e21cc4930","loggedIn":"","loginUrl":"https://cenele.com/user/","loginText":"\u0633\u062c\u0651\u0644 \u0627\u0644\u062f\u062e\u0648\u0644 \u0644\u0625\u0636\u0627\u0641\u0629 \u0625\u0639\u062c\u0627\u0628.","likeError":"\u062a\u0639\u0630\u0631 \u062d\u0641\u0638 \u0627\u0644\u0625\u0639\u062c\u0627\u0628 \u0627\u0644\u0622\u0646.","leaderboardLoading":"\u062c\u0627\u0631\u064d \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0634\u062e\u0635\u064a\u0627\u062a\u2026","leaderboardMore":"\u0639\u0631\u0636 12 \u0634\u062e\u0635\u064a\u0629 \u0623\u062e\u0631\u0649","leaderboardError":"\u062a\u0639\u0630\u0631 \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0645\u0632\u064a\u062f \u0627\u0644\u0622\u0646. \u062d\u0627\u0648\u0644 \u0645\u062c\u062f\u062f\u064b\u0627."};
+//# sourceURL=nhv-novel-wiki-js-extra
+</script>
+<script id="nhv-novel-wiki-js" src="https://cenele.com/wp-content/plugins/novel-wiki/assets/js/public.js?ver=1786114754"></script>
+<script id="nhv-novel-single-v2-js-extra">
+var nhvNovelV2 = {"ajaxurl":"https://cenele.com/wp-admin/admin-ajax.php","nonce":"269f7d8974","postId":"115579","chaptersNonce":"bb73eda8b0","isLoggedIn":"","loginUrl":"https://cenele.com/user/?action=login&redirect_to=https://cenele.com/cont/cursed-imm/","favoriteLogin":"\u064a\u062c\u0628 \u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062f\u062e\u0648\u0644 \u0625\u0644\u0649 \u062d\u0633\u0627\u0628\u0643 \u0644\u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0631\u0648\u0627\u064a\u0629 \u0625\u0644\u0649 \u0627\u0644\u0645\u0641\u0636\u0644\u0629.","loginLabel":"\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062f\u062e\u0648\u0644","favoriteIdle":"\u0627\u0644\u0645\u0641\u0636\u0644\u0629","favoriteActive":"\u0641\u064a \u0627\u0644\u0645\u0641\u0636\u0644\u0629","favoriteCount":"%s \u0642\u0627\u0631\u0626","favoriteError":"\u062a\u0639\u0630\u0631 \u062a\u062d\u062f\u064a\u062b \u0627\u0644\u0645\u0641\u0636\u0644\u0629. \u062d\u0627\u0648\u0644 \u0645\u062c\u062f\u062f\u064b\u0627.","loading":"\u062c\u0627\u0631\u064d \u0627\u0644\u062a\u062d\u0645\u064a\u0644...","error":"\u062a\u0639\u0630\u0631 \u062a\u062d\u0645\u064a\u0644 \u0647\u0630\u0627 \u0627\u0644\u0642\u0633\u0645 \u0627\u0644\u0622\u0646. \u062d\u0627\u0648\u0644 \u0645\u062c\u062f\u062f\u064b\u0627.","loadMore":"\u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0645\u0632\u064a\u062f","volumeCount":"%s \u0641\u0635\u0644","noVolume":"\u0628\u062f\u0648\u0646 \u0645\u062c\u0644\u062f\u0627\u062a","volumesEmpty":"\u0644\u0627 \u062a\u0648\u062c\u062f \u0645\u062c\u0644\u062f\u0627\u062a \u0623\u0648 \u0641\u0635\u0648\u0644 \u0645\u062a\u0627\u062d\u0629.","searchLoading":"\u062c\u0627\u0631\u064d \u0627\u0644\u0628\u062d\u062b...","searchEmpty":"\u0644\u0627 \u062a\u0648\u062c\u062f \u0646\u062a\u0627\u0626\u062c \u0645\u0637\u0627\u0628\u0642\u0629.","searchHint":"\u0623\u062f\u062e\u0644 \u0631\u0642\u0645 \u0627\u0644\u0641\u0635\u0644 \u0623\u0648 3 \u0623\u062d\u0631\u0641 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644.","searchError":"\u062a\u0639\u0630\u0631 \u0627\u0644\u0628\u062d\u062b \u0627\u0644\u0622\u0646. \u062d\u0627\u0648\u0644 \u0645\u062c\u062f\u062f\u064b\u0627.","searchRateLimited":"\u0637\u0644\u0628\u0627\u062a \u0628\u062d\u062b \u0643\u062b\u064a\u0631\u0629. \u0627\u0646\u062a\u0638\u0631 \u0642\u0644\u064a\u0644\u064b\u0627 \u062b\u0645 \u062d\u0627\u0648\u0644."};
+//# sourceURL=nhv-novel-single-v2-js-extra
+</script>
+<script id="nhv-novel-single-v2-js" src="https://cenele.com/wp-content/themes/madara-child-novel/assets/js/nhv-novel-single-v2.js?ver=1787198136"></script>
+<script id="wp-manga-slick-js-js" src="https://cenele.com/wp-content/plugins/madara-core/assets/slick/slick.min.js?ver=7.1"></script>
+<script id="jquery-ui-core-js-before">
+jQuery.uiBackCompat = true;
+//# sourceURL=jquery-ui-core-js-before
+</script>
+<script id="jquery-ui-core-js" src="https://cenele.com/wp-includes/js/jquery/ui/core.min.js?ver=1.14.2"></script>
+<script id="jquery-ui-menu-js" src="https://cenele.com/wp-includes/js/jquery/ui/menu.min.js?ver=1.14.2"></script>
+<script id="wp-dom-ready-js" src="https://cenele.com/wp-includes/js/dist/dom-ready.min.js?ver=3fe927cab37bf38d6a23"></script>
+<script id="wp-hooks-js" src="https://cenele.com/wp-includes/js/dist/hooks.min.js?ver=f0f188028580e8dc1255"></script>
+<script id="wp-i18n-js" src="https://cenele.com/wp-includes/js/dist/i18n.min.js?ver=1dfe7db3940c23ea9216"></script>
+<script id="wp-i18n-js-after">
+wp.i18n.setLocaleData( { 'text direction\u0004ltr': [ 'rtl' ] } );
+//# sourceURL=wp-i18n-js-after
+</script>
+<script id="wp-a11y-js-translations">
+( function( domain, translations ) {
+	var localeData = translations.locale_data[ domain ] || translations.locale_data.messages;
+	localeData[""].domain = domain;
+	wp.i18n.setLocaleData( localeData, domain );
+} )( "default", {"translation-revision-date":"2026-08-23 14:18:12+0000","generator":"GlotPress\/4.1.0","domain":"messages","locale_data":{"messages":{"":{"domain":"messages","plural-forms":"nplurals=6; plural=(n == 0) ? 0 : ((n == 1) ? 1 : ((n == 2) ? 2 : ((n % 100 >= 3 && n % 100 <= 10) ? 3 : ((n % 100 >= 11 && n % 100 <= 99) ? 4 : 5))));","lang":"ar"},"Notifications":["\u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062a"]}},"comment":{"reference":"wp-includes\/js\/dist\/a11y.js"}} );
+//# sourceURL=wp-a11y-js-translations
+</script>
+<script id="wp-a11y-js" src="https://cenele.com/wp-includes/js/dist/a11y.min.js?ver=31c6cec5a4ff7aff483d"></script>
+<script id="jquery-ui-autocomplete-js" src="https://cenele.com/wp-includes/js/jquery/ui/autocomplete.min.js?ver=1.14.2"></script>
+<script id="wp-manga-js-extra">
+var manga = {"ajax_url":"https://cenele.com/wp-admin/admin-ajax.php","home_url":"https://cenele.com","base_url":"https://cenele.com/cont/cursed-imm/","manga_paged_var":"manga-paged","enable_manga_view":"1","manga_id":"115579"};
+//# sourceURL=wp-manga-js-extra
+</script>
+<script id="wp-manga-js" src="https://cenele.com/wp-content/plugins/madara-core/assets/js/script.js?ver=2.1.0.1"></script>
+<script id="wp-manga-js-after">
+(function(){
+    function fillChapterViewPayload(){
+        if (typeof window.manga === 'undefined') {
+            return {};
+        }
+        var current = document.getElementById('wp-manga-current-chap');
+        if (!current) {
+            return {
+                slug: window.manga.chapter_slug || '',
+                id: window.manga.chapter_id || ''
+            };
+        }
+        var slug = current.value || '';
+        var chapterId = current.getAttribute('data-id') || '';
+        if (slug && (!window.manga.chapter_slug || window.manga.chapter_slug === 'undefined')) {
+            window.manga.chapter_slug = slug;
+        }
+        if (chapterId && (!window.manga.chapter_id || window.manga.chapter_id === 'undefined')) {
+            window.manga.chapter_id = chapterId;
+        }
+        return {
+            slug: window.manga.chapter_slug || slug,
+            id: window.manga.chapter_id || chapterId
+        };
+    }
+    fillChapterViewPayload();
+    document.addEventListener('DOMContentLoaded', fillChapterViewPayload);
+    window.madara_update_views = function(){
+        var $ = window.jQuery;
+        if (!$ || !$('body').hasClass('single-wp-manga') || typeof window.manga === 'undefined') {
+            return;
+        }
+        if (window.manga.enable_manga_view == "0") {
+            return;
+        }
+        var current = fillChapterViewPayload();
+        $.ajax({
+            url: window.manga.ajax_url,
+            type: 'POST',
+            data: {
+                action: 'manga_views',
+                manga: window.manga.manga_id,
+                chapter: current.slug || window.manga.chapter_slug || '',
+                chapter_id: current.id || window.manga.chapter_id || ''
+            }
+        });
+    };
+    if (window.jQuery && window.jQuery.ajaxPrefilter) {
+        window.jQuery.ajaxPrefilter(function(options){
+            if (!options || !options.data || typeof options.data !== 'object') {
+                return;
+            }
+            if (options.data.action !== 'manga_views') {
+                return;
+            }
+            fillChapterViewPayload();
+            if (typeof window.manga === 'undefined') {
+                return;
+            }
+            if ((!options.data.chapter || options.data.chapter === 'undefined') && window.manga.chapter_slug) {
+                options.data.chapter = window.manga.chapter_slug;
+            }
+            if ((!options.data.chapter_id || options.data.chapter_id === 'undefined') && window.manga.chapter_id) {
+                options.data.chapter_id = window.manga.chapter_id;
+            }
+        });
+    }
+})();
+//# sourceURL=wp-manga-js-after
+</script>
+<script id="slick-js" src="https://cenele.com/wp-content/themes/madara/js/slick/slick.min.js?ver=1.9.0"></script>
+<script id="ct-shortcode-js-js" src="https://cenele.com/wp-content/plugins/madara-shortcodes/shortcodes/js/ct-shortcodes.js?ver=1.5.2.1"></script>
+<script id="cf-turnstile-js" src="https://challenges.cloudflare.com/turnstile/v0/api.js"></script>
+<script type="text/javascript">(function (undefined) {let scriptOptions={"_localizedStrings":{"redirect_overlay_title":"Hold On","redirect_overlay_text":"You are being redirected to another page,<br>it may take a few seconds.","webview_notification_text":"The selected provider doesn't support embedded browsers!"},"_targetWindow":"prefer-popup","_redirectOverlay":"overlay-with-spinner-and-message","_unsupportedWebviewBehavior":""};
+/**
+ * Used when Cross-Origin-Opener-Policy blocked the access to the opener. We can't have a reference of the opened windows, so we should attempt to refresh only the windows that has opened popups.
+ */
+window._nslHasOpenedPopup = false;
+window._nslWebViewNoticeElement = null;
+
+window.NSLPopup = function (url, title, w, h) {
+
+    /**
+     * Cross-Origin-Opener-Policy blocked the access to the opener
+     */
+    if (typeof BroadcastChannel === "function") {
+        const _nslLoginBroadCastChannel = new BroadcastChannel('nsl_login_broadcast_channel');
+        _nslLoginBroadCastChannel.onmessage = (event) => {
+            if (window?._nslHasOpenedPopup && event.data?.action === 'redirect') {
+                window._nslHasOpenedPopup = false;
+
+                const url = event.data?.href;
+                _nslLoginBroadCastChannel.close();
+                if (typeof window.nslRedirect === 'function') {
+                    window.nslRedirect(url);
+                } else {
+                    window.opener.location = url;
+                }
+            }
+        };
+    }
+
+    const userAgent = navigator.userAgent,
+        mobile = function () {
+            return /\b(iPhone|iP[ao]d)/.test(userAgent) ||
+                /\b(iP[ao]d)/.test(userAgent) ||
+                /Android/i.test(userAgent) ||
+                /Mobile/i.test(userAgent);
+        },
+        screenX = window.screenX !== undefined ? window.screenX : window.screenLeft,
+        screenY = window.screenY !== undefined ? window.screenY : window.screenTop,
+        outerWidth = window.outerWidth !== undefined ? window.outerWidth : document.documentElement.clientWidth,
+        outerHeight = window.outerHeight !== undefined ? window.outerHeight : document.documentElement.clientHeight - 22,
+        targetWidth = mobile() ? null : w,
+        targetHeight = mobile() ? null : h,
+        left = parseInt(screenX + (outerWidth - targetWidth) / 2, 10),
+        right = parseInt(screenY + (outerHeight - targetHeight) / 2.5, 10),
+        features = [];
+    if (targetWidth !== null) {
+        features.push('width=' + targetWidth);
+    }
+    if (targetHeight !== null) {
+        features.push('height=' + targetHeight);
+    }
+    features.push('left=' + left);
+    features.push('top=' + right);
+    features.push('scrollbars=1');
+
+    const newWindow = window.open(url, title, features.join(','));
+
+    if (window.focus) {
+        newWindow.focus();
+    }
+
+    window._nslHasOpenedPopup = true;
+
+    return newWindow;
+};
+
+let isWebView = null;
+
+function checkWebView() {
+    if (isWebView === null) {
+        function _detectOS(ua) {
+            if (/Android/.test(ua)) {
+                return "Android";
+            } else if (/iPhone|iPad|iPod/.test(ua)) {
+                return "iOS";
+            } else if (/Windows/.test(ua)) {
+                return "Windows";
+            } else if (/Mac OS X/.test(ua)) {
+                return "Mac";
+            } else if (/CrOS/.test(ua)) {
+                return "Chrome OS";
+            } else if (/Firefox/.test(ua)) {
+                return "Firefox OS";
+            }
+            return "";
+        }
+
+        function _detectBrowser(ua) {
+            let android = /Android/.test(ua);
+
+            if (/Opera Mini/.test(ua) || / OPR/.test(ua) || / OPT/.test(ua)) {
+                return "Opera";
+            } else if (/CriOS/.test(ua)) {
+                return "Chrome for iOS";
+            } else if (/Edge/.test(ua)) {
+                return "Edge";
+            } else if (android && /Silk\//.test(ua)) {
+                return "Silk";
+            } else if (/Chrome/.test(ua)) {
+                return "Chrome";
+            } else if (/Firefox/.test(ua)) {
+                return "Firefox";
+            } else if (android) {
+                return "AOSP";
+            } else if (/MSIE|Trident/.test(ua)) {
+                return "IE";
+            } else if (/Safari\//.test(ua)) {
+                return "Safari";
+            } else if (/AppleWebKit/.test(ua)) {
+                return "WebKit";
+            }
+            return "";
+        }
+
+        function _detectBrowserVersion(ua, browser) {
+            if (browser === "Opera") {
+                return /Opera Mini/.test(ua) ? _getVersion(ua, "Opera Mini/") :
+                    / OPR/.test(ua) ? _getVersion(ua, " OPR/") :
+                        _getVersion(ua, " OPT/");
+            } else if (browser === "Chrome for iOS") {
+                return _getVersion(ua, "CriOS/");
+            } else if (browser === "Edge") {
+                return _getVersion(ua, "Edge/");
+            } else if (browser === "Chrome") {
+                return _getVersion(ua, "Chrome/");
+            } else if (browser === "Firefox") {
+                return _getVersion(ua, "Firefox/");
+            } else if (browser === "Silk") {
+                return _getVersion(ua, "Silk/");
+            } else if (browser === "AOSP") {
+                return _getVersion(ua, "Version/");
+            } else if (browser === "IE") {
+                return /IEMobile/.test(ua) ? _getVersion(ua, "IEMobile/") :
+                    /MSIE/.test(ua) ? _getVersion(ua, "MSIE ")
+                        :
+                        _getVersion(ua, "rv:");
+            } else if (browser === "Safari") {
+                return _getVersion(ua, "Version/");
+            } else if (browser === "WebKit") {
+                return _getVersion(ua, "WebKit/");
+            }
+            return "0.0.0";
+        }
+
+        function _getVersion(ua, token) {
+            try {
+                return _normalizeSemverString(ua.split(token)[1].trim().split(/[^\w\.]/)[0]);
+            } catch (o_O) {
+            }
+            return "0.0.0";
+        }
+
+        function _normalizeSemverString(version) {
+            const ary = version.split(/[\._]/);
+            return (parseInt(ary[0], 10) || 0) + "." +
+                (parseInt(ary[1], 10) || 0) + "." +
+                (parseInt(ary[2], 10) || 0);
+        }
+
+        function _isWebView(ua, os, browser, version, options) {
+            switch (os + browser) {
+                case "iOSSafari":
+                    return false;
+                case "iOSWebKit":
+                    return _isWebView_iOS(options);
+                case "AndroidAOSP":
+                    return false;
+                case "AndroidChrome":
+                    return parseFloat(version) >= 42 ? /; wv/.test(ua) : /\d{2}\.0\.0/.test(version) ? true : _isWebView_Android(options);
+            }
+            return false;
+        }
+
+        function _isWebView_iOS(options) {
+            const document = (window["document"] || {});
+
+            if ("WEB_VIEW" in options) {
+                return options["WEB_VIEW"];
+            }
+            return !("fullscreenEnabled" in document || "webkitFullscreenEnabled" in document || false);
+        }
+
+        function _isWebView_Android(options) {
+            if ("WEB_VIEW" in options) {
+                return options["WEB_VIEW"];
+            }
+            return !("requestFileSystem" in window || "webkitRequestFileSystem" in window || false);
+        }
+
+        const options = {},
+            nav = window.navigator || {},
+            ua = nav.userAgent || "",
+            os = _detectOS(ua),
+            browser = _detectBrowser(ua),
+            browserVersion = _detectBrowserVersion(ua, browser);
+
+        isWebView = _isWebView(ua, os, browser, browserVersion, options);
+    }
+
+    return isWebView;
+}
+
+function isAllowedWebViewForUserAgent(provider) {
+    const facebookAllowedWebViews = [
+        'Instagram',
+        'FBAV',
+        'FBAN'
+    ];
+    let whitelist = [];
+
+    if (provider && provider === 'facebook') {
+        whitelist = facebookAllowedWebViews;
+    }
+
+    const nav = window.navigator || {},
+        ua = nav.userAgent || "";
+
+    if (whitelist.length && ua.match(new RegExp(whitelist.join('|')))) {
+        return true;
+    }
+
+    return false;
+}
+
+function disableButtonInWebView(providerButtonElement) {
+    if (providerButtonElement) {
+        providerButtonElement.classList.add('nsl-disabled-provider');
+        providerButtonElement.setAttribute('href', '#');
+
+        providerButtonElement.addEventListener('pointerdown', (e) => {
+            const closeNotice = function () {
+                if (window._nslWebViewNoticeElement) {
+                    window._nslWebViewNoticeElement.remove();
+                    window._nslWebViewNoticeElement = null;
+                }
+            };
+
+            closeNotice();
+
+            window._nslWebViewNoticeElement = document.createElement('div');
+            window._nslWebViewNoticeElement.id = "nsl-notices-fallback";
+            window._nslWebViewNoticeElement.role = 'alert';
+            window._nslWebViewNoticeElement.ariaLive = 'assertive';
+            window._nslWebViewNoticeElement.ariaAtomic = 'true';
+
+            window._nslWebViewNoticeElement.addEventListener('pointerdown', closeNotice);
+
+            window._nslWebViewNoticeElement.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    closeNotice();
+                }
+            });
+            const webviewNoticeHTML = '<div class="error"><p>' + scriptOptions._localizedStrings.webview_notification_text + '</p></div>';
+
+            window._nslWebViewNoticeElement.insertAdjacentHTML("afterbegin", webviewNoticeHTML);
+            document.body.appendChild(window._nslWebViewNoticeElement);
+        });
+    }
+
+}
+
+window._nslDOMReady(function () {
+
+    window.nslRedirect = function (url) {
+        if (scriptOptions._redirectOverlay) {
+            const overlay = document.createElement('div');
+            overlay.id = "nsl-redirect-overlay";
+            let overlayHTML = '';
+            const overlayContainer = "<div id='nsl-redirect-overlay-container'>",
+                overlayContainerClose = "</div>",
+                overlaySpinner = "<div id='nsl-redirect-overlay-spinner'></div>",
+                overlayTitle = "<p id='nsl-redirect-overlay-title'>" + scriptOptions._localizedStrings.redirect_overlay_title + "</p>",
+                overlayText = "<p id='nsl-redirect-overlay-text'>" + scriptOptions._localizedStrings.redirect_overlay_text + "</p>";
+
+            switch (scriptOptions._redirectOverlay) {
+                case "overlay-only":
+                    break;
+                case "overlay-with-spinner":
+                    overlayHTML = overlayContainer + overlaySpinner + overlayContainerClose;
+                    break;
+                default:
+                    overlayHTML = overlayContainer + overlaySpinner + overlayTitle + overlayText + overlayContainerClose;
+                    break;
+            }
+
+            overlay.insertAdjacentHTML("afterbegin", overlayHTML);
+            document.body.appendChild(overlay);
+        }
+
+        window.location = url;
+    };
+
+    let targetWindow = scriptOptions._targetWindow || 'prefer-popup',
+        lastPopup = false;
+
+
+    document.addEventListener('click', function (e) {
+        if (e.target) {
+            const buttonLinkElement = e.target.closest('a[data-plugin="nsl"][data-action="connect"]') || e.target.closest('a[data-plugin="nsl"][data-action="link"]');
+            if (buttonLinkElement) {
+                if (lastPopup && !lastPopup.closed) {
+                    e.preventDefault();
+                    lastPopup.focus();
+                } else {
+
+                    let href = buttonLinkElement.href,
+                        success = false;
+                    if (href.indexOf('?') !== -1) {
+                        href += '&';
+                    } else {
+                        href += '?';
+                    }
+
+                    const redirectTo = buttonLinkElement.dataset.redirect;
+                    if (redirectTo === 'current') {
+                        href += 'redirect=' + encodeURIComponent(window.location.href) + '&';
+                    } else if (redirectTo && redirectTo !== '') {
+                        href += 'redirect=' + encodeURIComponent(redirectTo) + '&';
+                    }
+
+                    if (targetWindow !== 'prefer-same-window' && checkWebView()) {
+                        targetWindow = 'prefer-same-window';
+                    }
+
+                    if (targetWindow === 'prefer-popup') {
+                        lastPopup = NSLPopup(href + 'display=popup', 'nsl-social-connect', buttonLinkElement.dataset.popupwidth, buttonLinkElement.dataset.popupheight);
+                        if (lastPopup) {
+                            success = true;
+                            e.preventDefault();
+                        }
+                    } else if (targetWindow === 'prefer-new-tab') {
+                        const newTab = window.open(href + 'display=popup', '_blank');
+                        if (newTab) {
+                            if (window.focus) {
+                                newTab.focus();
+                            }
+                            success = true;
+                            window._nslHasOpenedPopup = true;
+                            e.preventDefault();
+                        }
+                    }
+
+                    if (!success) {
+                        window.location = href;
+                        e.preventDefault();
+                    }
+                }
+            }
+        }
+    });
+
+    let buttonCountChanged = false;
+
+    const googleLoginButtons = document.querySelectorAll(' a[data-plugin="nsl"][data-provider="google"]');
+    if (googleLoginButtons.length && checkWebView()) {
+        googleLoginButtons.forEach(function (googleLoginButton) {
+            if (scriptOptions._unsupportedWebviewBehavior === 'disable-button') {
+                disableButtonInWebView(googleLoginButton);
+            } else {
+                googleLoginButton.remove();
+                buttonCountChanged = true;
+            }
+        });
+    }
+
+    const facebookLoginButtons = document.querySelectorAll(' a[data-plugin="nsl"][data-provider="facebook"]');
+    if (facebookLoginButtons.length && checkWebView() && /Android/.test(window.navigator.userAgent) && !isAllowedWebViewForUserAgent('facebook')) {
+        facebookLoginButtons.forEach(function (facebookLoginButton) {
+            if (scriptOptions._unsupportedWebviewBehavior === 'disable-button') {
+                disableButtonInWebView(facebookLoginButton);
+            } else {
+                facebookLoginButton.remove();
+                buttonCountChanged = true;
+            }
+        });
+    }
+
+    const separators = document.querySelectorAll('div.nsl-separator');
+    if (buttonCountChanged && separators.length) {
+        separators.forEach(function (separator) {
+            const separatorParentNode = separator.parentNode;
+            if (separatorParentNode) {
+                const separatorButtonContainer = separatorParentNode.querySelector('div.nsl-container-buttons');
+                if (separatorButtonContainer && !separatorButtonContainer.hasChildNodes()) {
+                    separator.remove();
+                }
+            }
+        })
+    }
+});})();</script>	<div id="orw-ads-for-all" class="orw-ads-for-all" aria-hidden="true">
+		<div class="orw-ads-for-all__backdrop" data-orw-ads-close></div>
+		<section class="orw-ads-for-all__dialog" role="dialog" aria-modal="true" aria-label="إعلان وتصويت" tabindex="-1">
+			<button type="button" class="orw-ads-for-all__close" data-orw-ads-close aria-label="إغلاق">&times;</button>
+			<div class="orw-ads-for-all__inner">
+									<div class="orw-ads-for-all__promo">
+													<div class="orw-ads-for-all__logo">
+								<img src="https://cenele.com/wp-content/uploads/2026/08/cropped-فضاء-روايات.png" alt="" loading="lazy" decoding="async">
+							</div>
+																			<h3 class="orw-ads-for-all__name">أخيرا النسخة النهائية لتطبيق فضاء الروايات</h3>
+																									<div class="orw-ads-for-all__notes">📱 تطبيق فضاء روايات تجربة أسرع وأكثر سلاسة، متزامنة مع الموقع في الخبرة والمستويات، مع تحميل أسرع للفصول وإمكانية &quot;القراءة بدون اتصال&quot;، وبدون إعلانات مزعجة. إمكاينة إضافة المصادر وقراءة المانهوا على التطبيق 😱😱.</div>
+											</div>
+				
+				
+				<div class="orw-ads-for-all__actions">
+											<a class="orw-ads-for-all__play" href="https://play.google.com/store/apps/details?id=com.fadariwyat.cenele" target="_blank" rel="noopener">حمل التطبيق من غوغل بلاي</a>
+										<button type="button" class="orw-ads-for-all__dismiss" data-orw-ads-close>أغلق</button>
+				</div>
+			</div>
+		</section>
+	</div>
+	
+<script>
+  document.addEventListener("DOMContentLoaded", (event) => {
+    paypal.HostedButtons({
+      hostedButtonId: "58PPKYXWS6JBL"
+    })
+    .render("#paypal-container-58PPKYXWS6JBL")
+  })
+</script>
+
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a307711c3f5ece6a',t:'MTc4NzYyNzgyNg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body></html>

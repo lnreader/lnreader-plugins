@@ -189,6 +189,7 @@ export class MadaraPlugin implements Plugin.PluginBase {
         loadedCheerio('.post-title h1').text().trim() ||
         loadedCheerio('#manga-title h1').text().trim() ||
         loadedCheerio('.manga-title').text().trim() ||
+        loadedCheerio('h1.nhv-novel-title').text().trim() ||
         '',
     };
 
@@ -196,6 +197,7 @@ export class MadaraPlugin implements Plugin.PluginBase {
       loadedCheerio('.summary_image > a > img').attr('data-lazy-src') ||
       loadedCheerio('.summary_image > a > img').attr('data-src') ||
       loadedCheerio('.summary_image > a > img').attr('src') ||
+      loadedCheerio('img.wp-post-image').attr('src') ||
       defaultCover;
 
     loadedCheerio('.post-content_item, .post-content').each(function () {
@@ -268,6 +270,30 @@ export class MadaraPlugin implements Plugin.PluginBase {
         novel.rating = parseFloat(
           loadedCheerio('.post-rating span').text().trim(),
         );
+    }
+
+    // Checks for the "novel" Madara child theme (nhv-*, e.g. Riwyat / cenele.com).
+    // Existence-guarded: only applies when this theme's elements are actually on
+    // the page, so classic Madara/NovelHub sites are untouched.
+    {
+      const nhvStatus = loadedCheerio('.nhv-novel-status');
+      if (nhvStatus.length > 0)
+        novel.status = nhvStatus.text().includes('مستمرة')
+          ? NovelStatus.Ongoing
+          : NovelStatus.Completed;
+
+      const nhvGenres = loadedCheerio('.nhv-novel-genres');
+      if (nhvGenres.length > 0)
+        novel.genres = nhvGenres
+          .find('a')
+          .map((i, el) => loadedCheerio(el).text().trim())
+          .get()
+          .join(', ');
+
+      const nhvAuthors = loadedCheerio(
+        '.nhv-novel-meta a[href*="cont-author"]',
+      );
+      if (nhvAuthors.length > 0) novel.author = nhvAuthors.text().trim();
     }
 
     if (!novel.author)
@@ -386,10 +412,22 @@ export class MadaraPlugin implements Plugin.PluginBase {
   async parseChapter(chapterPath: string): Promise<string> {
     const loadedCheerio = await this.getCheerio(this.site + chapterPath, false);
     const chapterText =
-      loadedCheerio('.text-left') ||
-      loadedCheerio('.text-right') ||
-      loadedCheerio('.entry-content') ||
-      loadedCheerio('.c-blog-post > div > div:nth-child(2)');
+      (loadedCheerio('.text-left').length > 0 && loadedCheerio('.text-left')) ||
+      (loadedCheerio('.text-right').length > 0 &&
+        loadedCheerio('.text-right')) ||
+      (loadedCheerio('.reading-content').length > 0 &&
+        loadedCheerio('.reading-content')) ||
+      (loadedCheerio('.entry-content').length > 0 &&
+        loadedCheerio('.entry-content')) ||
+      (loadedCheerio('.c-blog-post > div > div:nth-child(2)').length > 0 &&
+        loadedCheerio('.c-blog-post > div > div:nth-child(2)')) ||
+      null;
+
+    if (!chapterText || chapterText.length === 0) {
+      throw new Error(
+        `Chapter content container not found for ${chapterPath}: site layout may have changed; retry`,
+      );
+    }
 
     if (this.options?.customJs) {
       try {
@@ -400,7 +438,11 @@ export class MadaraPlugin implements Plugin.PluginBase {
       }
     }
 
-    return this.translateDragontea(chapterText).html() || '';
+    const html = this.translateDragontea(chapterText).html();
+    if (!html || html.trim().length === 0) {
+      throw new Error(`Chapter content empty after parsing for ${chapterPath}`);
+    }
+    return html;
   }
 
   async searchNovels(
