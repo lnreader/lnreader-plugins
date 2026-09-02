@@ -33,7 +33,7 @@ type ChapterContentResponse = {
 class GalaxyNovels implements Plugin.PluginBase {
   id = 'galaxynovels';
   name = 'Galaxy Novels';
-  version = '1.1.0';
+  version = '1.2.0';
   icon = 'src/ar/galaxynovels/icon.png';
   site = 'https://galaxynovels.com/';
 
@@ -62,8 +62,13 @@ class GalaxyNovels implements Plugin.PluginBase {
 
   private baseUrl = 'https://galaxynovels.com';
 
+  private static readonly BROWSER_UA =
+    'Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36';
+
   private async fetchHtml(url: string): Promise<string> {
-    const res = await fetchApi(url);
+    const res = await fetchApi(url, {
+      headers: { 'User-Agent': GalaxyNovels.BROWSER_UA },
+    });
     if (!res.ok) {
       throw new Error(`Could not reach site (${res.status})`);
     }
@@ -71,7 +76,9 @@ class GalaxyNovels implements Plugin.PluginBase {
   }
 
   private async fetchJson<T>(url: string): Promise<T> {
-    const res = await fetchApi(url);
+    const res = await fetchApi(url, {
+      headers: { 'User-Agent': GalaxyNovels.BROWSER_UA },
+    });
     if (!res.ok) {
       throw new Error(`Could not reach site (${res.status})`);
     }
@@ -106,8 +113,7 @@ class GalaxyNovels implements Plugin.PluginBase {
       const coverLink = $el.find('a.wor-novel-card__cover');
       const href = coverLink.attr('href');
       const img = $el.find('img.wor-cover-img');
-      const cover =
-        img.attr('data-src') || img.attr('src') || undefined;
+      const cover = img.attr('data-src') || img.attr('src') || undefined;
       const title = $el.find('h3 a').text().trim();
 
       if (!href || !title) return;
@@ -174,8 +180,12 @@ class GalaxyNovels implements Plugin.PluginBase {
     if (chapters.length === 0) {
       $('article.wor-novel-chapter-item').each((_, el) => {
         const $el = $(el);
-        const chapterLink = $el.find('h3 a').attr('href') || $el.find('a.wor-novel-chapter-item__num').attr('href');
-        const chapterName = $el.find('h3 a').text().trim() || $el.find('a.wor-novel-chapter-item__num').text().trim();
+        const chapterLink =
+          $el.find('h3 a').attr('href') ||
+          $el.find('a.wor-novel-chapter-item__num').attr('href');
+        const chapterName =
+          $el.find('h3 a').text().trim() ||
+          $el.find('a.wor-novel-chapter-item__num').text().trim();
         const chapterId = $el.attr('data-chapter-id');
         const timeEl = $el.find('time');
         const releaseTime = timeEl.attr('datetime')?.split('T')[0] || '';
@@ -228,8 +238,9 @@ class GalaxyNovels implements Plugin.PluginBase {
     const url = `${this.baseUrl}${chapterPath}`;
     const html = await this.fetchHtml(url);
     const $ = loadCheerio(html);
-    const content =
-      $('article.wor-chapter-content, .wor-chapter-text, .entry-content').html();
+    const content = $(
+      'article.wor-chapter-content, .wor-chapter-text, .entry-content',
+    ).html();
     return content || '<p>Content not available.</p>';
   }
 
@@ -254,9 +265,7 @@ class GalaxyNovels implements Plugin.PluginBase {
 
     const term = searchTerm.toLowerCase();
     const filtered = searchIndex.items.filter(
-      n =>
-        n.t.toLowerCase().includes(term) ||
-        n.s.toLowerCase().includes(term),
+      n => n.t.toLowerCase().includes(term) || n.s.toLowerCase().includes(term),
     );
 
     const limit = 20;
@@ -265,9 +274,7 @@ class GalaxyNovels implements Plugin.PluginBase {
     return filtered.slice(offset, offset + limit).map(novel => ({
       name: novel.t,
       path: novel.u,
-      cover: novel.c.startsWith('http')
-        ? novel.c
-        : `${this.baseUrl}${novel.c}`,
+      cover: novel.c.startsWith('http') ? novel.c : `${this.baseUrl}${novel.c}`,
     }));
   }
 }
