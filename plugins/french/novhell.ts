@@ -36,14 +36,15 @@ class NovhellPlugin implements Plugin.PluginBase {
   name = 'Novhell';
   icon = 'src/fr/novhell/icon.png';
   site = 'https://novhell.org';
-  version = '1.0.4';
+  version = '1.0.5';
 
   async getCheerio(url: string): Promise<CheerioAPI> {
-    return load(
-      await fetchCheckedHtml(url, {
-        headers: { 'Accept-Encoding': 'deflate' },
-      }),
-    );
+    // Do not override Accept-Encoding: the app already sends
+    // `gzip, deflate` with its Android User-Agent. Forcing `deflate`
+    // alone disables transparent decompression on Android (OkHttp):
+    // the HTML arrives compressed, cheerio finds nothing (0 chapters),
+    // while the webview (a real browser) renders everything.
+    return load(await fetchCheckedHtml(url));
   }
 
   async popularNovels(pageNo: number): Promise<Plugin.NovelItem[]> {
