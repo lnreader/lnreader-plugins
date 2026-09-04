@@ -36,7 +36,7 @@ class NovhellPlugin implements Plugin.PluginBase {
   name = 'Novhell';
   icon = 'src/fr/novhell/icon.png';
   site = 'https://novhell.org';
-  version = '1.0.4';
+  version = '1.0.5';
 
   async getCheerio(url: string): Promise<CheerioAPI> {
     return load(
@@ -208,6 +208,34 @@ class NovhellPlugin implements Plugin.PluginBase {
         )
           return content;
       }
+    }
+    // Newer chapters use a Gutenberg block template with no `section`
+    // elements: title in the columns block holding the `h4`, body in the
+    // longest columns block of `article .entry-content`.
+    const entry = $('article .entry-content').first();
+    if (entry.length) {
+      let titleHtml = '';
+      let bodyHtml = '';
+      let bodyLength = 0;
+      entry.children('div.wp-block-columns').each((_, element) => {
+        const block = $(element);
+        if (block.find('h4').length) {
+          if (!titleHtml) titleHtml = $.html(element) || '';
+          return;
+        }
+        const textLength = block.text().replace(/\s+/g, ' ').trim().length;
+        if (textLength > bodyLength) {
+          bodyLength = textLength;
+          bodyHtml = $.html(element) || '';
+        }
+      });
+      const content = titleHtml + bodyHtml;
+      const parsedContent = load(content);
+      if (
+        parsedContent.text().replace(/\s+/g, ' ').trim().length >= 200 ||
+        parsedContent('img').length
+      )
+        return content;
     }
     throw new Error('No readable chapter content found');
   }
