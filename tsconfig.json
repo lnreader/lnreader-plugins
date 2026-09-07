@@ -122,6 +122,7 @@
     "./plugins/**/*.broken.ts",
     "./.js/**/*",
     "scripts/**",
+    "./tests/**",
     "docs/**",
     "public/**",
     ".github/**",

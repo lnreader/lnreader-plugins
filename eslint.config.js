@@ -165,7 +165,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['**/*.{ts,tsx,mts,cts,js,cjs}'],
+    files: ['**/*.{ts,tsx,mts,cts,js,cjs,mjs,mjsx}'],
     ignores: ['./plugins/*/*.ts', './plugins/multisrc/*/template.ts'],
     rules: {
       'no-unused-vars': 'off',

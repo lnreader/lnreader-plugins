@@ -115,6 +115,7 @@
     "./plugins/**/*.broken.ts",
     "./.js/**/*",
     "scripts/**",
+    "./tests/**",
     "docs/**",
     "./src/*.*",
     "./*.*",
