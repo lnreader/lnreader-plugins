@@ -30,7 +30,7 @@ class MVLEMPYRPlugin implements Plugin.PluginBase {
   name = 'MVLEMPYR';
   icon = 'src/en/mvlempyr/icon.png';
   site = 'https://www.mvlempyr.io/';
-  version = '1.0.12';
+  version = '1.0.13';
 
   _chapSite = 'https://chap.heliosarchive.online/';
   _allNovels: (Plugin.NovelItem & ExtraNovelData)[] | undefined;
@@ -81,7 +81,11 @@ class MVLEMPYRPlugin implements Plugin.PluginBase {
     // @ts-ignore
     const sorted = filtered.sort((a, b) => b[sortKey] - a[sortKey]);
 
-    return this.paginate(sorted, pageNo);
+    return this.paginate(sorted, pageNo).map(({ name, path, cover }) => ({
+      name,
+      path,
+      cover,
+    }));
   }
 
   convertNovelId(e: bigint) {
@@ -186,7 +190,11 @@ class MVLEMPYRPlugin implements Plugin.PluginBase {
       novel.name.toLowerCase().includes(searchTerm.toLowerCase()),
     );
 
-    return this.paginate(searchResults, page);
+    return this.paginate(searchResults, page).map(({ name, path, cover }) => ({
+      name,
+      path,
+      cover,
+    }));
   }
 
   paginate<T>(data: T[], page: number): T[] {
