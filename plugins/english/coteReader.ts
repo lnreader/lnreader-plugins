@@ -42,14 +42,13 @@ interface VolumeApiResponse {
   chapters?: Record<string, { index: number; title: string; content: string }>;
 }
 
-class CoteReader implements Plugin.PagePlugin {
+class CoteReader implements Plugin.PluginBase {
   id = 'cote-reader';
   name = 'COTE Reader';
   site = 'https://cote-reader.me';
   icon = 'src/en/cotereader/icon.png';
-  version = '1.0.0';
+  version = '1.0.1';
 
-  private novelCache = new Map<string, CoteNovelMeta>();
   private canonicalIds = new Set([
     'cote',
     'lotm',
@@ -125,9 +124,7 @@ class CoteReader implements Plugin.PagePlugin {
     }));
   }
 
-  async parseNovel(
-    novelPath: string,
-  ): Promise<Plugin.SourceNovel & { totalPages: number }> {
+  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
     const id = this.cleanId(novelPath);
     const metaUrl = `${this.site}/api/novels/${id}`;
     const res = await fetchApi(metaUrl);
@@ -137,16 +134,22 @@ class CoteReader implements Plugin.PagePlugin {
     }
 
     const data = (await res.json()) as CoteNovelMeta;
-    this.novelCache.set(id, data);
-
     const volumes = data.volumes || [];
-    const totalPages = Math.max(1, volumes.length);
+    const isCanonical = this.canonicalIds.has(id.toLowerCase());
 
-    let initialChapters: Plugin.ChapterItem[] = [];
-    if (totalPages > 0) {
-      const firstPage = await this.parsePage(novelPath, '1');
-      initialChapters = firstPage.chapters;
-    }
+    const chapters: Plugin.ChapterItem[] = volumes.map((volume, index) => {
+      const position = volume.position || index + 1;
+      const title = volume.title || `Volume ${position}`;
+      const path = isCanonical
+        ? `/canonical/${id}/${volume.id}`
+        : `/api/novels/${id}/volume/${volume.id}`;
+
+      return {
+        name: title,
+        path,
+        chapterNumber: position,
+      };
+    });
 
     const genres = Array.isArray(data.tags)
       ? data.tags.join(', ')
@@ -162,76 +165,8 @@ class CoteReader implements Plugin.PagePlugin {
       author: data.author,
       genres,
       status: NovelStatus.Ongoing,
-      totalPages,
-      chapters: initialChapters,
+      chapters,
     };
-  }
-
-  async parsePage(novelPath: string, page: string): Promise<Plugin.SourcePage> {
-    const id = this.cleanId(novelPath);
-    let novelMeta = this.novelCache.get(id);
-
-    if (!novelMeta) {
-      const res = await fetchApi(`${this.site}/api/novels/${id}`);
-      if (res.ok) {
-        novelMeta = (await res.json()) as CoteNovelMeta;
-        this.novelCache.set(id, novelMeta);
-      }
-    }
-
-    const volumes = novelMeta?.volumes || [];
-    const pageNum = parseInt(page, 10);
-    const volIndex = isNaN(pageNum) || pageNum < 1 ? 0 : pageNum - 1;
-    const volume = volumes[volIndex];
-
-    if (!volume) {
-      return { chapters: [] };
-    }
-
-    const chapters: Plugin.ChapterItem[] = [];
-    const isCanonical = this.canonicalIds.has(id.toLowerCase());
-
-    if (isCanonical) {
-      const cacheUrl = `${this.site}/assets/cache/${id}/${volume.id}.json`;
-      const res = await fetchApi(cacheUrl);
-
-      if (res.ok) {
-        const json = (await res.json()) as Record<
-          string,
-          { title?: string; content?: string }
-        >;
-        const keys = Object.keys(json).sort((a, b) => Number(a) - Number(b));
-
-        for (const key of keys) {
-          const item = json[key];
-          chapters.push({
-            name: `${volume.title} - ${item.title || `Chapter ${key}`}`,
-            path: `/canonical/${id}/${volume.id}/${key}`,
-            chapterNumber: Number(key),
-          });
-        }
-        return { chapters };
-      }
-    }
-
-    // Non-canonical novel (or canonical fallback)
-    const volApiUrl = `${this.site}/api/novels/${id}/volume/${volume.id}`;
-    const res = await fetchApi(volApiUrl);
-
-    if (res.ok) {
-      const volData = (await res.json()) as VolumeApiResponse;
-      const toc = volData.toc || [];
-
-      for (const item of toc) {
-        chapters.push({
-          name: `${volume.title} - ${item.title}`,
-          path: `/api/novels/${id}/volume/${volume.id}/${item.chapterIndex}`,
-          chapterNumber: item.chapterIndex,
-        });
-      }
-    }
-
-    return { chapters };
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
@@ -246,11 +181,22 @@ class CoteReader implements Plugin.PagePlugin {
       const cacheUrl = `${this.site}/assets/cache/${id}/${volumeId}.json`;
       const res = await fetchApi(cacheUrl);
       if (!res.ok) {
-        throw new Error(`Failed to fetch chapter: HTTP ${res.status}`);
+        throw new Error(`Failed to fetch volume: HTTP ${res.status}`);
       }
 
-      const json = (await res.json()) as Record<string, { content?: string }>;
-      rawHtml = json[chapterKey]?.content || '';
+      const json = (await res.json()) as Record<string, { title?: string; content?: string }>;
+      if (chapterKey && json[chapterKey]) {
+        rawHtml = json[chapterKey].content || '';
+      } else {
+        const keys = Object.keys(json).sort((a, b) => Number(a) - Number(b));
+        rawHtml = keys
+          .map((k) => {
+            const item = json[k];
+            const title = item.title || `Chapter ${k}`;
+            return `<section class="volume-chapter"><h2 class="volume-chapter-title">${title}</h2>${item.content || ''}</section>`;
+          })
+          .join('\n<hr class="volume-divider" />\n');
+      }
     } else if (chapterPath.startsWith('/api/novels/')) {
       const parts = chapterPath.replace(/^\/api\/novels\//, '').split('/');
       const id = parts[0];
@@ -260,11 +206,29 @@ class CoteReader implements Plugin.PagePlugin {
       const volUrl = `${this.site}/api/novels/${id}/volume/${volumeId}`;
       const res = await fetchApi(volUrl);
       if (!res.ok) {
-        throw new Error(`Failed to fetch chapter: HTTP ${res.status}`);
+        throw new Error(`Failed to fetch volume: HTTP ${res.status}`);
       }
 
       const volData = (await res.json()) as VolumeApiResponse;
-      rawHtml = volData.chapters?.[chapterIndex]?.content || '';
+      if (chapterIndex && volData.chapters?.[chapterIndex]) {
+        rawHtml = volData.chapters[chapterIndex].content || '';
+      } else {
+        const chaptersObj = volData.chapters || {};
+        const toc = volData.toc || [];
+        if (toc.length > 0) {
+          rawHtml = toc
+            .map((item) => {
+              const ch = chaptersObj[item.chapterIndex];
+              return `<section class="volume-chapter"><h2 class="volume-chapter-title">${item.title}</h2>${ch?.content || ''}</section>`;
+            })
+            .join('\n<hr class="volume-divider" />\n');
+        } else {
+          const keys = Object.keys(chaptersObj).sort((a, b) => Number(a) - Number(b));
+          rawHtml = keys
+            .map((k) => `<section class="volume-chapter">${chaptersObj[k]?.content || ''}</section>`)
+            .join('\n<hr class="volume-divider" />\n');
+        }
+      }
     } else {
       const res = await fetchApi(
         chapterPath.startsWith('http') ? chapterPath : `${this.site}${chapterPath}`,
@@ -274,21 +238,17 @@ class CoteReader implements Plugin.PagePlugin {
       }
     }
 
-    // Sanitize image paths and picture tags
     return this.sanitizeChapterHtml(rawHtml);
   }
 
   private sanitizeChapterHtml(html: string): string {
     if (!html) return '';
 
-    // Replace relative images /assets/... with full domain URL
     let cleaned = html.replace(
       /(<img[^>]+src=["'])(\/assets\/[^"']+)(["'])/gi,
       `$1${this.site}$2$3`,
     );
 
-    // Some chapters use <picture><source srcset="..."><img src="..."></picture>
-    // Ensure standard <img> has the best accessible URL (JPG/PNG/WebP)
     cleaned = cleaned.replace(
       /<picture>[\s\S]*?<img([^>]+src=["']https?:\/\/[^"']+["'][^>]*)>[\s\S]*?<\/picture>/gi,
       '<img$1>',
