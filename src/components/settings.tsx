@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { CheckedState } from '@radix-ui/react-checkbox';
-import { Check } from 'lucide-react';
+import { Check, X } from 'lucide-react';
+
+import { useAppStore } from '@/store';
 
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -23,15 +25,25 @@ const FETCH_MODES = {
 };
 
 const SettingsSection = React.memo(function SettingsSection() {
+  const plugin = useAppStore(state => state.plugin);
   const [settings, setSettings] = useState({
     cookies: '',
     fetchMode: FetchMode.PROXY,
     useUserAgent: true as CheckedState,
+    siteCookies: {} as Record<string, string>,
+    usePerSiteCookies: false as CheckedState,
   });
   const [status, setStatus] = useState<'idle' | 'loading' | 'saved'>('idle');
+  const [showAllSites, setShowAllSites] = useState(false);
+  const [addSiteHost, setAddSiteHost] = useState('');
+  const [addSiteCookie, setAddSiteCookie] = useState('');
+  const [addSiteError, setAddSiteError] = useState('');
   const init = useRef(false);
   const lastSaved = useRef<typeof settings | null>(null);
   const debouncedCookies = useDebounce(settings.cookies, 500);
+  const currentSiteHostname = plugin?.site
+    ? new URL(plugin.site).hostname.replace(/^www\./, '')
+    : undefined;
 
   useEffect(() => {
     fetch('settings')
@@ -41,6 +53,8 @@ const SettingsSection = React.memo(function SettingsSection() {
           cookies: data.cookies || '',
           fetchMode: data.fetchMode ?? FetchMode.PROXY,
           useUserAgent: data.useUserAgent ?? true,
+          siteCookies: data.siteCookies || {},
+          usePerSiteCookies: data.usePerSiteCookies ?? false,
         };
         setSettings(loaded);
         lastSaved.current = loaded;
@@ -51,7 +65,18 @@ const SettingsSection = React.memo(function SettingsSection() {
 
   useEffect(() => {
     if (!init.current || debouncedCookies !== settings.cookies) return;
-    const current = { ...settings, cookies: debouncedCookies };
+
+    // strip empty keys from siteCookies before saving
+    const cleanSiteCookies = { ...settings.siteCookies };
+    for (const key in cleanSiteCookies) {
+      if (!cleanSiteCookies[key]) delete cleanSiteCookies[key];
+    }
+
+    const current = {
+      ...settings,
+      cookies: debouncedCookies,
+      siteCookies: cleanSiteCookies,
+    };
 
     if (JSON.stringify(lastSaved.current) === JSON.stringify(current)) return;
 
@@ -72,6 +97,8 @@ const SettingsSection = React.memo(function SettingsSection() {
     settings.fetchMode,
     settings.useUserAgent,
     settings.cookies,
+    settings.siteCookies,
+    settings.usePerSiteCookies,
   ]);
 
   const update = <K extends keyof typeof settings>(
@@ -129,24 +156,198 @@ const SettingsSection = React.memo(function SettingsSection() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label
-                htmlFor="cookies"
-                className="font-semibold text-foreground"
-              >
-                Cookies
-              </Label>
-              <Input
-                id="cookies"
-                value={settings.cookies}
-                onChange={e => update('cookies', e.target.value.trim())}
-                placeholder="Enter cookies (optional)..."
-                className="font-mono text-xs"
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="use-per-site-cookies"
+                checked={settings.usePerSiteCookies}
+                onCheckedChange={v => update('usePerSiteCookies', v)}
               />
-              <p className="text-xs text-muted-foreground">
-                Additional cookies to send with requests (optional)
-              </p>
+              <Label
+                htmlFor="use-per-site-cookies"
+                className="text-sm text-foreground cursor-pointer font-semibold"
+              >
+                Use per-site cookies
+              </Label>
             </div>
+
+            {!settings.usePerSiteCookies ? (
+              <div className="space-y-2">
+                <Label
+                  htmlFor="cookies"
+                  className="font-semibold text-foreground"
+                >
+                  Cookies (global)
+                </Label>
+                <Input
+                  id="cookies"
+                  value={settings.cookies}
+                  onChange={e => update('cookies', e.target.value.trim())}
+                  placeholder="Enter cookies (optional)..."
+                  className="font-mono text-xs"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Applied to all requests
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {currentSiteHostname ? (
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="site-cookie"
+                      className="font-semibold text-foreground"
+                    >
+                      Cookie for{' '}
+                      <code className="text-xs bg-muted px-1 py-0.5 rounded">
+                        {currentSiteHostname}
+                      </code>
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="site-cookie"
+                        value={settings.siteCookies[currentSiteHostname] || ''}
+                        onChange={e => {
+                          const val = e.target.value.trim();
+                          setSettings(prev => ({
+                            ...prev,
+                            siteCookies: {
+                              ...prev.siteCookies,
+                              [currentSiteHostname]: val,
+                            },
+                          }));
+                        }}
+                        placeholder="Enter cookie (optional)..."
+                        className="font-mono text-xs"
+                      />
+                      {settings.siteCookies[currentSiteHostname] && (
+                        <button
+                          onClick={() => {
+                            const next = { ...settings.siteCookies };
+                            delete next[currentSiteHostname];
+                            update('siteCookies', next);
+                          }}
+                          className="px-2 text-muted-foreground hover:text-destructive transition-colors"
+                          title="Clear site cookie"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Sent instead of global cookies for requests to this
+                      hostname
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground py-2">
+                    Select a plugin to configure per-site cookies for its
+                    hostname.
+                  </p>
+                )}
+
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1">
+                    <div className="h-px flex-1 bg-border" />
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      add hosts
+                    </span>
+                    <div className="h-px flex-1 bg-border" />
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      value={addSiteHost}
+                      onChange={e => setAddSiteHost(e.target.value)}
+                      placeholder="https://..."
+                      className="font-mono text-xs flex-1"
+                    />
+                    <Input
+                      value={addSiteCookie}
+                      onChange={e => setAddSiteCookie(e.target.value)}
+                      placeholder="cookie value"
+                      className="font-mono text-xs flex-[2]"
+                    />
+                    <button
+                      onClick={() => {
+                        try {
+                          const host = new URL(
+                            addSiteHost.trim(),
+                          ).hostname.replace(/^www\./, '');
+                          const next = { ...settings.siteCookies };
+                          const val = addSiteCookie.trim();
+                          if (val) {
+                            next[host] = val;
+                          } else {
+                            delete next[host];
+                          }
+                          update('siteCookies', next);
+                          setAddSiteHost('');
+                          setAddSiteCookie('');
+                          setAddSiteError('');
+                        } catch {
+                          setAddSiteError(
+                            'Enter a full URL, e.g. https://source-b.com',
+                          );
+                        }
+                      }}
+                      disabled={!addSiteHost.trim()}
+                      className="px-3 py-1 text-xs font-semibold bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+                {addSiteError && (
+                  <p className="text-xs text-destructive mt-1">
+                    {addSiteError}
+                  </p>
+                )}
+
+                {Object.keys(settings.siteCookies).length > 0 && (
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => setShowAllSites(v => !v)}
+                      className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <span className="text-xs">
+                        {showAllSites ? '▾' : '▸'}
+                      </span>
+                      All Site Cookies (
+                      {Object.keys(settings.siteCookies).length})
+                    </button>
+                    {showAllSites && (
+                      <div className="space-y-1 pl-3 border-l-2 border-muted">
+                        {Object.entries(settings.siteCookies)
+                          .filter(([, v]) => v)
+                          .map(([site, cookie]) => (
+                            <div
+                              key={site}
+                              className="flex items-center gap-2 text-xs py-1"
+                            >
+                              <code className="bg-muted px-1 py-0.5 rounded shrink-0">
+                                {site}
+                              </code>
+                              <span className="text-muted-foreground truncate font-mono">
+                                {cookie}
+                              </span>
+                              <button
+                                onClick={() => {
+                                  const next = { ...settings.siteCookies };
+                                  delete next[site];
+                                  update('siteCookies', next);
+                                }}
+                                className="ml-auto text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                                title={`Delete cookie for ${site}`}
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </Section>
 
           <Section title="Fetch Settings">
