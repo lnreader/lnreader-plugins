@@ -21,15 +21,6 @@ type ChaptersIndex = {
   chapters: ChapterJSON[];
 };
 
-type ChapterContentResponse = {
-  schema: number;
-  data: {
-    content_html: string;
-    display_title: string;
-    navigation: { next_url: string; previous_url: string };
-  };
-};
-
 class GalaxyNovels implements Plugin.PluginBase {
   id = 'galaxynovels';
   name = 'Galaxy Novels';
@@ -61,6 +52,11 @@ class GalaxyNovels implements Plugin.PluginBase {
   } satisfies Filters;
 
   private baseUrl = 'https://galaxynovels.com';
+
+  private toChapterPath(url: string | undefined): string {
+    if (!url) return '';
+    return url.startsWith('http') ? new URL(url).pathname : url;
+  }
 
   private async fetchHtml(url: string): Promise<string> {
     const res = await fetchApi(url);
@@ -174,9 +170,7 @@ class GalaxyNovels implements Plugin.PluginBase {
 
         chapters = index.chapters.map(ch => ({
           name: ch.label + (ch.title ? `: ${ch.title}` : ''),
-          path: ch.url
-            ? new URL(ch.url, this.site).pathname
-            : `${novelPath}chapter-${ch.id}/`,
+          path: this.toChapterPath(ch.url) || `${novelPath}chapter-${ch.id}/`,
           chapterNumber: ch.position,
           releaseTime: ch.date_iso?.split('T')[0] || '',
         }));
@@ -199,7 +193,10 @@ class GalaxyNovels implements Plugin.PluginBase {
 
         if (!chapterLink) return;
 
-        const path = new URL(chapterLink, this.site).pathname;
+        // Only the full permalink resolves on the site; the data-chapter-id
+        // attribute holds the WordPress post id, and …/chapter-<post-id>/
+        // answers 404.
+        const path = this.toChapterPath(chapterLink);
         const numMatch = path.match(/chapter-(\d+)/);
         const chapterNumber = numMatch ? parseInt(numMatch[1]) : 0;
 
@@ -225,32 +222,27 @@ class GalaxyNovels implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    // Only legacy `chapter-<id>/` paths carry the post id; real URLs are `chapter-<number>/<slug>/`
-    const idMatch = chapterPath.match(/chapter-(\d+)\/?$/);
-    const chapterId = idMatch?.[1];
-
-    if (chapterId) {
-      const apiUrl = `${this.baseUrl}/wp-json/wor-reader-app/v1/chapters/${chapterId}`;
-      try {
-        const response = await this.fetchJson<ChapterContentResponse>(apiUrl);
-        if (response.data?.content_html) {
-          return response.data.content_html;
-        }
-      } catch {
-        // fallback to HTML
-      }
-    }
-
     const url = `${this.baseUrl}${chapterPath}`;
     const html = await this.fetchHtml(url);
     const $ = loadCheerio(html);
-    $('[data-wor-decoy], [hidden]').remove();
-    const content = $(
-      '.wor-reader-text-surface, article.wor-chapter-content, .wor-chapter-text, .entry-content',
-    )
-      .first()
-      .html();
-    return content || '<p>Content not available.</p>';
+
+    // The body is server-rendered inside the article marked up as
+    // https://schema.org/Chapter, as the element with itemprop="text". Pick
+    // the first candidate that actually carries text: a themed wrapper can be
+    // present but empty, and cheerio selections are always truthy.
+    for (const selector of [
+      'article[itemtype*="Chapter"] [itemprop="text"]',
+      '[itemprop="text"]',
+      '[data-wor-reader-text]',
+      '.wor-reader-text-surface',
+    ]) {
+      const candidate = $(selector);
+      if (candidate.length && candidate.text().trim()) {
+        return candidate.html() || '';
+      }
+    }
+
+    return '<p>Content not available.</p>';
   }
 
   async searchNovels(
