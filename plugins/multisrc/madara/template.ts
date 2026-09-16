@@ -570,11 +570,25 @@ export class MadaraPlugin implements Plugin.PluginBase {
       `${baseUrl}/${cleanPath}`,
       false,
     );
-    let chapterText = loadedCheerio('.text-left');
-    if (!chapterText.length) chapterText = loadedCheerio('.text-right');
-    if (!chapterText.length) chapterText = loadedCheerio('.entry-content');
-    if (!chapterText.length) {
-      chapterText = loadedCheerio('.c-blog-post > div > div:nth-child(2)');
+
+    // A cheerio selection is always truthy, so walk the candidates and keep
+    // the first one that actually holds text.
+    let chapterText = loadedCheerio('.__no-chapter-content__');
+    for (const selector of [
+      '.text-left',
+      '.text-right',
+      '.text-content',
+      '.text-chapter-content',
+      'novel-chapter',
+      '.reading-content',
+      '.entry-content',
+      '.c-blog-post > div > div:nth-child(2)',
+    ]) {
+      const candidate = loadedCheerio(selector);
+      if (candidate.text().trim()) {
+        chapterText = candidate;
+        break;
+      }
     }
 
     if (this.options?.customJs) {
