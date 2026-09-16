@@ -192,7 +192,6 @@ class Genesis implements Plugin.PluginBase {
     const search = new URLSearchParams({
       select: 'id,chapter_title,chapter_number,chapter_content,status,novel',
       id: `eq.${id}`,
-      status: 'eq.released',
     });
 
     const chQuery = await fetchApi(`${path}?${search}`, {
