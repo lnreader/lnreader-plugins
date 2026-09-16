@@ -25,9 +25,18 @@ type RawChapter = {
 class Novelight implements Plugin.PagePlugin {
   id = 'novelight';
   name = 'Novelight';
-  version = '1.1.6';
+  version = '1.1.7';
   icon = 'src/en/novelight/icon.png';
   site = 'https://novelight.net/';
+
+  // Browser-like headers (important for Cloudflare-fronted sites, which
+  // may serve a bot-check page to requests without a User-Agent).
+  private headers = {
+    'User-Agent':
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36',
+    Referer: this.site,
+    'Accept-Language': 'en-US,en;q=0.9',
+  };
 
   hideLocked = storage.get('hideLocked');
   pluginSettings = {
@@ -72,7 +81,9 @@ class Novelight implements Plugin.PagePlugin {
       url += `?&ordering=popularity&page=${pageNo}`;
     }
 
-    const body = await fetchApi(url).then(r => r.text());
+    const body = await fetchApi(url, { headers: this.headers }).then(r =>
+      r.text(),
+    );
 
     const loadedCheerio = parseHTML(body);
 
@@ -102,7 +113,9 @@ class Novelight implements Plugin.PagePlugin {
   async parseNovel(
     novelPath: string,
   ): Promise<Plugin.SourceNovel & { totalPages: number }> {
-    const body = await fetchApi(this.site + novelPath).then(r => r.text());
+    const body = await fetchApi(this.site + novelPath, {
+      headers: this.headers,
+    }).then(r => r.text());
 
     const loadedCheerio = parseHTML(body);
 
@@ -204,6 +217,7 @@ class Novelight implements Plugin.PagePlugin {
       `${this.site}book/ajax/chapter-pagination?csrfmiddlewaretoken=${csrftoken}&book_id=${bookId}&page=${sitePage}`,
       {
         headers: {
+          ...this.headers,
           'Host': this.site.replace('https://', '').replace('/', ''),
           'Referer': this.site + novelPath,
           'X-Requested-With': 'XMLHttpRequest',
@@ -254,7 +268,9 @@ class Novelight implements Plugin.PagePlugin {
   }
 
   async parsePage(novelPath: string, page: string): Promise<Plugin.SourcePage> {
-    const rawBody = await fetchApi(this.site + novelPath).then(r => r.text());
+    const rawBody = await fetchApi(this.site + novelPath, {
+      headers: this.headers,
+    }).then(r => r.text());
     const csrftoken = rawBody?.match(/window\.CSRF_TOKEN = "([^"]+)"/)?.[1];
     const bookId = rawBody?.match(/const OBJECT_BY_COMMENT = ([0-9]+)/)?.[1];
     const chapterPagination = this.parseChapterPagination(parseHTML(rawBody));
@@ -313,7 +329,9 @@ class Novelight implements Plugin.PagePlugin {
     if (chapterPath.charAt(0) == '/') {
       chapterPath = chapterPath.substring(1);
     }
-    const rawBody = await fetchApi(this.site + chapterPath).then(r => {
+    const rawBody = await fetchApi(this.site + chapterPath, {
+      headers: this.headers,
+    }).then(r => {
       const res = r.text();
       return res;
     });
@@ -327,6 +345,7 @@ class Novelight implements Plugin.PagePlugin {
       {
         method: 'GET',
         headers: {
+          ...this.headers,
           Cookie: 'csrftoken=' + csrftoken,
           Referer: this.site + chapterPath,
           'X-Requested-With': 'XMLHttpRequest',
@@ -351,7 +370,9 @@ class Novelight implements Plugin.PagePlugin {
 
   async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
     const url = `${this.site}catalog/?search=${encodeURIComponent(searchTerm)}`;
-    const body = await fetchApi(url).then(r => r.text());
+    const body = await fetchApi(url, { headers: this.headers }).then(r =>
+      r.text(),
+    );
     const loadedCheerio = parseHTML(body);
 
     const novels: Plugin.NovelItem[] = [];
