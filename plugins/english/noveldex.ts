@@ -483,12 +483,9 @@ class Noveldex implements Plugin.PluginBase {
     if (!clientId) return null;
 
     const marker = `"$L${clientId}",null,`;
-    let searchFrom = 0;
 
-    while (true) {
-      const idx = rscText.indexOf(marker, searchFrom);
-      if (idx === -1) return null;
-
+    let idx = rscText.indexOf(marker);
+    while (idx !== -1) {
       const jsonText = this.extractBalancedJson(rscText, idx + marker.length);
       if (jsonText) {
         try {
@@ -500,8 +497,10 @@ class Noveldex implements Plugin.PluginBase {
           // fall through and try the next occurrence
         }
       }
-      searchFrom = idx + marker.length;
+      idx = rscText.indexOf(marker, idx + marker.length);
     }
+
+    return null;
   }
 
   //Fetch one page of a series via RSC
@@ -929,18 +928,13 @@ class Noveldex implements Plugin.PluginBase {
   // Search starts
   // Bridge between raw RSC and structured data
   private extractBrowsePage(rscText: string): SeriesBrowsePage | null {
-    // fetch the component's module by its name
     const clientId = this.findClientId(rscText, 'SeriesBrowseGrid');
     if (!clientId) return null;
 
     const marker = `"$L${clientId}",null,`;
-    let searchFrom = 0;
 
-    while (true) {
-      const idx = rscText.indexOf(marker, searchFrom);
-      if (idx === -1) return null;
-
-      // slicing out the good json
+    let idx = rscText.indexOf(marker);
+    while (idx !== -1) {
       const jsonText = this.extractBalancedJson(rscText, idx + marker.length);
       if (jsonText) {
         try {
@@ -952,8 +946,10 @@ class Noveldex implements Plugin.PluginBase {
           // try the next occurrence
         }
       }
-      searchFrom = idx + marker.length;
+      idx = rscText.indexOf(marker, idx + marker.length);
     }
+
+    return null;
   }
 
   async searchNovels(
