@@ -49,11 +49,19 @@ class DreamyTranslationsPlugin implements Plugin.PluginBase {
   name = 'Dreamy Translations';
   icon = 'src/en/dreamyTranslations/icon.png';
   site = 'https://dreamy-translations.com';
-  version = '1.0.1';
+  version = '1.1.0';
 
   filters: Filters | undefined = undefined;
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
   webStorageUtilized?: boolean;
+
+  pluginSettings = {
+    hideLocked: {
+      value: false,
+      label: 'Hide locked chapters',
+      type: 'Switch',
+    },
+  };
 
   private headers = {
     'User-Agent':
@@ -84,13 +92,8 @@ class DreamyTranslationsPlugin implements Plugin.PluginBase {
   /**
    * Extract an object from a normal JSON RSC record.
    */
-  private extractRscObject<T>(
-    rscText: string,
-    marker: string,
-  ): T {
-    const line = rscText
-      .split('\n')
-      .find(l => l.includes(marker));
+  private extractRscObject<T>(rscText: string, marker: string): T {
+    const line = rscText.split('\n').find(l => l.includes(marker));
 
     if (!line) {
       throw new Error(
@@ -101,9 +104,7 @@ class DreamyTranslationsPlugin implements Plugin.PluginBase {
     const colonIndex = line.indexOf(':');
 
     if (colonIndex === -1) {
-      throw new Error(
-        'Invalid Dreamy Translations RSC record',
-      );
+      throw new Error('Invalid Dreamy Translations RSC record');
     }
 
     const jsonStr = line.slice(colonIndex + 1);
@@ -113,10 +114,7 @@ class DreamyTranslationsPlugin implements Plugin.PluginBase {
      * Next.js Flight records commonly contain the actual
      * application data at index 3.
      */
-    if (
-      Array.isArray(parsed) &&
-      parsed.length > 3
-    ) {
+    if (Array.isArray(parsed) && parsed.length > 3) {
       return parsed[3] as T;
     }
 
@@ -134,42 +132,26 @@ class DreamyTranslationsPlugin implements Plugin.PluginBase {
    * response must be sliced by encoded bytes rather than
    * JavaScript string characters.
    */
-  private extractDeferredText(
-    rscText: string,
-    refId: string,
-  ): string {
-    const escapedId = refId.replace(
-      /[.*+?^${}()|[\]\\]/g,
-      '\\$&',
-    );
+  private extractDeferredText(rscText: string, refId: string): string {
+    const escapedId = refId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-    const match = new RegExp(
-      `(?:^|\\n)${escapedId}:T([0-9a-fA-F]+),`,
-    ).exec(rscText);
+    const match = new RegExp(`(?:^|\\n)${escapedId}:T([0-9a-fA-F]+),`).exec(
+      rscText,
+    );
 
     if (!match) {
-      throw new Error(
-        'Could not locate chapter content in server response',
-      );
+      throw new Error('Could not locate chapter content in server response');
     }
 
-    const start =
-      match.index + match[0].length;
+    const start = match.index + match[0].length;
 
-    const byteLength = parseInt(
-      match[1],
-      16,
-    );
+    const byteLength = parseInt(match[1], 16);
 
     const rest = rscText.slice(start);
 
-    const bytes = new TextEncoder().encode(
-      rest,
-    );
+    const bytes = new TextEncoder().encode(rest);
 
-    return new TextDecoder().decode(
-      bytes.slice(0, byteLength),
-    );
+    return new TextDecoder().decode(bytes.slice(0, byteLength));
   }
 
   /**
@@ -178,38 +160,24 @@ class DreamyTranslationsPlugin implements Plugin.PluginBase {
    * This is a non-throwing version of extractDeferredText()
    * used when chapter content may already be inline.
    */
-  private findDeferredText(
-    rscText: string,
-    refId: string,
-  ): string | undefined {
-    const escapedId = refId.replace(
-      /[.*+?^${}()|[\]\\]/g,
-      '\\$&',
-    );
+  private findDeferredText(rscText: string, refId: string): string | undefined {
+    const escapedId = refId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-    const match = new RegExp(
-      `(?:^|\\n)${escapedId}:T([0-9a-fA-F]+),`,
-    ).exec(rscText);
+    const match = new RegExp(`(?:^|\\n)${escapedId}:T([0-9a-fA-F]+),`).exec(
+      rscText,
+    );
 
     if (!match) {
       return undefined;
     }
 
-    const start =
-      match.index + match[0].length;
+    const start = match.index + match[0].length;
 
-    const byteLength = parseInt(
-      match[1],
-      16,
-    );
+    const byteLength = parseInt(match[1], 16);
 
-    const bytes = new TextEncoder().encode(
-      rscText.slice(start),
-    );
+    const bytes = new TextEncoder().encode(rscText.slice(start));
 
-    return new TextDecoder().decode(
-      bytes.slice(0, byteLength),
-    );
+    return new TextDecoder().decode(bytes.slice(0, byteLength));
   }
 
   /**
@@ -223,47 +191,30 @@ class DreamyTranslationsPlugin implements Plugin.PluginBase {
    * 3. Parse a balanced JSON object.
    * 4. Fall back to other JSON-looking Flight records.
    */
-  private extractChapterObject(
-    rscText: string,
-  ): ChapterDetailData {
+  private extractChapterObject(rscText: string): ChapterDetailData {
     const lines = rscText.split('\n');
 
     /*
      * First attempt: normal Flight record.
      */
     const chapterLine = lines.find(
-      line =>
-        line.includes('"chapter"') &&
-        line.includes('"hasAccess"'),
+      line => line.includes('"chapter"') && line.includes('"hasAccess"'),
     );
 
     if (chapterLine) {
-      const colonIndex =
-        chapterLine.indexOf(':');
+      const colonIndex = chapterLine.indexOf(':');
 
       if (colonIndex !== -1) {
-        const payload =
-          chapterLine.slice(
-            colonIndex + 1,
-          );
+        const payload = chapterLine.slice(colonIndex + 1);
 
         try {
-          const parsed =
-            JSON.parse(payload);
+          const parsed = JSON.parse(payload);
 
-          if (
-            Array.isArray(parsed) &&
-            parsed.length > 3 &&
-            parsed[3]
-          ) {
+          if (Array.isArray(parsed) && parsed.length > 3 && parsed[3]) {
             return parsed[3] as ChapterDetailData;
           }
 
-          if (
-            parsed &&
-            typeof parsed === 'object' &&
-            !Array.isArray(parsed)
-          ) {
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
             return parsed as ChapterDetailData;
           }
         } catch {
@@ -280,45 +231,29 @@ class DreamyTranslationsPlugin implements Plugin.PluginBase {
      * directly inside the Flight response.
      */
     const marker = '"chapter":{';
-    const markerIndex =
-      rscText.indexOf(marker);
+    const markerIndex = rscText.indexOf(marker);
 
     if (markerIndex === -1) {
-      throw new Error(
-        'Could not locate chapter data in server response',
-      );
+      throw new Error('Could not locate chapter data in server response');
     }
 
     let start = -1;
 
-    for (
-      let i = markerIndex;
-      i >= 0;
-      i--
-    ) {
+    for (let i = markerIndex; i >= 0; i--) {
       if (rscText[i] !== '{') {
         continue;
       }
 
-      const candidate =
-        rscText.slice(
-          i,
-          markerIndex + marker.length,
-        );
+      const candidate = rscText.slice(i, markerIndex + marker.length);
 
-      if (
-        candidate.startsWith('{') &&
-        candidate.includes('"chapter"')
-      ) {
+      if (candidate.startsWith('{') && candidate.includes('"chapter"')) {
         start = i;
         break;
       }
     }
 
     if (start === -1) {
-      throw new Error(
-        'Could not locate chapter object in server response',
-      );
+      throw new Error('Could not locate chapter object in server response');
     }
 
     /*
@@ -329,11 +264,7 @@ class DreamyTranslationsPlugin implements Plugin.PluginBase {
     let inString = false;
     let escaped = false;
 
-    for (
-      let i = start;
-      i < rscText.length;
-      i++
-    ) {
+    for (let i = start; i < rscText.length; i++) {
       const char = rscText[i];
 
       if (inString) {
@@ -359,16 +290,10 @@ class DreamyTranslationsPlugin implements Plugin.PluginBase {
         depth--;
 
         if (depth === 0) {
-          const json =
-            rscText.slice(
-              start,
-              i + 1,
-            );
+          const json = rscText.slice(start, i + 1);
 
           try {
-            return JSON.parse(
-              json,
-            ) as ChapterDetailData;
+            return JSON.parse(json) as ChapterDetailData;
           } catch {
             break;
           }
@@ -381,26 +306,20 @@ class DreamyTranslationsPlugin implements Plugin.PluginBase {
      * Flight records.
      */
     for (const line of lines) {
-      const colon =
-        line.indexOf(':');
+      const colon = line.indexOf(':');
 
       if (colon === -1) {
         continue;
       }
 
-      const payload =
-        line.slice(colon + 1);
+      const payload = line.slice(colon + 1);
 
-      if (
-        !payload.startsWith('[') &&
-        !payload.startsWith('{')
-      ) {
+      if (!payload.startsWith('[') && !payload.startsWith('{')) {
         continue;
       }
 
       try {
-        const parsed =
-          JSON.parse(payload);
+        const parsed = JSON.parse(payload);
 
         if (Array.isArray(parsed)) {
           for (const value of parsed) {
@@ -436,35 +355,19 @@ class DreamyTranslationsPlugin implements Plugin.PluginBase {
   /**
    * Fetch every novel from the series page.
    */
-  private async fetchAllNovels(): Promise<
-    Plugin.NovelItem[]
-  > {
-    const rscText =
-      await this.fetchRsc(
-        `${this.site}/series`,
-      );
+  private async fetchAllNovels(): Promise<Plugin.NovelItem[]> {
+    const rscText = await this.fetchRsc(`${this.site}/series`);
 
-    const data =
-      this.extractRscObject<SeriesListData>(
-        rscText,
-        '"projects"',
-      );
+    const data = this.extractRscObject<SeriesListData>(rscText, '"projects"');
 
-    return data.projects.map(
-      project => ({
-        name: project.title,
-        path: `/novel/${project.slug}`,
-        cover:
-          data.squareImageUrls[
-            String(project.id)
-          ] || defaultCover,
-      }),
-    );
+    return data.projects.map(project => ({
+      name: project.title,
+      path: `/novel/${project.slug}`,
+      cover: data.squareImageUrls[String(project.id)] || defaultCover,
+    }));
   }
 
-  async popularNovels(
-    pageNo: number,
-  ): Promise<Plugin.NovelItem[]> {
+  async popularNovels(pageNo: number): Promise<Plugin.NovelItem[]> {
     if (pageNo !== 1) {
       return [];
     }
@@ -472,70 +375,46 @@ class DreamyTranslationsPlugin implements Plugin.PluginBase {
     return this.fetchAllNovels();
   }
 
-  async parseNovel(
-    novelPath: string,
-  ): Promise<Plugin.SourceNovel> {
-    const rscText =
-      await this.fetchRsc(
-        `${this.site}${novelPath}`,
-      );
+  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+    const rscText = await this.fetchRsc(`${this.site}${novelPath}`);
 
-    const data =
-      this.extractRscObject<NovelDetailData>(
-        rscText,
-        '"chapters":[',
-      );
+    const data = this.extractRscObject<NovelDetailData>(
+      rscText,
+      '"chapters":[',
+    );
 
     const novel: Plugin.SourceNovel = {
       path: novelPath,
-      name:
-        data.project.title ||
-        'Untitled',
-      cover:
-        data.coverUrl ||
-        defaultCover,
-      author:
-        data.project.author,
-      genres:
-        (data.project.genres || [])
-          .join(', '),
-      summary:
-        data.project.synopsis ||
-        data.project.short_synopsis,
-      status:
-        data.project.completed
-          ? NovelStatus.Completed
-          : NovelStatus.Ongoing,
+      name: data.project.title || 'Untitled',
+      cover: data.coverUrl || defaultCover,
+      author: data.project.author,
+      genres: (data.project.genres || []).join(', '),
+      summary: data.project.synopsis || data.project.short_synopsis,
+      status: data.project.completed
+        ? NovelStatus.Completed
+        : NovelStatus.Ongoing,
     };
 
-    novel.chapters =
-      data.chapters.map(
-        chapter => ({
-          name: chapter.free
-            ? chapter.title
-            : `🔒 ${chapter.title}`,
-          path:
-            `${novelPath}/chapter/${chapter.index}`,
-          chapterNumber:
-            chapter.index,
-        }),
-      );
+    // Filter locked chapters if the user enabled the setting
+    const shouldHideLocked = this.pluginSettings.hideLocked.value;
+
+    const chaptersToShow = shouldHideLocked
+      ? data.chapters.filter(ch => ch.free)
+      : data.chapters;
+
+    novel.chapters = chaptersToShow.map(chapter => ({
+      name: chapter.free ? chapter.title : `🔒 ${chapter.title}`,
+      path: `${novelPath}/chapter/${chapter.index}`,
+      chapterNumber: chapter.index,
+    }));
 
     return novel;
   }
 
-  async parseChapter(
-    chapterPath: string,
-  ): Promise<string> {
-    const rscText =
-      await this.fetchRsc(
-        `${this.site}${chapterPath}`,
-      );
+  async parseChapter(chapterPath: string): Promise<string> {
+    const rscText = await this.fetchRsc(`${this.site}${chapterPath}`);
 
-    const data =
-      this.extractChapterObject(
-        rscText,
-      );
+    const data = this.extractChapterObject(rscText);
 
     if (!data.hasAccess) {
       throw new Error(
@@ -543,41 +422,25 @@ class DreamyTranslationsPlugin implements Plugin.PluginBase {
       );
     }
 
-    let content =
-      data.chapter.content;
+    let content = data.chapter.content;
 
     /*
      * Chapter content may be a reference to
      * a streamed RSC text record.
      */
     const refMatch =
-      typeof content === 'string'
-        ? /^\$([0-9a-zA-Z]+)$/.exec(
-            content,
-          )
-        : null;
+      typeof content === 'string' ? /^\$([0-9a-zA-Z]+)$/.exec(content) : null;
 
     if (refMatch) {
-      const streamed =
-        this.findDeferredText(
-          rscText,
-          refMatch[1],
-        );
+      const streamed = this.findDeferredText(rscText, refMatch[1]);
 
-      if (
-        streamed !== undefined
-      ) {
+      if (streamed !== undefined) {
         content = streamed;
       }
     }
 
-    if (
-      !content ||
-      !content.trim()
-    ) {
-      throw new Error(
-        'Dreamy Translations returned an empty chapter',
-      );
+    if (!content || !content.trim()) {
+      throw new Error('Dreamy Translations returned an empty chapter');
     }
 
     /*
@@ -587,41 +450,30 @@ class DreamyTranslationsPlugin implements Plugin.PluginBase {
      * We intentionally do NOT HTML-escape the content.
      * Dreamy supplies actual HTML, including <img> tags.
      */
-    const normalized =
-      content
-        .replace(/\r\n/g, '\n')
-        .replace(/\r/g, '\n')
-        /*
-         * Dreamy currently returns image src values
-         * in this form:
-         *
-         * src="[https://example.com/image](https://example.com/image)"
-         *
-         * Convert that into:
-         *
-         * src="https://example.com/image"
-         */
-        .replace(
-          /(\bsrc\s*=\s*["'])\[([^\]]+)\]\(\2\)(["'])/gi,
-          '$1$2$3',
-        );
+    const normalized = content
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n')
+      /*
+       * Dreamy currently returns image src values
+       * in this form:
+       *
+       * src="[https://example.com/image](https://example.com/image)"
+       *
+       * Convert that into:
+       *
+       * src="https://example.com/image"
+       */
+      .replace(/(\bsrc\s*=\s*["'])\[([^\]]+)\]\(\2\)(["'])/gi, '$1$2$3');
 
     return normalized
       .split(/\n{2,}/)
-      .map(
-        paragraph =>
-          paragraph.trim(),
-      )
+      .map(paragraph => paragraph.trim())
       .filter(Boolean)
       .map(paragraph => {
         /*
          * Don't wrap standalone images in <p>.
          */
-        if (
-          /^<img\b[^>]*\/?>$/i.test(
-            paragraph,
-          )
-        ) {
+        if (/^<img\b[^>]*\/?>$/i.test(paragraph)) {
           return paragraph;
         }
 
@@ -630,10 +482,7 @@ class DreamyTranslationsPlugin implements Plugin.PluginBase {
          * converting ordinary newlines to
          * reader line breaks.
          */
-        return `<p>${paragraph.replace(
-          /\n/g,
-          '<br>',
-        )}</p>`;
+        return `<p>${paragraph.replace(/\n/g, '<br>')}</p>`;
       })
       .join('');
   }
@@ -646,22 +495,14 @@ class DreamyTranslationsPlugin implements Plugin.PluginBase {
       return [];
     }
 
-    const novels =
-      await this.fetchAllNovels();
+    const novels = await this.fetchAllNovels();
 
-    const term =
-      searchTerm.toLowerCase();
+    const term = searchTerm.toLowerCase();
 
-    return novels.filter(
-      novel =>
-        novel.name
-          .toLowerCase()
-          .includes(term),
-    );
+    return novels.filter(novel => novel.name.toLowerCase().includes(term));
   }
 
-  resolveUrl = (path: string) =>
-    this.site + path;
+  resolveUrl = (path: string) => this.site + path;
 }
 
 export default new DreamyTranslationsPlugin();
