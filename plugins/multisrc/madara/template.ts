@@ -46,7 +46,7 @@ export class MadaraPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/madara/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `2.2.${versionIncrements}`;
+    this.version = `2.3.${versionIncrements}`;
     this.options = metadata.options;
     this.filters = metadata.filters;
 
@@ -385,11 +385,29 @@ export class MadaraPlugin implements Plugin.PluginBase {
 
   async parseChapter(chapterPath: string): Promise<string> {
     const loadedCheerio = await this.getCheerio(this.site + chapterPath, false);
-    const chapterText =
-      loadedCheerio('.text-left') ||
-      loadedCheerio('.text-right') ||
-      loadedCheerio('.entry-content') ||
-      loadedCheerio('.c-blog-post > div > div:nth-child(2)');
+
+    // A cheerio selection is always truthy, so the previous
+    // `$('.text-left') || $('.text-right') || …` chain never looked past the
+    // first selector: on a site that no longer renders `.text-left` it
+    // returned an empty body no matter what else the page offered. Walk the
+    // candidates and keep the first one that actually holds text.
+    let chapterText = loadedCheerio('.__no-chapter-content__');
+    for (const selector of [
+      '.text-left',
+      '.text-right',
+      '.text-content',
+      '.text-chapter-content',
+      'novel-chapter',
+      '.reading-content',
+      '.entry-content',
+      '.c-blog-post > div > div:nth-child(2)',
+    ]) {
+      const candidate = loadedCheerio(selector);
+      if (candidate.text().trim()) {
+        chapterText = candidate;
+        break;
+      }
+    }
 
     if (this.options?.customJs) {
       try {
