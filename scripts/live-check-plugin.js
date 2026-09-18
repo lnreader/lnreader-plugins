@@ -297,6 +297,17 @@ async function probeSiteReachability(site) {
 
 async function checkPlugin(pluginPath) {
   const result = { pluginPath, steps: [], loadError: null };
+  // Parked broken sources are deliberately excluded from production
+  // compilation (see tsconfig.production.json) — live-checking them can
+  // only fail by design, so short-circuit to INCONCLUSIVE (never a FAIL).
+  if (pluginPath.endsWith('.broken.ts')) {
+    const step = makeStep('parkedBrokenSource');
+    step.status = 'INCONCLUSIVE';
+    step.detail =
+      'Parked broken source (*.broken.ts): excluded from production compilation; live check skipped.';
+    result.steps = [step];
+    return result;
+  }
   let plugin;
   try {
     plugin = await loadPluginInstance(pluginPath);
