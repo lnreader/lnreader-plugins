@@ -92,11 +92,33 @@ export namespace Plugin {
     resolveUrl?(path: string, isNovel?: boolean): string;
   };
 
+  /**
+   * Direction of a source's flat chapter enumeration relative to reading
+   * order.
+   *
+   * The flat enumeration is every page walked in ascending page number,
+   * taking each page's chapters in the order the source serves them.
+   *
+   * - `ASC` (the default): that enumeration is already reading order, so
+   *   page 1 holds the oldest chapters and new chapters land on the last
+   *   page.
+   * - `DESC`: that enumeration is reversed reading order, so page 1 holds
+   *   the newest chapters and new chapters push older ones onto later pages.
+   *
+   * Only declare `DESC` when both the page sequence and the order within
+   * each page are newest-first. A source that is newest-first by page but
+   * oldest-first within a page is not expressible by this flag; either make
+   * the plugin serve each page newest-first, or leave it as `ASC`.
+   */
+  export type PageOrder = 'ASC' | 'DESC';
+
   export type PagePlugin = {
     parseNovel(
       novelPath: string,
     ): Promise<SourceNovel & { totalPages: number }>;
     parsePage(novelPath: string, page: string): Promise<SourcePage>;
+    /** Defaults to `'ASC'` when a plugin does not declare it. */
+    pageOrder?: PageOrder;
   } & PluginBase;
 }
 
