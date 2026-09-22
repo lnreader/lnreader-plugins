@@ -1,0 +1,41 @@
+.github/ISSUE_TEMPLATE/request_plugin.yml
+  s_2a05acb407603b::t_bc9629afa0024c 3
+.github/workflows/theme_auto_label.yml
+  s_2a05acb407603b::t_bc9629afa0024c 16,129-130,133-134,137-138,141-142
+.github/ISSUE_TEMPLATE/report_issue.yml
+  s_2a05acb407603b::t_bc9629afa0024c 7
+  s_2a05acb407603b::t_1b81bd5cb1ccc6 131,293
+.github/scripts/generate-issue-template-options.cjs
+  s_2a05acb407603b::t_947b009416bd26 63
+  s_2a05acb407603b::t_77bc85fa1fa90f 11,25,39,41,47-54,57,59-60,65,67,70-72
+  s_2a05acb407603b::t_6f69e721fe30b3 44-46,55-56,58
+  s_2a05acb407603b::t_f991dc738d3ca7 73
+.github/ISSUE_TEMPLATE/request_feature.yml
+  s_2a05acb407603b::t_bc9629afa0024c 3
+.github/workflows/issue_moderator.yml
+  s_2a05acb407603b::t_bc9629afa0024c 22,26
+.github/scripts/blank_report_issue.yml
+  s_2a05acb407603b::t_bc9629afa0024c 7
+.github/scripts/keys.json
+  s_2a05acb407603b::t_1b81bd5cb1ccc6 1
+.github/workflows/issue_auto_label.yml
+  s_2a05acb407603b::t_bc9629afa0024c 18,67-70,75-76,90,92
+README.md
+  s_2a05acb407603b::t_bc9629afa0024c 5-6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "09a9ad9612c422841c08f508e919bdb41966d1c9",
+  "prompts": {},
+  "sessions": {
+    "s_2a05acb407603b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0ca39-9c89-7303-9b59-fdeca8f57345",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "Rajarshee Chatterjee <rajarshee.adm@gmail.com>"
+    }
+  }
+}
