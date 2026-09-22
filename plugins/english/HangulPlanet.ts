@@ -10,7 +10,7 @@ class HangulPlanetPlugin implements Plugin.PluginBase {
   name = 'HangulPlanet';
   icon = 'src/en/hangulplanet/icon.png';
   site = 'https://hangulplanet.com';
-  version = '1.0.0';
+  version = '2.3.0';
 
   private async fetchPage(
     url: string,
@@ -68,7 +68,11 @@ class HangulPlanetPlugin implements Plugin.PluginBase {
     return this.parseNovelCards($);
   }
 
-  async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
+  async searchNovels(
+    searchTerm: string,
+    pageNo: number,
+  ): Promise<Plugin.NovelItem[]> {
+    if (pageNo > 1) return [];
     const url = `${this.site}/browse?q=${encodeURIComponent(searchTerm)}`;
     const $ = await this.getCheerio(url, true);
     return this.parseNovelCards($);
