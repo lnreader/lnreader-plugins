@@ -202,7 +202,7 @@ class HangulPlanetPlugin implements Plugin.PluginBase {
 
     const content = $('article[data-reader-article="true"] .reader-prose');
 
-    // Drop the translator-credit line (first <p><strong>Translator: ...</strong></p>)
+    //Remove the TL/ED credit(annoying for TTS)
     content
       .find('p')
       .first()
