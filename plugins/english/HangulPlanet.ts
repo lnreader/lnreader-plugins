@@ -10,7 +10,7 @@ class HangulPlanetPlugin implements Plugin.PluginBase {
   name = 'HangulPlanet';
   icon = 'src/en/hangulplanet/icon.png';
   site = 'https://hangulplanet.com';
-  version = '1.0.1';
+  version = '1.0.0';
 
   private async fetchPage(
     url: string,
@@ -207,7 +207,7 @@ class HangulPlanetPlugin implements Plugin.PluginBase {
       .find('p')
       .first()
       .each((_, el) => {
-        if ($(el).text().trim().startsWith('Translator:')) {
+        if ($(el).text().trim().startsWith('TL/ED')) {
           $(el).remove();
         }
       });
