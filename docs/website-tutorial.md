@@ -40,6 +40,8 @@ Before submitting your plugin, verify that:
 
 - All five tabs work without errors
 - Multiple pages load correctly, for both `popularNovels` and, if implemented, `parsePage`
+- Chapter pages chain in the direction the plugin declares — see
+  [Page direction](./docs.md#page-direction) if page 1 holds the newest chapters
 - Search returns accurate results
 - Novel parsing extracts all metadata
 - Chapter content is clean

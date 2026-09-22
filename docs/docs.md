@@ -80,6 +80,7 @@ class ExamplePlugin implements Plugin.PluginBase {}
 | [searchNovels(searchTerm, page)](#pluginbasesearchnovels)      | yes      | Novel searching getter                                         |
 | [resolveUrl(path, isNovel)](#pluginbaseresolveurl)             | no       | Helper that turns a novel/chapter path into a full URL          |
 | [parsePage(novelPath, page)](#pagination)                      | no       | Chapter-list-by-page getter, for novels too large to list in one `parseNovel` call — see [Pagination](#pagination) |
+| [pageOrder](#page-direction)                                   | no       | Direction of a paginated source's chapter enumeration, `'ASC'` (default) or `'DESC'` — see [Page direction](#page-direction) |
 
 #### PluginBase::id
 
@@ -899,6 +900,46 @@ class ExamplePlugin implements Plugin.PluginBase {
 
 If your plugin doesn't paginate chapter lists, omit `parsePage`/`totalPages` entirely and just
 return the full list from `parseNovel`.
+
+#### Page direction
+
+Most paginated sources put the oldest chapters on page 1 and append new ones to the last page.
+Some do the opposite: page 1 holds the newest chapters, and publishing a chapter pushes older
+ones onto later pages. `pageOrder` tells the app which of the two it is:
+
+```ts
+pageOrder?: 'ASC' | 'DESC';
+```
+
+The flag describes the source's **flat enumeration** — every page walked in ascending page
+number, taking each page's chapters in the order the source serves them:
+
+- `'ASC'` (the default, and what you get by omitting the field): that enumeration is already
+  reading order.
+- `'DESC'`: that enumeration is reversed reading order.
+
+So `'DESC'` requires **both** the page sequence and the order within each page to be
+newest-first. A source that is newest-first by page but oldest-first within a page is not
+expressible by this flag — either reverse each page in your parser so it comes back
+newest-first, or leave the source as `'ASC'`.
+
+The check that matters is whether the pages chain: the chapter after page N's last one should
+be page N+1's first. Compare the ends of consecutive pages before declaring `'DESC'` —
+`parseNovel` must also agree with `parsePage('1')`, since the app takes page 1 from
+`parseNovel` and pages 2..N from `parsePage`.
+
+```ts
+class ExamplePlugin implements Plugin.PluginBase {
+  ...
+  // page 1 = newest chapters, newest-first within the page
+  pageOrder: Plugin.PageOrder = 'DESC';
+  ...
+}
+```
+
+Declaring `'DESC'` lets the app derive a stable reading order that survives chapters shifting
+between pages, and lets it look for new chapters on page 1 instead of the last one. App
+versions without `pageOrder` support ignore the field and treat every source as `'ASC'`.
 
 ---
 
