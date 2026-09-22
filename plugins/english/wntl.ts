@@ -116,7 +116,7 @@ class WNTLPlugin implements Plugin.PluginBase {
   name = 'Web Novel Translation';
   icon = 'src/en/webnoveltraslation/icon.png';
   site = 'https://wntl.net/';
-  version = '3.0.0';
+  version = '2.3.0';
 
   private static readonly PAGE_SIZE = 20;
   private cache: { time: number; novels: APINovel[] } | null = null;
