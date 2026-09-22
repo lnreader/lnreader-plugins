@@ -10,21 +10,21 @@ class HangulPlanetPlugin implements Plugin.PluginBase {
   name = 'HangulPlanet';
   icon = 'src/en/hangulplanet/icon.png';
   site = 'https://hangulplanet.com';
-  version = '1.0.0';
+  version = '1.0.1';
 
-  /**
-   * Fetches a URL and loads it into Cheerio, guarding against
-   * Cloudflare bot-verification / captcha interstitials so a
-   * "Just a moment..." page doesn't get silently parsed as real content.
-   */
-  async getCheerio(url: string, search = false): Promise<CheerioAPI> {
+  private async fetchPage(
+    url: string,
+    search = false,
+  ): Promise<{ $: CheerioAPI; text: string }> {
     const r = await fetchApi(url);
     if (!r.ok && !search) {
       throw new Error(
         'Could not reach site (' + r.status + ') try to open in webview.',
       );
     }
-    const $ = parseHTML(await r.text());
+    const text = await r.text();
+    console.log('response byte length:', text.length);
+    const $ = parseHTML(text);
     const title = $('title').text().trim();
     if (
       title === 'Bot Verification' ||
@@ -35,6 +35,11 @@ class HangulPlanetPlugin implements Plugin.PluginBase {
     ) {
       throw new Error('Captcha error, please open in webview');
     }
+    return { $, text };
+  }
+
+  async getCheerio(url: string, search = false): Promise<CheerioAPI> {
+    const { $ } = await this.fetchPage(url, search);
     return $;
   }
 
@@ -56,8 +61,6 @@ class HangulPlanetPlugin implements Plugin.PluginBase {
     pageNo: number,
     { showLatestNovels }: Plugin.PopularNovelsOptions<Filters>,
   ): Promise<Plugin.NovelItem[]> {
-    // Site only has a handful of novels and no pagination has been
-    // confirmed to exist yet, so anything past page 1 returns empty.
     if (pageNo > 1) return [];
 
     const sort = showLatestNovels ? 'latest' : 'popular';
@@ -71,12 +74,68 @@ class HangulPlanetPlugin implements Plugin.PluginBase {
     return this.parseNovelCards($);
   }
 
+  /**
+    IMPORTANT: this site does NOT render its full chapter list as real
+    <a> DOM elements. Beyond a small SSR-visible slice, the list lives
+    inside a Next.js RSC ("flight") payload
+   */
+  private parseChaptersFromText(
+    novelPath: string,
+    text: string,
+    chapters: Plugin.ChapterItem[],
+    seen: Set<number>,
+  ): number {
+    let added = 0;
+
+    // Primary: escaped-JSON form from the RSC payload.
+    const hrefPattern = /\\"href\\":\\"([^"\\]*\/chapter-(\d+))\\"/g;
+    const WINDOW = 800;
+    let match: RegExpExecArray | null;
+    while ((match = hrefPattern.exec(text)) !== null) {
+      const chapterNumber = parseInt(match[2], 10);
+      if (seen.has(chapterNumber)) continue;
+      seen.add(chapterNumber);
+
+      const windowText = text.slice(match.index, match.index + WINDOW);
+
+      const nameMatch = windowText.match(
+        /\\"line-clamp-1 flex-1 text-sm\\",\\"children\\":\\"([^\\]*)\\"/,
+      );
+      const dateMatch = windowText.match(/\\"dateTime\\":\\"([^\\]*)\\"/);
+
+      chapters.push({
+        name: nameMatch ? nameMatch[1] : `Chapter ${chapterNumber}`,
+        path: match[1],
+        chapterNumber,
+        releaseTime: dateMatch ? dateMatch[1] : null,
+      });
+      added++;
+    }
+
+    const $ = parseHTML(text);
+    $('#chapters a[href*="/chapter-"]').each((_, el) => {
+      const href = $(el).attr('href') || '';
+      const chapterNumMatch = href.match(/chapter-(\d+)$/);
+      if (!href || !chapterNumMatch) return;
+      const chapterNumber = parseInt(chapterNumMatch[1], 10);
+      if (seen.has(chapterNumber)) return;
+      seen.add(chapterNumber);
+      const name = $(el).find('.line-clamp-1').text().trim();
+      const releaseTime = $(el).find('time').attr('datetime') || null;
+      chapters.push({
+        name: name || `Chapter ${chapterNumber}`,
+        path: href,
+        chapterNumber,
+        releaseTime,
+      });
+      added++;
+    });
+
+    return added;
+  }
+
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const $ = await this.getCheerio(this.site + novelPath);
-    console.log(
-      'chapter links found:',
-      $('#chapters a[href*="/chapter-"]').length,
-    );
+    const { $, text } = await this.fetchPage(this.site + novelPath);
 
     const coverSrc = $('img.object-cover').first().attr('src');
     const heading = $('h1').first();
@@ -103,18 +162,34 @@ class HangulPlanetPlugin implements Plugin.PluginBase {
       .join(', ');
 
     const chapters: Plugin.ChapterItem[] = [];
-    $('#chapters a[href*="/chapter-"]').each((_, el) => {
-      const href = $(el).attr('href') || '';
-      const name = $(el).find('.line-clamp-1').text().trim();
-      const chapterNumMatch = href.match(/chapter-(\d+)$/);
-      const chapterNumber = chapterNumMatch
-        ? parseInt(chapterNumMatch[1], 10)
-        : 0;
-      const releaseTime = $(el).find('time').attr('datetime') || null;
+    const seen = new Set<number>();
 
-      if (!href) return;
-      chapters.push({ name, path: href, chapterNumber, releaseTime });
-    });
+    const foundOnPage1 = this.parseChaptersFromText(
+      novelPath,
+      text,
+      chapters,
+      seen,
+    );
+    console.log('chapters found on page 1 (RSC + DOM):', foundOnPage1);
+
+    const MAX_PAGES = 100; // safety cap so a parsing quirk can't loop forever
+    let page = 2;
+    while (page <= MAX_PAGES) {
+      const { text: pageText } = await this.fetchPage(
+        `${this.site}${novelPath}?cpage=${page}`,
+      );
+      const added = this.parseChaptersFromText(
+        novelPath,
+        pageText,
+        chapters,
+        seen,
+      );
+      console.log(`cpage=${page} contributed ${added} new chapters`);
+      if (added === 0) break;
+      page++;
+    }
+
+    console.log('total chapter links found:', chapters.length);
 
     novel.chapters = chapters.sort(
       (a, b) => (a.chapterNumber ?? 0) - (b.chapterNumber ?? 0),
