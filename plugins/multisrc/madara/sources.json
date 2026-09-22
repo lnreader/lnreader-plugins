@@ -552,15 +552,6 @@
     }
   },
   {
-    "id": "WebNovelTraslation",
-    "sourceSite": "https://webnoveltranslations.com/",
-    "sourceName": "Web Novel Translation",
-    "options": {
-      "lang": "English",
-      "useNewChapterEndpoint": true
-    }
-  },
-  {
     "id": "AnimesHoy12",
     "sourceSite": "https://animeshoy12.com/",
     "sourceName": "AnimesHoy12",
