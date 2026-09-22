@@ -1,0 +1,69 @@
+name: Enforce Issue Templates
+
+# Every issue created through one of our issue forms (report_issue.yml,
+# request_feature.yml, request_plugin.yml) automatically gets that
+# template's `labels:` applied at creation time. An issue with no labels
+# at all at creation therefore skipped every template - e.g. it was
+# opened via the API/CLI, or a deep link like
+# `/issues/new?template=...` fell back to a blank issue. GitHub only
+# enforces required template fields inside its own web form, so this is
+# the closest we can get to enforcing the templates after the fact.
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  enforce-template:
+    name: Close Issues That Skip The Template
+    runs-on: ubuntu-latest
+    if: github.event.issue.user.type != 'Bot'
+    steps:
+      - name: Check For Template Labels
+        id: check
+        env:
+          LABELS_JSON: ${{ toJSON(github.event.issue.labels) }}
+        run: |
+          LABEL_COUNT="$(echo "$LABELS_JSON" | jq 'length')"
+          echo "no_labels=$([ "$LABEL_COUNT" -eq 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: Ensure Invalid Label Exists
+        if: steps.check.outputs.no_labels == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          gh api "repos/$REPOSITORY/labels/invalid" >/dev/null 2>&1 || \
+            gh api --method POST "repos/$REPOSITORY/labels" \
+              -f name="invalid" \
+              -f color="e4e669" \
+              -f description="Not filed using one of the issue templates"
+
+      - name: Comment And Close
+        if: steps.check.outputs.no_labels == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          {
+            echo "This issue wasn't filed using one of our issue forms, so it's missing the details we need to triage it (affected plugin, steps to reproduce, versions, etc.)."
+            echo
+            echo "Please open a new issue using one of the templates instead:"
+            echo "- 🐞 [Report Issue](https://github.com/$REPOSITORY/issues/new?template=report_issue.yml)"
+            echo "- ✨ [Request Feature](https://github.com/$REPOSITORY/issues/new?template=request_feature.yml)"
+            echo "- 🧩 [Request Plugin](https://github.com/$REPOSITORY/issues/new?template=request_plugin.yml)"
+            echo
+            echo "Auto-closing to keep the tracker organized. Feel free to open a new report with the template filled out."
+          } > comment_body.md
+
+          gh issue comment "$ISSUE_NUMBER" --repo "$REPOSITORY" --body-file comment_body.md
+          gh issue edit "$ISSUE_NUMBER" --repo "$REPOSITORY" --add-label "invalid"
+          gh issue close "$ISSUE_NUMBER" --repo "$REPOSITORY" --reason "not planned"
