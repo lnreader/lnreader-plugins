@@ -129,6 +129,7 @@ class WNTLPlugin implements Plugin.PluginBase {
     return res.json();
   }
 
+  // The whole catalogue comes back in one request, so cache it briefly.
   private async getAll(): Promise<APINovel[]> {
     if (this.cache && Date.now() - this.cache.time < 60_000) {
       return this.cache.novels;
