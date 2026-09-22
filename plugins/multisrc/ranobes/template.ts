@@ -22,13 +22,14 @@ export class RanobesPlugin implements Plugin.PluginBase {
   site: string;
   version: string;
   options: RanobesOptions;
+  pageOrder: Plugin.PageOrder = 'DESC';
 
   constructor(metadata: RanobesMetadata) {
     this.id = metadata.id;
     this.name = metadata.sourceName;
     this.icon = 'multisrc/ranobes/ranobes/icon.png';
     this.site = metadata.sourceSite;
-    this.version = '2.0.2';
+    this.version = '2.1.0';
     this.options = metadata.options as RanobesOptions;
   }
 
