@@ -12,11 +12,16 @@ class HangulPlanetPlugin implements Plugin.PluginBase {
   site = 'https://hangulplanet.com';
   version = '2.3.0';
 
+  private readonly headers = {
+    'User-Agent':
+      'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
+    'Accept-Language': 'en-US,en;q=0.9',
+  };
   private async fetchPage(
     url: string,
     search = false,
   ): Promise<{ $: CheerioAPI; text: string }> {
-    const r = await fetchApi(url);
+    const r = await fetchApi(url, { headers: this.headers });
     if (!r.ok && !search) {
       throw new Error(
         'Could not reach site (' + r.status + ') try to open in webview.',
@@ -211,7 +216,7 @@ class HangulPlanetPlugin implements Plugin.PluginBase {
       .find('p')
       .first()
       .each((_, el) => {
-        if ($(el).text().trim().startsWith('TL/ED')) {
+        if ($(el).text().trim().startsWith('TL')) {
           $(el).remove();
         }
       });
