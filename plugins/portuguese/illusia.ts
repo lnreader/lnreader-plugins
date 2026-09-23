@@ -10,7 +10,7 @@ class Illusia implements Plugin.PluginBase {
   name = 'Illusia';
   icon = 'src/pt-br/illusia/icon.png';
   site = 'https://illusia.com.br';
-  version = '1.0.2';
+  version = '1.0.3';
   filters: Filters | undefined = undefined;
 
   headers = {
@@ -96,7 +96,9 @@ class Illusia implements Plugin.PluginBase {
 
     const novel: Plugin.SourceNovel = {
       path: novelPath,
-      name: loadedCheerio('h1.story__identity-title, h1.post-title')
+      name: loadedCheerio(
+        'h1.illusia-single-story__title, h1.story__identity-title, h1.post-title',
+      )
         .text()
         .trim(),
     };
@@ -131,6 +133,7 @@ class Illusia implements Plugin.PluginBase {
     novel.author = author || 'Desconhecido';
 
     novel.cover =
+      loadedCheerio('img.illusia-single-story__cover-img').attr('data-src') ||
       loadedCheerio('figure.story__thumbnail img').attr('data-src') ||
       loadedCheerio('figure.story__thumbnail img').attr('src') ||
       loadedCheerio('.story__thumbnail img').attr('data-src') ||
@@ -147,7 +150,7 @@ class Illusia implements Plugin.PluginBase {
 
     let summaryHtml =
       loadedCheerio(
-        'section.story__summary, div.story__summary, .summary',
+        'div.illusia-single-story__description, section.story__summary, div.story__summary, .summary',
       ).html() || '';
     summaryHtml = summaryHtml
       .replace(/<br\s*\/?>/gi, '\n')
@@ -323,7 +326,7 @@ class Illusia implements Plugin.PluginBase {
     return uniqueNovels;
   }
 
-  // resolveUrl = (path: string, isNovel?: boolean) => `${this.site}/${path}/`;
+  resolveUrl = (path: string) => `${this.site}/${path}/`;
 }
 
 export default new Illusia();

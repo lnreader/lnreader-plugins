@@ -15,7 +15,7 @@ type BloggerEntry = {
 class BlogDoAnonNovelsPlugin implements Plugin.PluginBase {
   id = 'blogdoamonnovels';
   name = 'Blog do Amon Novels';
-  version = '1.0.1';
+  version = '1.0.2';
   icon = 'src/pt-br/blogdoamonnovels/icon.png';
   site = 'https://www.blogdoamonnovels.com';
 
@@ -120,7 +120,9 @@ class BlogDoAnonNovelsPlugin implements Plugin.PluginBase {
       .toArray()
       .join(',');
 
-    const cat = loadedCheerio('#clwd').text().split("'")[1];
+    const cat =
+      /categoria\s*=\s*"([^"]+)"/.exec(body)?.[1] ??
+      loadedCheerio('#clwd').text().split("'")[1];
 
     if (!cat) {
       const chapters: Plugin.ChapterItem[] = [];
