@@ -234,6 +234,6 @@ export class FictioneerPlugin implements Plugin.PluginBase {
     return this.parseNovels(loadedCheerio, this.selectors.searchCard);
   }
 
-  // resolveUrl = (path: string, isNovel?: boolean) =>
-  //   this.site + '/' + path + '/';
+  resolveUrl = (path: string) =>
+    this.site.replace(/\/+$/, '') + '/' + path.replace(/^\/+|\/+$/g, '') + '/';
 }
