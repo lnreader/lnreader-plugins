@@ -326,7 +326,8 @@ class Illusia implements Plugin.PluginBase {
     return uniqueNovels;
   }
 
-  resolveUrl = (path: string) => `${this.site}/${path}/`;
+  resolveUrl = (path: string) =>
+    /^https?:\/\//.test(path) ? path : `${this.site}/${path}/`;
 }
 
 export default new Illusia();
