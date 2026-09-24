@@ -2,8 +2,8 @@
 
 <p>
 <img alt="Total number of available plugins" src="https://raw.githubusercontent.com/LNReader/lnreader-plugins/plugins/v3.0.0/total.svg">
-<img alt="Open plugin requests" src="https://img.shields.io/github/issues/lnreader/lnreader-plugins/Plugin%20Request?color=success&label=plugin%20requests">
-<img alt="Open bug reports" src="https://img.shields.io/github/issues/lnreader/lnreader-plugins/Bug?color=red&label=bugs">
+<img alt="Open plugin requests" src="https://img.shields.io/github/issues/lnreader/lnreader-plugins/plugin%20request?color=success&label=plugin%20requests">
+<img alt="Open bug reports" src="https://img.shields.io/github/issues/lnreader/lnreader-plugins/bug?color=red&label=bugs">
 </p>
 
 Community-driven plugin repository for [LNReader](https://github.com/LNReader/lnreader). This repository hosts plugins and manages related issues and requests.

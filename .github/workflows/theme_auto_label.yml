@@ -13,7 +13,7 @@ concurrency:
 jobs:
   auto-label:
     name: Auto Label Theme
-    if: contains(github.event.issue.labels.*.name, 'Plugin Request')
+    if: contains(github.event.issue.labels.*.name, 'plugin request')
     runs-on: ubuntu-latest
     permissions:
       issues: write
@@ -126,20 +126,20 @@ jobs:
         run: |
           echo "## Theme Detection Result" >> $GITHUB_STEP_SUMMARY
           if [[ "$MADARA" == "true" ]]; then
-            echo "🏷️ Adding label: Theme: Madara" >> $GITHUB_STEP_SUMMARY
-            gh issue edit $ISSUE_NUMBER --add-label "Theme: Madara" -R $REPO
+            echo "🏷️ Adding label: theme: madara" >> $GITHUB_STEP_SUMMARY
+            gh issue edit $ISSUE_NUMBER --add-label "theme: madara" -R $REPO
             echo "theme=madara" >> "$GITHUB_OUTPUT"
           elif [[ "$LIGHNOVELWP" == "true" ]]; then
-            echo "🏷️ Adding label: Theme: Lighnovelwp" >> $GITHUB_STEP_SUMMARY
-            gh issue edit $ISSUE_NUMBER --add-label "Theme: Lighnovelwp" -R $REPO
+            echo "🏷️ Adding label: theme: lighnovelwp" >> $GITHUB_STEP_SUMMARY
+            gh issue edit $ISSUE_NUMBER --add-label "theme: lighnovelwp" -R $REPO
             echo "theme=lightnovelwp" >> "$GITHUB_OUTPUT"
           elif [[ "$HOTNOVELPUB" == "true" ]]; then
-            echo "🏷️ Adding label: Theme: Hotnovelpub" >> $GITHUB_STEP_SUMMARY
-            gh issue edit $ISSUE_NUMBER --add-label "Theme: Hotnovelpub" -R $REPO
+            echo "🏷️ Adding label: theme: hotnovelpub" >> $GITHUB_STEP_SUMMARY
+            gh issue edit $ISSUE_NUMBER --add-label "theme: hotnovelpub" -R $REPO
             echo "theme=hotnovelpub" >> "$GITHUB_OUTPUT"
           elif [[ "$FICTIONEER" == "true" ]]; then
-            echo "🏷️ Adding label: Theme: Fictioneer" >> $GITHUB_STEP_SUMMARY
-            gh issue edit $ISSUE_NUMBER --add-label "Theme: Fictioneer" -R $REPO
+            echo "🏷️ Adding label: theme: fictioneer" >> $GITHUB_STEP_SUMMARY
+            gh issue edit $ISSUE_NUMBER --add-label "theme: fictioneer" -R $REPO
             echo "theme=fictioneer" >> "$GITHUB_OUTPUT"
           else
             echo "❌ No Theme Detected" >> $GITHUB_STEP_SUMMARY

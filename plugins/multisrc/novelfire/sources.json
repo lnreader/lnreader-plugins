@@ -6,7 +6,7 @@
     "options": {
       "lang": "English",
       "minorVer": 4,
-      "versionIncrement": 3
+      "versionIncrement": 4
     }
   },
   {
@@ -15,7 +15,7 @@
     "sourceName": "Novel Phoenix",
     "options": {
       "lang": "English",
-      "versionIncrement": 1
+      "versionIncrement": 2
     }
   }
 ]

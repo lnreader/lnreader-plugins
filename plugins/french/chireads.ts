@@ -2,252 +2,311 @@ import { CheerioAPI, load } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
-import dayjs from 'dayjs';
 import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
+
+type WordPressCategory = {
+  name: string;
+  link: string;
+};
 
 class ChireadsPlugin implements Plugin.PluginBase {
   id = 'chireads';
   name = 'Chireads';
   icon = 'src/fr/chireads/icon.png';
   site = 'https://chireads.com';
-  version = '1.0.2';
+  version = '2.3.4';
+
+  // The site is fronted by Cloudflare, which serves different HTML/JSON to a
+  // plain device User-Agent (the mobile app injects its own UA via fetchApi)
+  // than to a desktop browser. Send the same desktop Chrome UA on every
+  // request — HTML pages and the wp-json REST endpoints alike — so a novel's
+  // chapter list survives on the app.
+  private readonly browserHeaders = {
+    Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'User-Agent':
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36',
+  };
+
+  private readonly restHeaders = {
+    Accept: 'application/json, */*;q=0.8',
+    'User-Agent': this.browserHeaders['User-Agent'],
+  };
 
   async getCheerio(url: string): Promise<CheerioAPI> {
-    const r = await fetchApi(url, {
-      headers: { 'Accept-Encoding': 'deflate' },
-    });
+    const r = await fetchApi(url, { headers: this.browserHeaders });
+    if (!r.ok) throw new Error(`HTTP ${r.status} while loading ${url}`);
     const body = await r.text();
-    const $ = load(body);
-    return $;
+    return load(body);
+  }
+
+  private absoluteUrl(url?: string): string {
+    if (!url) return defaultCover;
+    try {
+      const absolute = new URL(url, this.site);
+      return /^https?:$/.test(absolute.protocol) ? absolute.href : defaultCover;
+    } catch {
+      return defaultCover;
+    }
+  }
+
+  private toPath(url?: string): string {
+    if (!url) return '';
+    const parsed = new URL(url, this.site);
+    if (!/(?:^|\.)chireads\.com$/i.test(parsed.hostname)) return '';
+    return `${parsed.pathname}${parsed.search}`;
+  }
+
+  private compactChapterPath(url?: string): string {
+    if (!url) return '';
+    const parsed = new URL(url, this.site);
+    if (!/(?:^|\.)chireads\.com$/i.test(parsed.hostname)) return '';
+    const segments = parsed.pathname.split('/').filter(Boolean);
+    if (segments[0] === 'c' && segments[1]) return `/c/${segments[1]}/`;
+
+    const last = (offset: number) => segments[segments.length - offset];
+    const hasDateSuffix =
+      /^\d{4}$/.test(last(3) || '') &&
+      /^\d{1,2}$/.test(last(2) || '') &&
+      /^\d{1,2}$/.test(last(1) || '');
+    const chapterSlug = last(hasDateSuffix ? 4 : 1);
+    return chapterSlug ? `/c/${chapterSlug}/` : '';
+  }
+
+  private parseCards($: CheerioAPI): Plugin.NovelItem[] {
+    const novels: Plugin.NovelItem[] = [];
+    const seen = new Set<string>();
+    $('ul.refresh-card-grid li.refresh-card').each((i, el) => {
+      const novelUrl = $(el).find('.refresh-card-title a').attr('href');
+      if (!novelUrl || seen.has(novelUrl)) return;
+      seen.add(novelUrl);
+      novels.push({
+        name: $(el).find('.refresh-card-title a').text().trim(),
+        cover: this.absoluteUrl(
+          $(el).find('.refresh-card-cover img').attr('src'),
+        ),
+        path: this.toPath(novelUrl),
+      });
+    });
+    return novels;
   }
 
   async popularNovels(
     pageNo: number,
     { filters, showLatestNovels }: Plugin.PopularNovelsOptions,
   ): Promise<Plugin.NovelItem[]> {
-    let url = this.site;
-    let tag = 'all';
-    if (showLatestNovels) url += '/category/translatedtales/page/' + pageNo;
-    else {
-      if (
-        filters &&
-        typeof filters.tag.value === 'string' &&
-        filters.tag.value !== 'all'
-      )
-        tag = filters.tag.value;
-      if (tag !== 'all') url += '/tag/' + tag + '/page/' + pageNo;
-      else if (pageNo > 1) return [];
+    if (showLatestNovels) {
+      if (pageNo !== 1) return [];
+      const $ = await this.getCheerio(this.site);
+      const novels: Plugin.NovelItem[] = [];
+      const seen = new Set<string>();
+      $('.dernieres-tabel tbody tr').each((i, el) => {
+        const novelUrl = $(el).find('td').first().find('a').attr('href');
+        if (!novelUrl || seen.has(novelUrl)) return;
+        seen.add(novelUrl);
+        novels.push({
+          name: $(el)
+            .find('td')
+            .first()
+            .find('a')
+            .text()
+            .trim()
+            .replace(/^\[[TO]\]\s*/, ''),
+          cover: defaultCover,
+          path: this.toPath(novelUrl),
+        });
+      });
+
+      // The homepage "latest" table carries no cover images, only links to
+      // each novel's page. Resolve covers from the detail pages so the list
+      // shows a real cover instead of the "not available" placeholder.
+      const covers = await Promise.allSettled(
+        novels.map(async novel => {
+          const page = await this.getCheerio(this.site + novel.path);
+          const cover =
+            page('.refresh-detail-cover img').attr('src') ||
+            page('.refresh-detail-cover img').attr('data-src');
+          return cover ? this.absoluteUrl(cover) : defaultCover;
+        }),
+      );
+      return novels.map((novel, index) => ({
+        ...novel,
+        cover:
+          covers[index]?.status === 'fulfilled'
+            ? covers[index].value
+            : defaultCover,
+      }));
     }
-    let $ = await this.getCheerio(url);
+
+    const tag = filters?.tag?.value;
+    const isAll = typeof tag !== 'string' || tag === '' || tag === 'all';
+    const bases = isAll
+      ? ['/category/translatedtales', '/category/original']
+      : [`/tag/${tag}`];
+
+    const catalogues = isAll
+      ? await Promise.allSettled(
+          bases.map(base =>
+            this.getCheerio(`${this.site}${base}/page/${pageNo}`),
+          ),
+        )
+      : [
+          {
+            status: 'fulfilled' as const,
+            value: await this.getCheerio(
+              `${this.site}${bases[0]}/page/${pageNo}`,
+            ),
+          },
+        ];
+    if (
+      isAll &&
+      catalogues.every(catalogue => catalogue.status === 'rejected')
+    ) {
+      throw new Error('All catalogue pages failed');
+    }
 
     const novels: Plugin.NovelItem[] = [];
-    let novel: Plugin.NovelItem;
-
-    if (showLatestNovels || tag !== 'all') {
-      let loop = 1;
-      if (showLatestNovels) loop = 2;
-      for (let i = 0; i < loop; i++) {
-        if (i === 1)
-          $ = await this.getCheerio(
-            this.site + '/category/original/page/' + pageNo,
-          );
-        let romans = $('.romans-content li');
-        if (!romans.length) romans = $('#content li');
-        romans.each((i, elem) => {
-          const novelName = $(elem)
-            .contents()
-            .find('div')
-            .first()
-            .text()
-            .trim();
-          const novelCover = $(elem)
-            .find('div')
-            .first()
-            .find('img')
-            .attr('src');
-          const novelUrl = $(elem).find('div').first().find('a').attr('href');
-
-          if (novelUrl) {
-            novel = {
-              name: novelName,
-              cover: novelCover,
-              path: novelUrl.replace(this.site, ''),
-            };
-            novels.push(novel);
-          }
-        });
-      }
-    } else {
-      const populaire = $(':contains("Populaire")')
-        .last()
-        .parent()
-        .next()
-        .find('li > div');
-      if (populaire.length === 12) {
-        // pc
-        let novelCover: string | undefined;
-        let novelName: string | undefined;
-        let novelUrl: string | undefined;
-        populaire.each((i, elem) => {
-          if (i % 2 === 0) novelCover = $(elem).find('img').attr('src');
-          else {
-            novelName = $(elem).text().trim();
-            novelUrl = $(elem).find('a').attr('href');
-
-            if (!novelUrl) return;
-
-            novel = {
-              name: novelName,
-              cover: novelCover || defaultCover,
-              path: novelUrl.replace(this.site, ''),
-            };
-
-            novels.push(novel);
-          }
-        });
-      } // mobile
-      else {
-        const imgs = populaire.find('div.popular-list-img img');
-        const txts = populaire.find('div.popular-list-name');
-
-        txts.each((i, elem) => {
-          const novelName = $(elem).text().trim();
-          const novelCover = $(imgs[i]).attr('src');
-          const novelUrl = $(elem).find('a').attr('href');
-
-          if (novelUrl) {
-            novel = {
-              name: novelName,
-              cover: novelCover,
-              path: novelUrl.replace(this.site, ''),
-            };
-            novels.push(novel);
-          }
-        });
+    const seen = new Set<string>();
+    for (const catalogue of catalogues) {
+      if (catalogue.status !== 'fulfilled') continue;
+      const $ = catalogue.value;
+      for (const novel of this.parseCards($)) {
+        if (seen.has(novel.path)) continue;
+        seen.add(novel.path);
+        novels.push(novel);
       }
     }
     return novels;
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const novel: Plugin.SourceNovel = { path: novelPath, name: 'Sans titre' };
+    const novel: Plugin.SourceNovel = {
+      path: this.toPath(novelPath),
+      name: '',
+    };
 
-    const $ = await this.getCheerio(this.site + novelPath);
+    const $ = await this.getCheerio(this.site + novel.path);
 
-    novel.name =
-      $('.inform-product-txt').first().text().trim() ||
-      $('.inform-title').text().trim();
-    novel.cover =
-      $('.inform-product img').attr('src') ||
-      $('.inform-product-img img').attr('src') ||
-      defaultCover;
-    novel.summary =
-      $('.inform-inform-txt').text().trim() ||
-      $('.inform-intr-txt').text().trim();
+    novel.name = $('h1.refresh-detail-title').first().text().trim();
+    novel.cover = this.absoluteUrl(
+      $('.refresh-detail-cover img').attr('src') ||
+        $('.refresh-detail-cover img').attr('data-src'),
+    );
+    novel.summary = $('.refresh-detail-summary-content').text().trim();
 
-    const infos =
-      $('div.inform-product-txt > div.inform-intr-col').text().trim() ||
-      $('div.inform-inform-data > h6').text().trim();
-    if (infos.includes('Auteur : '))
-      novel.author = infos
-        .substring(
-          infos.indexOf('Auteur : ') + 9,
-          infos.indexOf('Statut de Parution : '),
-        )
-        .trim();
-    else if (infos.includes('Fantrad : '))
-      novel.author = infos
-        .substring(
-          infos.indexOf('Fantrad : ') + 10,
-          infos.indexOf('Statut de Parution : '),
-        )
-        .trim();
-    else novel.author = 'Inconnu';
-    switch (
-      infos.substring(infos.indexOf('Statut de Parution : ') + 21).toLowerCase()
-    ) {
-      case 'en pause':
-        novel.status = NovelStatus.OnHiatus;
-        break;
-      case 'complet':
-        novel.status = NovelStatus.Completed;
-        break;
-      default:
-        novel.status = NovelStatus.Ongoing;
-        break;
-    }
-
-    const chapters: Plugin.ChapterItem[] = [];
-
-    let chapterList = $('.chapitre-table a');
-    if (!chapterList.length) {
-      $('div.inform-annexe-list').first().remove();
-      chapterList = $('.inform-annexe-list').find('a');
-    }
-    chapterList.each((i, elem) => {
-      const chapterName = $(elem).text().trim();
-      const chapterUrl = $(elem).attr('href');
-      const releaseDate = dayjs(
-        chapterUrl?.substring(chapterUrl.length - 11, chapterUrl.length - 1),
-      ).format('DD MMMM YYYY');
-
-      if (chapterUrl) {
-        chapters.push({
-          name: chapterName,
-          releaseTime: releaseDate,
-          path: chapterUrl.replace(this.site, ''),
-        });
+    $('.refresh-detail-meta > div').each((i, el) => {
+      const label = $(el).find('dt').text().trim();
+      const value = $(el).find('dd').text().trim();
+      if (label.includes('Auteur')) novel.author = value;
+      else if (label.includes('Statut')) {
+        const status = value.toLowerCase();
+        if (status.includes('en pause') || status.includes('hiatus'))
+          novel.status = NovelStatus.OnHiatus;
+        else if (status.includes('complet') || status.includes('termin'))
+          novel.status = NovelStatus.Completed;
+        else novel.status = NovelStatus.Ongoing;
       }
     });
 
-    novel.chapters = chapters;
+    const chapters = new Map<string, Plugin.ChapterItem>();
+    $('.refresh-detail-chapter-list a').each((i, el) => {
+      const chapterUrl = $(el).attr('href');
+      const path = this.compactChapterPath(chapterUrl);
+      if (!path || chapters.has(path)) return;
+
+      const title = $(el).text().trim();
+      const match = title.match(
+        /^Chapitre\s+(\d+(?:[.,]\d+)?)\s*(?:(?:–|-|:)\s*)?(.*)$/i,
+      );
+      const segments = new URL(chapterUrl!, this.site).pathname
+        .split('/')
+        .filter(Boolean);
+      const date = segments.slice(-3);
+      const hasDate =
+        /^\d{4}$/.test(date[0] || '') &&
+        /^\d{1,2}$/.test(date[1] || '') &&
+        /^\d{1,2}$/.test(date[2] || '');
+
+      chapters.set(path, {
+        name: match
+          ? `${match[1]}${match[2] ? ` - ${match[2].trim()}` : ''}`
+          : title,
+        path,
+        ...(match ? { chapterNumber: Number(match[1].replace(',', '.')) } : {}),
+        ...(hasDate
+          ? {
+              releaseTime: `${date[0]}-${date[1].padStart(2, '0')}-${date[2].padStart(2, '0')}`,
+            }
+          : {}),
+      });
+    });
+    novel.chapters = Array.from(chapters.values());
 
     return novel;
   }
 
   async parseChapter(chapterUrl: string): Promise<string> {
-    const $ = await this.getCheerio(this.site + chapterUrl);
+    const $ = await this.getCheerio(
+      this.site + this.compactChapterPath(chapterUrl),
+    );
 
-    const chapterText = $('#content').html() || '';
+    const content = $('#content').first();
+    content
+      .find('script, style, iframe, form, nav, footer, .sharedaddy, .ads')
+      .remove();
+    if (content.text().replace(/\s+/g, ' ').trim().length < 200) {
+      throw new Error('Chapter content is not readable');
+    }
 
-    return chapterText;
+    return content.html() || '';
   }
 
   async searchNovels(
     searchTerm: string,
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
-    if (pageNo !== 1) return [];
-    let novels: Plugin.NovelItem[] = [];
-
-    let i = 1;
-    let finised = false;
-    while (!finised) {
-      await this.popularNovels(i, {
-        showLatestNovels: true,
-        filters: undefined,
-      }).then(res => {
-        if (res.length === 0) finised = true;
-        novels.push(...res);
-      });
-      i++;
-    }
-
-    novels = novels.filter(novel =>
-      novel.name
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .includes(
-          searchTerm
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, ''),
-        ),
+    const parents = await Promise.allSettled(
+      [2, 811].map(async parent => {
+        const response = await fetchApi(
+          `${this.site}/wp-json/wp/v2/categories?parent=${parent}&search=${encodeURIComponent(searchTerm)}&per_page=100&page=${pageNo}`,
+          { headers: this.restHeaders },
+        );
+        if (!response.ok) throw new Error(`Search parent ${parent} failed`);
+        const categories: unknown = await response.json();
+        if (
+          !Array.isArray(categories) ||
+          !categories.every(
+            category =>
+              category !== null &&
+              typeof category === 'object' &&
+              typeof (category as WordPressCategory).name === 'string' &&
+              typeof (category as WordPressCategory).link === 'string',
+          )
+        )
+          throw new Error(`Search parent ${parent} returned invalid data`);
+        return categories as WordPressCategory[];
+      }),
     );
+    const categories = parents.flatMap(parent =>
+      parent.status === 'fulfilled' ? parent.value : [],
+    );
+    if (parents.every(parent => parent.status === 'rejected'))
+      throw new Error('Chireads search failed for all category parents');
 
-    return novels;
+    const seen = new Set<string>();
+    return categories
+      .map(category => ({
+        name: category.name,
+        cover: defaultCover,
+        path: this.toPath(category.link),
+      }))
+      .filter(
+        novel =>
+          (novel.path.startsWith('/category/translatedtales/') ||
+            novel.path.startsWith('/category/original/')) &&
+          !seen.has(novel.path) &&
+          Boolean(seen.add(novel.path)),
+      );
   }
 
   filters = {

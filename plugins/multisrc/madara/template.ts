@@ -235,6 +235,11 @@ export class MadaraPlugin implements Plugin.PluginBase {
         case 'المؤلف (ين)':
           novel.author = detail.text().trim();
           break;
+        case 'Translator(s)':
+        case 'Translator':
+        case 'Translators':
+          if (!novel.author) novel.author = detail.text().trim();
+          break;
         case 'Status':
         case 'Novel':
         case 'Estado':
@@ -282,6 +287,13 @@ export class MadaraPlugin implements Plugin.PluginBase {
       loadedCheerio('.post-content_item h5:contains("Summary")')
         .next()
         .find('span')
+        .map((i, el) => loadedCheerio(el).text())
+        .get()
+        .join('\n\n')
+        .trim() ||
+      loadedCheerio('.post-content_item h5:contains("Summary")')
+        .next()
+        .find('p')
         .map((i, el) => loadedCheerio(el).text())
         .get()
         .join('\n\n')

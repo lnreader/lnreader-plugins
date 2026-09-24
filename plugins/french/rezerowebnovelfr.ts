@@ -3,6 +3,33 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 
+const challengeTitles = new Set([
+  'bot verification',
+  'you are being redirected...',
+  'un instant...',
+  'just a moment...',
+  'redirecting...',
+]);
+
+async function fetchCheckedHtml(
+  url: string,
+  init?: Parameters<typeof fetchApi>[1],
+): Promise<string> {
+  const response = await fetchApi(url, init);
+  if (!response.ok)
+    throw new Error(`HTTP ${response.status} while loading ${url}`);
+  const html = await response.text();
+  const title = html
+    .match(/<title[^>]*>(.*?)<\/title>/is)?.[1]
+    ?.replace(/<[^>]+>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+  if (title && challengeTitles.has(title))
+    throw new Error(`Bot challenge while loading ${url}`);
+  return html;
+}
+
 const NOVEL_METADATA: Record<string, { name: string; summary: string }> = {
   '/histoire-principale/': {
     name: 'Re:Zero - Histoire Principale',
@@ -626,15 +653,14 @@ class ReZeroWebNovelFrPlugin implements Plugin.PluginBase {
   name = 'Re:Zero Web Novel FR';
   icon = 'src/fr/rezerowebnovelfr/icon.png';
   site = 'https://rezerowebnovelfr.wordpress.com';
-  version = '1.0.1';
+  version = '1.0.3';
 
   async getCheerio(url: string): Promise<CheerioAPI> {
-    const r = await fetchApi(url, {
-      headers: { 'Accept-Encoding': 'deflate' },
-    });
-    const body = await r.text();
-    const $ = load(body);
-    return $;
+    return load(
+      await fetchCheckedHtml(url, {
+        headers: { 'Accept-Encoding': 'deflate' },
+      }),
+    );
   }
 
   async popularNovels(pageNo: number): Promise<Plugin.NovelItem[]> {
@@ -656,7 +682,7 @@ class ReZeroWebNovelFrPlugin implements Plugin.PluginBase {
     const $ = await this.getCheerio(this.site + novelPath);
     novel.name = $('h1.entry-title').text().trim();
     novel.author = 'Tappei Nagatsuki';
-    novel.status = NovelStatus.Ongoing;
+    novel.status = NovelStatus.Unknown;
 
     const meta = NOVEL_METADATA[novelPath];
     if (meta) {
@@ -666,6 +692,7 @@ class ReZeroWebNovelFrPlugin implements Plugin.PluginBase {
     }
 
     const chapters: Plugin.ChapterItem[] = [];
+    const chapterPaths = new Set<string>();
 
     const tryAddChapter = (
       href: string | undefined,
@@ -677,7 +704,8 @@ class ReZeroWebNovelFrPlugin implements Plugin.PluginBase {
       const dateMatch = cleanHref.match(/\/(\d{4})\/(\d{2})\/(\d{2})\//);
       if (dateMatch && name) {
         const path = cleanHref.replace(this.site, '');
-        if (!chapters.some(c => c.path === path)) {
+        if (!chapterPaths.has(path)) {
+          chapterPaths.add(path);
           const releaseDate = `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}`;
           let cleanName = name;
           if (novelPath === '/if-stories/') {
@@ -806,6 +834,7 @@ class ReZeroWebNovelFrPlugin implements Plugin.PluginBase {
     $(
       'div.entry-content .sharedaddy, div.entry-content .wpcnt, div.entry-content #jp-post-flair, div.entry-content div[id^="atatags-"]',
     ).remove();
+    $('div.entry-content').find('script, style, ins, iframe, .ads').remove();
 
     const title = $('h1.entry-title').html() || '';
     const chapter = $('div.entry-content').html() || '';

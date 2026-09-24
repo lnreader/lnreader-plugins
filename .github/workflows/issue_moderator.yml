@@ -19,11 +19,11 @@ jobs:
         uses: tachiyomiorg/issue-moderator-action@v2
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-          duplicate-label: Duplicate
+          duplicate-label: duplicate
 
           duplicate-check-enabled: true
           duplicate-check-labels: |
-            ["Plugin Request", "Domain Changed"]
+            ["plugin request", "domain changed"]
 
           existing-check-enabled: false
 

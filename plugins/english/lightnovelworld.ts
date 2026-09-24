@@ -23,7 +23,7 @@ export class LightNovelWorldPlugin implements Plugin.PluginBase {
     name = "LightNovelWorld";
     icon = "src/en/lightnovelworld/icon.png";
     site = "https://lightnovelworld.org/";
-    version = "1.0.1";
+    version = "1.0.2";
 
     filters = {
         sort: {
@@ -199,6 +199,11 @@ export class LightNovelWorldPlugin implements Plugin.PluginBase {
         const apiBase = `${this.site}api/novel/${slug}/chapters/?limit=${LIMIT}`;
 
         const firstRes = await fetchApi(`${apiBase}&offset=0`);
+        if (!firstRes.ok) {
+            throw new Error(
+                `Failed to fetch chapters (HTTP ${firstRes.status})`,
+            );
+        }
         const firstJson = (await firstRes.json()) as {
             chapters: { number: number; title: string }[];
             total_chapters: number;
@@ -212,17 +217,23 @@ export class LightNovelWorldPlugin implements Plugin.PluginBase {
 
         const remainingResults = await Promise.all(
             offsets.map(async (offset) => {
-                try {
-                    const res = await fetchApi(`${apiBase}&offset=${offset}`);
-                    const json = (await res.json()) as { chapters: { number: number; title: string }[] };
-                    return json.chapters || [];
-                } catch {
-                    return [];
+                const res = await fetchApi(`${apiBase}&offset=${offset}`);
+                if (!res.ok) {
+                    throw new Error(
+                        `Failed to fetch chapters page ${offset} (HTTP ${res.status})`,
+                    );
                 }
+                const json = (await res.json()) as {
+                    chapters: { number: number; title: string }[];
+                };
+                return json.chapters || [];
             })
         );
 
-        const rawChapters = [...(firstJson.chapters || []), ...remainingResults.flat()];
+        const rawChapters = [
+            ...(firstJson.chapters || []),
+            ...remainingResults.flat(),
+        ];
 
         return rawChapters
             .map((ch) => ({
@@ -255,11 +266,7 @@ export class LightNovelWorldPlugin implements Plugin.PluginBase {
         let chapters: Plugin.ChapterItem[] = [];
 
         if (slug) {
-            try {
-                chapters = await this.fetchAllChapters(slug);
-            } catch {
-                chapters = [];
-            }
+            chapters = await this.fetchAllChapters(slug);
         }
 
         return {
@@ -275,19 +282,29 @@ export class LightNovelWorldPlugin implements Plugin.PluginBase {
     }
 
     async parseChapter(chapterPath: string): Promise<string> {
-        const html = await fetchText(`${this.site}${chapterPath}`);
+        const url = `${this.site}${chapterPath}`;
+        const res = await fetchApi(url);
+        if (!res.ok) {
+            throw new Error(`Could not load chapter (HTTP ${res.status})`);
+        }
+        const html = await res.text();
         const $ = loadCheerio(html);
 
         const container = $('#chapterText');
         if (!container.length) {
-            return '<p>No content found.</p>';
+            throw new Error('Could not load chapter');
         }
 
-        container.find('script, style, ins, iframe, .ads, .ad-container, .watermark').remove();
+        container
+            .find('script, style, ins, iframe, .ads, .ad-container, .watermark')
+            .remove();
         container.find('[style]').removeAttr('style');
 
         const content = container.html()?.trim() || '';
-        return content || '<p>No content found.</p>';
+        if (!content) {
+            throw new Error('Could not load chapter');
+        }
+        return content;
     }
 
     async searchNovels(

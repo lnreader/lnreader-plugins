@@ -20,7 +20,7 @@ class HakoPlugin implements Plugin.PluginBase {
   name = 'Hako';
   icon = 'src/vi/hakolightnovel/icon.png';
   site = 'https://ln.hako.vn';
-  version = '1.1.1';
+  version = '1.2.0';
   parseNovels(url: string) {
     return fetchApi(url)
       .then(res => res.text())
@@ -59,10 +59,15 @@ class HakoPlugin implements Plugin.PluginBase {
   }
   popularNovels(
     pageNo: number,
-    { filters }: Plugin.PopularNovelsOptions<typeof this.filters>,
+    {
+      showLatestNovels,
+      filters,
+    }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
     let link = this.site + '/danh-sach';
-    if (filters) {
+    if (showLatestNovels) {
+      link += '?sapxep=capnhat&page=' + pageNo;
+    } else if (filters) {
       if (filters.alphabet.value) {
         link += '/' + filters.alphabet.value;
       }

@@ -449,17 +449,32 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
     const loadedCheerio = await this.getCheerio(url, false);
 
     const chapterText = loadedCheerio('#content');
+
+    if (chapterText.length === 0) {
+      throw new Error(
+        `Chapter content container (#content) not found for ${chapterPath} — possible transient fetch issue. Retry`,
+      );
+    }
+
     const odds = chapterText.find(
       ':not(p, h1, span, i, b, u, img, a, div, strong)',
     );
     for (const ele of odds.toArray()) {
       const tag = ele.name.toString();
-      if (tag.length > 5 && ele.name.toString().substring(0, 1) == 'nf') {
+      if (tag.length > 5 && tag.substring(0, 1) == 'nf') {
         loadedCheerio(ele).remove();
       }
     }
 
-    return chapterText.html()?.replace(/&nbsp;/g, ' ') || '';
+    const html = chapterText.html()?.replace(/&nbsp;/g, ' ');
+
+    if (!html || html.trim().length === 0) {
+      throw new Error(
+        `Chapter content was empty after parsing for ${chapterPath}.`,
+      );
+    }
+
+    return html;
   }
 
   async searchNovels(

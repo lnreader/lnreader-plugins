@@ -9,7 +9,7 @@ class ChikariPlugin implements Plugin.PluginBase {
   name = 'Chikari';
   icon = 'src/en/chikari/icon.png';
   site = 'https://chikari.moe';
-  version = '1.0.0';
+  version = '1.0.1';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   // Define the filters for the app's filter menu
@@ -234,7 +234,7 @@ async popularNovels(
   }
 
   resolveUrl = (path: string, isNovel?: boolean) => {
-    if (isNovel) return `${this.site}/novel/${path}`;
+    if (isNovel) return `${this.site}/novels/${path}`;
     return `${this.site}/${path}`;
   };
 }

@@ -1,7 +1,12 @@
 name: Request Plugin
 description: Request a new plugin for LNReader
-labels: [Plugin Request]
+labels: [plugin request]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        > **Note:** Creating a plugin request does not guarantee it will be added. Please wait for a maintainer or contributor to pick it up — or, since this is open source, feel free to contribute the plugin yourself!
+
   - type: input
     id: name
     attributes:

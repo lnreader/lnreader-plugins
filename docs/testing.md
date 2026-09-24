@@ -35,9 +35,10 @@ Each step reports one of three outcomes:
 ## CI
 
 Any PR that touches a file under `plugins/**/*.ts` (excluding multisrc-generated files) runs this
-same check automatically against just the changed plugins, and posts a summary comment. The check
-only fails the PR on a genuine `FAIL` — `INCONCLUSIVE` results (a site being briefly down) never
-block a merge.
+same check automatically against just the changed plugins, and posts the results as a job summary
+on the workflow run (visible from the PR's checks list, under the Actions tab) — not as a PR
+comment. The check only fails the PR on a genuine `FAIL` — `INCONCLUSIVE` results (a site being
+briefly down) never block a merge.
 
 You can also trigger it manually against any plugin path from the Actions tab
 (`Plugin Live Check` → `Run workflow`), which is useful for re-checking an existing plugin after

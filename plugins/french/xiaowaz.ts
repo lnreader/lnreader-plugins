@@ -5,12 +5,39 @@ import { Plugin } from '@/types/plugin';
 import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
+const challengeTitles = new Set([
+  'bot verification',
+  'you are being redirected...',
+  'un instant...',
+  'just a moment...',
+  'redirecting...',
+]);
+
+async function fetchCheckedHtml(
+  url: string,
+  init?: Parameters<typeof fetchApi>[1],
+): Promise<string> {
+  const response = await fetchApi(url, init);
+  if (!response.ok)
+    throw new Error(`HTTP ${response.status} while loading ${url}`);
+  const html = await response.text();
+  const title = html
+    .match(/<title[^>]*>(.*?)<\/title>/is)?.[1]
+    ?.replace(/<[^>]+>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+  if (title && challengeTitles.has(title))
+    throw new Error(`Bot challenge while loading ${url}`);
+  return html;
+}
+
 class XiaowazPlugin implements Plugin.PluginBase {
   id = 'xiaowaz';
   name = 'Xiaowaz';
   icon = 'src/fr/xiaowaz/icon.png';
   site = 'https://xiaowaz.fr';
-  version = '1.0.2';
+  version = '1.0.5';
   static novels: Plugin.NovelItem[] | undefined;
 
   async getCheerio(url: string): Promise<CheerioAPI> {
@@ -18,10 +45,7 @@ class XiaowazPlugin implements Plugin.PluginBase {
     let returnError: unknown;
     while (retries > 0) {
       try {
-        const r = await fetchApi(url);
-        const body = await r.text();
-        const $ = load(body);
-        return $;
+        return load(await fetchCheckedHtml(url));
       } catch (error) {
         console.error(error);
         returnError = error;
@@ -171,13 +195,22 @@ class XiaowazPlugin implements Plugin.PluginBase {
     }
 
     const chapters: Plugin.ChapterItem[] = [];
+    const chapterPaths = new Set<string>();
     pathChapter.each((i, elem) => {
       const chapterName = $(elem).text().trim();
       const chapterUrl = $(elem).attr('href');
-      if (chapterUrl && chapterUrl.includes(this.site) && chapterName) {
+      if (
+        chapterUrl &&
+        chapterUrl.includes(this.site) &&
+        !/\.pdf(?:$|[?#])/i.test(chapterUrl) &&
+        chapterName
+      ) {
+        const path = chapterUrl.replace(this.site, '');
+        if (chapterPaths.has(path)) return;
+        chapterPaths.add(path);
         chapters.push({
           name: chapterName,
-          path: chapterUrl.replace(this.site, ''),
+          path,
         });
       }
     });
@@ -229,15 +262,20 @@ class XiaowazPlugin implements Plugin.PluginBase {
   async parseChapter(chapterPath: string): Promise<string> {
     const $ = await this.getCheerio(this.site + chapterPath);
 
-    const startTag = $('.wp-post-navigation');
-    const endTag = $('.abh_box.abh_box_down.abh_box_business');
+    const startTag = $('.entry-content .wp-post-navigation').first();
 
     const elementsBetweenTags: string[] = [];
     let footnotesElement: string | null = null;
 
-    if (startTag.length > 0 && endTag.length > 0) {
+    if (startTag.length > 0) {
       let currentElement = startTag.next();
-      while (currentElement.length > 0 && !currentElement.is(endTag)) {
+      while (currentElement.length > 0) {
+        if (
+          currentElement.hasClass('wp-post-navigation') ||
+          currentElement.is('.abh_box.abh_box_down.abh_box_business')
+        ) {
+          break;
+        }
         if (
           currentElement.find('p > a[href="https://ko-fi.com/wazouille"]')
             .length > 0

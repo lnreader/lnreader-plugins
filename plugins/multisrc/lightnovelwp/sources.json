@@ -337,5 +337,10 @@
       "reverseChapters": true,
       "hasLocked": true
     } 
+  },
+  {
+    "id": "dobynovels",
+    "sourceSite": "https://dobynovels.com/",
+    "sourceName": "DobyNovels"
   }
 ]
