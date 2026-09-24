@@ -9,7 +9,7 @@ class WTRLAB implements Plugin.PluginBase {
   id = 'WTRLAB';
   name = 'WTR-LAB';
   site = 'https://wtr-lab.com/';
-  version = '1.2.1';
+  version = '1.2.2';
   icon = 'src/en/wtrlab/icon.png';
   sourceLang = 'en/';
   baggage = '';
@@ -888,8 +888,14 @@ class WTRLAB implements Plugin.PluginBase {
     searchTerm: string,
     page: number,
   ): Promise<Plugin.NovelItem[]> {
-    const filters = this.filters;
-    filters.search.value = searchTerm;
+    // Copy rather than mutate: this.filters is the plugin's own filter
+    // definition object, which the app also reads. Writing the term into it
+    // leaves it there, so every later browse is narrowed to that search and
+    // Reset restores the polluted value.
+    const filters = {
+      ...this.filters,
+      search: { ...this.filters.search, value: searchTerm },
+    };
     return this.popularNovels(page, { showLatestNovels: false, filters });
   }
 
@@ -989,46 +995,46 @@ class WTRLAB implements Plugin.PluginBase {
       type: FilterTypes.ExcludableCheckboxGroup,
       value: { include: [], exclude: [] },
       options: [
-        { label: 'Action', value: 'action' },
-        { label: 'Adult', value: 'adult' },
-        { label: 'Adventure', value: 'adventure' },
-        { label: 'Comedy', value: 'comedy' },
-        { label: 'Drama', value: 'drama' },
-        { label: 'Ecchi', value: 'ecchi' },
-        { label: 'Erciyuan', value: 'erciyuan' },
-        { label: 'Fan-Fiction', value: 'fan-fiction' },
-        { label: 'Fantasy', value: 'fantasy' },
-        { label: 'Game', value: 'game' },
-        { label: 'Gender-Bender', value: 'gender-bender' },
-        { label: 'Harem', value: 'harem' },
-        { label: 'Historical', value: 'historical' },
-        { label: 'Horror', value: 'horror' },
-        { label: 'Josei', value: 'josei' },
-        { label: 'Martial-Arts', value: 'martial-arts' },
-        { label: 'Mature', value: 'mature' },
-        { label: 'Mecha', value: 'mecha' },
-        { label: 'Military', value: 'military' },
-        { label: 'Mystery', value: 'mystery' },
-        { label: 'Psychological', value: 'psychological' },
-        { label: 'Romance', value: 'romance' },
-        { label: 'School-Life', value: 'school-life' },
-        { label: 'Sci-Fi', value: 'sci-fi' },
-        { label: 'Seinen', value: 'seinen' },
-        { label: 'Shoujo', value: 'shoujo' },
-        { label: 'Shoujo-Ai', value: 'shoujo-ai' },
-        { label: 'Shounen', value: 'shounen' },
-        { label: 'Shounen-Ai', value: 'shounen-ai' },
-        { label: 'Slice-Of-Life', value: 'slice-of-life' },
-        { label: 'Smut', value: 'smut' },
-        { label: 'Sports', value: 'sports' },
-        { label: 'Supernatural', value: 'supernatural' },
-        { label: 'Tragedy', value: 'tragedy' },
-        { label: 'Urban-Life', value: 'urban-life' },
-        { label: 'Wuxia', value: 'wuxia' },
-        { label: 'Xianxia', value: 'xianxia' },
-        { label: 'Xuanhuan', value: 'xuanhuan' },
-        { label: 'Yaoi', value: 'yaoi' },
-        { label: 'Yuri', value: 'yuri' },
+        { label: 'Action', value: '1' },
+        { label: 'Adult', value: '2' },
+        { label: 'Adventure', value: '3' },
+        { label: 'Comedy', value: '4' },
+        { label: 'Drama', value: '5' },
+        { label: 'Ecchi', value: '6' },
+        { label: 'Erciyuan', value: '7' },
+        { label: 'Fan-Fiction', value: '8' },
+        { label: 'Fantasy', value: '9' },
+        { label: 'Game', value: '10' },
+        { label: 'Gender-Bender', value: '11' },
+        { label: 'Harem', value: '12' },
+        { label: 'Historical', value: '13' },
+        { label: 'Horror', value: '14' },
+        { label: 'Josei', value: '15' },
+        { label: 'Martial-Arts', value: '16' },
+        { label: 'Mature', value: '17' },
+        { label: 'Mecha', value: '18' },
+        { label: 'Military', value: '19' },
+        { label: 'Mystery', value: '20' },
+        { label: 'Psychological', value: '21' },
+        { label: 'Romance', value: '22' },
+        { label: 'School-Life', value: '23' },
+        { label: 'Sci-Fi', value: '24' },
+        { label: 'Seinen', value: '25' },
+        { label: 'Shoujo', value: '26' },
+        { label: 'Shoujo-Ai', value: '27' },
+        { label: 'Shounen', value: '28' },
+        { label: 'Shounen-Ai', value: '29' },
+        { label: 'Slice-Of-Life', value: '30' },
+        { label: 'Smut', value: '31' },
+        { label: 'Sports', value: '32' },
+        { label: 'Supernatural', value: '33' },
+        { label: 'Tragedy', value: '34' },
+        { label: 'Urban-Life', value: '35' },
+        { label: 'Wuxia', value: '36' },
+        { label: 'Xianxia', value: '37' },
+        { label: 'Xuanhuan', value: '38' },
+        { label: 'Yaoi', value: '39' },
+        { label: 'Yuri', value: '40' },
       ],
     },
     tag_operator: {
