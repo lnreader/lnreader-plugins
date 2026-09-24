@@ -19,3 +19,4 @@ broken-sites-report.json
 .agents/
 .claude/
 .cursor/
+missed-sites-report.json
