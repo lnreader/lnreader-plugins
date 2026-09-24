@@ -42,7 +42,7 @@ export class LightNovelWPPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/lightnovelwp/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `1.1.${10 + versionIncrements}`;
+    this.version = `1.2.${10 + versionIncrements}`;
     this.options = metadata.options ?? ({} as LightNovelWPOptions);
     this.filters = metadata.filters satisfies Filters;
 
@@ -220,7 +220,13 @@ export class LightNovelWPPlugin implements Plugin.PluginBase {
           isReadingChapter = true;
         } else if (isReadingChapter) {
           if (name === 'a' && tempChapter.path === undefined) {
-            tempChapter.path = attribs['href'].replace(baseURL, '').trim();
+            // Some installs link chapters with the absolute URL of the main
+            // site (free.kolnovel.com links kolnovel.com), and parseChapter
+            // re-prefixes this.site, so keep the path only.
+            tempChapter.path = attribs['href']
+              .replace(baseURL, '')
+              .replace(/^https?:\/\/[^/]+/, '')
+              .trim();
           } else if (attribs['class'] === 'epl-num') {
             isReadingChapterInfo = 1;
           } else if (attribs['class'] === 'epl-title') {
@@ -438,11 +444,20 @@ export class LightNovelWPPlugin implements Plugin.PluginBase {
         throw error;
       }
     }
+
+    // The body is the theme's `.epcontent` block, which newer installs render
+    // as an <article> instead of a <div> and no longer close with
+    // `<div class="bottomnav">`. The old regex sliced the raw document between
+    // those two wrappers, so both of those changes emptied every chapter;
+    // select the body itself and read its paragraphs instead.
+    const $ = load(data);
     return (
-      data
-        .match(/<div.*?class="epcontent ([^]*?)<div.*?class="?bottomnav/g)?.[0]
-        .match(/<p[^>]*>([^]*?)<\/p>/g)
-        ?.join('\n') || ''
+      $('.epcontent')
+        .first()
+        .find('p')
+        .map((_, el) => $.html(el) || '')
+        .get()
+        .join('\n') || ''
     );
   }
 

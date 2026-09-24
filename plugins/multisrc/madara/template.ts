@@ -46,7 +46,7 @@ export class MadaraPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/madara/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `2.2.${versionIncrements}`;
+    this.version = `2.3.${versionIncrements}`;
     this.options = metadata.options;
     this.filters = metadata.filters;
 
@@ -189,6 +189,7 @@ export class MadaraPlugin implements Plugin.PluginBase {
         loadedCheerio('.post-title h1').text().trim() ||
         loadedCheerio('#manga-title h1').text().trim() ||
         loadedCheerio('.manga-title').text().trim() ||
+        loadedCheerio('h1.nhv-novel-title').text().trim() ||
         '',
     };
 
@@ -196,6 +197,9 @@ export class MadaraPlugin implements Plugin.PluginBase {
       loadedCheerio('.summary_image > a > img').attr('data-lazy-src') ||
       loadedCheerio('.summary_image > a > img').attr('data-src') ||
       loadedCheerio('.summary_image > a > img').attr('src') ||
+      loadedCheerio('.nhv-novel-cover img').attr('data-lazy-src') ||
+      loadedCheerio('.nhv-novel-cover img').attr('data-src') ||
+      loadedCheerio('.nhv-novel-cover img').attr('src') ||
       defaultCover;
 
     loadedCheerio('.post-content_item, .post-content').each(function () {
@@ -256,6 +260,36 @@ export class MadaraPlugin implements Plugin.PluginBase {
       }
     });
 
+    // Fallback for the custom "NHV" theme (e.g. cenele.com), which renders
+    // novel pages without the classic Madara detail blocks. Every field is
+    // only filled when the selectors above left it empty, so sources on the
+    // classic theme keep their existing behaviour.
+    {
+      if (!novel.author)
+        novel.author =
+          loadedCheerio('.nhv-novel-meta a[href*="cont-author"]')
+            .first()
+            .text()
+            .trim() ||
+          loadedCheerio('a[href*="cont-author"]').first().text().trim();
+      if (!novel.genres)
+        novel.genres = loadedCheerio('.nhv-novel-genres a')
+          .map((i, el) => loadedCheerio(el).text())
+          .get()
+          .join(', ');
+      const nhvStatus = loadedCheerio('.nhv-novel-status').text().trim();
+      if (!novel.status && nhvStatus)
+        novel.status = nhvStatus.includes('مستمرة')
+          ? NovelStatus.Ongoing
+          : NovelStatus.Completed;
+      if (!novel.rating) {
+        const nhvRating = parseFloat(
+          loadedCheerio('.nhv-simple-rating__avg').text().trim(),
+        );
+
+        if (!isNaN(nhvRating)) novel.rating = nhvRating;
+      }
+    }
     // Checks for "Madara NovelHub" version
     {
       if (!novel.genres)
@@ -304,6 +338,11 @@ export class MadaraPlugin implements Plugin.PluginBase {
         .join('\n\n')
         .trim() ||
       loadedCheerio('.manga-excerpt p')
+        .map((i, el) => loadedCheerio(el).text())
+        .get()
+        .join('\n\n')
+        .trim() ||
+      loadedCheerio('.nhv-novel-synopsis p')
         .map((i, el) => loadedCheerio(el).text())
         .get()
         .join('\n\n')
@@ -397,11 +436,29 @@ export class MadaraPlugin implements Plugin.PluginBase {
 
   async parseChapter(chapterPath: string): Promise<string> {
     const loadedCheerio = await this.getCheerio(this.site + chapterPath, false);
-    const chapterText =
-      loadedCheerio('.text-left') ||
-      loadedCheerio('.text-right') ||
-      loadedCheerio('.entry-content') ||
-      loadedCheerio('.c-blog-post > div > div:nth-child(2)');
+
+    // A cheerio selection is always truthy, so the previous
+    // `$('.text-left') || $('.text-right') || …` chain never looked past the
+    // first selector: on a site that no longer renders `.text-left` it
+    // returned an empty body no matter what else the page offered. Walk the
+    // candidates and keep the first one that actually holds text.
+    let chapterText = loadedCheerio('.__no-chapter-content__');
+    for (const selector of [
+      '.text-left',
+      '.text-right',
+      '.text-content',
+      '.text-chapter-content',
+      'novel-chapter',
+      '.reading-content',
+      '.entry-content',
+      '.c-blog-post > div > div:nth-child(2)',
+    ]) {
+      const candidate = loadedCheerio(selector);
+      if (candidate.text().trim()) {
+        chapterText = candidate;
+        break;
+      }
+    }
 
     if (this.options?.customJs) {
       try {
