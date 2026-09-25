@@ -7,8 +7,6 @@ import { defaultCover } from '@libs/defaultCover';
 import dayjs from 'dayjs';
 import { storage } from '@libs/storage';
 
-const CHAPTERS_PER_PAGE = 50;
-
 type ChapterPaginationOption = {
   value: string;
   start: number;
@@ -25,7 +23,7 @@ type RawChapter = {
 class Novelight implements Plugin.PagePlugin {
   id = 'novelight';
   name = 'Novelight';
-  version = '1.1.8';
+  version = '1.1.6';
   icon = 'src/en/novelight/icon.png';
   site = 'https://novelight.net/';
 
@@ -132,19 +130,16 @@ class Novelight implements Plugin.PagePlugin {
 
     const loadedCheerio = parseHTML(body);
 
-    // The chapter select tiles the chapter list, so the largest range end is
-    // the novel's chapter count. `parsePage` derives the same value from the
-    // same markup, keeping `totalPages` and the served pages in agreement.
-    const totalChapters = this.parseTotalChapters(
-      this.parseChapterPagination(loadedCheerio),
-    );
+    // The chapter select tiles the chapter list, so one app page per site
+    // range keeps `totalPages` and the served pages in agreement.
+    const totalPages = this.parseChapterPagination(loadedCheerio).length || 1;
 
     const novel: Plugin.SourceNovel & { totalPages: number } = {
       path: novelPath,
       name: loadedCheerio('h1').text() || 'Untitled',
       cover: this.site + loadedCheerio('.poster > img').attr('src'),
       summary: loadedCheerio('section.text-info.section > p').text(),
-      totalPages: Math.ceil(totalChapters / CHAPTERS_PER_PAGE) || 1,
+      totalPages,
       chapters: [],
     };
 
@@ -188,10 +183,13 @@ class Novelight implements Plugin.PagePlugin {
   }
 
   /**
-   * The site's chapter select lists page ranges such as `1-50`, `51-100`,
-   * newest page first. Those ranges tile the whole chapter list, so they
-   * describe the site's own partition and let us slice it without assuming a
-   * fixed site page size.
+   * The site's chapter select lists page ranges such as `1-17`, `18-67`,
+   * newest page first, each holding 50 chapters except the oldest page,
+   * which holds the remainder. Those ranges tile the whole chapter list,
+   * so they describe the site's own partition. The chapter-pagination
+   * endpoint serves exactly one of these ranges per request and accepts
+   * no page-size or offset parameter, so serving the site's own ranges
+   * one-to-one is the only way to spend a single ajax request per page.
    */
   private parseChapterPagination(
     loadedCheerio: ReturnType<typeof parseHTML>,
@@ -211,13 +209,6 @@ class Novelight implements Plugin.PagePlugin {
       });
     });
     return options;
-  }
-
-  private parseTotalChapters(options: ChapterPaginationOption[]): number {
-    return (
-      options.reduce((total, option) => Math.max(total, option.end), 0) ||
-      options.length * CHAPTERS_PER_PAGE
-    );
   }
 
   private async parseSitePageChapters(
@@ -286,56 +277,44 @@ class Novelight implements Plugin.PagePlugin {
     }).then(r => r.text());
     const csrftoken = rawBody?.match(/window\.CSRF_TOKEN = "([^"]+)"/)?.[1];
     const bookId = rawBody?.match(/const OBJECT_BY_COMMENT = ([0-9]+)/)?.[1];
-    const chapterPagination = this.parseChapterPagination(parseHTML(rawBody));
-    const totalChapters = this.parseTotalChapters(chapterPagination);
-
+    // Serve the site's own ranges one-to-one, oldest chunk first: app page
+    // N is the Nth site range in ascending chapter order. One site page per
+    // app page means exactly one chapter-pagination request per call; the
+    // trade-off is that the short (remainder) page comes first instead of
+    // last, and adding new chapters shifts every page's contents because
+    // the site anchors its partition at the newest chapter.
+    const sitePages = this.parseChapterPagination(parseHTML(rawBody)).sort(
+      (a, b) => a.start - b.start,
+    );
     const pageNo = parseInt(page, 10);
-    const firstChapter = (pageNo - 1) * CHAPTERS_PER_PAGE + 1;
-    const lastChapter = Math.min(pageNo * CHAPTERS_PER_PAGE, totalChapters);
+    const sitePage = sitePages[pageNo - 1];
 
-    if (
-      Number.isNaN(pageNo) ||
-      !csrftoken ||
-      !bookId ||
-      firstChapter > lastChapter
-    ) {
+    if (Number.isNaN(pageNo) || !csrftoken || !bookId || !sitePage) {
       return { chapters: [] };
     }
 
-    // Site ranges are numbered from the oldest chapter, which is also how
-    // pages are served, so the requested chunk maps onto them directly even
-    // though the site lists its own pages newest first.
-    const sitePages = chapterPagination
-      .filter(
-        option => option.start <= lastChapter && option.end >= firstChapter,
-      )
-      .sort((a, b) => a.start - b.start);
-
-    if (sitePages.length === 0) {
-      return { chapters: [] };
-    }
-
-    const fetched = await Promise.all(
-      sitePages.map(option =>
-        this.parseSitePageChapters(novelPath, csrftoken, bookId, option.value),
-      ),
+    // The requested value comes straight from the parsed select, so it can
+    // never fall outside the site's pages (out-of-range values used to be
+    // silently clamped to the oldest page, duplicating its chapters).
+    const chapters = await this.parseSitePageChapters(
+      novelPath,
+      csrftoken,
+      bookId,
+      sitePage.value,
     );
 
-    // The fetched pages form one contiguous oldest-first run starting at the
-    // first range's start, so slice exactly the requested chunk out of it.
-    const offset = firstChapter - sitePages[0].start;
-    const chapters = fetched
-      .flat()
-      .slice(offset, offset + lastChapter - firstChapter + 1)
-      .filter(chapter => !(this.hideLocked && chapter.isLocked))
-      .map(chapter => ({
-        name: chapter.isLocked ? '🔒 ' + chapter.name : chapter.name,
-        path: chapter.path,
-        page: page,
-        releaseTime: chapter.releaseTime,
-      }));
-
-    return { chapters };
+    // The site lists a page newest first; `parseSitePageChapters` already
+    // returns it oldest first.
+    return {
+      chapters: chapters
+        .filter(chapter => !(this.hideLocked && chapter.isLocked))
+        .map(chapter => ({
+          name: chapter.isLocked ? '🔒 ' + chapter.name : chapter.name,
+          path: chapter.path,
+          page: page,
+          releaseTime: chapter.releaseTime,
+        })),
+    };
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
