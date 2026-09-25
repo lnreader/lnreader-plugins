@@ -1,5 +1,5 @@
 import { load as parseHTML } from 'cheerio';
-import { fetchApi } from '@libs/fetch';
+import { fetchApi, FetchInit } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { Filters, FilterTypes } from '@libs/filterInputs';
@@ -7,12 +7,46 @@ import { defaultCover } from '@libs/defaultCover';
 import dayjs from 'dayjs';
 import { storage } from '@libs/storage';
 
+type ChapterPaginationOption = {
+  value: string;
+  start: number;
+};
+
+type RawChapter = {
+  name: string;
+  path: string;
+  releaseTime?: string;
+  isLocked: boolean;
+};
+
 class Novelight implements Plugin.PagePlugin {
   id = 'novelight';
   name = 'Novelight';
-  version = '1.1.5';
+  version = '1.1.7';
   icon = 'src/en/novelight/icon.png';
   site = 'https://novelight.net/';
+
+  // Browser-like headers (important for Cloudflare-fronted sites, which
+  // may serve a bot-check page to requests without a User-Agent).
+  private headers = {
+    'User-Agent':
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36',
+    Referer: this.site,
+    'Accept-Language': 'en-US,en;q=0.9',
+  };
+
+  // Throw (carrying the HTTP status) on a refused response so a
+  // runner-side block is reported INCONCLUSIVE per docs/testing.md
+  // instead of being parsed into a false empty-result FAIL.
+  private async fetchSite(url: string, init?: FetchInit) {
+    const res = await fetchApi(url, init);
+    if (!res.ok) {
+      throw Object.assign(new Error('Request failed: ' + res.status), {
+        status: res.status,
+      });
+    }
+    return res;
+  }
 
   hideLocked = storage.get('hideLocked');
   pluginSettings = {
@@ -57,7 +91,9 @@ class Novelight implements Plugin.PagePlugin {
       url += `?&ordering=popularity&page=${pageNo}`;
     }
 
-    const body = await fetchApi(url).then(r => r.text());
+    const body = await this.fetchSite(url, { headers: this.headers }).then(r =>
+      r.text(),
+    );
 
     const loadedCheerio = parseHTML(body);
 
@@ -87,16 +123,22 @@ class Novelight implements Plugin.PagePlugin {
   async parseNovel(
     novelPath: string,
   ): Promise<Plugin.SourceNovel & { totalPages: number }> {
-    const body = await fetchApi(this.site + novelPath).then(r => r.text());
+    const body = await this.fetchSite(this.site + novelPath, {
+      headers: this.headers,
+    }).then(r => r.text());
 
     const loadedCheerio = parseHTML(body);
+
+    // The chapter select tiles the chapter list, so one app page per site
+    // range keeps `totalPages` and the served pages in agreement.
+    const totalPages = this.parseChapterPagination(loadedCheerio).length || 1;
 
     const novel: Plugin.SourceNovel & { totalPages: number } = {
       path: novelPath,
       name: loadedCheerio('h1').text() || 'Untitled',
       cover: this.site + loadedCheerio('.poster > img').attr('src'),
       summary: loadedCheerio('section.text-info.section > p').text(),
-      totalPages: loadedCheerio('#select-pagination-chapter > option').length,
+      totalPages,
       chapters: [],
     };
 
@@ -139,21 +181,50 @@ class Novelight implements Plugin.PagePlugin {
     return novel;
   }
 
-  async parsePage(novelPath: string, page: string): Promise<Plugin.SourcePage> {
-    const rawBody = await fetchApi(this.site + novelPath).then(r => r.text());
-    const csrftoken = rawBody?.match(/window\.CSRF_TOKEN = "([^"]+)"/)?.[1];
-    const bookId = rawBody?.match(/const OBJECT_BY_COMMENT = ([0-9]+)/)?.[1];
-    const totalPages = parseInt(
-      rawBody
-        ?.match(/<option value="([0-9]+)"/g)
-        ?.at(-1)
-        ?.match(/([0-9]+)/)?.[1] ?? '1',
-    );
+  /**
+   * The site's chapter select lists page ranges such as `1-17`, `18-67`,
+   * newest page first, each holding 50 chapters except the oldest page,
+   * which holds the remainder. Those ranges tile the whole chapter list,
+   * so they describe the site's own partition. The chapter-pagination
+   * endpoint serves exactly one of these ranges per request and accepts
+   * no page-size or offset parameter, so serving the site's own ranges
+   * one-to-one is the only way to spend a single ajax request per page.
+   */
+  private parseChapterPagination(
+    loadedCheerio: ReturnType<typeof parseHTML>,
+  ): ChapterPaginationOption[] {
+    const options: ChapterPaginationOption[] = [];
+    loadedCheerio('#select-pagination-chapter > option').each((_, ele) => {
+      const option = loadedCheerio(ele);
+      // Skip entries that are not chapter ranges (e.g. placeholder options
+      // without an `N-M` label); they hold no page of chapters.
+      const range = option
+        .text()
+        .trim()
+        .match(/([0-9]+)\s*-\s*[0-9]+/);
+      if (!range) return;
+      const value = option.val() ?? '';
+      if (typeof value !== 'string' || !value) return;
+      options.push({
+        value,
+        start: parseInt(range[1], 10),
+      });
+    });
+    return options;
+  }
 
-    const r = await fetchApi(
-      `${this.site}book/ajax/chapter-pagination?csrfmiddlewaretoken=${csrftoken}&book_id=${bookId}&page=${totalPages - parseInt(page) + 1}`,
+  private async parseSitePageChapters(params: {
+    novelPath: string;
+    csrftoken: string;
+    bookId: string;
+    sitePage: string;
+  }): Promise<RawChapter[]> {
+    const { novelPath, csrftoken, bookId, sitePage } = params;
+    const r = await this.fetchSite(
+      `${this.site}book/ajax/chapter-pagination?csrfmiddlewaretoken=${csrftoken}&book_id=${bookId}&page=${sitePage}`,
       {
         headers: {
+          ...this.headers,
           'Host': this.site.replace('https://', '').replace('/', ''),
           'Referer': this.site + novelPath,
           'X-Requested-With': 'XMLHttpRequest',
@@ -161,26 +232,24 @@ class Novelight implements Plugin.PagePlugin {
       },
     );
 
-    let chaptersRaw;
-    try {
-      chaptersRaw = await r.json();
-      chaptersRaw = chaptersRaw.html;
-    } catch (error) {
-      console.error('Error Parsing Response');
-      console.error(error);
-      throw new Error(error);
+    // Endpoint failures propagate with their original stack; a JSON body
+    // without an `html` field throws here instead of parsing silently
+    // into zero chapters.
+    const chaptersRaw = await r.json();
+    const chaptersHtml = chaptersRaw?.html;
+    if (typeof chaptersHtml !== 'string') {
+      throw new Error('Unexpected chapter-pagination response');
     }
 
-    const chapter: Plugin.ChapterItem[] = [];
+    const chapters: RawChapter[] = [];
 
-    parseHTML('<html>' + chaptersRaw + '</html>')('a').each((idx, ele) => {
+    parseHTML('<html>' + chaptersHtml + '</html>')('a').each((idx, ele) => {
       const title = parseHTML(ele)('.title').text().trim();
       const isLocked = !!parseHTML(ele)('.cost').text().trim();
-      if (this.hideLocked && isLocked) return;
 
-      let date;
+      let releaseTime;
       try {
-        date = dayjs(
+        releaseTime = dayjs(
           parseHTML(ele)('.date').text().trim(),
           'DD.MM.YYYY',
         ).toISOString();
@@ -188,28 +257,73 @@ class Novelight implements Plugin.PagePlugin {
         // linter happy
       }
 
-      const chapterName = isLocked ? '🔒 ' + title : title;
       let chapterUrl = ele.attribs.href;
       if (chapterUrl.charAt(0) == '/') {
         chapterUrl = chapterUrl.substring(1);
       }
-      chapter.push({
-        name: chapterName,
+      chapters.push({
+        name: title,
         path: chapterUrl,
-        page: page,
-        releaseTime: date,
+        releaseTime,
+        isLocked,
       });
     });
 
-    const chapters = chapter.reverse();
-    return { chapters };
+    // The site lists a page newest first, while pages are served oldest first.
+    return chapters.reverse();
+  }
+
+  async parsePage(novelPath: string, page: string): Promise<Plugin.SourcePage> {
+    const rawBody = await this.fetchSite(this.site + novelPath, {
+      headers: this.headers,
+    }).then(r => r.text());
+    const csrftoken = rawBody?.match(/window\.CSRF_TOKEN = "([^"]+)"/)?.[1];
+    const bookId = rawBody?.match(/const OBJECT_BY_COMMENT = ([0-9]+)/)?.[1];
+    // Serve the site's own ranges one-to-one, oldest chunk first: app page
+    // N is the Nth site range in ascending chapter order. One site page per
+    // app page means exactly one chapter-pagination request per call; the
+    // trade-off is that the short (remainder) page comes first instead of
+    // last, and adding new chapters shifts every page's contents because
+    // the site anchors its partition at the newest chapter.
+    const sitePages = this.parseChapterPagination(parseHTML(rawBody)).sort(
+      (a, b) => a.start - b.start,
+    );
+    const pageNo = parseInt(page, 10);
+    const sitePage = sitePages[pageNo - 1];
+
+    if (Number.isNaN(pageNo) || !csrftoken || !bookId || !sitePage) {
+      return { chapters: [] };
+    }
+
+    // The requested value comes straight from the parsed select, so it can
+    // never fall outside the site's pages (out-of-range values used to be
+    // silently clamped to the oldest page, duplicating its chapters).
+    const chapters = await this.parseSitePageChapters({
+      novelPath,
+      csrftoken,
+      bookId,
+      sitePage: sitePage.value,
+    });
+
+    return {
+      chapters: chapters
+        .filter(chapter => !(this.hideLocked && chapter.isLocked))
+        .map(chapter => ({
+          name: chapter.isLocked ? '🔒 ' + chapter.name : chapter.name,
+          path: chapter.path,
+          page: page,
+          releaseTime: chapter.releaseTime,
+        })),
+    };
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
     if (chapterPath.charAt(0) == '/') {
       chapterPath = chapterPath.substring(1);
     }
-    const rawBody = await fetchApi(this.site + chapterPath).then(r => {
+    const rawBody = await this.fetchSite(this.site + chapterPath, {
+      headers: this.headers,
+    }).then(r => {
       const res = r.text();
       return res;
     });
@@ -218,11 +332,12 @@ class Novelight implements Plugin.PagePlugin {
     const chapterId = rawBody?.match(/const CHAPTER_ID = "([0-9]+)/)?.[1];
 
     let className;
-    const body = await fetchApi(
+    const body = await this.fetchSite(
       this.site + 'book/ajax/read-chapter/' + chapterId,
       {
         method: 'GET',
         headers: {
+          ...this.headers,
           Cookie: 'csrftoken=' + csrftoken,
           Referer: this.site + chapterPath,
           'X-Requested-With': 'XMLHttpRequest',
@@ -247,7 +362,9 @@ class Novelight implements Plugin.PagePlugin {
 
   async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
     const url = `${this.site}catalog/?search=${encodeURIComponent(searchTerm)}`;
-    const body = await fetchApi(url).then(r => r.text());
+    const body = await this.fetchSite(url, { headers: this.headers }).then(r =>
+      r.text(),
+    );
     const loadedCheerio = parseHTML(body);
 
     const novels: Plugin.NovelItem[] = [];
