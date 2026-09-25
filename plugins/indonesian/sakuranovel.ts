@@ -3,12 +3,21 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 
+// `.tldariinggrissendiribrojangancopy` is the site's own obfuscated content wrapper class, not a typo — keep it in sync with the live markup.
+const CHAPTER_CONTENT_SELECTORS = [
+  '.tldariinggrissendiribrojangancopy .entry-content',
+  '.entry-content',
+];
+
+// Promo paragraph the site injects into chapter bodies; rewordings only need updating here.
+const PROMO_TEXT = 'Baca novel lain di sakuranovel';
+
 class SakuraNovel implements Plugin.PluginBase {
   id = 'sakura.id';
   name = 'SakuraNovel';
   icon = 'src/id/sakuranovel/icon.png';
   site = 'https://sakuranovel.id/';
-  version = '1.0.1';
+  version = '1.0.2';
 
   parseNovels(loadedCheerio: CheerioAPI) {
     const novels: Plugin.NovelItem[] = [];
@@ -137,14 +146,31 @@ class SakuraNovel implements Plugin.PluginBase {
 
     const loadedCheerio = parseHTML(body);
 
-    const divi = loadedCheerio("div:contains('Daftar Isi') +")
-      .find('div:first')
-      .attr('class');
-    loadedCheerio(`.${divi}`).remove();
-    const chapterText =
-      loadedCheerio("div:contains('Daftar Isi') +").html() || '';
+    // Tier 1: themed content container — the obfuscated parent class marks the real chapter body when the site serves its full theme markup.
+    for (const selector of CHAPTER_CONTENT_SELECTORS) {
+      const content = loadedCheerio(selector).first();
+      if (!content.length) continue;
+      content.find(`p:contains('${PROMO_TEXT}')`).remove();
+      const chapterText = (content.html() || '').trim();
+      if (chapterText) return chapterText;
+    }
 
-    return chapterText;
+    // Tier 2: markdown-rendered chapters expose one paragraph per element.
+    const paragraphs = loadedCheerio('p.ds-markdown-paragraph')
+      .map((i, el) => {
+        const para = loadedCheerio(el);
+        if (para.text().includes(PROMO_TEXT)) return '';
+        return para.toString();
+      })
+      .get()
+      .join('');
+    if (paragraphs.trim()) return paragraphs;
+
+    // Tier 3 (last resort): the legacy layout locates the body as the sibling after the 'Daftar Isi' div — fragile by construction since :contains matches every ancestor, so this stays last and scoped to the container only.
+    const legacy = loadedCheerio("div:contains('Daftar Isi') +").first();
+    const legacyInner = legacy.find('div:first').attr('class');
+    if (legacyInner) legacy.find(`.${legacyInner.split(' ')[0]}`).remove();
+    return legacy.html() || '';
   }
 
   async searchNovels(
