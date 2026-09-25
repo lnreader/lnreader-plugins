@@ -10,7 +10,6 @@ import { storage } from '@libs/storage';
 type ChapterPaginationOption = {
   value: string;
   start: number;
-  end: number;
 };
 
 type RawChapter = {
@@ -23,7 +22,7 @@ type RawChapter = {
 class Novelight implements Plugin.PagePlugin {
   id = 'novelight';
   name = 'Novelight';
-  version = '1.1.6';
+  version = '1.1.7';
   icon = 'src/en/novelight/icon.png';
   site = 'https://novelight.net/';
 
@@ -197,26 +196,30 @@ class Novelight implements Plugin.PagePlugin {
     const options: ChapterPaginationOption[] = [];
     loadedCheerio('#select-pagination-chapter > option').each((_, ele) => {
       const option = loadedCheerio(ele);
+      // Skip entries that are not chapter ranges (e.g. placeholder options
+      // without an `N-M` label); they hold no page of chapters.
       const range = option
         .text()
         .trim()
-        .match(/([0-9]+)\s*-\s*([0-9]+)/);
+        .match(/([0-9]+)\s*-\s*[0-9]+/);
       if (!range) return;
+      const value = option.val() ?? '';
+      if (typeof value !== 'string' || !value) return;
       options.push({
-        value: option.val() ?? '',
+        value,
         start: parseInt(range[1], 10),
-        end: parseInt(range[2], 10),
       });
     });
     return options;
   }
 
-  private async parseSitePageChapters(
-    novelPath: string,
-    csrftoken: string,
-    bookId: string,
-    sitePage: string,
-  ): Promise<RawChapter[]> {
+  private async parseSitePageChapters(params: {
+    novelPath: string;
+    csrftoken: string;
+    bookId: string;
+    sitePage: string;
+  }): Promise<RawChapter[]> {
+    const { novelPath, csrftoken, bookId, sitePage } = params;
     const r = await this.fetchSite(
       `${this.site}book/ajax/chapter-pagination?csrfmiddlewaretoken=${csrftoken}&book_id=${bookId}&page=${sitePage}`,
       {
@@ -229,19 +232,18 @@ class Novelight implements Plugin.PagePlugin {
       },
     );
 
-    let chaptersRaw;
-    try {
-      chaptersRaw = await r.json();
-      chaptersRaw = chaptersRaw.html;
-    } catch (error) {
-      console.error('Error Parsing Response');
-      console.error(error);
-      throw new Error(error);
+    // Endpoint failures propagate with their original stack; a JSON body
+    // without an `html` field throws here instead of parsing silently
+    // into zero chapters.
+    const chaptersRaw = await r.json();
+    const chaptersHtml = chaptersRaw?.html;
+    if (typeof chaptersHtml !== 'string') {
+      throw new Error('Unexpected chapter-pagination response');
     }
 
     const chapters: RawChapter[] = [];
 
-    parseHTML('<html>' + chaptersRaw + '</html>')('a').each((idx, ele) => {
+    parseHTML('<html>' + chaptersHtml + '</html>')('a').each((idx, ele) => {
       const title = parseHTML(ele)('.title').text().trim();
       const isLocked = !!parseHTML(ele)('.cost').text().trim();
 
@@ -296,15 +298,13 @@ class Novelight implements Plugin.PagePlugin {
     // The requested value comes straight from the parsed select, so it can
     // never fall outside the site's pages (out-of-range values used to be
     // silently clamped to the oldest page, duplicating its chapters).
-    const chapters = await this.parseSitePageChapters(
+    const chapters = await this.parseSitePageChapters({
       novelPath,
       csrftoken,
       bookId,
-      sitePage.value,
-    );
+      sitePage: sitePage.value,
+    });
 
-    // The site lists a page newest first; `parseSitePageChapters` already
-    // returns it oldest first.
     return {
       chapters: chapters
         .filter(chapter => !(this.hideLocked && chapter.isLocked))
