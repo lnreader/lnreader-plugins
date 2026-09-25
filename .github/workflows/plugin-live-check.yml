@@ -37,6 +37,7 @@ jobs:
             plugins/**/*.ts
           files_ignore: |
             plugins/**/*\[*\]*.ts
+            plugins/**/*.broken.ts
             plugins/multisrc/**
 
       - name: Determine Targets
@@ -63,6 +64,9 @@ jobs:
       # Multisrc-generated files (plugins/**/*[...].ts) are excluded above.
       # They're produced from plugins/multisrc/*/template.ts + sources.json,
       # not hand-authored, so testing the generator is out of scope here.
+      # Parked broken sources (plugins/**/*.broken.ts) are excluded too: the
+      # `.broken.ts` suffix deliberately removes them from production
+      # compilation, so live-checking them can only fail by design.
       - name: Run Live Check
         id: live-check
         if: steps.targets.outputs.files != ''
