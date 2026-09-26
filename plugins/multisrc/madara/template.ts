@@ -370,13 +370,14 @@ export class MadaraPlugin implements Plugin.PluginBase {
     if (html && html !== '0' && parseHTML(html)('.wp-manga-chapter').length) {
       loadedCheerio = parseHTML(html);
     } else {
-      const detailPage = await this.getCheerio(this.site + novelPath, false);
-      if (!detailPage('.wp-manga-chapter').length) {
-        throw new Error('Could not find any chapters on the novel page');
+      // `loadedCheerio` still holds the novel page parsed at the top of
+      // parseNovel, so the chapters are already here — no second request.
+      const chaptersOnPage = loadedCheerio('.wp-manga-chapter');
+      if (chaptersOnPage.length) {
+        loadedCheerio = parseHTML(chaptersOnPage.parent().html() || '');
       }
-      html =
-        detailPage('.wp-manga-chapter').parent().html() || detailPage.html();
-      loadedCheerio = parseHTML(html);
+      // A novel with nothing published yet has no chapter list anywhere. That
+      // is a valid novel, not an error, so let it through with none.
     }
 
     const totalChapters = loadedCheerio('.wp-manga-chapter').length;
@@ -420,26 +421,20 @@ export class MadaraPlugin implements Plugin.PluginBase {
     // Newer Madara child themes wrap the body in a <novel-chapter> custom
     // element instead of `.text-left`, and park their app-promos and
     // obfuscated anti-ad <section> elements as siblings of the prose <p> tags.
-    // Drop those, then concatenate the paragraphs that are left.
+    // Drop those and keep the rest of the wrapper's content, so headings, lists
+    // and inline images inside it survive alongside the paragraphs.
     const novelChapter = loadedCheerio('novel-chapter');
-    if (novelChapter.length) {
-      novelChapter.find('.nhv-reader-promo, .nhv-reader-store-promo').remove();
-      novelChapter.find('section').remove();
-      const paragraphs = novelChapter.find('p');
-      if (paragraphs.length) {
-        const html = paragraphs
-          .toArray()
-          .map(el => loadedCheerio(el).html() || '')
-          .join('');
-        return this.translateDragontea(parseHTML(html)).html() || '';
-      }
-    }
+    const chapterText = novelChapter.length
+      ? novelChapter.first()
+      : loadedCheerio('.text-left') ||
+        loadedCheerio('.text-right') ||
+        loadedCheerio('.entry-content') ||
+        loadedCheerio('.c-blog-post > div > div:nth-child(2)');
 
-    const chapterText =
-      loadedCheerio('.text-left') ||
-      loadedCheerio('.text-right') ||
-      loadedCheerio('.entry-content') ||
-      loadedCheerio('.c-blog-post > div > div:nth-child(2)');
+    if (novelChapter.length) {
+      chapterText.find('.nhv-reader-promo, .nhv-reader-store-promo').remove();
+      chapterText.find('section').remove();
+    }
 
     if (this.options?.customJs) {
       try {
