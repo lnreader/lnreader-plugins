@@ -16,7 +16,9 @@
       "lang": "Arabic",
       "reverseChapters": true,
       "customJs": "$('article > style').text().match(/\\.\\w+(?=\\s*[,{])/g)?.forEach(tag => $(`p${tag}`).remove());$('.epcontent .code-block').remove();",
-      "versionIncrements": 10
+      "versionIncrements": 10,
+      "down": true,
+      "downSince": 1789180000000
     }
   },
   {
@@ -26,7 +28,9 @@
     "options": {
       "lang": "Arabic",
       "reverseChapters": true,
-      "customJs": "$('article > style').text().match(/\\.\\w+(?=\\s*[,{])/g)?.forEach(tag => $(`p${tag}`).remove());$('.epcontent .code-block').remove();"
+      "customJs": "$('article > style').text().match(/\\.\\w+(?=\\s*[,{])/g)?.forEach(tag => $(`p${tag}`).remove());$('.epcontent .code-block').remove();",
+      "down": true,
+      "downSince": 1789180000000
     }
   },
   {
