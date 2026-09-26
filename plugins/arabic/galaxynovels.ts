@@ -81,6 +81,16 @@ class GalaxyNovels implements Plugin.PluginBase {
     return res.text();
   }
 
+  /**
+   * The reader cache URLs come out of both attributes and JSON, and the site
+   * has shipped them both absolute and relative over time. Resolving against
+   * the site keeps a relative one from silently failing into the HTML
+   * fallback, which would truncate the chapter list to the first page.
+   */
+  private resolveUrl(url: string): string {
+    return url.startsWith('http') ? url : `${this.baseUrl}${url}`;
+  }
+
   private async fetchJson<T>(url: string): Promise<T> {
     const res = await fetchApi(url);
     if (!res.ok) {
@@ -91,10 +101,11 @@ class GalaxyNovels implements Plugin.PluginBase {
 
   private toChapter(ch: ChapterJSON, novelPath: string): Plugin.ChapterItem {
     // Use the url from the index verbatim. It carries a percent-encoded title
-    // slug (`/chapter-1/<slug>/`) which the site requires — the bare
-    // `/chapter-<id>/` form 404s.
-    const path = ch.url?.startsWith('http')
-      ? new URL(ch.url).pathname
+    // slug (`/chapter-<n>/<slug>/`) which the site requires: the bare
+    // `/chapter-<n>/` form 404s, and so does the internal id form. Relative
+    // index urls are resolved the same way.
+    const path = ch.url
+      ? new URL(this.resolveUrl(ch.url), this.site).pathname
       : `${novelPath}chapter-${ch.id}/`;
 
     return {
@@ -199,8 +210,12 @@ class GalaxyNovels implements Plugin.PluginBase {
       }
     } else if (manifestUrl) {
       try {
-        const manifest = await this.fetchJson<ChaptersManifest>(manifestUrl);
-        const pack = await this.fetchJson<ChaptersIndex>(manifest.pack_url);
+        const manifest = await this.fetchJson<ChaptersManifest>(
+          this.resolveUrl(manifestUrl),
+        );
+        const pack = await this.fetchJson<ChaptersIndex>(
+          this.resolveUrl(manifest.pack_url),
+        );
         chapters = pack.chapters.map(ch => this.toChapter(ch, novelPath));
       } catch {
         // fallback to HTML parsing
@@ -297,7 +312,7 @@ class GalaxyNovels implements Plugin.PluginBase {
       'https://galaxynovels.com/wp-content/uploads/wor-reader-cache/search/manifest.json';
     const manifest = await this.fetchJson<{
       index: string;
-    }>(manifestUrl);
+    }>(this.resolveUrl(manifestUrl));
 
     const searchIndex = await this.fetchJson<{
       items: {
@@ -306,7 +321,7 @@ class GalaxyNovels implements Plugin.PluginBase {
         c: string;
         s: string;
       }[];
-    }>(manifest.index);
+    }>(this.resolveUrl(manifest.index));
 
     const term = searchTerm.toLowerCase();
     const filtered = searchIndex.items.filter(
