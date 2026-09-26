@@ -189,6 +189,13 @@ export class MadaraPlugin implements Plugin.PluginBase {
         loadedCheerio('.post-title h1').text().trim() ||
         loadedCheerio('#manga-title h1').text().trim() ||
         loadedCheerio('.manga-title').text().trim() ||
+        // Newer child themes put the title in an <h1>/<h2> without any of the
+        // Madara title wrappers.
+        loadedCheerio('h1.entry-title, h1.nhv-novel-title, .nhv-novel-title')
+          .text()
+          .trim() ||
+        loadedCheerio('h1').first().text().trim() ||
+        loadedCheerio('h2').first().text().trim() ||
         '',
     };
 
@@ -356,7 +363,19 @@ export class MadaraPlugin implements Plugin.PluginBase {
       }).then((res: Response) => res.text());
     }
 
-    if (html !== '0') {
+    // Newer child themes dropped both chapter ajax endpoints — `ajax/chapters/`
+    // now 404s and `manga_get_chapters` answers 400 "0". Those sites render the
+    // chapter list straight into the novel's own page, so fall back to that
+    // whenever the ajax response turned up no chapters.
+    if (html && html !== '0' && parseHTML(html)('.wp-manga-chapter').length) {
+      loadedCheerio = parseHTML(html);
+    } else {
+      const detailPage = await this.getCheerio(this.site + novelPath, false);
+      if (!detailPage('.wp-manga-chapter').length) {
+        throw new Error('Could not find any chapters on the novel page');
+      }
+      html =
+        detailPage('.wp-manga-chapter').parent().html() || detailPage.html();
       loadedCheerio = parseHTML(html);
     }
 
@@ -397,6 +416,25 @@ export class MadaraPlugin implements Plugin.PluginBase {
 
   async parseChapter(chapterPath: string): Promise<string> {
     const loadedCheerio = await this.getCheerio(this.site + chapterPath, false);
+
+    // Newer Madara child themes wrap the body in a <novel-chapter> custom
+    // element instead of `.text-left`, and park their app-promos and
+    // obfuscated anti-ad <section> elements as siblings of the prose <p> tags.
+    // Drop those, then concatenate the paragraphs that are left.
+    const novelChapter = loadedCheerio('novel-chapter');
+    if (novelChapter.length) {
+      novelChapter.find('.nhv-reader-promo, .nhv-reader-store-promo').remove();
+      novelChapter.find('section').remove();
+      const paragraphs = novelChapter.find('p');
+      if (paragraphs.length) {
+        const html = paragraphs
+          .toArray()
+          .map(el => loadedCheerio(el).html() || '')
+          .join('');
+        return this.translateDragontea(parseHTML(html)).html() || '';
+      }
+    }
+
     const chapterText =
       loadedCheerio('.text-left') ||
       loadedCheerio('.text-right') ||
