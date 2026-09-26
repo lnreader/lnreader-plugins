@@ -311,6 +311,16 @@
     }
   },
   {
+    "id": "azora",
+    "sourceSite": "https://azoramoon.com/",
+    "sourceName": "Azora",
+    "options": {
+      "useNewChapterEndpoint": true,
+      "lang": "Arabic",
+      "down": true
+    }
+  },
+  {
     "id": "translatinotaku",
     "sourceSite": "https://translatinotaku.net/",
     "sourceName": "TranslatinOtaku",

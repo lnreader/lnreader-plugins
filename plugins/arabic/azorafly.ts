@@ -14,8 +14,9 @@ import { Filters, FilterTypes } from '@libs/filterInputs';
  * Two limits are worth knowing about:
  *  - the chapter list on a series page only carries the newest 20 chapters
  *    plus a "featured" one, so novels are listed newest-first;
- *  - `/novels` has no pages, and `?page=` is ignored, so paging is client-side
- *    and popularNovels returns the first page only.
+ *  - `/novels` and `/mangas` have no pages, and `?page=` is ignored, so paging
+ *    is client-side and both popularNovels and searchNovels return the first
+ *    page only.
  */
 class AzoraFly implements Plugin.PluginBase {
   id = 'azorafly';
@@ -87,8 +88,12 @@ class AzoraFly implements Plugin.PluginBase {
     }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
     // `?page=` is accepted but ignored by the site, so there is only one page
-    // of results to hand back.
-    void pageNo;
+    // of results to hand back. Returning [] past the first page is what tells
+    // the browse list there is nothing more to load.
+    if (pageNo > 1) {
+      return [];
+    }
+
     void showLatestNovels;
 
     const html = await this.fetchHtml(
@@ -197,15 +202,34 @@ class AzoraFly implements Plugin.PluginBase {
     return paragraphs.join('\n') || content.html()?.trim() || '';
   }
 
-  async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
+  async searchNovels(
+    searchTerm: string,
+    pageNo: number,
+  ): Promise<Plugin.NovelItem[]> {
     // The site's ?s= is not wired to the series catalogue, so match against
-    // what the listing page itself offers.
-    const html = await this.fetchHtml(`${this.baseUrl}/novels`);
-    const term = searchTerm.toLowerCase();
+    // the listing pages themselves. Manga are searchable too, otherwise a
+    // title browsable under the Manga filter could never be found.
+    if (pageNo > 1) {
+      return [];
+    }
 
-    return this.parseCards(html).filter(novel =>
-      novel.name.toLowerCase().includes(term),
-    );
+    const term = searchTerm.toLowerCase();
+    const match = (html: string) =>
+      this.parseCards(html).filter(novel =>
+        novel.name.toLowerCase().includes(term),
+      );
+
+    // Novels first, so search still answers if the manga listing is the half
+    // that is down; a failed half is skipped rather than failing the query.
+    const results = await match(await this.fetchHtml(`${this.baseUrl}/novels`));
+
+    try {
+      results.push(...match(await this.fetchHtml(`${this.baseUrl}/mangas`)));
+    } catch {
+      // manga listing unavailable — search the novels alone
+    }
+
+    return results;
   }
 }
 
