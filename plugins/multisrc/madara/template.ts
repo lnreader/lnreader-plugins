@@ -189,6 +189,13 @@ export class MadaraPlugin implements Plugin.PluginBase {
         loadedCheerio('.post-title h1').text().trim() ||
         loadedCheerio('#manga-title h1').text().trim() ||
         loadedCheerio('.manga-title').text().trim() ||
+        // Newer child themes put the title in an <h1>/<h2> without any of the
+        // Madara title wrappers.
+        loadedCheerio('h1.entry-title, h1.nhv-novel-title, .nhv-novel-title')
+          .text()
+          .trim() ||
+        loadedCheerio('h1').first().text().trim() ||
+        loadedCheerio('h2').first().text().trim() ||
         '',
     };
 
@@ -356,8 +363,21 @@ export class MadaraPlugin implements Plugin.PluginBase {
       }).then((res: Response) => res.text());
     }
 
-    if (html !== '0') {
+    // Newer child themes dropped both chapter ajax endpoints — `ajax/chapters/`
+    // now 404s and `manga_get_chapters` answers 400 "0". Those sites render the
+    // chapter list straight into the novel's own page, so fall back to that
+    // whenever the ajax response turned up no chapters.
+    if (html && html !== '0' && parseHTML(html)('.wp-manga-chapter').length) {
       loadedCheerio = parseHTML(html);
+    } else {
+      // `loadedCheerio` still holds the novel page parsed at the top of
+      // parseNovel, so the chapters are already here — no second request.
+      const chaptersOnPage = loadedCheerio('.wp-manga-chapter');
+      if (chaptersOnPage.length) {
+        loadedCheerio = parseHTML(chaptersOnPage.parent().html() || '');
+      }
+      // A novel with nothing published yet has no chapter list anywhere. That
+      // is a valid novel, not an error, so let it through with none.
     }
 
     const totalChapters = loadedCheerio('.wp-manga-chapter').length;
@@ -397,11 +417,24 @@ export class MadaraPlugin implements Plugin.PluginBase {
 
   async parseChapter(chapterPath: string): Promise<string> {
     const loadedCheerio = await this.getCheerio(this.site + chapterPath, false);
-    const chapterText =
-      loadedCheerio('.text-left') ||
-      loadedCheerio('.text-right') ||
-      loadedCheerio('.entry-content') ||
-      loadedCheerio('.c-blog-post > div > div:nth-child(2)');
+
+    // Newer Madara child themes wrap the body in a <novel-chapter> custom
+    // element instead of `.text-left`, and park their app-promos and
+    // obfuscated anti-ad <section> elements as siblings of the prose <p> tags.
+    // Drop those and keep the rest of the wrapper's content, so headings, lists
+    // and inline images inside it survive alongside the paragraphs.
+    const novelChapter = loadedCheerio('novel-chapter');
+    const chapterText = novelChapter.length
+      ? novelChapter.first()
+      : loadedCheerio('.text-left') ||
+        loadedCheerio('.text-right') ||
+        loadedCheerio('.entry-content') ||
+        loadedCheerio('.c-blog-post > div > div:nth-child(2)');
+
+    if (novelChapter.length) {
+      chapterText.find('.nhv-reader-promo, .nhv-reader-store-promo').remove();
+      chapterText.find('section').remove();
+    }
 
     if (this.options?.customJs) {
       try {
