@@ -311,15 +311,6 @@
     }
   },
   {
-    "id": "azora",
-    "sourceSite": "https://azoramoon.com/",
-    "sourceName": "Azora",
-    "options": {
-      "useNewChapterEndpoint": true,
-      "lang": "Arabic"
-    }
-  },
-  {
     "id": "translatinotaku",
     "sourceSite": "https://translatinotaku.net/",
     "sourceName": "TranslatinOtaku",
@@ -661,7 +652,6 @@
       "useNewChapterEndpoint": true
     }
   },
-
   {
     "id": "lovelyblossoms",
     "sourceSite": "https://lovelyblossoms.com/",
