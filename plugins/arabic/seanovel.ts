@@ -83,7 +83,7 @@ function extractInitialParagraphs(payload: string): string[] {
 class Seanovel implements Plugin.PluginBase {
   id = 'seanovel';
   name = 'Seanovel';
-  version = '1.1.0';
+  version = '1.2.0';
   icon = 'src/ar/seanovel/icon.png';
   site = 'https://seanovel.org/';
 
@@ -114,8 +114,20 @@ class Seanovel implements Plugin.PluginBase {
 
   private baseUrl = 'https://seanovel.org';
 
+  /**
+   * The site sits behind Cloudflare and its robots.txt disallows `/api/` to
+   * generic crawlers, so a bare request can come back 403. `fetchApi` sets no
+   * User-Agent of its own, which is the shape a bot presents. Sending the
+   * browser UA the app itself uses is what gets past it, and matches what
+   * other plugins in this repo do for the same reason.
+   */
+  private headers = {
+    'User-Agent':
+      'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36',
+  };
+
   private async fetchJson<T>(url: string): Promise<T> {
-    const res = await fetchApi(url);
+    const res = await fetchApi(url, { headers: this.headers });
     if (!res.ok) {
       throw new Error(`Could not reach site (${res.status})`);
     }
@@ -182,7 +194,7 @@ class Seanovel implements Plugin.PluginBase {
 
   async parseChapter(chapterPath: string): Promise<string> {
     const url = `${this.baseUrl}${chapterPath}`;
-    const res = await fetchApi(url);
+    const res = await fetchApi(url, { headers: this.headers });
     const html = await res.text();
 
     const allChunks: string[] = [];
