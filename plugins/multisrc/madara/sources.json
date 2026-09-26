@@ -316,7 +316,8 @@
     "sourceName": "Azora",
     "options": {
       "useNewChapterEndpoint": true,
-      "lang": "Arabic"
+      "lang": "Arabic",
+      "down": true
     }
   },
   {
@@ -661,7 +662,6 @@
       "useNewChapterEndpoint": true
     }
   },
-
   {
     "id": "lovelyblossoms",
     "sourceSite": "https://lovelyblossoms.com/",
