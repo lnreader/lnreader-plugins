@@ -30,11 +30,14 @@ class MVLEMPYRPlugin implements Plugin.PluginBase {
   name = 'MVLEMPYR';
   icon = 'src/en/mvlempyr/icon.png';
   site = 'https://www.mvlempyr.io/';
-  version = '1.0.14';
+  version = '1.0.15';
 
   _chapSite = 'https://chap.heliosarchive.online/';
   _allNovels: (Plugin.NovelItem & ExtraNovelData)[] | undefined;
   _allNovelsPromise: Promise<(Plugin.NovelItem & ExtraNovelData)[]> | undefined;
+  private headers = {
+    'Cache-Control': 'no-store',
+  };
 
   checkCaptcha(loadedCheerio: CheerioAPI) {
     const title = loadedCheerio('title').text();
@@ -100,23 +103,24 @@ class MVLEMPYRPlugin implements Plugin.PluginBase {
     );
     return u;
   }
-
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
     const url = this.site + novelPath;
-    const result = await fetchApi(url);
+    const result = await fetchApi(url, { headers: this.headers });
+
     const body = await result.text();
 
     const loadedCheerio = parseHTML(body);
-
     this.checkCaptcha(loadedCheerio);
 
     const code = loadedCheerio('#novel-code').text();
     const newNovelId = this.convertNovelId(BigInt(parseInt(code)));
+
     const firstPostsReq = await fetchApi(
       this._chapSite +
         'wp-json/wp/v2/posts?tags=' +
         newNovelId +
         '&per_page=500&page=1',
+      { headers: this.headers },
     );
 
     const pages = parseInt(firstPostsReq.headers.get('X-Wp-Totalpages')) || 1;
@@ -134,6 +138,7 @@ class MVLEMPYRPlugin implements Plugin.PluginBase {
                 newNovelId +
                 '&per_page=500&page=' +
                 page,
+              { headers: this.headers },
             ).then(res => res.json()),
           ),
       )),
