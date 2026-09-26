@@ -3,6 +3,7 @@ import { Plugin } from '@/types/plugin';
 import { FilterTypes, Filters } from '@libs/filterInputs';
 import { NovelStatus } from '@libs/novelStatus';
 import { defaultCover } from '@libs/defaultCover';
+import { isUrlAbsolute } from '@libs/isAbsoluteUrl';
 
 type ListingItem = {
   id: number;
@@ -41,6 +42,25 @@ const ISLAND = (id: string) =>
   );
 
 const BASE_URL = 'https://mtlarabic.com';
+
+/**
+ * Chapter bodies are plain text, but the reader injects the string returned by
+ * `parseChapter` straight into the DOM. Anything that looks like markup in a
+ * chapter would therefore be parsed as HTML, so escape the text before this
+ * plugin adds its own paragraph and line-break tags.
+ */
+const escapeHtml = (text: string) =>
+  text.replace(
+    /[&<>"']/g,
+    char =>
+      ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      })[char]!,
+  );
 
 /** `image` is a bare filename; the file itself lives under /images/novels/. */
 const coverUrl = (image?: string | null) =>
@@ -227,13 +247,19 @@ class MtlaArabic implements Plugin.PluginBase {
       .split(/\n{2,}/)
       .map(paragraph => paragraph.trim())
       .filter(Boolean)
-      .map(paragraph => `<p>${paragraph.replace(/\n/g, '<br>')}</p>`)
+      .map(
+        paragraph => `<p>${escapeHtml(paragraph).replace(/\n/g, '<br>')}</p>`,
+      )
       .join('');
   }
 
   // Novel paths are `/slug` and chapter paths `/slug/number` — both are
   // already site-absolute once the site is prepended, so `isNovel` adds nothing.
-  resolveUrl = (path: string) => this.site + path;
+  // Covers come back from `coverUrl` as fully-qualified URLs, and EPUB export
+  // runs them through here too, so an already-absolute URL must pass through
+  // untouched rather than get the site address glued onto its front.
+  resolveUrl = (path: string) =>
+    isUrlAbsolute(path) ? path : this.site + path;
 }
 
 export default new MtlaArabic();
