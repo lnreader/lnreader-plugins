@@ -21,6 +21,17 @@ type ChaptersIndex = {
   chapters: ChapterJSON[];
 };
 
+/**
+ * The chapter list is served as a static index the site's own reader
+ * hydrates from: a small `manifest` naming a `pack`, which holds every
+ * chapter. The novel page only ever renders the first page of it.
+ */
+type ChaptersManifest = {
+  novel_id: number;
+  total: number;
+  pack_url: string;
+};
+
 type ChapterContentResponse = {
   schema: number;
   data: {
@@ -33,7 +44,7 @@ type ChapterContentResponse = {
 class GalaxyNovels implements Plugin.PluginBase {
   id = 'galaxynovels';
   name = 'Galaxy Novels';
-  version = '1.1.0';
+  version = '1.2.0';
   icon = 'src/ar/galaxynovels/icon.png';
   site = 'https://galaxynovels.com/';
 
@@ -70,12 +81,41 @@ class GalaxyNovels implements Plugin.PluginBase {
     return res.text();
   }
 
+  /**
+   * The reader cache URLs come out of both attributes and JSON, and the site
+   * has shipped them both absolute and relative over time. Resolving against
+   * the site keeps a relative one from silently failing into the HTML
+   * fallback, which would truncate the chapter list to the first page.
+   */
+  private resolveUrl(url: string): string {
+    return url.startsWith('http') ? url : `${this.baseUrl}${url}`;
+  }
+
   private async fetchJson<T>(url: string): Promise<T> {
     const res = await fetchApi(url);
     if (!res.ok) {
       throw new Error(`Could not reach site (${res.status})`);
     }
     return res.json() as Promise<T>;
+  }
+
+  private toChapter(ch: ChapterJSON, novelPath: string): Plugin.ChapterItem {
+    // Use the url from the index verbatim. It carries a percent-encoded title
+    // slug (`/chapter-<n>/<slug>/`) which the site requires: the bare
+    // `/chapter-<n>/` form 404s, and so does the internal id form. Relative
+    // index urls are resolved the same way.
+    const path = ch.url
+      ? new URL(this.resolveUrl(ch.url), this.site).pathname
+      : `${novelPath}chapter-${ch.id}/`;
+
+    return {
+      name:
+        (ch.label || ch.title || `Chapter ${ch.position}`) +
+        (ch.label && ch.title ? `: ${ch.title}` : ''),
+      path,
+      chapterNumber: ch.position,
+      releaseTime: ch.date_iso?.split('T')[0] || '',
+    };
   }
 
   async popularNovels(
@@ -106,8 +146,7 @@ class GalaxyNovels implements Plugin.PluginBase {
       const coverLink = $el.find('a.wor-novel-card__cover');
       const href = coverLink.attr('href');
       const img = $el.find('img.wor-cover-img');
-      const cover =
-        img.attr('data-src') || img.attr('src') || undefined;
+      const cover = img.attr('data-src') || img.attr('src') || undefined;
       const title = $el.find('h3 a').text().trim();
 
       if (!href || !title) return;
@@ -150,9 +189,14 @@ class GalaxyNovels implements Plugin.PluginBase {
 
     const chaptersContainer = $('[data-wor-chapters-container]');
     const chaptersIndexUrl = chaptersContainer.attr('data-index-url');
+    const manifestUrl = chaptersContainer.attr('data-manifest-url');
 
     let chapters: Plugin.ChapterItem[] = [];
 
+    // Older builds pointed straight at an index. Current ones render only the
+    // first page of chapters (data-rendered-count) while the total lives in
+    // data-rendered-total, so read the full list the reader itself hydrates
+    // from before falling back to whatever HTML we were given.
     if (chaptersIndexUrl) {
       try {
         const indexUrl = chaptersIndexUrl.startsWith('http')
@@ -160,12 +204,19 @@ class GalaxyNovels implements Plugin.PluginBase {
           : `${this.baseUrl}${chaptersIndexUrl}`;
         const index = await this.fetchJson<ChaptersIndex>(indexUrl);
 
-        chapters = index.chapters.map(ch => ({
-          name: ch.label + (ch.title ? `: ${ch.title}` : ''),
-          path: `${novelPath}chapter-${ch.id}/`,
-          chapterNumber: ch.position,
-          releaseTime: ch.date_iso?.split('T')[0] || '',
-        }));
+        chapters = index.chapters.map(ch => this.toChapter(ch, novelPath));
+      } catch {
+        // fallback to HTML parsing
+      }
+    } else if (manifestUrl) {
+      try {
+        const manifest = await this.fetchJson<ChaptersManifest>(
+          this.resolveUrl(manifestUrl),
+        );
+        const pack = await this.fetchJson<ChaptersIndex>(
+          this.resolveUrl(manifest.pack_url),
+        );
+        chapters = pack.chapters.map(ch => this.toChapter(ch, novelPath));
       } catch {
         // fallback to HTML parsing
       }
@@ -174,17 +225,19 @@ class GalaxyNovels implements Plugin.PluginBase {
     if (chapters.length === 0) {
       $('article.wor-novel-chapter-item').each((_, el) => {
         const $el = $(el);
-        const chapterLink = $el.find('h3 a').attr('href') || $el.find('a.wor-novel-chapter-item__num').attr('href');
-        const chapterName = $el.find('h3 a').text().trim() || $el.find('a.wor-novel-chapter-item__num').text().trim();
-        const chapterId = $el.attr('data-chapter-id');
+        const chapterLink =
+          $el.find('h3 a').attr('href') ||
+          $el.find('a.wor-novel-chapter-item__num').attr('href');
+        const chapterName =
+          $el.find('h3 a').text().trim() ||
+          $el.find('a.wor-novel-chapter-item__num').text().trim();
         const timeEl = $el.find('time');
         const releaseTime = timeEl.attr('datetime')?.split('T')[0] || '';
 
         if (!chapterLink) return;
 
-        const path = chapterId
-          ? `${novelPath}chapter-${chapterId}/`
-          : new URL(chapterLink, this.site).pathname;
+        // Keep the href's title slug. The bare `/chapter-<id>/` form 404s.
+        const path = new URL(chapterLink, this.site).pathname;
         const numMatch = path.match(/chapter-(\d+)/);
         const chapterNumber = numMatch ? parseInt(numMatch[1]) : 0;
 
@@ -221,16 +274,34 @@ class GalaxyNovels implements Plugin.PluginBase {
           return response.data.content_html;
         }
       } catch {
-        // fallback to HTML
+        // the reader app route is walled off; fall back to the HTML page
       }
     }
 
     const url = `${this.baseUrl}${chapterPath}`;
     const html = await this.fetchHtml(url);
     const $ = loadCheerio(html);
-    const content =
-      $('article.wor-chapter-content, .wor-chapter-text, .entry-content').html();
-    return content || '<p>Content not available.</p>';
+
+    // The reader renders the prose into .wor-reader-text-surface; the older
+    // classes are kept as fallbacks for older builds.
+    const content = $(
+      '.wor-reader-text-surface, article.wor-chapter-content, .wor-chapter-text, .entry-content',
+    ).first();
+
+    // The surface also carries the reader's own chrome (settings panels, the
+    // progress bar) — keep only the prose paragraphs.
+    const paragraphs = content.find('p').toArray();
+    if (paragraphs.length) {
+      const body = paragraphs
+        .map(el => $.html(el) || '')
+        .join('')
+        .trim();
+      if (body) {
+        return body;
+      }
+    }
+
+    return content.html()?.trim() || '<p>Content not available.</p>';
   }
 
   async searchNovels(
@@ -241,7 +312,7 @@ class GalaxyNovels implements Plugin.PluginBase {
       'https://galaxynovels.com/wp-content/uploads/wor-reader-cache/search/manifest.json';
     const manifest = await this.fetchJson<{
       index: string;
-    }>(manifestUrl);
+    }>(this.resolveUrl(manifestUrl));
 
     const searchIndex = await this.fetchJson<{
       items: {
@@ -250,13 +321,11 @@ class GalaxyNovels implements Plugin.PluginBase {
         c: string;
         s: string;
       }[];
-    }>(manifest.index);
+    }>(this.resolveUrl(manifest.index));
 
     const term = searchTerm.toLowerCase();
     const filtered = searchIndex.items.filter(
-      n =>
-        n.t.toLowerCase().includes(term) ||
-        n.s.toLowerCase().includes(term),
+      n => n.t.toLowerCase().includes(term) || n.s.toLowerCase().includes(term),
     );
 
     const limit = 20;
@@ -265,9 +334,7 @@ class GalaxyNovels implements Plugin.PluginBase {
     return filtered.slice(offset, offset + limit).map(novel => ({
       name: novel.t,
       path: novel.u,
-      cover: novel.c.startsWith('http')
-        ? novel.c
-        : `${this.baseUrl}${novel.c}`,
+      cover: novel.c.startsWith('http') ? novel.c : `${this.baseUrl}${novel.c}`,
     }));
   }
 }
