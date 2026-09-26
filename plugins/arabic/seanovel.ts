@@ -32,10 +32,58 @@ type SeanovelNovelListItem = {
   description: string;
 };
 
+/**
+ * Pull the `initialParagraphs` array out of a Next.js RSC payload.
+ *
+ * The array is sliced out by scanning for its closing bracket, but a plain
+ * depth counter breaks on the first `[` or `]` that appears *inside* a
+ * paragraph — translated chapters quote things like "انظر [ملاحظة]" often
+ * enough that ~4% of chapters came back as a truncated, unparseable slice and
+ * the reader showed "Content not available". So the scan has to know when it
+ * is inside a JSON string literal.
+ */
+function extractInitialParagraphs(payload: string): string[] {
+  const keyIndex = payload.indexOf('"initialParagraphs"');
+  if (keyIndex < 0) return [];
+  const start = payload.indexOf('[', keyIndex);
+  if (start < 0) return [];
+
+  let depth = 0;
+  let inString = false;
+  for (let i = start; i < payload.length; i++) {
+    const char = payload[i];
+    if (inString) {
+      if (char === '\\') {
+        i++; // the next character is escaped, whatever it is
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+    if (char === '"') {
+      inString = true;
+    } else if (char === '[' || char === '{') {
+      depth++;
+    } else if (char === ']' || char === '}') {
+      depth--;
+      if (depth === 0) {
+        try {
+          const parsed: unknown = JSON.parse(payload.substring(start, i + 1));
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      }
+    }
+  }
+
+  return [];
+}
+
 class Seanovel implements Plugin.PluginBase {
   id = 'seanovel';
   name = 'Seanovel';
-  version = '1.0.0';
+  version = '1.1.0';
   icon = 'src/ar/seanovel/icon.png';
   site = 'https://seanovel.org/';
 
@@ -150,39 +198,12 @@ class Seanovel implements Plugin.PluginBase {
     }
 
     if (allChunks.length > 0) {
-      const fullPayload = allChunks.join('');
-      const initIdx = fullPayload.indexOf('initialParagraphs');
-      if (initIdx > 0) {
-        const arrStart = fullPayload.indexOf('[', initIdx);
-        if (arrStart > 0) {
-          let depth = 0;
-          let arrEnd = -1;
-          for (let i = arrStart; i < fullPayload.length; i++) {
-            if (fullPayload[i] === '[') depth++;
-            if (fullPayload[i] === ']') {
-              depth--;
-              if (depth === 0) {
-                arrEnd = i + 1;
-                break;
-              }
-            }
-          }
-          if (arrEnd > 0) {
-            const raw = fullPayload.substring(arrStart, arrEnd);
-            const unescaped = raw.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
-            try {
-              const paragraphs: string[] = JSON.parse(unescaped);
-              if (paragraphs.length > 0) {
-                return paragraphs
-                  .filter(p => typeof p === 'string' && p.trim())
-                  .map(p => `<p>${p.trim()}</p>`)
-                  .join('\n');
-              }
-            } catch {
-              // fallback below
-            }
-          }
-        }
+      const paragraphs = extractInitialParagraphs(allChunks.join(''));
+      if (paragraphs.length > 0) {
+        return paragraphs
+          .filter(p => typeof p === 'string' && p.trim())
+          .map(p => `<p>${p.trim()}</p>`)
+          .join('\n');
       }
     }
 
