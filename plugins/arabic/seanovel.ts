@@ -117,9 +117,13 @@ class Seanovel implements Plugin.PluginBase {
   /**
    * The site sits behind Cloudflare and its robots.txt disallows `/api/` to
    * generic crawlers, so a bare request can come back 403. `fetchApi` sets no
-   * User-Agent of its own, which is the shape a bot presents. Sending the
-   * browser UA the app itself uses is what gets past it, and matches what
-   * other plugins in this repo do for the same reason.
+   * User-Agent of its own, which is the shape a bot presents; sending the
+   * browser UA the app itself uses matches what other plugins in this repo do
+   * for the same reason.
+   *
+   * Note this does not get past every block: the API also 403s for whole IP
+   * ranges, GitHub's CI runners among them, and no header changes that. That
+   * is a site-side decision, not something to fix here.
    */
   private headers = {
     'User-Agent':
