@@ -30,7 +30,17 @@ const CIPHER_TABLES: Record<number, string> = {
 // l-shaped glyphs there) need a sentence-start l -> I restoration pass.
 function decodeCipheredText(content: string, seed: number): string {
   const table = CIPHER_TABLES[seed];
-  if (!table) return content;
+  if (!table) {
+    // Passing ciphertext through would show the reader rows of blank glyphs.
+    if (/[\ue000-\ue0ff]/.test(content)) {
+      throw new Error(
+        'Cherry Mist Cafe changed its text cipher (seed ' +
+          seed +
+          '); this chapter cannot be decoded yet. Read it in WebView.',
+      );
+    }
+    return content;
+  }
   let out = '';
   for (let i = 0; i < content.length; i++) {
     const code = content.charCodeAt(i);
@@ -44,8 +54,20 @@ function decodeCipheredText(content: string, seed: number): string {
   // A standalone lowercase l is always the pronoun I.
   out = out.replace(/\bl\b/g, 'I');
   if (table.indexOf('I') === -1) {
+    // No English word starts with a lowercase l before one of these
+    // consonants, so such words are I-words (It, If, In, Is...) wherever they
+    // sit, including right after <p>/<em> tags. Tags, comments and entities
+    // such as &lt; or dir="ltr" are skipped.
     out = out.replace(
-      /(^|[.!?…]+["”’\s]*["“‘([]?\s*)(l)(?=[a-z])/g,
+      /(<!--[\s\S]*?-->|<[^>]*>|&[a-z]+;?)|\bl(?=[cdfghjkmnpqrstvwxz])/g,
+      function (match, markup) {
+        return markup ? match : 'I';
+      },
+    );
+    // A vowel after the l (let, like, look...) is a real l-word even after an
+    // ellipsis, so only consonant-led l-words are restored at sentence starts.
+    out = out.replace(
+      /(^|[.!?…]+["”’\s]*["“‘([]?\s*)(l)(?=[b-df-hj-np-tv-xz])/g,
       function (match, pre, _l, offset, full) {
         const before = full.slice(0, offset).replace(/[\s"”’‘([]+$/, '');
         if (
@@ -101,7 +123,7 @@ type ChapterRow = {
   id: number;
   slug: string;
   title: string;
-  chapter_number: number;
+  chapter_number: number | null;
   published_at?: string;
 };
 
@@ -109,12 +131,17 @@ type ChapterDetail = {
   id: number;
   slug: string;
   title: string;
-  content?: string;
-  foreword?: string;
-  afterword?: string;
-  chapter_number: number;
-  published_at?: string;
-  cipher?: { seed?: number };
+  content?: string | null;
+  foreword?: string | null;
+  afterword?: string | null;
+  chapter_number: number | null;
+  published_at?: string | null;
+  scheduled_at?: string | null;
+  coin_price?: number | null;
+  paid_locked?: boolean;
+  coming_soon?: boolean;
+  has_access_password?: boolean;
+  cipher?: { seed?: number } | null;
 };
 
 class CherryMistCafePlugin implements Plugin.PluginBase {
@@ -122,10 +149,26 @@ class CherryMistCafePlugin implements Plugin.PluginBase {
   name = 'Cherry Mist Cafe';
   icon = 'src/en/cherrymistcafe/icon.png';
   site = 'https://cherrymist.cafe';
-  version = '1.0.0';
+  version = '2.0.0';
 
   private async getJson<T>(url: string): Promise<T> {
     const res = await fetchApi(url);
+    if (!res.ok) {
+      // The API answers misses with {"error":"Not found"}; without this a
+      // removed series parses as an untitled novel with no chapters.
+      let reason = res.statusText;
+      try {
+        reason = ((await res.json()) as { error?: string }).error || reason;
+      } catch {
+        // Cloudflare error pages are HTML, keep the status text.
+      }
+      throw new Error(
+        'Cherry Mist Cafe request failed (HTTP ' +
+          res.status +
+          (reason ? ': ' + reason : '') +
+          ')',
+      );
+    }
     return (await res.json()) as T;
   }
 
@@ -196,7 +239,7 @@ class CherryMistCafePlugin implements Plugin.PluginBase {
     else if (status === 'hiatus') novel.status = NovelStatus.OnHiatus;
     else novel.status = NovelStatus.Ongoing;
 
-    const chapters: Plugin.ChapterItem[] = [];
+    const chapters: (Plugin.ChapterItem & { order: number })[] = [];
     const perPage = 500;
     let page = 1;
     for (;;) {
@@ -214,27 +257,62 @@ class CherryMistCafePlugin implements Plugin.PluginBase {
         chapters.push({
           name: row.title,
           path: 'chapter/' + row.id + '/' + row.slug,
-          chapterNumber: row.chapter_number,
+          chapterNumber:
+            typeof row.chapter_number === 'number'
+              ? row.chapter_number
+              : undefined,
           releaseTime: row.published_at,
+          order: chapters.length,
         });
       }
       if (rows.length < perPage) break;
       page++;
       if (page > 10) break;
     }
-    chapters.sort((a, b) => (a.chapterNumber || 0) - (b.chapterNumber || 0));
-    novel.chapters = chapters;
+    // Newer uploads can have a null chapter_number; the API lists those first
+    // although they follow the numbered ones, so keep them after in API order.
+    chapters.sort((a, b) => {
+      const an = a.chapterNumber === undefined ? Infinity : a.chapterNumber;
+      const bn = b.chapterNumber === undefined ? Infinity : b.chapterNumber;
+      return an === bn ? a.order - b.order : an < bn ? -1 : 1;
+    });
+    novel.chapters = chapters.map(c => ({
+      name: c.name,
+      path: c.path,
+      chapterNumber: c.chapterNumber,
+      releaseTime: c.releaseTime,
+    }));
     return novel;
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
     const segment = (chapterPath.replace(/^chapter\//, '') || '').split('/')[0];
     const id = parseInt(segment, 10);
-    if (!id) return '';
+    if (!id)
+      throw new Error('Invalid Cherry Mist Cafe chapter path: ' + chapterPath);
     const detail: ChapterDetail = await this.getJson(
       this.site + '/api/chapters/' + id,
     );
-    if (!detail) return '';
+    if (!detail) throw new Error('Cherry Mist Cafe returned no chapter data');
+    if (detail.content == null) {
+      // Locked chapters come back with content: null and no cipher.
+      if (detail.paid_locked) {
+        throw new Error(
+          'This chapter is coin-locked on Cherry Mist Cafe' +
+            (detail.coin_price ? ' (' + detail.coin_price + ' coins)' : '') +
+            (detail.coming_soon && detail.scheduled_at
+              ? '; scheduled for ' + detail.scheduled_at.slice(0, 10)
+              : '') +
+            '. Unlock it in WebView.',
+        );
+      }
+      if (detail.has_access_password) {
+        throw new Error(
+          'This chapter is password-protected on Cherry Mist Cafe. Open it in WebView.',
+        );
+      }
+      throw new Error('Cherry Mist Cafe returned no text for this chapter');
+    }
     const seed =
       detail.cipher && typeof detail.cipher.seed === 'number'
         ? detail.cipher.seed
