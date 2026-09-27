@@ -242,7 +242,9 @@ class GalaxyNovels implements Plugin.PluginBase {
       }
     }
 
-    return '<p>Content not available.</p>';
+    // Throw rather than return placeholder text, which the reader would show
+    // (and a download would save) as if it were the chapter.
+    throw new Error('Chapter text not found on the page, open it in WebView.');
   }
 
   async searchNovels(
