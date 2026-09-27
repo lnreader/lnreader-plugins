@@ -13,7 +13,8 @@
     "sourceSite": "https://lunarletters.com/",
     "sourceName": "LunarLetters",
     "options": {
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "versionIncrements": 1
     }
   },
   {
@@ -21,7 +22,8 @@
     "sourceSite": "https://sleepytranslations.com/",
     "sourceName": "SleepyTranslations",
     "options": {
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "versionIncrements": 1
     }
   },
   {
@@ -29,7 +31,8 @@
     "sourceSite": "https://1stkissnovel.org/",
     "sourceName": "FirstKissNovel",
     "options": {
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "versionIncrements": 1
     }
   },
   {
@@ -46,19 +49,25 @@
     "id": "mostnovel",
     "sourceSite": "https://mostnovel.com/",
     "sourceName": "MostNovel",
-    "options": {}
+    "options": {
+      "versionIncrements": 1
+    }
   },
   {
     "id": "novelmultiverse",
     "sourceSite": "https://www.novelmultiverse.com/",
-    "sourceName": "NovelMultiverse"
+    "sourceName": "NovelMultiverse",
+    "options": {
+      "versionIncrements": 1
+    }
   },
   {
     "id": "lnheaven",
     "sourceSite": "https://lightnovelheaven.com/",
     "sourceName": "LightNovelHeaven",
     "options": {
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "versionIncrements": 1
     }
   },
   {
@@ -67,6 +76,7 @@
     "sourceName": "ArNovel",
     "options": {
       "useNewChapterEndpoint": true,
+      "versionIncrements": 1,
       "lang": "Arabic"
     }
   },
@@ -76,6 +86,7 @@
     "sourceName": "MeioNovel",
     "options": {
       "useNewChapterEndpoint": true,
+      "versionIncrements": 1,
       "lang": "Indonesian"
     }
   },
@@ -93,7 +104,8 @@
     "sourceSite": "https://wbnovel.com/",
     "sourceName": "WBNovel",
     "options": {
-      "lang": "Indonesian"
+      "lang": "Indonesian",
+      "versionIncrements": 1
     }
   },
   {
@@ -101,7 +113,8 @@
     "sourceSite": "https://wuxiaworld.site/",
     "sourceName": "WuxiaWorld.Site",
     "options": {
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "versionIncrements": 1
     }
   },
   {
@@ -109,7 +122,8 @@
     "sourceSite": "https://mysticalmerries.com/",
     "sourceName": "MysticalSeries",
     "options": {
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "versionIncrements": 1
     }
   },
   {
@@ -118,6 +132,7 @@
     "sourceName": "Vanovel",
     "options": {
       "useNewChapterEndpoint": true,
+      "versionIncrements": 1,
       "lang": "Indonesian"
     }
   },
@@ -127,7 +142,8 @@
     "sourceName": "HizoManga",
     "options": {
       "useNewChapterEndpoint": true,
-      "lang": "Arabic"
+      "lang": "Arabic",
+      "versionIncrements": 1
     }
   },
   {
@@ -137,6 +153,7 @@
     "options": {
       "useNewChapterEndpoint": true,
       "lang": "Arabic",
+      "versionIncrements": 1,
       "customJs": "chapterText.find('span[style*=\"opacity: 0; position: fixed;\"],[role=\"presentation\"]').remove();"
     }
   },
@@ -155,7 +172,8 @@
     "sourceSite": "https://turkcelightnovels.com/",
     "sourceName": "TurkceLightNovels",
     "options": {
-      "lang": "Turkish"
+      "lang": "Turkish",
+      "versionIncrements": 1
     }
   },
   {
@@ -163,7 +181,8 @@
     "sourceSite": "https://www.sonicmtl.com/",
     "sourceName": "SonicMTL",
     "options": {
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "versionIncrements": 1
     }
   },
   {
@@ -179,7 +198,10 @@
   {
     "id": "neosekaiTLS",
     "sourceSite": "https://www.neosekaitranslations.com/",
-    "sourceName": "NeoSekai Translations"
+    "sourceName": "NeoSekai Translations",
+    "options": {
+      "versionIncrements": 1
+    }
   },
   {
     "id": "mtl-novel",
@@ -196,7 +218,8 @@
     "sourceSite": "https://zetrotranslation.com/",
     "sourceName": "Zetro Translation",
     "options": {
-      "hasLocked": true
+      "hasLocked": true,
+      "versionIncrements": 1
     }
   },
   {
@@ -204,7 +227,8 @@
     "sourceSite": "https://www.webnoveloku.com/",
     "sourceName": "WebNovelOku",
     "options": {
-      "lang": "Turkish"
+      "lang": "Turkish",
+      "versionIncrements": 1
     }
   },
   {
@@ -221,7 +245,8 @@
     "sourceSite": "https://www.foxaholic.com/",
     "sourceName": "Foxaholic",
     "options": {
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "versionIncrements": 1
     }
   },
   {
@@ -229,7 +254,8 @@
     "sourceSite": "https://nitromanga.com/",
     "sourceName": "Nitro Manga",
     "options": {
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "versionIncrements": 1
     }
   },
   {
@@ -248,6 +274,7 @@
     "sourceName": "Pancho Translations",
     "options": {
       "useNewChapterEndpoint": true,
+      "versionIncrements": 1,
       "lang": "Spanish"
     }
   },
@@ -256,7 +283,8 @@
     "sourceSite": "https://salmonlatte.com/",
     "sourceName": "Salmon Latte",
     "options": {
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "versionIncrements": 1
     }
   },
   {
@@ -264,7 +292,8 @@
     "sourceSite": "https://srankmanga.com/",
     "sourceName": "Srank Manga",
     "options": {
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "versionIncrements": 1
     }
   },
   {
@@ -273,6 +302,7 @@
     "sourceName": "Novel Lucky",
     "options": {
       "useNewChapterEndpoint": true,
+      "versionIncrements": 1,
       "lang": "Thai"
     }
   },
@@ -281,7 +311,8 @@
     "sourceSite": "https://fanstranslations.com/",
     "sourceName": "Fans Translations",
     "options": {
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "versionIncrements": 1
     }
   },
   {
@@ -290,6 +321,7 @@
     "sourceName": "WorldNovel",
     "options": {
       "useNewChapterEndpoint": true,
+      "versionIncrements": 1,
       "lang": "French"
     }
   },
@@ -298,7 +330,8 @@
     "sourceSite": "https://hiraethtranslation.com/",
     "sourceName": "Hiraeth Translation",
     "options": {
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "versionIncrements": 1
     }
   },
   {
@@ -307,6 +340,7 @@
     "sourceName": "Novel PDF",
     "options": {
       "useNewChapterEndpoint": true,
+      "versionIncrements": 1,
       "lang": "Thai"
     }
   },
@@ -316,6 +350,7 @@
     "sourceName": "Azora",
     "options": {
       "useNewChapterEndpoint": true,
+      "versionIncrements": 1,
       "lang": "Arabic"
     }
   },
@@ -325,6 +360,7 @@
     "sourceName": "TranslatinOtaku",
     "options": {
       "useNewChapterEndpoint": true,
+      "versionIncrements": 1,
       "lang": "English"
     }
   },
@@ -334,6 +370,7 @@
     "sourceName": "Dragon Tea",
     "options": {
       "useNewChapterEndpoint": true,
+      "versionIncrements": 1,
       "lang": "English"
     }
   },
@@ -343,6 +380,7 @@
     "sourceName": "NovelBookID",
     "options": {
       "useNewChapterEndpoint": true,
+      "versionIncrements": 1,
       "lang": "Indonesian"
     }
   },
@@ -384,7 +422,8 @@
     "sourceSite": "https://wordexcerpt.com/",
     "sourceName": "WordExcerpt",
     "options": {
-      "lang": "English"
+      "lang": "English",
+      "versionIncrements": 1
     }
   },
   {
@@ -393,6 +432,7 @@
     "sourceName": "Citrus Aurora",
     "options": {
       "useNewChapterEndpoint": true,
+      "versionIncrements": 1,
       "lang": "English"
     }
   },
@@ -402,6 +442,7 @@
     "sourceName": "Dusk Blossoms",
     "options": {
       "useNewChapterEndpoint": true,
+      "versionIncrements": 1,
       "lang": "English"
     }
   },
@@ -422,6 +463,7 @@
     "sourceName": "Traducciones Amistosas",
     "options": {
       "useNewChapterEndpoint": true,
+      "versionIncrements": 1,
       "lang": "Spanish"
     }
   },
@@ -442,6 +484,7 @@
     "sourceName": "Pastel Tales",
     "options": {
       "useNewChapterEndpoint": true,
+      "versionIncrements": 1,
       "lang": "English"
     }
   },
@@ -451,6 +494,7 @@
     "sourceName": "Araz Novel",
     "options": {
       "useNewChapterEndpoint": true,
+      "versionIncrements": 1,
       "lang": "Turkish"
     }
   },
@@ -482,6 +526,7 @@
     "sourceName": "E-KİTAPLAR",
     "options": {
       "useNewChapterEndpoint": true,
+      "versionIncrements": 1,
       "lang": "Turkish"
     }
   },
@@ -491,6 +536,7 @@
     "sourceName": "Wook's Teahouse",
     "options": {
       "useNewChapterEndpoint": true,
+      "versionIncrements": 1,
       "lang": "English"
     }
   },
@@ -500,7 +546,8 @@
     "sourceSite": "https://eternalune.com/",
     "options": {
       "lang": "English",
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "versionIncrements": 1
     }
   },
   {
@@ -509,7 +556,8 @@
     "sourceName": "Fortune Eternal",
     "options": {
       "lang": "Korean",
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "versionIncrements": 1
     }
   },
   {
@@ -518,7 +566,8 @@
     "sourceName": "Ragnar Scans",
     "options": {
       "lang": "Turkish",
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "versionIncrements": 1
     }
   },
   {
@@ -526,7 +575,8 @@
     "sourceSite": "https://readfanfic.com/",
     "sourceName": "Read Fanfic",
     "options": {
-      "lang": "English"
+      "lang": "English",
+      "versionIncrements": 1
     }
   },
   {
@@ -567,7 +617,8 @@
     "sourceName": "kakikata",
     "options": {
       "lang": "Turkish",
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "versionIncrements": 1
     }
   },
   {
@@ -577,6 +628,7 @@
     "options": {
       "lang": "English",
       "useNewChapterEndpoint": true,
+      "versionIncrements": 1,
       "customJs": "loadedCheerio('img[alt=\"Buy Me a Coffee at ko-fi.com\"]').parent().remove(); loadedCheerio('*').contents().each(function() {if (this.type === 'comment' && this.data.trim() === 'Text Ranovel') {let currentNode = this.next;for (let i = 0; i < 2 && currentNode; i++) {const nextNode = currentNode.next;loadedCheerio(currentNode).remove();currentNode = nextNode;}}});"
     }
   },
@@ -586,7 +638,8 @@
     "sourceName": "Dragonholic",
     "options": {
       "lang": "English",
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "versionIncrements": 1
     }
   },
   {
@@ -595,7 +648,8 @@
     "sourceName": "Etude Translations",
     "options": {
       "lang": "English",
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "versionIncrements": 1
     }
   },
   {
@@ -604,7 +658,8 @@
     "sourceName": "MassNovel",
     "options": {
       "lang": "French",
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "versionIncrements": 1
     }
   },
   {
@@ -613,7 +668,8 @@
     "sourceName": "Noice Translations",
     "options": {
       "lang": "English",
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "versionIncrements": 1
     }
   },
   {
@@ -621,7 +677,8 @@
     "sourceSite": "https://novelninja.xyz/",
     "sourceName": "Novel Ninja",
     "options": {
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "versionIncrements": 1
     }
   },
   {
@@ -630,7 +687,8 @@
     "sourceName": "LulloBox",
     "options": {
       "lang": "English",
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "versionIncrements": 1
     }
   },
   {
@@ -649,7 +707,8 @@
     "sourceName": "Novel Nice",
     "options": {
       "lang": "English",
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "versionIncrements": 1
     }
   },
   {
@@ -658,16 +717,17 @@
     "sourceName": "Novel Short",
     "options": {
       "lang": "English",
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "versionIncrements": 1
     }
   },
-
   {
     "id": "lovelyblossoms",
     "sourceSite": "https://lovelyblossoms.com/",
     "sourceName": "Lovelyblossoms",
     "options": {
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "versionIncrements": 1
     }
   },
   {
@@ -676,7 +736,8 @@
     "sourceName": "Tangerine Archive",
     "options": {
       "lang": "English",
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "versionIncrements": 1
     }
   }
 ]
