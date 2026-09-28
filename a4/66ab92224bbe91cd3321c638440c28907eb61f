@@ -1,0 +1,19 @@
+.github/workflows/update-issue-template.yml
+  s_fba6b24dd9c1e1::t_fb2fdc338f52b9 50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "a466ab92224bbe91cd3321c638440c28907eb61f",
+  "prompts": {},
+  "sessions": {
+    "s_fba6b24dd9c1e1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0e67b-5faf-7542-8b43-3beeec3826ea",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Rajarshee Chatterjee <rajarshee.adm@gmail.com>"
+    }
+  }
+}
