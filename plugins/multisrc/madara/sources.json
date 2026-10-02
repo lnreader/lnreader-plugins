@@ -285,15 +285,6 @@
     }
   },
   {
-    "id": "worldnovel",
-    "sourceSite": "https://world-novel.fr/",
-    "sourceName": "WorldNovel",
-    "options": {
-      "useNewChapterEndpoint": true,
-      "lang": "French"
-    }
-  },
-  {
     "id": "hiraethtranslation",
     "sourceSite": "https://hiraethtranslation.com/",
     "sourceName": "Hiraeth Translation",
