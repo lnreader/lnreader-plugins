@@ -692,9 +692,9 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
             }
 
             if (chapterHref !== undefined) {
-              const path = chapterHref.startsWith('/')
-                ? chapterHref.slice(1)
-                : chapterHref.replace(this.site + '/', '');
+              const path = new URL(chapterHref, this.site).pathname.substring(
+                1,
+              );
               tempAjaxChapter.path = path;
               tempAjaxChapter.name = initialName;
             }

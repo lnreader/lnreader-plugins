@@ -71,13 +71,13 @@
     }
   },
   {
-    "id": "novelbin",
-    "sourceSite": "https://novelbin.com/",
-    "sourceName": "Novel Bin",
+    "id": "novelarrow",
+    "sourceSite": "https://novelping.com/",
+    "sourceName": "Novel Arrow",
     "options": {
-      "latestPage": "sort/latest",
+      "latestPage": "sort/updates",
       "searchPage": "search",
-      "versionIncrements": 1,
+      "versionIncrements": 0,
       "customJs": "$('[class*=\"app-promo\"]').remove();"
     }
   },
