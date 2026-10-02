@@ -3,29 +3,60 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 
+const siteUrl = 'https://novelping.com/';
+
+const headers = {
+  'User-Agent':
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+  Referer: siteUrl,
+  'Accept-Language': 'en-US,en;q=0.9',
+};
+
+// Throw on a non-ok response carrying the HTTP status, so a refusal
+// surfaces as an error (classified INCONCLUSIVE by the live check)
+// instead of parsing into an empty result.
+async function fetchSite(url: string) {
+  const res = await fetchApi(url, { headers });
+  if (!res.ok) {
+    throw Object.assign(new Error('Request failed: ' + res.status), {
+      status: res.status,
+    });
+  }
+  return res.text();
+}
+
 class NovelArrow implements Plugin.PluginBase {
   id = 'novelarrow';
   name = 'Novel Arrow';
   icon = 'src/en/novelarrow/icon.png';
-  site = 'https://novelarrow.com/';
-  version = '1.0.1';
+  site = siteUrl;
+  version = '2.0.0';
 
-  async popularNovels(page: number) {
-    const url = `${this.site}novels/latest?page=${page}`;
-    const result = await fetchApi(url).then(res => res.text());
-    const $ = parseHTML(result);
+  private toPath(href?: string) {
+    if (!href) {
+      return '';
+    }
+    try {
+      return new URL(href, this.site).pathname.replace(/^\//, '');
+    } catch {
+      return href.replace(/^\//, '');
+    }
+  }
+
+  private parseListing(html: string) {
+    const $ = parseHTML(html);
     const novels: Plugin.NovelItem[] = [];
 
-    $('article').each((i, el) => {
-      const title = $(el).find('h2').text().trim();
-      const cover = $(el).find('img').attr('src');
-      const href = $(el).find('a').attr('href');
+    $('.novel-title a').each((i, el) => {
+      const name = $(el).text().trim();
+      const path = this.toPath($(el).attr('href'));
+      const cover = $(el).closest('.row').find('img.cover').attr('src');
 
-      if (title && href) {
+      if (name && path) {
         novels.push({
-          name: title,
+          name,
           cover,
-          path: href.substring(1), // Result: "novel/slug"
+          path,
         });
       }
     });
@@ -33,163 +64,104 @@ class NovelArrow implements Plugin.PluginBase {
     return novels;
   }
 
+  async popularNovels(page: number) {
+    const url = `${this.site}sort/updates?page=${page}`;
+    const result = await fetchSite(url);
+    return this.parseListing(result);
+  }
+
   async parseNovel(novelPath: string) {
-    // Ensure no double slashes in the URL
-    const url = this.site + novelPath.replace(/^\//, '');
-    const result = await fetchApi(url).then(res => res.text());
+    // Accept both the previous `novel/<slug>` paths (kept by existing
+    // library entries) and the current `book/<slug>` paths, and always
+    // request the current route.
+    const slug = novelPath
+      .replace(/^\//, '')
+      .replace(/^(book|novel)\//, '')
+      .split('/')[0];
+    const canonicalPath = `book/${slug}`;
+    const url = this.site + canonicalPath;
+    const result = await fetchSite(url);
     const $ = parseHTML(result);
 
-    const novelId = novelPath.replace('novel/', '').replace(/^\//, '');
+    // Get the full summary from the paragraphs inside the description block
+    const fullSummary =
+      $('#novel-description-content p')
+        .map((i, el) => $(el).text().trim())
+        .get()
+        .join('\n\n') || $('#novel-description-content').text().trim();
 
-    // Collect genres
-    let genres = $('meta[name="og:novel:genre"], meta[property="og:novel:genre"]').attr('content');
+    const statusText = (
+      $('meta[property="og:novel:status"]').attr('content') || ''
+    ).toLowerCase();
 
-    if (!genres) {
-      const genreList: string[] = [];
-      $('meta[property="article:tag"]').each((i, el) => {
-        const tag = $(el).attr('content');
-        if (tag) genreList.push(tag);
-      });
-      genres = genreList.join(', ');
+    // The single og:novel:author and og:novel:genre lookups were verified
+    // sufficient on the new markup; the old fallbacks are dropped.
+    let status = NovelStatus.Unknown;
+    if (statusText === 'ongoing') {
+      status = NovelStatus.Ongoing;
+    } else if (statusText === 'completed') {
+      status = NovelStatus.Completed;
     }
 
-    // Get the full summary from the paragraphs inside class .site-reading-copy
-    const fullSummary = $('.site-reading-copy p')
-      .map((i, el) => $(el).text().trim())
-      .get()
-      .join('\n\n') || $('.site-reading-copy').text().trim();
-
     const novel: Plugin.SourceNovel = {
-      path: novelPath,
-      name: $('meta[name="og:novel:novel_name"]').attr('content') || $('h1').first().text().trim(),
+      path: canonicalPath,
+      name:
+        $('meta[property="og:novel:novel_name"]').attr('content') ||
+        $('h3.title').first().text().trim(),
       cover: $('meta[property="og:image"]').attr('content'),
-      author: $('meta[name="og:novel:author"]').attr('content') || $('meta[name="author"]').attr('content'),
-      status:
-        $('meta[name="og:novel:status"]').attr('content') === 'Ongoing'
-          ? NovelStatus.Ongoing
-          : NovelStatus.Completed,
+      author: $('meta[property="og:novel:author"]').attr('content'),
+      status,
       summary: fullSummary,
-      genres: genres,
+      genres: $('meta[property="og:novel:genre"]').attr('content'),
       chapters: [],
     };
 
-    const chaptersUrl = `${this.site}api-web/novels/${novelId}/chapters?sort=asc`;
-    try {
-      const chaptersJson = await fetchApi(chaptersUrl, {
-        headers: {
-          'Accept': 'application/json',
-        },
-      }).then(res => res.json());
+    // The archive serves oldest-first like the old ?sort=asc endpoint,
+    // so no reversal is needed.
+    const chaptersUrl = `${this.site}ajax/chapter-archive?novelId=${encodeURIComponent(slug)}`;
+    const chaptersHtml = await fetchSite(chaptersUrl);
+    const $$ = parseHTML(chaptersHtml);
+    const chapters: Plugin.ChapterItem[] = [];
 
-      if (chaptersJson && chaptersJson.items) {
-        novel.chapters = chaptersJson.items.map(
-          (item: { chapter_name: string; chapter_id: string }) => ({
-            name: item.chapter_name,
-            path: `chapter/${novelId}/${item.chapter_id}`,
-            releaseTime: null,
-          }),
-        );
+    $$('li[data-chapter-item]').each((i, el) => {
+      const chapterId = $$(el).attr('data-chapter-id');
+      const anchor = $$(el).find('a');
+      const name = (anchor.attr('title') || anchor.text()).trim();
+
+      if (chapterId && name) {
+        chapters.push({
+          name,
+          path: `book/${slug}/${chapterId}`,
+          releaseTime: null,
+        });
       }
-    } catch (e) {
-      const chaptersMap = new Map();
-      // Flexible Regex to handle JSON stream variations
-      const combinedRegex =
-        /\\?"chapter_id\\?":\\?"([^"]+)\\?",\\?"chapter_name\\?":\\?"([^"]+)\\?"/g;
-      let match;
-      while ((match = combinedRegex.exec(result)) !== null) {
-        const path = match[1];
-        const name = match[2].replace(/\\"/g, '"');
-        const fullPath = `chapter/${novelId}/${path}`;
-        if (!chaptersMap.has(fullPath)) {
-          chaptersMap.set(fullPath, {
-            name,
-            path: fullPath,
-            releaseTime: null,
-          });
-        }
-      }
-      novel.chapters = Array.from(chaptersMap.values());
-    }
+    });
+
+    novel.chapters = chapters;
 
     return novel;
   }
 
   async parseChapter(chapterPath: string) {
-    const pathParts = chapterPath.replace('chapter/', '').split('/');
-    const novelId = pathParts[0];
-    const chapterId = pathParts[1];
+    // Accept the previous `chapter/<slug>/<id>` form as well as the current
+    // `book/<slug>/<id>` form.
+    const canonicalChapterPath = chapterPath
+      .replace(/^\//, '')
+      .replace(/^chapter\//, 'book/');
+    const result = await fetchSite(this.site + canonicalChapterPath);
+    const $ = parseHTML(result);
+    const content = $('#chr-content');
 
-    const url = `${this.site}api-web/novels/${novelId}/chapters/${chapterId}`;
+    // Strip ad slots injected inside the chapter body
+    content.find('.js-ad-slot').remove();
 
-    try {
-      const json = await fetchApi(url, {
-        headers: {
-          'Accept': 'application/json',
-          'x-track-reading-progress': 'false',
-        },
-      }).then(res => res.json());
-
-      if (
-        json &&
-        json.item &&
-        json.item.chapterInfo &&
-        json.item.chapterInfo.chapter_content
-      ) {
-        return json.item.chapterInfo.chapter_content;
-      }
-    } catch (e) {
-      const result = await fetchApi(`${this.site}${chapterPath}`).then(res =>
-        res.text(),
-      );
-      const contentRegex = /\\u003ch4\\u003e(.*)\\u003c\/p\\u003e/;
-      const match = result.match(contentRegex);
-
-      if (match) {
-        let chapterHtml = match[0];
-        chapterHtml = chapterHtml
-          .replace(/\\u003c/g, '<')
-          .replace(/\\u003e/g, '>')
-          .replace(/\\"/g, '"')
-          .replace(/\\n/g, '')
-          .replace(/\\t/g, '')
-          .replace(/\\r/g, '')
-          .replace(/\\\\/g, '\\');
-
-        const lastPTagIndex = chapterHtml.lastIndexOf('</p>');
-        if (lastPTagIndex !== -1) {
-          chapterHtml = chapterHtml.substring(0, lastPTagIndex + 4);
-        }
-        return chapterHtml;
-      }
-
-      const $ = parseHTML(result);
-      return $('.site-reading-copy').html() || 'Content not found or premium.';
-    }
-
-    return 'Content not found or premium.';
+    return content.html() || 'Content not found or premium.';
   }
 
   async searchNovels(searchTerm: string, page: number) {
-    const url = `${this.site}novels/search?keyword=${encodeURIComponent(searchTerm)}&page=${page}`;
-    const result = await fetchApi(url).then(res => res.text());
-    const $ = parseHTML(result);
-    const novels: Plugin.NovelItem[] = [];
-
-    $('article').each((i, el) => {
-      const title = $(el).find('h2').text().trim();
-      const cover = $(el).find('img').attr('src');
-      const href = $(el).find('a').attr('href');
-
-      if (title && href) {
-        novels.push({
-          name: title,
-          cover,
-          path: href.substring(1),
-        });
-      }
-    });
-
-    return novels;
+    const url = `${this.site}search?keyword=${encodeURIComponent(searchTerm)}&page=${page}`;
+    const result = await fetchSite(url);
+    return this.parseListing(result);
   }
 }
 
