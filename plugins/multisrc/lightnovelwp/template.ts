@@ -443,7 +443,7 @@ export class LightNovelWPPlugin implements Plugin.PluginBase {
     // select the element itself rather than cutting the document between
     // landmarks: a <script> inside the block then cannot end it early either.
     const $ = load(data);
-    const content = $('div.epcontent').first();
+    const content = $('.epcontent').first();
 
     // No epcontent block means this was not a chapter page (a login wall or
     // an error page served with 200). Returning the whole document here would

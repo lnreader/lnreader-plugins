@@ -293,11 +293,12 @@
   },
   {
     "id": "TCSega",
-    "sourceSite": "https://teamchmantranslations.com",
+    "sourceSite": "https://teamchmantranslations.com/",
     "sourceName": "TC & Sega",
     "options": {
       "lang": "Spanish",
-      "reverseChapters": true
+      "reverseChapters": true,
+      "versionIncrements": 1
     }
   },
   {
@@ -326,7 +327,7 @@
       "lang": "English",
       "reverseChapters": true,
       "hasLocked": true
-    } 
+    }
   },
   {
     "id": "blumeverse",
@@ -336,7 +337,7 @@
       "lang": "English",
       "reverseChapters": true,
       "hasLocked": true
-    } 
+    }
   },
   {
     "id": "dobynovels",
