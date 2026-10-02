@@ -26,6 +26,7 @@ type ReadNovelFullOptions = {
   pageAsPath?: boolean;
   customJs?: string;
   chapterListPaginated?: boolean;
+  imageReferer?: boolean;
 };
 
 export type ReadNovelFullMetadata = {
@@ -44,6 +45,7 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
   version: string;
   options: ReadNovelFullOptions;
   filters?: Filters | undefined;
+  imageRequestInit?: Plugin.ImageRequestInit;
 
   constructor(metadata: ReadNovelFullMetadata) {
     this.id = metadata.id;
@@ -54,6 +56,13 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
     this.version = `2.2.${1 + versionIncrements}`;
     this.options = metadata.options;
     this.filters = metadata.filters;
+    if (this.options?.imageReferer) {
+      this.imageRequestInit = {
+        headers: {
+          'Referer': this.site,
+        },
+      };
+    }
   }
 
   lastSearch: number | null = null;
@@ -94,7 +103,12 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
         switch (name) {
           case 'img':
             {
-              const cover = attribs['data-src'] || attribs.src;
+              const cover = [
+                attribs['data-src'],
+                attribs['data-cfsrc'],
+                attribs['data-original'],
+                attribs.src,
+              ].find(attr => attr && !attr.startsWith('data:'));
               if (cover) {
                 tempNovel.cover = new URL(cover, this.site).href;
               }
@@ -415,8 +429,12 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
             break;
           case 'img':
             if (state === ParsingState.Cover) {
-              const cover =
-                attribs.src ?? attribs['data-cfsrc'] ?? attribs['data-src'];
+              const cover = [
+                attribs['data-src'],
+                attribs['data-cfsrc'],
+                attribs['data-original'],
+                attribs.src,
+              ].find(attr => attr && !attr.startsWith('data:'));
               const name = attribs.title;
               if (cover) {
                 novel.cover = new URL(cover, this.site).href;
