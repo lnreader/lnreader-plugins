@@ -408,13 +408,12 @@
   },
   {
     "id": "bellereservoir",
-    "sourceSite": "https://bellereservoir.com/",
-    "sourceName": "Belle Reservoir",
+    "sourceSite": "https://bellerepository.com/",
+    "sourceName": "Belle Repository",
     "options": {
       "useNewChapterEndpoint": true,
       "lang": "English",
-      "down": true,
-      "downSince": 1777153113000
+      "versionIncrements": 1
     }
   },
   {
