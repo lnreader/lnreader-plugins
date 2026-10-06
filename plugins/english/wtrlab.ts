@@ -20,15 +20,31 @@ function decodeReveal(b64: string): string {
   }
 }
 
-function resolveTokens(str: string | undefined | null): string {
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function resolveTokens(
+  str: string | undefined | null,
+  escapeHtmlFlag = false,
+): string {
   if (!str) return '';
   return str.replace(
-    /%\{(?:"([^"]*)":([^"}]+)|([^|{}%\u0000-\u001F\u007F\u2028\u2029]+)\|([A-Za-z0-9_-]+))\}/g,
+    /%\{(?:"([^"]*)":\s*"?([A-Za-z0-9+/=_-]+)"?|([^|{}%\u0000-\u001F\u007F\u2028\u2029]+?)\s*\|\s*([A-Za-z0-9+/=_-]+))\}/g,
     (match, safe1, b64_1, safe2, b64_2) => {
-      const safe = safe1 ?? safe2 ?? '';
-      const b64 = b64_1 ?? b64_2 ?? '';
+      const safe = (safe1 ?? safe2 ?? '').trim();
+      const b64 = (b64_1 ?? b64_2 ?? '').trim();
       const decoded = decodeReveal(b64);
-      return decoded || safe || match;
+      const result = decoded || safe;
+      if (result) {
+        return escapeHtmlFlag ? escapeHtml(result) : result;
+      }
+      return match;
     },
   );
 }
@@ -869,7 +885,7 @@ class WTRLAB implements Plugin.PluginBase {
     let chapterTitle: string | undefined =
       parsedJson?.chapter?.title || content.title;
     if (chapterTitle) {
-      chapterTitle = resolveTokens(chapterTitle);
+      chapterTitle = resolveTokens(chapterTitle, true);
       if (dictionary.length > 0) {
         chapterTitle = chapterTitle.replaceAll(
           /(?:wtr-lab\s+)?※([0-9]+)[⛬〓]/g,
@@ -942,7 +958,7 @@ class WTRLAB implements Plugin.PluginBase {
 
     for (let text of paragraphs) {
       if (typeof text !== 'string') continue;
-      text = resolveTokens(text);
+      text = resolveTokens(text, true);
       if (dictionary.length > 0) {
         text = text.replaceAll(
           /(?:wtr-lab\s+)?※([0-9]+)[⛬〓]/g,
