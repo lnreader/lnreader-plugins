@@ -1,34 +1,26 @@
 import { CheerioAPI, load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
+import { Filters, FilterTypes } from '@libs/filterInputs';
 import { storage } from '@libs/storage';
 import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
-enum APIAction {
-  novels = 'load_novels',
-  search = 'live_novel_search',
-}
-
-type APIParams = {
-  action: APIAction;
-  params: Record<string, string | number>;
-};
-
 type ChapterJSON = {
-  items: ChapterItem[];
-  total: number;
-  total_pages?: number;
+  items?: ChapterItem[];
+  total?: number;
   page?: number;
-  per_page?: number;
-  order?: string;
+  pages?: number;
+  tier?: string;
 };
 
 type ChapterItem = {
   id: number;
+  number: string;
   title: string;
   url: string;
-  locked: boolean;
+  date?: string;
+  tier?: string;
 };
 
 class CrimsonScrollsPlugin implements Plugin.PluginBase {
@@ -36,7 +28,7 @@ class CrimsonScrollsPlugin implements Plugin.PluginBase {
   name = 'Crimson Scrolls';
   icon = 'src/en/crimsonscrolls/icon.png';
   site = 'https://crimsonscrolls.net';
-  version = '1.0.1';
+  version = '1.1.0';
 
   hideLocked = storage.get('hideLocked');
   pluginSettings = {
@@ -47,169 +39,273 @@ class CrimsonScrollsPlugin implements Plugin.PluginBase {
     },
   };
 
-  async queryAPI(query: APIParams): Promise<CheerioAPI> {
-    const formData = new FormData();
-    formData.append('action', query.action);
-    for (const [key, value] of Object.entries(query.params))
-      formData.append(key, value.toString());
-
-    const result = await fetchApi(`${this.site}/wp-admin/admin-ajax.php`, {
-      method: 'POST',
-      body: formData,
-    }).then(result => result.json());
-
-    return parseHTML(result.html);
+  async fetchPage(url: string): Promise<CheerioAPI> {
+    const body = await fetchApi(url).then(r => r.text());
+    return parseHTML(body);
   }
 
-  async fetchChapters(
-    id: number,
-    page?: number | undefined,
-  ): Promise<ChapterItem[]> {
-    const url = `${this.site}/wp-json/cs/v1/novels/${id}/chapters?per_page=75&order=asc`;
-    const data: ChapterJSON = await fetchApi(`${url}&page=${page ?? 1}`).then(
-      r => r.json(),
-    );
-
-    const items = data.items || [];
-    const locked = items.some(e => e.locked);
-
-    if (
-      data.total_pages &&
-      (data.page ?? 1) < data.total_pages &&
-      !(locked && this.hideLocked)
-    ) {
-      const nextItems = await this.fetchChapters(id, (data.page ?? 0) + 1);
-      return items.concat(nextItems);
-    }
-
-    return items;
+  toPath(url: string): string {
+    return new URL(url, this.site).pathname.substring(1);
   }
 
-  parseNovels(loadedCheerio: CheerioAPI) {
+  parseNovels(loadedCheerio: CheerioAPI): Plugin.NovelItem[] {
     const novels: Plugin.NovelItem[] = [];
 
-    loadedCheerio(':is(a.live-search-item, div.novel-list-card)').each(
-      (i, el) => {
-        const novelName = loadedCheerio(el)
-          .find(':is(div.live-search-title, h3.novel-title)')
-          .text()
-          .trim();
-        const novelCover = loadedCheerio(el)
-          .find(':is(img.live-search-cover, div.novel-cover img)')
-          .attr('src');
-        const novelUrl =
-          loadedCheerio(el).find('a').attr('href') ||
-          loadedCheerio(el).attr('href');
+    loadedCheerio('article.cs-browse-card').each((_, el) => {
+      const card = loadedCheerio(el);
+      const link = card.find('h2 a');
+      const novelUrl = link.attr('href');
+      if (!novelUrl) return;
 
-        if (!novelUrl) return;
+      const img = card.find('.cs-browse-card__cover img');
+      const src = img.attr('data-src') || img.attr('src');
 
-        const novel = {
-          name: novelName
-            .trim()
-            .split(' ')
-            .filter(e => e.length > 0)
-            .join(' '),
-          cover: novelCover,
-          path: novelUrl
-            ? new URL(novelUrl, this.site).pathname.substring(1)
-            : defaultCover,
-        };
-        novels.push(novel);
-      },
-    );
+      novels.push({
+        name: (link.attr('title') || link.text()).trim(),
+        cover: src && !src.startsWith('data:') ? src : defaultCover,
+        path: this.toPath(novelUrl),
+      });
+    });
+
     return novels;
   }
 
-  async popularNovels(page: number): Promise<Plugin.NovelItem[]> {
-    const loadedCheerio = await this.queryAPI({
-      action: APIAction.novels,
-      params: { page: page.toString() },
-    });
+  async browse(
+    page: number,
+    params: URLSearchParams,
+  ): Promise<Plugin.NovelItem[]> {
+    params.append('cs_page', page.toString());
+    const loadedCheerio = await this.fetchPage(
+      `${this.site}/novels/?${params.toString()}`,
+    );
     return this.parseNovels(loadedCheerio);
   }
 
-  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const result = await fetchApi(`${this.site}/${novelPath}`).then(r =>
-      r.text(),
-    );
+  async popularNovels(
+    page: number,
+    {
+      showLatestNovels,
+      filters,
+    }: Plugin.PopularNovelsOptions<typeof this.filters>,
+  ): Promise<Plugin.NovelItem[]> {
+    const params = new URLSearchParams({
+      sort: showLatestNovels ? 'latest-updated' : filters.sort.value,
+    });
+    if (filters.status.value) params.append('status', filters.status.value);
+    filters.genres.value.forEach(g => params.append('genres[]', g));
 
-    const loadedCheerio = parseHTML(result);
-    const novelInfo = loadedCheerio('#single-novel-content-wrapper');
+    return this.browse(page, params);
+  }
+
+  async searchNovels(
+    searchTerm: string,
+    page: number,
+  ): Promise<Plugin.NovelItem[]> {
+    return this.browse(page, new URLSearchParams({ s: searchTerm }));
+  }
+
+  async fetchChapters(novelId: string, tier: string): Promise<ChapterItem[]> {
+    const chapters: ChapterItem[] = [];
+    let page = 1;
+    let pages = 1;
+
+    do {
+      const params = new URLSearchParams({
+        novel_id: novelId,
+        tier,
+        page: page.toString(),
+        per_page: '100',
+        order: 'ASC',
+      });
+      const data: ChapterJSON = await fetchApi(
+        `${this.site}/wp-json/crimsonscrolls/v2/novel-chapters?${params.toString()}`,
+      ).then(r => r.json());
+
+      chapters.push(...(data.items || []));
+      pages = Number(data.pages) || 1;
+      page++;
+    } while (page <= pages);
+
+    return chapters;
+  }
+
+  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+    const loadedCheerio = await this.fetchPage(`${this.site}/${novelPath}`);
+    const novelInfo = loadedCheerio('.cs-novel-info');
+
+    const cover = loadedCheerio('.cs-cover img');
+    const coverSrc = cover.attr('data-src') || cover.attr('src');
 
     const novel: Plugin.SourceNovel = {
       path: novelPath,
-      name: novelInfo.find('h1').text().trim() ?? 'Untitled',
+      name: novelInfo.find('h1').text().trim() || 'Untitled',
       cover:
-        novelInfo.find('img:first').data('src')?.toString() ?? defaultCover,
-      summary: novelInfo.find('#synopsis-full').text().trim(),
-      author: novelInfo.find('strong:first').next().text().trim(),
+        coverSrc && !coverSrc.startsWith('data:') ? coverSrc : defaultCover,
+      summary: loadedCheerio('.cs-synopsis-content p')
+        .map((_, el) => loadedCheerio(el).text().trim())
+        .toArray()
+        .filter(text => text)
+        .join('\n\n'),
+      author: loadedCheerio('.cs-novel-creator-card--author strong')
+        .first()
+        .text()
+        .trim(),
+      genres: loadedCheerio('.cs-detail-genres a')
+        .map((_, el) => loadedCheerio(el).text().trim())
+        .toArray()
+        .join(','),
       chapters: [],
     };
 
-    novel.genres = novelInfo
-      .find('.cs-genre-chip')
-      .map((_, el) => loadedCheerio(el).text().trim())
-      .toArray()
-      .join(',');
-
-    const rawStatus = novelInfo.find('.cs-nsb-badge').text().trim();
-    const map: Record<string, string> = {
-      ongoing: NovelStatus.Ongoing,
-      hiatus: NovelStatus.OnHiatus,
-      dropped: NovelStatus.Cancelled,
-      cancelled: NovelStatus.Cancelled,
-      completed: NovelStatus.Completed,
+    const rawStatus = loadedCheerio('.cs-cover-status')
+      .first()
+      .text()
+      .trim()
+      .toLowerCase();
+    const statusMap: Record<string, string> = {
+      'ongoing': NovelStatus.Ongoing,
+      'completed': NovelStatus.Completed,
+      'on hiatus': NovelStatus.OnHiatus,
+      'hiatus': NovelStatus.OnHiatus,
+      'dropped': NovelStatus.Cancelled,
+      'cancelled': NovelStatus.Cancelled,
     };
-    novel.status = map[rawStatus.toLowerCase()] ?? NovelStatus.Unknown;
+    novel.status = statusMap[rawStatus] ?? NovelStatus.Unknown;
 
-    const id = loadedCheerio('#chapter-list').data('novel');
-    const chapters = await this.fetchChapters(Number(id));
+    const chapterPanel = loadedCheerio('[data-novel-chapters]');
+    const novelId =
+      chapterPanel.attr('data-novel-chapters') ||
+      loadedCheerio('main.cs-novel-page').attr('data-view-id');
+    if (!novelId) return novel;
 
-    const novelChapters: Plugin.ChapterItem[] = [];
-    chapters.forEach((chapter, index) => {
-      if (!(chapter.locked && this.hideLocked)) {
-        novelChapters.push({
-          name: chapter.locked ? `🔒 ${chapter.title}` : chapter.title,
-          path: chapter.url
-            ? new URL(chapter.url, this.site).pathname.split('/')[2]
-            : '',
-          chapterNumber: index + 1,
+    const tiers = loadedCheerio('[data-chapter-access-tier]')
+      .map((_, el) => loadedCheerio(el).attr('data-chapter-access-tier'))
+      .toArray()
+      .filter(tier => tier);
+    if (!tiers.length)
+      tiers.push(chapterPanel.attr('data-default-tier') || 'free');
+
+    const chapters: Plugin.ChapterItem[] = [];
+    for (const tier of tiers) {
+      const locked = tier !== 'free';
+      if (locked && this.hideLocked) continue;
+
+      const items = await this.fetchChapters(novelId, tier);
+      items.forEach(item => {
+        const title = item.title?.trim();
+        const name = `Chapter ${item.number}${title ? `: ${title}` : ''}`;
+        chapters.push({
+          name: locked ? `🔒 ${name}` : name,
+          path: this.toPath(item.url),
+          releaseTime: item.date || null,
+          chapterNumber: chapters.length + 1,
         });
-      }
-    });
-    novel.chapters = novelChapters;
+      });
+    }
+    novel.chapters = chapters;
 
     return novel;
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const body = await fetchApi(`${this.site}/chapter/${chapterPath}`).then(r =>
-      r.text(),
+    const loadedCheerio = await this.fetchPage(
+      this.resolveUrl(chapterPath, false),
     );
-    const loadedCheerio = parseHTML(body);
-    for (const i of [
-      'hr.cs-attrib-divider',
-      'div.cs-attrib',
-      'p.cs-chapter-attrib',
-    ])
-      loadedCheerio(`#chapter-display ${i}:last`).remove();
+    const content = loadedCheerio('article.cs-reader');
 
-    const chapterText = loadedCheerio('#chapter-display').html() || '';
-    return chapterText;
-  }
+    if (content.find('.cs-tier-gate').length) {
+      throw new Error(
+        'This chapter is locked. Unlock it on Crimson Scrolls to read it.',
+      );
+    }
 
-  async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
-    const loadedCheerio = await this.queryAPI({
-      action: APIAction.search,
-      params: { query: searchTerm },
+    content
+      .find(
+        [
+          'header.cs-reader-title',
+          '.cs-chapter-ad',
+          '.cs-copy-watermark',
+          'ins',
+          'script',
+          'style',
+          'noscript',
+          'iframe',
+        ].join(','),
+      )
+      .remove();
+
+    content.find('*').each((_, el) => {
+      if (!('attribs' in el)) return;
+      for (const attr of Object.keys(el.attribs)) {
+        const value = el.attribs[attr].trim().toLowerCase();
+        if (attr.startsWith('on') || value.startsWith('javascript:'))
+          loadedCheerio(el).removeAttr(attr);
+      }
     });
 
-    return this.parseNovels(loadedCheerio);
+    return content.html() || '';
   }
 
-  // not sure purpose of this, commented out
-  // resolveUrl = (path: string, isNovel?: boolean) =>
-  //   this.site + '/novel/' + path;
+  resolveUrl = (path: string, isNovel?: boolean) => {
+    if (/^https?:\/\//i.test(path)) return path;
+    if (path.startsWith('//')) return `https:${path}`;
+    // Chapters saved by versions before 1.1.0 store only the chapter slug;
+    // the site redirects /chapter/<slug>/ to the chapter's current URL.
+    return !isNovel && !path.includes('/')
+      ? `${this.site}/chapter/${path}/`
+      : `${this.site}/${path}`;
+  };
+
+  filters = {
+    sort: {
+      type: FilterTypes.Picker,
+      label: 'Sort by',
+      value: 'latest-updated',
+      options: [
+        { label: 'Latest Updated', value: 'latest-updated' },
+        { label: 'Newest Added', value: 'newest' },
+        { label: 'Highest Rated', value: 'top-rated' },
+      ],
+    },
+    status: {
+      type: FilterTypes.Picker,
+      label: 'Status',
+      value: '',
+      options: [
+        { label: 'Any status', value: '' },
+        { label: 'Ongoing', value: 'ongoing' },
+        { label: 'Completed', value: 'completed' },
+        { label: 'On Hiatus', value: 'on-hiatus' },
+        { label: 'Dropped', value: 'dropped' },
+      ],
+    },
+    genres: {
+      type: FilterTypes.CheckboxGroup,
+      label: 'Genres',
+      value: [],
+      options: [
+        { label: 'Abyssal Villain', value: 'abyssal-villain' },
+        { label: 'Anti-Hero', value: 'anti-hero' },
+        { label: 'Anti-Hero Villain', value: 'anti-hero-villain' },
+        { label: 'Comedy', value: 'comedy' },
+        { label: 'Cultivation', value: 'cultivation' },
+        { label: 'Dark Villain', value: 'dark-villain' },
+        { label: 'Emotional Story', value: 'emotional-story' },
+        { label: 'Fantasy', value: 'fantasy' },
+        { label: 'Harem', value: 'harem' },
+        { label: 'Horror', value: 'horror' },
+        { label: 'Mature', value: 'mature' },
+        { label: 'Misunderstanding', value: 'misunderstanding' },
+        { label: 'Romance', value: 'romance' },
+        { label: 'Sci-Fi', value: 'sci-fi' },
+        { label: 'Slice of Life', value: 'slice-of-life' },
+        { label: 'Tragedy', value: 'tragedy' },
+        { label: 'Urban', value: 'urban' },
+        { label: 'Urban Fantasy', value: 'urban-fantasy' },
+        { label: 'Yandere', value: 'yandere' },
+      ],
+    },
+  } satisfies Filters;
 }
 
 export default new CrimsonScrollsPlugin();
