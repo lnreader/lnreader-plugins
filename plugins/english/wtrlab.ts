@@ -892,6 +892,14 @@ class WTRLAB implements Plugin.PluginBase {
       return this.site.replace(/\/$/, '') + '/' + imgUrl.replace(/^\//, '');
     };
 
+    const escapeAttr = (str: string): string =>
+      str
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
     const paragraphs: string[] = Array.isArray(chapterContent)
       ? chapterContent
       : typeof chapterContent === 'string'
@@ -914,7 +922,9 @@ class WTRLAB implements Plugin.PluginBase {
           if (/^\[\s*image\s*\]$/i.test(part.trim())) {
             const nextImg = images[imageIndex++];
             if (nextImg) {
-              paragraphHtml += `<img src="${resolveImageUrl(nextImg)}" />`;
+              paragraphHtml += `<img src="${escapeAttr(
+                resolveImageUrl(nextImg),
+              )}" />`;
             } else {
               paragraphHtml += '[image]';
             }
@@ -933,7 +943,9 @@ class WTRLAB implements Plugin.PluginBase {
     while (imageIndex < images.length) {
       const remainingImg = images[imageIndex++];
       if (remainingImg) {
-        htmlString += `<p><img src="${resolveImageUrl(remainingImg)}" /></p>`;
+        htmlString += `<p><img src="${escapeAttr(
+          resolveImageUrl(remainingImg),
+        )}" /></p>`;
       }
     }
 
