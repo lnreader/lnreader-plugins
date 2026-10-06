@@ -5,11 +5,39 @@ import { CheerioAPI, load as parseHTML } from 'cheerio';
 import { gcm } from '@libs/aes';
 import { storage } from '@libs/storage';
 
+function decodeReveal(b64: string): string {
+  try {
+    const clean = b64.replace(/-/g, '+').replace(/_/g, '/').replace(/=+$/, '');
+    if (!/^[A-Za-z0-9+/]*$/.test(clean) || clean.length % 4 === 1) return '';
+    const padded = clean + '='.repeat((4 - (clean.length % 4)) % 4);
+    if (typeof atob === 'function') {
+      const bytes = Uint8Array.from(atob(padded), c => c.charCodeAt(0));
+      return new TextDecoder().decode(bytes);
+    }
+    return '';
+  } catch {
+    return '';
+  }
+}
+
+function resolveTokens(str: string | undefined | null): string {
+  if (!str) return '';
+  return str.replace(
+    /%\{(?:"([^"]*)":([^"}]+)|([^|{}%\u0000-\u001F\u007F\u2028\u2029]+)\|([A-Za-z0-9_-]+))\}/g,
+    (match, safe1, b64_1, safe2, b64_2) => {
+      const safe = safe1 ?? safe2 ?? '';
+      const b64 = b64_1 ?? b64_2 ?? '';
+      const decoded = decodeReveal(b64);
+      return decoded || safe || match;
+    },
+  );
+}
+
 class WTRLAB implements Plugin.PluginBase {
   id = 'WTRLAB';
   name = 'WTR-LAB';
   site = 'https://wtr-lab.com/';
-  version = '1.2.4';
+  version = '1.2.5';
   icon = 'src/en/wtrlab/icon.png';
   sourceLang = 'en/';
   baggage = '';
@@ -317,7 +345,7 @@ class WTRLAB implements Plugin.PluginBase {
       // Parse novels from JSON
       const novels: Plugin.NovelItem[] = recentNovel.data.map(
         (datum: Datum) => ({
-          name: datum.serie.data.title || datum.serie.slug || '',
+          name: resolveTokens(datum.serie.data.title || datum.serie.slug || ''),
           cover: datum.serie.data.image,
           path:
             this.sourceLang +
@@ -355,7 +383,7 @@ class WTRLAB implements Plugin.PluginBase {
           return true;
         })
         .map((novel: Datum) => ({
-          name: novel.data.title,
+          name: resolveTokens(novel.data.title),
           cover: novel.data.image,
           path: `${this.sourceLang}serie-${novel.raw_id}/${novel.slug}`,
         }));
@@ -397,8 +425,8 @@ class WTRLAB implements Plugin.PluginBase {
 
     const novel: Plugin.SourceNovel = {
       path: novelPath,
-      name: loadedCheerio('h1.text-uppercase').text(),
-      summary: loadedCheerio('.lead').text().trim(),
+      name: resolveTokens(loadedCheerio('h1.text-uppercase').text()),
+      summary: resolveTokens(loadedCheerio('.lead').text().trim()),
     };
 
     if (nextDataText) {
@@ -409,10 +437,10 @@ class WTRLAB implements Plugin.PluginBase {
         // console.log('Parsed novel JSON data:', serieData);
 
         if (serieData) {
-          novel.name = serieData.data?.title || '';
+          novel.name = resolveTokens(serieData.data?.title || '');
           novel.cover = serieData.data?.image || '';
-          novel.summary = serieData.data?.description || '';
-          novel.author = serieData.data?.author || '';
+          novel.summary = resolveTokens(serieData.data?.description || '');
+          novel.author = resolveTokens(serieData.data?.author || '');
           rawId = serieData.raw_id || null;
           slug = serieData.slug || null;
 
@@ -433,10 +461,11 @@ class WTRLAB implements Plugin.PluginBase {
     }
 
     if (!novel.name) {
-      novel.name =
+      novel.name = resolveTokens(
         loadedCheerio('h1.text-uppercase').text() ||
         loadedCheerio('h1.long-title').text() ||
-        loadedCheerio('.title-wrap h1').text().trim();
+        loadedCheerio('.title-wrap h1').text().trim(),
+      );
     }
 
     if (!novel.cover) {
@@ -446,10 +475,11 @@ class WTRLAB implements Plugin.PluginBase {
     }
 
     if (!novel.summary) {
-      novel.summary =
+      novel.summary = resolveTokens(
         loadedCheerio('.description').text().trim() ||
         loadedCheerio('.desc-wrap .description').text().trim() ||
-        loadedCheerio('.lead').text().trim();
+        loadedCheerio('.lead').text().trim(),
+      );
     }
 
     // Genres and tags live in __NEXT_DATA__ as numeric ids, not in the page
@@ -480,7 +510,8 @@ class WTRLAB implements Plugin.PluginBase {
 
         if (Array.isArray(pageProps?.tags)) {
           for (const tag of pageProps.tags) {
-            const title = tag?.title && String(tag.title).trim();
+            const title =
+              tag?.title && resolveTokens(String(tag.title).trim());
             if (title) labels.push(title);
           }
         }
@@ -837,11 +868,14 @@ class WTRLAB implements Plugin.PluginBase {
 
     let chapterTitle: string | undefined =
       parsedJson?.chapter?.title || content.title;
-    if (chapterTitle && dictionary.length > 0) {
-      chapterTitle = chapterTitle.replaceAll(
-        /(?:wtr-lab\s+)?※([0-9]+)[⛬〓]/g,
-        (m: string, index: string) => dictionary[parseInt(index)] || m,
-      );
+    if (chapterTitle) {
+      chapterTitle = resolveTokens(chapterTitle);
+      if (dictionary.length > 0) {
+        chapterTitle = chapterTitle.replaceAll(
+          /(?:wtr-lab\s+)?※([0-9]+)[⛬〓]/g,
+          (m: string, index: string) => dictionary[parseInt(index)] || m,
+        );
+      }
     }
 
     let htmlString = '';
@@ -908,6 +942,7 @@ class WTRLAB implements Plugin.PluginBase {
 
     for (let text of paragraphs) {
       if (typeof text !== 'string') continue;
+      text = resolveTokens(text);
       if (dictionary.length > 0) {
         text = text.replaceAll(
           /(?:wtr-lab\s+)?※([0-9]+)[⛬〓]/g,
@@ -984,10 +1019,11 @@ class WTRLAB implements Plugin.PluginBase {
 
         const batchChapters: Plugin.ChapterItem[] = chapters.map(
           (apiChapter: ApiChapter) => ({
-            name:
+            name: resolveTokens(
               apiChapter.title ||
-              apiChapter.name ||
-              `Chapter ${apiChapter.order}`,
+                apiChapter.name ||
+                `Chapter ${apiChapter.order}`,
+            ),
             path: `${this.sourceLang}serie-${rawId}/${slug}/chapter-${apiChapter.order}`,
             releaseTime: apiChapter.updated_at?.substring(0, 10),
             chapterNumber: apiChapter.order,
