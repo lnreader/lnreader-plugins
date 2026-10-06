@@ -9,7 +9,7 @@ class WTRLAB implements Plugin.PluginBase {
   id = 'WTRLAB';
   name = 'WTR-LAB';
   site = 'https://wtr-lab.com/';
-  version = '1.2.3';
+  version = '1.2.4';
   icon = 'src/en/wtrlab/icon.png';
   sourceLang = 'en/';
   baggage = '';
@@ -831,10 +831,18 @@ class WTRLAB implements Plugin.PluginBase {
     }
 
     let chapterContent: any = content.body;
-    const chapterTitle: string | undefined =
-      parsedJson?.chapter?.title || content.title;
     const chapterGlossary: ChapterContent['glossary_data'] | undefined =
       content.glossary_data;
+    const dictionary = chapterGlossary?.terms?.map(t => t[0]) || [];
+
+    let chapterTitle: string | undefined =
+      parsedJson?.chapter?.title || content.title;
+    if (chapterTitle && dictionary.length > 0) {
+      chapterTitle = chapterTitle.replaceAll(
+        /(?:wtr-lab\s+)?※([0-9]+)[⛬〓]/g,
+        (m: string, index: string) => dictionary[parseInt(index)] || m,
+      );
+    }
 
     let htmlString = '';
     if (chapterTitle) {
@@ -870,16 +878,63 @@ class WTRLAB implements Plugin.PluginBase {
       )}</small></p>`;
     }
 
-    const dictionary = chapterGlossary?.terms?.map(t => t[0]) || [];
+    const images: string[] = Array.isArray(content.images)
+      ? content.images
+      : Array.isArray((parsedJson as any)?.images)
+        ? (parsedJson as any).images
+        : [];
+    let imageIndex = 0;
 
-    for (let text of chapterContent) {
+    const resolveImageUrl = (imgUrl: string): string => {
+      if (!imgUrl) return '';
+      if (/^https?:\/\//i.test(imgUrl)) return imgUrl;
+      if (imgUrl.startsWith('//')) return 'https:' + imgUrl;
+      return this.site.replace(/\/$/, '') + '/' + imgUrl.replace(/^\//, '');
+    };
+
+    const paragraphs: string[] = Array.isArray(chapterContent)
+      ? chapterContent
+      : typeof chapterContent === 'string'
+        ? chapterContent.split('\n')
+        : [];
+
+    for (let text of paragraphs) {
+      if (typeof text !== 'string') continue;
       if (dictionary.length > 0) {
         text = text.replaceAll(
           /(?:wtr-lab\s+)?※([0-9]+)[⛬〓]/g,
           (m: string, index: string) => dictionary[parseInt(index)] || m,
         );
       }
-      htmlString += `<p>${text}</p>`;
+
+      if (/\[\s*image\s*\]/i.test(text)) {
+        const parts = text.split(/(\[\s*image\s*\])/gi);
+        let paragraphHtml = '';
+        for (const part of parts) {
+          if (/^\[\s*image\s*\]$/i.test(part.trim())) {
+            const nextImg = images[imageIndex++];
+            if (nextImg) {
+              paragraphHtml += `<img src="${resolveImageUrl(nextImg)}" />`;
+            } else {
+              paragraphHtml += '[image]';
+            }
+          } else if (part) {
+            paragraphHtml += part;
+          }
+        }
+        if (paragraphHtml.trim()) {
+          htmlString += `<p>${paragraphHtml}</p>`;
+        }
+      } else {
+        htmlString += `<p>${text}</p>`;
+      }
+    }
+
+    while (imageIndex < images.length) {
+      const remainingImg = images[imageIndex++];
+      if (remainingImg) {
+        htmlString += `<p><img src="${resolveImageUrl(remainingImg)}" /></p>`;
+      }
     }
 
     return htmlString;
@@ -2045,7 +2100,8 @@ type ReaderResponse = {
 
 type ChapterContent = {
   title: string;
-  body: string;
+  body: string | string[];
+  images?: string[];
   glossary_data?: {
     terms: string[][];
   };
