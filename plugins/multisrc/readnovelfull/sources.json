@@ -82,6 +82,17 @@
     }
   },
   {
+    "id": "novelping",
+    "sourceSite": "https://novelping.com/",
+    "sourceName": "Novel Ping",
+    "options": {
+      "latestPage": "sort/updates",
+      "searchPage": "search",
+      "versionIncrements": 0,
+      "customJs": "$('[class*=\"app-promo\"]').remove();"
+    }
+  },
+  {
     "id": "FWN.com",
     "sourceSite": "https://freewebnovel.com/",
     "sourceName": "Free Web Novel",
