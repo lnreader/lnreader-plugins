@@ -42,7 +42,7 @@ export class LightNovelWPPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/lightnovelwp/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `1.1.${11 + versionIncrements}`;
+    this.version = `1.1.${12 + versionIncrements}`;
     this.options = metadata.options ?? ({} as LightNovelWPOptions);
     this.filters = metadata.filters satisfies Filters;
 
@@ -512,8 +512,13 @@ export class LightNovelWPPlugin implements Plugin.PluginBase {
     searchTerm: string,
     page: number,
   ): Promise<Plugin.NovelItem[]> {
+    // Some sources' sites have no trailing slash (Lazy Girl Translations).
     const url =
-      this.site + 'page/' + page + '/?s=' + encodeURIComponent(searchTerm);
+      this.site.replace(/\/?$/, '/') +
+      'page/' +
+      page +
+      '/?s=' +
+      encodeURIComponent(searchTerm);
     const html = await this.safeFecth(url, true);
     return this.parseNovels(html);
   }
