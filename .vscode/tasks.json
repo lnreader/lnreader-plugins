@@ -1,0 +1,56 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "npm",
+            "script": "dev:prep",
+            "problemMatcher": [],
+            "label": "npm: dev:prep",
+            "detail": "Builds multisource files and plugin index for use in Vite/Dev Playground",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "type": "npm",
+            "script": "dev:auto",
+            "label": "npm: dev:auto",
+            "detail": "Runs dev:prep, then starts vite daemon",
+            "isBackground": true,
+            "problemMatcher": [
+                {
+                    "pattern": [
+                        {
+                            "regexp": ".",
+                            "file": 1,
+                            "location": 2,
+                            "message": 3
+                        }
+                    ],
+                    "background": {
+                        "activeOnStart": true,
+                        "beginsPattern": ".",
+                        "endsPattern": "."
+                    }
+                }
+            ]
+        },
+        {
+            "type": "npm",
+            "script": "clean:multisrc",
+            "problemMatcher": [],
+            "label": "npm: clean:multisrc",
+            "detail": "Interactive git clean of ignored files under ./plugins"
+        },
+        {
+            "type": "npm",
+            "script": "format",
+            "problemMatcher": [],
+            "label": "npm: format",
+            "detail": "Overwrite file with corrected formatting"
+        }
+    ]
+}
