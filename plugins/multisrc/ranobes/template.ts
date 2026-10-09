@@ -2,6 +2,7 @@ import { Parser } from 'htmlparser2';
 import { fetchApi, FetchInit } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
+import { storage } from '@libs/storage';
 
 type RanobesOptions = {
   lang?: string;
@@ -22,13 +23,14 @@ export class RanobesPlugin implements Plugin.PluginBase {
   site: string;
   version: string;
   options: RanobesOptions;
+  webStorageUtilized = true;
 
   constructor(metadata: RanobesMetadata) {
     this.id = metadata.id;
     this.name = metadata.sourceName;
     this.icon = 'multisrc/ranobes/ranobes/icon.png';
     this.site = metadata.sourceSite;
-    this.version = '2.0.2';
+    this.version = '2.1.0';
     this.options = metadata.options as RanobesOptions;
   }
 
@@ -56,50 +58,61 @@ export class RanobesPlugin implements Plugin.PluginBase {
 
   parseNovels(html: string) {
     const novels: Plugin.NovelItem[] = [];
-    let tempNovel = {} as Plugin.NovelItem;
-    tempNovel.name = '';
-    const baseUrl = this.site;
-    let isParsingNovel = false;
-    let isTitleTag = false;
-    let isNovelName = false;
+    let tempNovel: Partial<Plugin.NovelItem> = {};
+
+    const stateStack: ParsingState[] = [ParsingState.Idle];
+    const currentState = () => stateStack[stateStack.length - 1];
+    const pushState = (state: ParsingState) => stateStack.push(state);
+    const popState = () =>
+      stateStack.length > 1 ? stateStack.pop() : currentState();
+
     const parser = new Parser({
-      onopentag(name, attribs) {
-        if (attribs['class']?.includes('short-cont')) {
-          isParsingNovel = true;
+      onopentag: (name, attribs) => {
+        const state = currentState();
+        if (attribs.id === 'dle-content') {
+          pushState(ParsingState.NovelList);
+          return;
         }
-        if (isParsingNovel) {
-          if (name === 'h2' && attribs['class']?.includes('title')) {
-            isTitleTag = true;
-          }
-          if (isTitleTag && name === 'a') {
-            tempNovel.path = attribs['href'].slice(baseUrl.length);
-            isNovelName = true;
-          }
-          if (name === 'figure') {
-            tempNovel.cover = attribs['style'].replace(
-              /.*url\((.*?)\)./g,
-              '$1',
-            );
-          }
-          if (tempNovel.path && tempNovel.cover) {
-            novels.push(tempNovel);
-            tempNovel = {} as Plugin.NovelItem;
-            tempNovel.name = '';
-          }
-        }
-      },
-      ontext(data) {
-        if (isNovelName) {
-          tempNovel.name += data;
-        }
-      },
-      onclosetag(name) {
+        if (state === ParsingState.Idle) return;
+
         if (name === 'h2') {
-          isNovelName = false;
-          isTitleTag = false;
+          pushState(ParsingState.NovelItem);
+          return;
         }
-        if (name === 'figure') {
-          isParsingNovel = false;
+
+        if (state === ParsingState.NovelItem) {
+          switch (name) {
+            case 'a':
+              if (!tempNovel.path) {
+                tempNovel.path = new URL(attribs.href, this.site).pathname;
+                pushState(ParsingState.NovelTitle);
+              }
+              break;
+            case 'figure':
+              tempNovel.cover = attribs['style'].replace(
+                /.*url\((.*?)\).*/,
+                '$1',
+              );
+              if (tempNovel.path && tempNovel.cover) {
+                novels.push({ ...tempNovel } as Plugin.NovelItem);
+              }
+              tempNovel = {};
+              popState();
+              break;
+          }
+        }
+      },
+      ontext: data => {
+        if (currentState() !== ParsingState.NovelTitle) return;
+        tempNovel.name = (tempNovel.name || '') + data.trim();
+      },
+      onclosetag: name => {
+        const state = currentState();
+        if (name === 'a' && state === ParsingState.NovelTitle) {
+          popState();
+        }
+        if (name === 'main') {
+          popState();
         }
       },
     });
@@ -117,7 +130,7 @@ export class RanobesPlugin implements Plugin.PluginBase {
         path: item.link.slice(this.site.length),
       });
     });
-    return chapter.reverse();
+    return chapter;
   }
 
   parseDate = (date: string) => {
@@ -184,6 +197,7 @@ export class RanobesPlugin implements Plugin.PluginBase {
     novelPath: string,
   ): Promise<Plugin.SourceNovel & { totalPages: number }> {
     const baseUrl = this.site;
+    const baseId = this.id;
     const html = await this.safeFecth(baseUrl + novelPath);
     const novel: Plugin.SourceNovel & { totalPages: number } = {
       path: novelPath,
@@ -192,175 +206,221 @@ export class RanobesPlugin implements Plugin.PluginBase {
       chapters: [],
       totalPages: 1,
     };
-    let isCover = false;
-    let isAuthor = false;
-    let isSummary = false;
-    let isStatus = false;
-    let isStatusText = false;
-    let isGenres = false;
-    let isGenresText = false;
-    let isMaxChapters = false;
-    let isChapter = false;
-    let isChapterTitle = false;
-    let isChapterDate = false;
+    const stateStack: ParsingState[] = [ParsingState.Idle];
+    const currentState = () => stateStack[stateStack.length - 1];
+    const pushState = (state: ParsingState) => stateStack.push(state);
+    const popState = () =>
+      stateStack.length > 1 ? stateStack.pop() : currentState();
+
+    const summaryArray: string[] = [];
+    const authorArray: string[] = [];
     const genreArray: string[] = [];
     const chapters: Plugin.ChapterItem[] = [];
-    let tempchapter: Plugin.ChapterItem = {};
+    let tempChapter: Partial<Plugin.ChapterItem> = {};
     let maxChapters = 0;
     const fixDate = this.parseDate;
     const parser = new Parser({
       onopentag(name, attribs) {
-        if (attribs['class'] === 'poster') {
-          isCover = true;
-        }
-        if (isCover && name === 'img') {
-          novel.name = attribs['alt'];
-          novel.cover = baseUrl + attribs['src'];
-        }
-        if (
-          (name === 'div' &&
-            attribs['class'] === 'moreless cont-text showcont-h') ||
-          (attribs['class'] === 'cont-text showcont-h' &&
-            attribs['itemprop'] === 'description')
-        ) {
-          isSummary = true;
-        }
-        if (
-          name === 'li' &&
-          attribs['title'] &&
-          (attribs['title'].includes('Original status') ||
-            attribs['title'].includes('Статус оригинала'))
-        ) {
-          isStatus = true;
-        }
-        if (name === 'a' && attribs['rel'] === 'chapter') {
-          isChapter = true;
-          tempchapter.path = attribs['href'].replace(baseUrl, '');
-        }
-        if (
-          isChapter &&
-          name === 'span' &&
-          attribs['class'] === 'title ellipses'
-        ) {
-          isChapterTitle = true;
-        }
-        if (isChapter && name === 'span' && attribs['class'] === 'grey') {
-          isChapterDate = true;
-        }
-        if (
-          name === 'li' &&
-          (attribs['title'] ==
-            'Glossary + illustrations + division of chapters, etc.' ||
-            attribs['title'] ===
-              'Глоссарий + иллюстраций + разделение глав и т.д.')
-        ) {
-          isMaxChapters = true;
+        const state = currentState();
+        switch (name) {
+          case 'div':
+            if (attribs.class === 'poster') {
+              pushState(ParsingState.Cover);
+            }
+            if (attribs.class?.includes('r-desription')) {
+              pushState(ParsingState.Summary);
+            }
+            if (attribs.class === 'moreless__short') {
+              pushState(ParsingState.Hidden);
+            }
+            if (attribs.id === 'mc-fs-genre') {
+              pushState(ParsingState.Genres);
+            }
+            if (attribs.id === 'fs-chapters') {
+              pushState(ParsingState.ChapterList);
+            }
+            break;
+          case 'img':
+            if (state === ParsingState.Cover) {
+              novel.name = attribs.alt;
+              novel.cover = new URL(attribs.src, baseUrl).href;
+              popState();
+            }
+            break;
+          case 'style':
+            pushState(ParsingState.Hidden);
+            break;
+          case 'br':
+            if (state === ParsingState.Summary) summaryArray.push('\n');
+            break;
+          case 'i':
+            if (
+              state === ParsingState.Summary &&
+              attribs.class === 'showcont-hh'
+            )
+              popState();
+            break;
+          case 'li':
+            if (
+              attribs.title?.includes('status') ||
+              attribs.title?.includes('Статус оригинала')
+            ) {
+              pushState(ParsingState.Status);
+            } else if (
+              attribs.title?.includes('Glossary') ||
+              attribs.title?.includes('Глоссарий')
+            ) {
+              pushState(ParsingState.TotalChapters);
+            }
+            break;
+          case 'span':
+            if (attribs.class === 'tag_list') pushState(ParsingState.Author);
+            if (state === ParsingState.ChapterItem && attribs.class === 'grey')
+              pushState(ParsingState.ChapterDate);
+            break;
+          case 'a':
+            if (attribs.class === 'btn read-continue') {
+              storage.set(
+                `${baseId}_${novelPath.split('-')[0].split('/').pop()}`,
+                new URL(attribs.href, baseUrl).pathname,
+              );
+            }
+            if (
+              state === ParsingState.Summary &&
+              attribs.class?.includes('moreless__toggle')
+            )
+              popState();
+            if (state === ParsingState.ChapterList) {
+              tempChapter.path = new URL(attribs.href, baseUrl).pathname;
+              pushState(ParsingState.ChapterItem);
+            }
+            break;
         }
       },
-      onopentagname(name) {
-        if (isSummary && name === 'br') {
-          novel.summary += '\n';
-        }
-        if (isStatus && name === 'a') {
-          isStatusText = true;
-        }
-        if (isGenres && name === 'a') {
-          isGenresText = true;
-        }
-      },
-      onattribute(name, value) {
-        if (name === 'itemprop' && value === 'creator') {
-          isAuthor = true;
-        }
-        if (name === 'id' && value === 'mc-fs-genre') {
-          isGenres = true;
-        }
-      },
-      ontext(data) {
-        if (isAuthor) {
-          novel.author = data;
-        }
-        if (isSummary) {
-          novel.summary += data.trim();
-        }
-        if (isStatusText) {
-          novel.status =
-            data === 'Ongoing' || data == 'В процессе'
-              ? NovelStatus.Ongoing
-              : NovelStatus.Completed;
-        }
-        if (isGenresText) {
-          genreArray.push(data);
-        }
-        if (isMaxChapters) {
-          const isNumber = data.replace(/\D/g, '');
-          if (isNumber) {
-            maxChapters = parseInt(isNumber, 10);
+      ontext: data => {
+        switch (currentState()) {
+          case ParsingState.Hidden:
+            break;
+          case ParsingState.Summary:
+            summaryArray.push(data.trim());
+            break;
+          case ParsingState.Status: {
+            const statusMap: Record<string, NovelStatus> = {
+              'Ongoing': NovelStatus.Ongoing,
+              'В процессе': NovelStatus.Ongoing,
+
+              'Completed': NovelStatus.Completed,
+              'Завершено': NovelStatus.Completed,
+
+              'Hiatus': NovelStatus.OnHiatus,
+              'Остановлен': NovelStatus.OnHiatus,
+
+              'Dropped': NovelStatus.Cancelled,
+              'Удален': NovelStatus.Cancelled,
+            };
+            novel.status = statusMap[data] ?? NovelStatus.Unknown;
+            break;
           }
-        }
-        if (isChapter) {
-          if (isChapterTitle) tempchapter.name = data.trim();
-          if (isChapterDate) tempchapter.releaseTime = fixDate(data.trim());
+          case ParsingState.Author:
+            authorArray.push(data);
+            break;
+          case ParsingState.Genres:
+            genreArray.push(data);
+            break;
+          case ParsingState.TotalChapters: {
+            const isNumber = data.replace(/\D/g, '');
+            if (isNumber) {
+              maxChapters = parseInt(isNumber, 10);
+            }
+            break;
+          }
+          case ParsingState.ChapterItem:
+            tempChapter.name = (tempChapter.name || '') + data;
+            break;
+          case ParsingState.ChapterDate:
+            tempChapter.releaseTime =
+              (tempChapter.releaseTime || '') +
+              data.replace(/[\n\t]/g, '').trim();
+            break;
         }
       },
-      onclosetag(name) {
-        if (name === 'a') {
-          isCover = false;
-          isAuthor = false;
-          isStatusText = false;
-          isGenresText = false;
-          isStatus = false;
+      onclosetag: name => {
+        switch (currentState()) {
+          case ParsingState.Hidden:
+            if (name === 'div' || name === 'style') popState();
+            break;
+          case ParsingState.Summary:
+            if (name === 'div') popState();
+            break;
+          case ParsingState.Status:
+            if (name === 'li') popState();
+            break;
+          case ParsingState.Author:
+            if (name === 'span') popState();
+            break;
+          case ParsingState.Genres:
+            if (name === 'div') popState();
+            break;
+          case ParsingState.TotalChapters:
+            if (name === 'li') popState();
+            break;
+          case ParsingState.ChapterDate:
+            if (name === 'span') popState();
+            break;
+          case ParsingState.ChapterItem:
+            if (name === 'li') {
+              tempChapter.name = tempChapter.name.replace(/[\n\t]/g, '').trim();
+              tempChapter.releaseTime = fixDate(tempChapter.releaseTime);
+              chapters.push({ ...tempChapter } as Plugin.ChapterItem);
+              tempChapter = {};
+              popState();
+            }
+            break;
+          case ParsingState.ChapterList:
+            if (name === 'ul') popState();
+            break;
         }
-        if (name === 'div') {
-          isSummary = false;
-          isGenres = false;
-        }
-        if (name === 'li') {
-          isMaxChapters = false;
-        }
-        if (name === 'a') {
-          isChapter = false;
-          if (tempchapter.name) {
-            chapters.push({ ...tempchapter, page: '1' });
-            tempchapter = {};
-          }
-        }
-        if (name === 'span') {
-          if (isChapterTitle) isChapterTitle = false;
-          if (isChapterDate) isChapterDate = false;
+      },
+      onend: () => {
+        novel.author = authorArray
+          .map(str => str.replace(/[\n\t]/g, '').trim())
+          .filter(str => str && str !== ',')
+          .join(', ');
+        novel.genres = genreArray
+          .map(str => str.replace(/[\n\t]/g, '').trim())
+          .filter(str => str && str !== ',')
+          .join(', ');
+        novel.summary = summaryArray.join('');
+        novel.totalPages = Math.ceil((maxChapters || 1) / 25);
+        novel.chapters = chapters;
+        if (novel.chapters[0].path) {
+          novel.latestChapter = novel.chapters[0];
         }
       },
     });
     parser.write(html);
     parser.end();
-    novel.genres = genreArray.join(', ');
-    novel.totalPages = Math.ceil((maxChapters || 1) / 25);
-    novel.chapters = chapters;
-
-    if (novel.chapters[0].path) {
-      novel.latestChapter = novel.chapters[0];
-    }
 
     return novel;
   }
 
   async parsePage(novelPath: string, page: string): Promise<Plugin.SourcePage> {
-    const pagePath =
-      this.id == 'ranobes'
-        ? novelPath.split('-')[0]
-        : '/' + novelPath.split('-').slice(1).join('-').split('.')[0];
-    const firstUrl =
-      this.site + '/chapters' + pagePath.replace(this.options.path + '/', '');
-    const pageBody = await this.safeFecth(firstUrl + '/page/' + page);
+    const pagePath = storage.get(
+      `${this.id}_${novelPath.split('-')[0].split('/').pop()}`,
+    );
+    const pageBody = await this.safeFecth(
+      this.site + pagePath + 'page/' + page,
+    );
 
     const baseUrl = this.site;
-    let isScript = false;
-    let isChapter = false;
-    let isChapterInfo = false;
-    let isChapterDate = false;
+    const stateStack: ParsingState[] = [ParsingState.Idle];
+    const currentState = () => stateStack[stateStack.length - 1];
+    const pushState = (state: ParsingState) => stateStack.push(state);
+    const popState = () =>
+      stateStack.length > 1 ? stateStack.pop() : currentState();
 
     let chapters: Plugin.ChapterItem[] = [];
-    let tempchapter: Plugin.ChapterItem = {};
+    let tempChapter: Partial<Plugin.ChapterItem> = {};
     const fixDate = this.parseDate;
 
     let dataJson: {
@@ -369,48 +429,65 @@ export class RanobesPlugin implements Plugin.PluginBase {
     } = { pages_count: '', chapters: [] };
 
     const parser = new Parser({
-      onopentag(name, attribs) {
-        if (name === 'div' && attribs['class'] === 'cat_block cat_line') {
-          isChapter = true;
+      onopentag: (name, attribs) => {
+        const state = currentState();
+
+        if (attribs.id === 'dle-content') {
+          pushState(ParsingState.ChapterList);
         }
-        if (isChapter && name === 'a' && attribs['title'] && attribs['href']) {
-          tempchapter.name = attribs['title'];
-          tempchapter.path = attribs['href'].replace(baseUrl, '');
+        if (name === 'aside' && state === ParsingState.Script) {
+          popState();
+          return;
         }
-        if (name === 'span' && attribs['class'] === 'grey small') {
-          isChapterInfo = true;
-        }
-        if (name === 'small' && isChapterInfo) {
-          isChapterDate = true;
+
+        if (state === ParsingState.Idle) return;
+
+        switch (name) {
+          case 'a':
+            if (attribs.title && attribs.href) {
+              tempChapter.name = attribs.title;
+              tempChapter.path = new URL(attribs.href, baseUrl).pathname;
+              pushState(ParsingState.ChapterItem);
+            }
+            break;
+          case 'small':
+            if (state === ParsingState.ChapterItem) {
+              pushState(ParsingState.ChapterDate);
+            }
         }
       },
-      ontext(data) {
-        if (isChapterDate) tempchapter.releaseTime = fixDate(data.trim());
-        if (isScript) {
+      ontext: data => {
+        if (currentState() === ParsingState.ChapterDate)
+          tempChapter.releaseTime =
+            (tempChapter.releaseTime || '') +
+            data.replace(/[\n\t]/g, '').trim();
+        if (currentState() === ParsingState.Script) {
           if (data.includes('window.__DATA__ =')) {
             dataJson = JSON.parse(data.replace('window.__DATA__ =', ''));
           }
         }
       },
-      onclosetag(name) {
-        if (name === 'a' && tempchapter.name) {
-          chapters.push(tempchapter);
-          tempchapter = {};
-        }
-        if (name === 'div') {
-          isChapter = false;
-        }
-        if (name === 'span') {
-          isChapterInfo = false;
-        }
-        if (name === 'small') {
-          isChapterDate = false;
-        }
-        if (name === 'main') {
-          isScript = true;
-        }
-        if (name === 'script') {
-          isScript = false;
+      onclosetag: name => {
+        const state = currentState();
+        switch (name) {
+          case 'small':
+            if (state === ParsingState.ChapterDate) popState();
+            break;
+          case 'a':
+            if (state === ParsingState.ChapterItem) {
+              tempChapter.releaseTime = fixDate(tempChapter.releaseTime);
+              chapters.push({ ...tempChapter } as Plugin.ChapterItem);
+              tempChapter = {};
+              popState();
+            }
+            break;
+          case 'main':
+            popState();
+            pushState(ParsingState.Script);
+            break;
+          case 'script':
+            if (state === ParsingState.Script) popState();
+            break;
         }
       },
     });
@@ -469,3 +546,21 @@ type ChapterEntry = {
   date: string;
   link: string;
 };
+
+enum ParsingState {
+  Idle,
+  Cover,
+  Script,
+  Genres,
+  Hidden,
+  Status,
+  Author,
+  Summary,
+  NovelList,
+  NovelItem,
+  NovelTitle,
+  ChapterList,
+  ChapterItem,
+  ChapterDate,
+  TotalChapters,
+}
