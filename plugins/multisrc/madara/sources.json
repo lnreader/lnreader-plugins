@@ -223,7 +223,7 @@
     "options": {
       "useNewChapterEndpoint": true,
       "resolveCoverDataUri": true,
-      "versionIncrements": 1
+      "versionIncrements": 2
     }
   },
   {
