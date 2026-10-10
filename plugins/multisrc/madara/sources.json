@@ -672,13 +672,5 @@
       "lang": "English",
       "useNewChapterEndpoint": true
     }
-  },
-  {
-    "id": "bailiantales",
-    "sourceSite": "https://bailiantales.com/",
-    "sourceName": "BaiLianTales",
-    "options": {
-      "useNewChapterEndpoint": true
-    }
   }
 ]
