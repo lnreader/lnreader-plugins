@@ -141,21 +141,20 @@ export class MadaraPlugin implements Plugin.PluginBase {
   }
 
   extractCover(image: Cheerio<AnyNode>): string {
-    const candidate =
-      image.attr('data-lazy-src') ||
-      image.attr('data-src') ||
-      image.attr('data-cfsrc') ||
-      image.attr('data-srcset')?.split(' ')[0] ||
-      image.attr('data-lazy-srcset')?.split(' ')[0] ||
-      image.attr('srcset')?.split(' ')[0];
+    const candidates = [
+      image.attr('data-lazy-src'),
+      image.attr('data-src'),
+      image.attr('data-cfsrc'),
+      image.attr('data-srcset')?.split(' ')[0],
+      image.attr('data-lazy-srcset')?.split(' ')[0],
+      image.attr('srcset')?.split(' ')[0],
+      image.attr('src'),
+    ];
 
-    if (candidate && !candidate.includes('dflazy')) {
-      return candidate;
-    }
-
-    const src = image.attr('src');
-    if (src && !src.includes('dflazy')) {
-      return src;
+    for (const candidate of candidates) {
+      if (candidate && !candidate.includes('dflazy')) {
+        return candidate;
+      }
     }
 
     return defaultCover;
@@ -194,17 +193,15 @@ export class MadaraPlugin implements Plugin.PluginBase {
 
   async resolveCoverAsDataUri(url: string): Promise<string> {
     if (!url || !url.startsWith('http') || url.startsWith('data:')) return url;
+    let timeout: ReturnType<typeof setTimeout> | null = null;
     try {
       const controller =
         typeof AbortController !== 'undefined' ? new AbortController() : null;
-      const timeout = controller
-        ? setTimeout(() => controller.abort(), 4000)
-        : null;
+      timeout = controller ? setTimeout(() => controller.abort(), 4000) : null;
       const res = await fetchApi(url, {
         headers: this.requestHeaders,
         ...(controller ? { signal: controller.signal } : {}),
       });
-      if (timeout) clearTimeout(timeout);
       if (!res.ok) return url;
       const blob = await res.blob();
       return await new Promise<string>(resolve => {
@@ -226,6 +223,8 @@ export class MadaraPlugin implements Plugin.PluginBase {
       });
     } catch {
       return url;
+    } finally {
+      if (timeout) clearTimeout(timeout);
     }
   }
 
