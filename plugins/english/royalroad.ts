@@ -9,7 +9,7 @@ import { storage } from '@libs/storage';
 class RoyalRoad implements Plugin.PluginBase {
   id = 'royalroad';
   name = 'Royal Road';
-  version = '2.3.1';
+  version = '2.3.2';
   icon = 'src/en/royalroad/icon.png';
   site = 'https://www.royalroad.com/';
 
@@ -112,7 +112,8 @@ class RoyalRoad implements Plugin.PluginBase {
       path: novelPath,
     };
     const baseUrl = this.site;
-    const enableVolume = this.enableVol;
+    const parseChapters = (scriptContent: string) =>
+      this.parseChapters(scriptContent);
 
     let state: ParsingState = ParsingState.Idle;
     let statusText = '';
@@ -122,9 +123,6 @@ class RoyalRoad implements Plugin.PluginBase {
     const summaryParts: string[] = [];
     const scriptContentParts: string[] = [];
     const genreArray: string[] = [];
-
-    let chapterJson: ChapterEntry[] = [];
-    let volumeJson: VolumeEntry[] = [];
 
     const parser = new Parser({
       onopentag(name, attribs) {
@@ -245,20 +243,6 @@ class RoyalRoad implements Plugin.PluginBase {
           case 'script':
             if (state === ParsingState.InScript) {
               state = ParsingState.Idle;
-              const scriptContent = scriptContentParts.join('');
-              const chapterMatch = scriptContent.match(
-                /window\.chapters\s*=\s*(\[.*?\]);/,
-              );
-              const volumeMatch = scriptContent.match(
-                /window\.volumes\s*=\s*(\[.*?\]);/,
-              );
-
-              if (chapterMatch?.[1]) {
-                chapterJson = JSON.parse(chapterMatch[1]);
-              }
-              if (volumeMatch?.[1] && enableVolume) {
-                volumeJson = JSON.parse(volumeMatch[1]);
-              }
             }
             break;
         }
@@ -278,21 +262,7 @@ class RoyalRoad implements Plugin.PluginBase {
             novel.status = NovelStatus.Unknown;
         }
 
-        novel.chapters = chapterJson.map((chapter: ChapterEntry) => {
-          const matchingVolume = volumeJson.find(
-            (volume: VolumeEntry) => volume.id === chapter.volumeId,
-          );
-          return {
-            name: chapter.title,
-            path: (() => {
-              const parts = chapter.url.split('/');
-              return `${parts[1]}/${parts[2]}/${parts[4]}/${parts[5]}`;
-            })(),
-            releaseTime: chapter.date,
-            chapterNumber: chapter?.order,
-            page: matchingVolume?.title,
-          };
-        });
+        novel.chapters = parseChapters(scriptContentParts.join(''));
       },
     });
 
@@ -300,6 +270,49 @@ class RoyalRoad implements Plugin.PluginBase {
     parser.end();
 
     return novel as Plugin.NovelItem;
+  }
+
+  parseChapters(scriptContent: string): Plugin.ChapterItem[] {
+    const chapterMatch = scriptContent.match(
+      /window\.chapters\s*=\s*(\[.*?\]);/,
+    );
+    const volumeMatch = scriptContent.match(/window\.volumes\s*=\s*(\[.*?\]);/);
+    const chapterJson: ChapterEntry[] = chapterMatch?.[1]
+      ? JSON.parse(chapterMatch[1])
+      : [];
+    const volumeJson: VolumeEntry[] =
+      volumeMatch?.[1] && this.enableVol ? JSON.parse(volumeMatch[1]) : [];
+
+    return chapterJson.map((chapter: ChapterEntry) => {
+      const matchingVolume = volumeJson.find(
+        (volume: VolumeEntry) => volume.id === chapter.volumeId,
+      );
+      return {
+        name: chapter.title,
+        path: (() => {
+          const parts = chapter.url.split('/');
+          return `${parts[1]}/${parts[2]}/${parts[4]}/${parts[5]}`;
+        })(),
+        releaseTime: chapter.date,
+        chapterNumber: chapter?.order,
+        page: matchingVolume?.title,
+      };
+    });
+  }
+
+  // LNReader asks for a page when it has no stored chapters for it, e.g. a novel
+  // that was saved without its chapter list. Every chapter is on the fiction page.
+  async parsePage(novelPath: string, page: string): Promise<Plugin.SourcePage> {
+    const result = await fetchApi(this.site + novelPath);
+    const chapters = this.parseChapters(await result.text());
+    // Page "1" is asked for when the app has no stored pages at all, so give it
+    // the whole list; any other page is a volume title.
+    return {
+      chapters:
+        page === '1'
+          ? chapters
+          : chapters.filter(chapter => chapter.page === page),
+    };
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
