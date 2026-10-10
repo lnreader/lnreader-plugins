@@ -221,7 +221,9 @@
     "sourceSite": "https://www.foxaholic.com/",
     "sourceName": "Foxaholic",
     "options": {
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "resolveCoverDataUri": true,
+      "versionIncrements": 1
     }
   },
   {
