@@ -1,5 +1,5 @@
 import { load as parseHTML } from 'cheerio';
-import { fetchApi, FetchInit } from '@libs/fetch';
+import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { defaultCover } from '@libs/defaultCover';
 
@@ -21,46 +21,45 @@ import { defaultCover } from '@libs/defaultCover';
  * - Chapter page: `/series/<slug>/<chapter>/` — text inside `#novel-content`.
  *
  * The site gates chapter pages on User-Agent: desktop UAs receive a
- * "Mobile Only Content" interstitial instead of the chapter, so every
- * request sends a mobile browser UA.
+ * "Mobile Only Content" interstitial instead of the chapter.
+ *
+ * The site also refuses app readers on purpose: any User-Agent carrying the
+ * Android WebView `; wv` token (LNReader's own UA and its WebView) gets an
+ * HTTP 403 "Access Denied" page asking readers to open the site in Google
+ * Chrome. The plugin sends the app's own User-Agent and reports that
+ * refusal instead of disguising the app as a browser.
  */
 class DaoTekno implements Plugin.PluginBase {
   id = 'daotekno';
   name = 'DaoTekno';
-  version = '1.0.1';
+  version = '1.0.2';
   icon = 'src/en/daotekno/icon.png';
   site = 'https://daotekno.com/';
-
-  // Browser-like headers (important for Cloudflare-fronted sites, which
-  // serve a bot-check page to requests without them). The UA is a mobile
-  // Chrome: the site serves chapter pages only to mobile UAs. The
-  // sec-ch-ua/sec-fetch-* fields mirror what a Chrome fetch() sends here
-  // (Sec-Fetch-Mode: cors is added by fetchApi's default headers).
-  private headers = {
-    'User-Agent':
-      'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-    'Accept-Language': 'en-US,en;q=0.9',
-    'Referer': this.site,
-    'sec-ch-ua':
-      '"Chromium";v="126", "Not(A:Brand";v="24", "Google Chrome";v="126"',
-    'sec-ch-ua-mobile': '?1',
-    'sec-ch-ua-platform': '"Android"',
-    'Sec-Fetch-Site': 'cross-site',
-    'Sec-Fetch-Dest': 'empty',
-  };
 
   // Throw (carrying the HTTP status) on a refused response so a
   // runner-side block is reported INCONCLUSIVE per docs/testing.md
   // instead of being parsed into a false empty-result FAIL.
-  private async fetchSite(url: string, init?: FetchInit) {
-    const res = await fetchApi(url, init);
+  private async fetchHtml(url: string): Promise<string> {
+    const res = await fetchApi(url);
     if (!res.ok) {
-      throw Object.assign(new Error('Request failed: ' + res.status), {
-        status: res.status,
-      });
+      let message = 'Request failed: ' + res.status;
+      if (res.headers.get('cf-mitigated') === 'challenge') {
+        message =
+          'Cloudflare challenge (HTTP ' +
+          res.status +
+          '). Open daotekno.com in WebView to pass it, then retry.';
+      } else if (
+        res.status === 403 &&
+        /in-app browser is not allowed/i.test(await res.text())
+      ) {
+        message =
+          'daotekno.com blocks reading in apps and in-app browsers ' +
+          '(HTTP 403 "Access Denied") and asks readers to open the site ' +
+          'in Google Chrome instead.';
+      }
+      throw Object.assign(new Error(message), { status: res.status });
     }
-    return res;
+    return res.text();
   }
 
   private parseNovelCards(html: string): Plugin.NovelItem[] {
@@ -106,9 +105,7 @@ class DaoTekno implements Plugin.PluginBase {
   }
 
   async popularNovels(pageNo: number): Promise<Plugin.NovelItem[]> {
-    const html = await this.fetchSite(`${this.site}?page=${pageNo}`, {
-      headers: this.headers,
-    }).then(r => r.text());
+    const html = await this.fetchHtml(`${this.site}?page=${pageNo}`);
 
     // Out-of-range pages are clamped to the last page (?page=11 serves
     // page 10), so compare the requested page against the `N / M` marker
@@ -123,9 +120,7 @@ class DaoTekno implements Plugin.PluginBase {
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const firstHtml = await this.fetchSite(this.site + novelPath, {
-      headers: this.headers,
-    }).then(r => r.text());
+    const firstHtml = await this.fetchHtml(this.site + novelPath);
     const $first = parseHTML(firstHtml);
 
     const novel: Plugin.SourceNovel = {
@@ -142,9 +137,7 @@ class DaoTekno implements Plugin.PluginBase {
     const maxChapterPages = 100;
 
     while (nextHref && pagesFetched < maxChapterPages) {
-      const html = await this.fetchSite(this.site + novelPath + nextHref, {
-        headers: this.headers,
-      }).then(r => r.text());
+      const html = await this.fetchHtml(this.site + novelPath + nextHref);
       const $ = parseHTML(html);
       chapters.push(...this.collectChapters($));
       nextHref = this.nextChapterPage($);
@@ -158,9 +151,7 @@ class DaoTekno implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const html = await this.fetchSite(this.site + chapterPath, {
-      headers: this.headers,
-    }).then(r => r.text());
+    const html = await this.fetchHtml(this.site + chapterPath);
     const $ = parseHTML(html);
 
     const content = $('#novel-content');
@@ -185,10 +176,9 @@ class DaoTekno implements Plugin.PluginBase {
       return [];
     }
 
-    const html = await this.fetchSite(
+    const html = await this.fetchHtml(
       `${this.site}?q=${encodeURIComponent(searchTerm)}`,
-      { headers: this.headers },
-    ).then(r => r.text());
+    );
 
     return this.parseNovelCards(html);
   }
