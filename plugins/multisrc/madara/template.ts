@@ -392,7 +392,9 @@ export class MadaraPlugin implements Plugin.PluginBase {
       if (!novel.status && nhvStatus)
         novel.status = nhvStatus.includes('مستمرة')
           ? NovelStatus.Ongoing
-          : NovelStatus.Completed;
+          : nhvStatus.includes('متوقفة')
+            ? NovelStatus.OnHiatus
+            : NovelStatus.Completed;
       if (!novel.rating) {
         const nhvRating = parseFloat(
           loadedCheerio('.nhv-simple-rating__avg').text().trim(),

@@ -271,6 +271,9 @@ class GalaxyNovels implements Plugin.PluginBase {
           releaseTime,
         });
       });
+      // The page lists the newest chapter first (data-order="desc"), but the
+      // app expects the oldest first.
+      if (chaptersContainer.attr('data-order') === 'desc') chapters.reverse();
     }
 
     return {
