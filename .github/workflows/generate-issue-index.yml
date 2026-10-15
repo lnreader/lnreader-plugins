@@ -1,0 +1,79 @@
+name: Generate Issue Index
+
+on:
+  issues:
+    types: [opened, closed, reopened, edited, labeled, unlabeled, deleted]
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths:
+      - .github/scripts/generate-issue-index.cjs
+      - .github/scripts/keys.json
+      - .github/workflows/generate-issue-index.yml
+  workflow_run:
+    workflows: ['Update Issue Template', 'Issue Moderator']
+    types: [completed]
+
+permissions: {}
+
+concurrency:
+  group: plugin-issue-index
+  cancel-in-progress: false
+
+jobs:
+  generate-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: read
+    steps:
+      - name: Checkout default branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '24'
+
+      - name: Generate full open issue index
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api --paginate --slurp "repos/$REPOSITORY/issues?state=open&per_page=100" > "$RUNNER_TEMP/open-plugin-issues.json"
+          node .github/scripts/generate-issue-index.cjs "$RUNNER_TEMP/open-plugin-issues.json" "$RUNNER_TEMP/issue-index.min.json"
+
+      - name: Publish issue index branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+
+          set +e
+          git ls-remote --exit-code --heads origin refs/heads/issue-index >/dev/null
+          branch_status=$?
+          set -e
+          if [ "$branch_status" -eq 0 ]; then
+            git fetch origin refs/heads/issue-index
+            git checkout --force -B issue-index FETCH_HEAD
+          elif [ "$branch_status" -eq 2 ]; then
+            git checkout --orphan issue-index
+            git rm -rf --ignore-unmatch .
+          else
+            echo "Unable to determine whether refs/heads/issue-index exists (git ls-remote exited $branch_status)." >&2
+            exit "$branch_status"
+          fi
+
+          cp "$RUNNER_TEMP/issue-index.min.json" issue-index.min.json
+          git add -- issue-index.min.json
+          if git diff --cached --quiet; then
+            echo "Issue index is unchanged."
+            exit 0
+          fi
+          git commit -m "chore(issues): update plugin issue index"
+          git push origin HEAD:refs/heads/issue-index

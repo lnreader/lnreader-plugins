@@ -35,6 +35,14 @@ npm run dev:start
 
 Open [localhost:3000](http://localhost:3000) to test plugins interactively. See the [testing guide](./docs/website-tutorial.md) for details.
 
+The issue-report panel uses `VITE_ISSUE_INDEX_URL` when set. Add it to `.env.local` to use another index URL:
+
+```env
+VITE_ISSUE_INDEX_URL=https://example.com/issue-index.min.json
+```
+
+If unset, the playground uses `https://raw.githubusercontent.com/LNReader/lnreader-plugins/issue-index/issue-index.min.json`.
+
 ### Mobile App
 
 **From GitHub (Automated):**
