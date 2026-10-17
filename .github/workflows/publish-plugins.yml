@@ -1,9 +1,11 @@
+
 name: Publish Plugins
 
 on:
+  workflow_dispatch:
   push:
     branches:
-      - master
+      - patch-1
     paths:
       - 'plugins/**'
       - 'public/**'
