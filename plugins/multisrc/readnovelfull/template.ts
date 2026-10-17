@@ -47,6 +47,7 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
   options: ReadNovelFullOptions;
   filters?: Filters | undefined;
   imageRequestInit?: Plugin.ImageRequestInit;
+  private lastPage: { no: number; paths: string[] } | null = null;
 
   constructor(metadata: ReadNovelFullMetadata) {
     this.id = metadata.id;
@@ -54,7 +55,7 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/readnovelfull/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `2.2.${1 + versionIncrements}`;
+    this.version = `2.3.${1 + versionIncrements}`;
     this.options = metadata.options;
     this.filters = metadata.filters;
     if (this.options?.imageReferer) {
@@ -374,7 +375,22 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
       );
     }
     const html = await result.text();
-    return this.parseNovels(html);
+    const novels = this.parseNovels(html);
+    const paths = novels.map(n => n.path);
+
+    // If the previous and current page share the same novel items then return []
+    const prev = this.lastPage;
+    if (
+      prev &&
+      pageNo === prev.no + 1 &&
+      prev.paths.length === paths.length &&
+      prev.paths.every((p, i) => p === paths[i])
+    ) {
+      return [];
+    }
+
+    this.lastPage = { no: pageNo, paths };
+    return novels;
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
