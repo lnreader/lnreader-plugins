@@ -54,7 +54,7 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/readnovelfull/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `2.2.${1 + versionIncrements}`;
+    this.version = `2.2.${2 + versionIncrements}`;
     this.options = metadata.options;
     this.filters = metadata.filters;
     if (this.options?.imageReferer) {
@@ -380,6 +380,13 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
     const url = this.site + novelPath;
     const result = await fetchApi(url);
+    if (!result.ok) {
+      throw new Error(
+        result.status === 404
+          ? 'Novel not found (404), it may have been removed from this source.'
+          : `Could not reach site (${result.status}: ${result.statusText}) try to open in webview.`,
+      );
+    }
     const body = await result.text();
 
     const novel: Partial<Plugin.SourceNovel> = {
@@ -766,6 +773,13 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
 
   async parseChapter(chapterPath: string): Promise<string> {
     const response = await fetchApi(this.site + chapterPath);
+    if (!response.ok) {
+      throw new Error(
+        response.status === 404
+          ? 'Chapter not found (404), it may have been removed from this source.'
+          : `Could not reach site (${response.status}: ${response.statusText}) try to open in webview.`,
+      );
+    }
     let html = await response.text();
     if (this.options?.customJs) {
       try {
