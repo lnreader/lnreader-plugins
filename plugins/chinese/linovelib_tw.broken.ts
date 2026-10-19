@@ -9,7 +9,7 @@ class Linovelib_tw implements Plugin.PluginBase {
   name = 'Linovelib(繁體)';
   icon = 'src/cn/linovelib/icon.png';
   site = 'https://tw.linovelib.com/';
-  version = '1.0.1';
+  version = '1.0.2';
 
   async popularNovels(
     pageNo: number,
