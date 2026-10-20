@@ -1,9 +1,37 @@
-import { fetchText } from '@libs/fetch';
-import { Plugin } from '@/types/plugin';
-import { NovelStatus } from '@libs/novelStatus';
-import { Filters, FilterTypes } from '@libs/filterInputs';
+import { fetchText } from "@libs/fetch";
+import { Plugin } from "@/types/plugin";
+import { NovelStatus } from "@libs/novelStatus";
+import { Filters, FilterTypes } from "@libs/filterInputs";
 
-const API = 'https://api.wetriedtls.com';
+const API = "https://api.wetriedtls.com";
+
+/** Cap for the chapterTitles cache (see the field's comment). */
+const MAX_TITLE_CACHE_ENTRIES = 4000;
+
+/**
+ * Sanity bound on chapter-list pagination. Real series need a handful
+ * of pages (500 chapters per page); a response claiming hundreds of
+ * pages is broken or hostile, and following it would loop fetches for
+ * as long as the app lets it. Fail loudly instead.
+ */
+const MAX_LIST_PAGES = 200;
+
+/**
+ * Upper bound on any single response this plugin will parse. Chapter
+ * pages and API responses from this site are orders of magnitude
+ * smaller; anything bigger is a broken or hostile response, and
+ * regex-scanning / JSON-parsing it would bill the reader's phone, not
+ * the site. Enforced before any parsing happens.
+ */
+const MAX_RESPONSE_CHARS = 10000000;
+
+/** fetchText with the size cap applied — used for every API call. */
+async function fetchApiText(url: string): Promise<string> {
+  const text = await fetchText(url);
+  if (text.length > MAX_RESPONSE_CHARS)
+    throw new Error("Response too large to parse safely");
+  return text;
+}
 
 /**
  * Build the catalog browse URL for a page. The API honors the `status`
@@ -12,12 +40,12 @@ const API = 'https://api.wetriedtls.com';
  * 'all' (or empty) means no status filtering.
  */
 function catalogUrl(pageNo: number, status?: string): string {
-  let url = API + '/query?adult=true&query_string=&page=' + pageNo;
-  const s = (status || '').trim();
-  if (s && s !== 'all') url += '&status=' + encodeURIComponent(s);
+  let url = API + "/query?adult=true&query_string=&page=" + pageNo;
+  const s = (status || "").trim();
+  if (s && s !== "all") url += "&status=" + encodeURIComponent(s);
   return url;
 }
-const SITE = 'https://wetriedtls.com';
+const SITE = "https://wetriedtls.com";
 
 type NovelCard = {
   slug: string;
@@ -53,33 +81,30 @@ function safeJson(text: string): unknown {
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null;
+  return typeof v === "object" && v !== null;
 }
 
 function str(v: unknown): string {
-  return typeof v === 'string' ? v : '';
+  return typeof v === "string" ? v : "";
 }
 
-/** Decode a handful of HTML entities; the site uses a small set. */
+/**
+ * Decode HTML entities in display text (titles, names, summaries).
+ * Delegates to the single-pass decoder: the previous chain of sequential
+ * .replace() passes decoded twice ("&amp;lt;" -> "<"), and its numeric
+ * pass wrapped code points above 0xffff through String.fromCharCode.
+ * One visible difference: &nbsp; now yields U+00A0 (as browsers render it)
+ * instead of a plain space; stripHtml already collapses U+00A0.
+ */
 function decodeEntities(s: string): string {
-  return s
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#0?39;/g, "'")
-    .replace(/&rsquo;|&lsquo;/g, "'")
-    .replace(/&rdquo;|&ldquo;/g, '"')
-    .replace(/&mdash;/g, '—')
-    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n, 10)));
+  return decodeEntitiesOnce(s);
 }
 
 /** Strip tags, collapse whitespace. */
 function stripHtml(html: string): string {
-  return decodeEntities(html.replace(/<[^>]+>/g, ' '))
-    .replace(/[ \t\xa0]+/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
+  return decodeEntities(html.replace(/<[^>]+>/g, " "))
+    .replace(/[ \t\xa0]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
 
@@ -92,8 +117,10 @@ function stripHtml(html: string): string {
  * silently skipped due to formatting.
  */
 function extractFlightText(html: string): string {
+  if (html.length > MAX_RESPONSE_CHARS)
+    throw new Error("Page too large to parse safely");
   const re = /self\.__next_f\.push\(\[1,"([\s\S]*?)"\]\)\s*;?\s*<\/script>/g;
-  let out = '';
+  let out = "";
   let m: RegExpExecArray | null;
   while ((m = re.exec(html)) !== null) {
     try {
@@ -130,7 +157,7 @@ function sliceUtf8Bytes(s: string, start: number, byteLen: number): string {
 
 /** Inner text of one <p>...</p> block, tags stripped. */
 function paragraphText(p: string): string {
-  return decodeEntities(p.replace(/<[^>]+>/g, '')).trim();
+  return decodeEntities(p.replace(/<[^>]+>/g, "")).trim();
 }
 
 function isTitleRepeat(p: string, knownTitles?: string[]): boolean {
@@ -140,15 +167,15 @@ function isTitleRepeat(p: string, knownTitles?: string[]): boolean {
   // label, a POV header) must never be stripped, so without a matching
   // known title nothing is treated as a repeat.
   const inner = p
-    .replace(/^<p[^>]*>/i, '')
-    .replace(/<\/p>$/i, '')
+    .replace(/^<p[^>]*>/i, "")
+    .replace(/<\/p>$/i, "")
     .trim();
   if (!/^<strong>[\s\S]*<\/strong>$/.test(inner)) return false;
   if (!knownTitles || knownTitles.length === 0) return false;
-  const text = decodeEntities(inner.replace(/<[^>]+>/g, ''))
+  const text = decodeEntities(inner.replace(/<[^>]+>/g, ""))
     .trim()
     .toLowerCase();
-  return knownTitles.some(t => t.trim().toLowerCase() === text);
+  return knownTitles.some((t) => t.trim().toLowerCase() === text);
 }
 
 /**
@@ -168,81 +195,488 @@ function isPromoParagraph(p: string): boolean {
   // when it has no text of its own (e.g. <p><div><img></div></p>).
   if (/<img[\s>]/i.test(p)) return false;
   const t = paragraphText(p).toLowerCase();
-  if (!t || t === '= = =') return true;
-  if (t.indexOf('we tried translations') !== -1) return true;
-  if (t.indexOf('dsc.gg') !== -1 || t.indexOf('join our discord') !== -1)
+  if (!t || t === "= = =") return true;
+  if (t.indexOf("we tried translations") !== -1) return true;
+  if (t.indexOf("dsc.gg") !== -1 || t.indexOf("join our discord") !== -1)
     return true;
   return false;
 }
 
 /**
- * Decode the HTML entities that can appear inside an attribute value —
- * decimal (&#106;), hex (&#x6A;), and the named entities used to smuggle a
- * scheme past a naive prefix check (&colon;) — so the scheme test below
- * sees what the browser will actually navigate to.
+ * Decode HTML entities in ONE pass, the way a browser decodes an
+ * attribute value: numeric references (decimal/hex, semicolon optional)
+ * and named references (semicolon required, except the legacy set —
+ * amp/lt/gt/quot — when not followed by a letter, digit, or '=', which
+ * is the HTML attribute exception). A single pass matters: sequential
+ * replace passes can double-decode (`&amp;#106;` must stay the literal
+ * text `&#106;`, exactly as a browser sees it), and this decoder's whole
+ * job is to show the URL check the same string the browser will use.
+ * The named table covers every reference that can produce an ASCII
+ * letter, digit, punctuation mark, or whitespace — the only characters
+ * that can take part in a URL scheme — plus common typographic ones.
  */
-function decodeAttrEntities(s: string): string {
-  return s
-    .replace(/&#x([0-9a-f]+);?/gi, (_m, h: string) =>
-      String.fromCharCode(parseInt(h, 16)),
-    )
-    .replace(/&#(\d+);?/g, (_m, n: string) =>
-      String.fromCharCode(parseInt(n, 10)),
-    )
-    .replace(/&colon;?/gi, ':')
-    .replace(/&semi;?/gi, ';')
-    .replace(/&amp;?/gi, '&')
-    .replace(/&lt;?/gi, '<')
-    .replace(/&gt;?/gi, '>')
-    .replace(/&quot;?/gi, '"')
-    .replace(/&#0?39;?/g, "'");
-}
+const NAMED_ENTITIES: Record<string, string> = {
+  Tab: "\t",
+  NewLine: "\n",
+  colon: ":",
+  semi: ";",
+  comma: ",",
+  period: ".",
+  sol: "/",
+  bsol: "\\",
+  plus: "+",
+  equals: "=",
+  lpar: "(",
+  rpar: ")",
+  excl: "!",
+  quest: "?",
+  num: "#",
+  percnt: "%",
+  dollar: "$",
+  ast: "*",
+  commat: "@",
+  Hat: "^",
+  lowbar: "_",
+  grave: "`",
+  lcub: "{",
+  rcub: "}",
+  lsqb: "[",
+  rsqb: "]",
+  verbar: "|",
+  tilde: "~",
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  apos: "'",
+  nbsp: "\u00a0",
+  copy: "\u00a9",
+  reg: "\u00ae",
+  trade: "\u2122",
+  hellip: "\u2026",
+  mdash: "\u2014",
+  ndash: "\u2013",
+  lsquo: "\u2018",
+  rsquo: "\u2019",
+  ldquo: "\u201c",
+  rdquo: "\u201d",
+  laquo: "\u00ab",
+  raquo: "\u00bb",
+  middot: "\u00b7",
+  bull: "\u2022",
+  dagger: "\u2020",
+  deg: "\u00b0",
+  plusmn: "\u00b1",
+  times: "\u00d7",
+  divide: "\u00f7",
+  minus: "\u2212",
+  infin: "\u221e",
+  ne: "\u2260",
+  le: "\u2264",
+  ge: "\u2265",
+};
 
-/**
- * True for URLs that would execute script when followed from the reader.
- * The value is entity-decoded and stripped of whitespace/control
- * characters first, so &#106;avascript:, javascript&colon;, and
- * java<TAB>script:-style smuggling are all caught.
- */
-function isScriptUrl(url: string): boolean {
-  const norm = decodeAttrEntities(url).replace(
-    /[\s\u0000-\u001f\u007f]+/g,
-    '',
-  );
-  return /^(javascript|vbscript):/i.test(norm);
-}
-
-/**
- * Strip anything that could execute code from chapter HTML before it
- * reaches the reader, which renders the HTML unsanitized: dangerous
- * elements (script/iframe/object/...), event handler attributes
- * (e.g. <img onerror=...>), and javascript: URLs. Everything else —
- * paragraphs, headings, figures, images, inline formatting — is
- * preserved as-is.
- */
-function sanitizeHtml(html: string): string {
-  let out = html;
-  // Remove dangerous elements entirely, content included.
-  out = out.replace(
-    /<(script|iframe|object|embed|form|input|textarea|select|button|style|link|meta|base|noscript)[\s>][\s\S]*?<\/\1\s*>/gi,
-    '',
-  );
-  out = out.replace(
-    /<\/?(script|iframe|object|embed|form|input|textarea|select|button|style|link|meta|base|noscript)[^>]*>/gi,
-    '',
-  );
-  // Strip event handler attributes (onclick, onerror, ...).
-  out = out.replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s"'=<>`]+)/gi, '');
-  // Neutralize script URLs (href/src/action). The value is entity-decoded
-  // before the scheme check so encoded variants can't slip through.
-  out = out.replace(
-    /\s(href|src|action)\s*=\s*("[^"]*"|'[^']*'|[^\s"'=<>`]+)/gi,
-    (_m, _attr, val: string) => {
-      const unquoted = val.replace(/^['"]|['"]$/g, '');
-      return isScriptUrl(unquoted) ? '' : _m;
+function decodeEntitiesOnce(s: string): string {
+  return s.replace(
+    /&(#x[0-9a-f]+|#[0-9]+|[a-z][a-z0-9]+)(;?)/gi,
+    (m, body: string, semi: string, offset: number, whole: string) => {
+      if (body.charAt(0) === "#") {
+        const hex = body.charAt(1) === "x" || body.charAt(1) === "X";
+        const code = parseInt(body.slice(hex ? 2 : 1), hex ? 16 : 10);
+        if (!isNaN(code) && code > 0 && code <= 0x10ffff)
+          return String.fromCodePoint(code);
+        return m;
+      }
+      const named = Object.prototype.hasOwnProperty.call(NAMED_ENTITIES, body)
+        ? NAMED_ENTITIES[body]
+        : undefined;
+      if (named === undefined) return m;
+      if (!semi) {
+        // Legacy no-semicolon form: browsers only honor it in
+        // attributes when the next character can't extend the name.
+        const legacy =
+          body === "amp" || body === "lt" || body === "gt" || body === "quot";
+        const next = whole.charAt(offset + m.length);
+        if (!legacy || /[0-9a-zA-Z=]/.test(next)) return m;
+      }
+      return named;
     },
   );
+}
+
+/**
+ * Canonicalize a URL attribute value and return it if — and only if —
+ * it cannot execute script: entity-decode once (above), remove the
+ * tab/newline characters browsers strip from URLs, trim leading
+ * control/space characters the way the URL parser does, and then
+ * require any explicit scheme to be on the allowlist. Relative URLs,
+ * fragments, and protocol-relative URLs have no scheme to abuse and
+ * pass. Returns null for anything else (javascript:, data:, vbscript:,
+ * file:, ...), and the caller drops the attribute.
+ */
+function safeUrl(rawValue: string, allowMailto: boolean): string | null {
+  const decoded = decodeEntitiesOnce(rawValue).replace(/[\t\n\r]/g, "");
+  const trimmed = decoded.replace(/^[\u0000-\u0020]+/, "");
+  const m = /^([a-zA-Z][a-zA-Z0-9+.-]*):/.exec(trimmed);
+  if (!m) return trimmed;
+  const scheme = m[1].toLowerCase();
+  if (scheme === "http" || scheme === "https") return trimmed;
+  if (allowMailto && scheme === "mailto") return trimmed;
+  return null;
+}
+
+function escapeAttrValue(v: string): string {
+  return v.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+}
+
+type ParsedTag = {
+  kind: "open" | "close" | "comment";
+  name: string;
+  attrs: { name: string; value: string | null }[];
+  selfClosing: boolean;
+  unterminated: boolean;
+  end: number;
+};
+
+/** Parse the tag starting at html[lt] === '<'. Null = '<' is literal text. */
+function parseTag(html: string, lt: number): ParsedTag | null {
+  const n = html.length;
+  const c1 = html.charAt(lt + 1);
+  if (c1 === "!" || c1 === "?") {
+    // Comment, doctype, or processing instruction: never emitted.
+    if (html.startsWith("<!--", lt)) {
+      const close = html.indexOf("-->", lt + 4);
+      return {
+        kind: "comment",
+        name: "",
+        attrs: [],
+        selfClosing: false,
+        unterminated: false,
+        end: close === -1 ? n : close + 3,
+      };
+    }
+    const gt = html.indexOf(">", lt + 2);
+    return {
+      kind: "comment",
+      name: "",
+      attrs: [],
+      selfClosing: false,
+      unterminated: false,
+      end: gt === -1 ? n : gt + 1,
+    };
+  }
+  let i = lt + 1;
+  let kind: "open" | "close" = "open";
+  if (c1 === "/") {
+    kind = "close";
+    i = lt + 2;
+  }
+  if (!/[a-zA-Z]/.test(html.charAt(i))) return null;
+  let name = "";
+  while (i < n && /[a-zA-Z0-9-]/.test(html.charAt(i))) {
+    name += html.charAt(i).toLowerCase();
+    i++;
+  }
+  if (kind === "close") {
+    const gt = html.indexOf(">", i);
+    return {
+      kind,
+      name,
+      attrs: [],
+      selfClosing: false,
+      unterminated: gt === -1,
+      end: gt === -1 ? n : gt + 1,
+    };
+  }
+  const attrs: { name: string; value: string | null }[] = [];
+  let selfClosing = false;
+  let unterminated = true;
+  while (i < n) {
+    while (i < n && /\s/.test(html.charAt(i))) i++;
+    if (i >= n) break;
+    const ch = html.charAt(i);
+    if (ch === ">") {
+      unterminated = false;
+      i++;
+      break;
+    }
+    if (ch === "/") {
+      if (html.charAt(i + 1) === ">") {
+        selfClosing = true;
+        unterminated = false;
+        i += 2;
+        break;
+      }
+      i++;
+      continue;
+    }
+    let aname = "";
+    while (i < n && !/[\s=/>]/.test(html.charAt(i))) {
+      aname += html.charAt(i).toLowerCase();
+      i++;
+    }
+    while (i < n && /\s/.test(html.charAt(i))) i++;
+    let value: string | null = null;
+    if (html.charAt(i) === "=") {
+      i++;
+      while (i < n && /\s/.test(html.charAt(i))) i++;
+      const q = html.charAt(i);
+      if (q === '"' || q === "'") {
+        const start = ++i;
+        while (i < n && html.charAt(i) !== q) i++;
+        value = html.slice(start, i);
+        if (i < n) i++;
+      } else {
+        const start = i;
+        while (i < n && !/[\s>]/.test(html.charAt(i))) i++;
+        value = html.slice(start, i);
+      }
+    }
+    if (aname) attrs.push({ name: aname, value });
+  }
+  return { kind, name, attrs, selfClosing, unterminated, end: i };
+}
+
+/**
+ * Elements whose content is raw text (script/style) or RCDATA
+ * (textarea/title): no markup is recognized inside them, so the FIRST
+ * matching close tag ends the element — nesting must not be counted.
+ */
+const SANITIZE_RAWTEXT = new Set(["script", "style", "textarea", "title"]);
+
+/**
+ * Skip a dropped element's content, through its matching close tag.
+ * Container elements (svg, iframe, form, ...) nest, so same-name opens
+ * are depth-counted; raw-text elements end at their first close tag.
+ * Scanning uses parseTag rather than a `[^>]*>` regex, so a `>` inside
+ * a quoted attribute of a nested tag cannot end that tag early and
+ * desync the depth count.
+ */
+function skipElementContent(html: string, from: number, name: string): number {
+  const rawText = SANITIZE_RAWTEXT.has(name);
+  let depth = 1;
+  let i = from;
+  while (i < html.length) {
+    const lt = html.indexOf("<", i);
+    if (lt === -1) return html.length;
+    const tag = parseTag(html, lt);
+    if (!tag) {
+      i = lt + 1;
+      continue;
+    }
+    i = tag.end;
+    if (tag.name !== name || tag.kind === "comment") continue;
+    if (tag.kind === "close") {
+      depth--;
+      if (depth === 0) return i;
+    } else if (!rawText && !tag.selfClosing) {
+      depth++;
+    }
+  }
+  return html.length;
+}
+
+const SANITIZE_ALLOWED_TAGS = new Set([
+  "a",
+  "b",
+  "blockquote",
+  "br",
+  "code",
+  "div",
+  "em",
+  "figcaption",
+  "figure",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "hr",
+  "i",
+  "img",
+  "li",
+  "ol",
+  "p",
+  "pre",
+  "s",
+  "small",
+  "span",
+  "strong",
+  "sub",
+  "sup",
+  "table",
+  "tbody",
+  "td",
+  "tfoot",
+  "th",
+  "thead",
+  "tr",
+  "u",
+  "ul",
+]);
+
+/** Elements removed together with everything inside them. */
+const SANITIZE_DROP_CONTENT = new Set([
+  "script",
+  "style",
+  "iframe",
+  "object",
+  "embed",
+  "form",
+  "button",
+  "select",
+  "textarea",
+  "input",
+  "link",
+  "meta",
+  "base",
+  "noscript",
+  "template",
+  "svg",
+  "math",
+  "title",
+  "frame",
+  "frameset",
+  "applet",
+  "audio",
+  "video",
+  "source",
+  "track",
+]);
+
+const SANITIZE_VOID = new Set([
+  "br",
+  "hr",
+  "img",
+  "input",
+  "link",
+  "meta",
+  "base",
+  "embed",
+  "source",
+  "track",
+  "wbr",
+  "col",
+  // `frame` is void too (no closing tag exists): without it here, a stray
+  // <frame> makes the drop-with-content skipper scan to end of input and
+  // swallow the rest of the chapter.
+  "frame",
+]);
+
+/** The only attributes ever emitted, per tag. Everything else is dropped. */
+const SANITIZE_ALLOWED_ATTRS: Record<string, Set<string>> = {
+  a: new Set(["href", "title"]),
+  img: new Set(["src", "alt", "title", "width", "height"]),
+  td: new Set(["colspan", "rowspan"]),
+  th: new Set(["colspan", "rowspan"]),
+  ol: new Set(["start"]),
+  li: new Set(["value"]),
+};
+
+function sanitizeAttrs(tagName: string, tag: ParsedTag): string {
+  const allowed = SANITIZE_ALLOWED_ATTRS[tagName];
+  if (!allowed) return "";
+  let out = "";
+  const emitted = new Set<string>();
+  for (const attr of tag.attrs) {
+    // First occurrence wins, matching browser handling of duplicates;
+    // a later duplicate can never replace a value we already emitted.
+    if (!allowed.has(attr.name) || emitted.has(attr.name)) continue;
+    emitted.add(attr.name);
+    const value = attr.value === null ? "" : attr.value;
+    if (attr.name === "href" || attr.name === "src") {
+      const safe = safeUrl(value, attr.name === "href");
+      if (safe === null) continue;
+      out += " " + attr.name + '="' + escapeAttrValue(safe) + '"';
+    } else {
+      // Display text (alt/title/...): decode once, then re-escape, so
+      // the reader shows exactly the text the site authored — emitting
+      // the raw value escaped would double-encode its entities
+      // (&amp; would display as the literal text "&amp;").
+      out +=
+        " " +
+        attr.name +
+        '="' +
+        escapeAttrValue(decodeEntitiesOnce(value)) +
+        '"';
+    }
+  }
   return out;
+}
+
+/**
+ * Make chapter HTML safe for the reader, which renders it unsanitized.
+ *
+ * This is an ALLOWLIST rebuild, not another patch on the old denylist.
+ * The previous sanitizer (remove dangerous tags, strip on* attributes,
+ * block script schemes in href/src/action) was bypassed three times —
+ * encoded schemes, then SVG xlink:href, then entity-smuggled schemes —
+ * because a list of bad things is never complete. Here the HTML is
+ * tokenized properly; only known-safe tags are emitted, with only
+ * known-safe attributes (URLs canonicalized and scheme-checked);
+ * dangerous elements are dropped with their content; unknown tags are
+ * unwrapped (tag dropped, text kept), so new site markup degrades to
+ * plain content instead of slipping through. Site chrome classes and
+ * inline styles are not carried over — the reader applies its own
+ * styling.
+ */
+function sanitizeHtml(html: string): string {
+  let out = "";
+  let i = 0;
+  const n = html.length;
+  while (i < n) {
+    const lt = html.indexOf("<", i);
+    if (lt === -1) {
+      out += html.slice(i);
+      break;
+    }
+    out += html.slice(i, lt);
+    const tag = parseTag(html, lt);
+    if (!tag) {
+      out += "<";
+      i = lt + 1;
+      continue;
+    }
+    i = tag.end;
+    if (tag.kind === "comment" || tag.unterminated) continue;
+    if (SANITIZE_DROP_CONTENT.has(tag.name)) {
+      if (
+        tag.kind === "open" &&
+        !tag.selfClosing &&
+        !SANITIZE_VOID.has(tag.name)
+      ) {
+        i = skipElementContent(html, i, tag.name);
+      }
+      continue;
+    }
+    if (!SANITIZE_ALLOWED_TAGS.has(tag.name)) continue;
+    if (tag.kind === "close") {
+      out += "</" + tag.name + ">";
+    } else {
+      out += "<" + tag.name + sanitizeAttrs(tag.name, tag) + ">";
+    }
+  }
+  return out;
+}
+
+/**
+ * Read the pagination total from an API response. A response with no
+ * meta at all is a single page (return 1). But a meta that is PRESENT
+ * and malformed — last_page as a string, zero, negative — means the
+ * response is not the shape the API contract promises; defaulting to
+ * 1 there silently truncates catalogs and chapter lists to their first
+ * page, indistinguishable from a complete list. Fail loudly instead.
+ */
+function readLastPage(root: Record<string, unknown>): number {
+  const meta = root.meta;
+  if (meta === undefined || meta === null) return 1;
+  if (!isRecord(meta)) throw new Error("Invalid API response (bad metadata)");
+  const lp = meta.last_page;
+  if (lp === undefined) return 1;
+  if (typeof lp !== "number" || !(lp >= 1))
+    throw new Error("Invalid API response (bad last_page)");
+  return Math.floor(lp);
 }
 
 /** Parse the /query API response (catalog + search share the shape). */
@@ -254,20 +688,18 @@ function parseQueryResults(jsonText: string): {
   const items: NovelCard[] = [];
   let lastPage = 1;
   if (isRecord(root)) {
-    const meta = root.meta;
-    if (isRecord(meta) && typeof meta.last_page === 'number')
-      lastPage = meta.last_page;
+    lastPage = readLastPage(root);
     const data = Array.isArray(root.data) ? root.data : [];
     for (const it of data) {
       if (!isRecord(it)) continue;
-      if (it.series_type && it.series_type !== 'Novel') continue;
+      if (it.series_type && it.series_type !== "Novel") continue;
       const slug = str(it.series_slug).trim();
       const title = str(it.title).trim();
       if (!slug || !title) continue;
       items.push({
         slug,
         title: decodeEntities(title),
-        cover: str(it.thumbnail),
+        cover: str(it.thumbnail).trim(),
       });
     }
   }
@@ -277,17 +709,17 @@ function parseQueryResults(jsonText: string): {
 /** Parse the /series/{slug} API response. */
 function parseSeriesDetail(jsonText: string): NovelDetails | null {
   const s = safeJson(jsonText);
-  if (!isRecord(s) || typeof s.id !== 'number') return null;
+  if (!isRecord(s) || typeof s.id !== "number") return null;
   const tags = Array.isArray(s.tags) ? s.tags : [];
   return {
     id: s.id,
     name: decodeEntities(str(s.title)),
     author: decodeEntities(str(s.author)),
     genres: tags
-      .map(t => (isRecord(t) ? decodeEntities(str(t.name)) : ''))
-      .filter(g => g.length > 0),
+      .map((t) => (isRecord(t) ? decodeEntities(str(t.name)) : ""))
+      .filter((g) => g.length > 0),
     status: str(s.status),
-    cover: str(s.thumbnail),
+    cover: str(s.thumbnail).trim(),
     summary: stripHtml(str(s.description)),
   };
 }
@@ -305,7 +737,7 @@ function parseChapterList(
   // fetch for the end of the list and return an incomplete chapter list
   // as though it were complete. Throw so the failure is loud, not silent.
   if (!jsonText || !jsonText.trim()) {
-    throw new Error('Empty response while fetching the chapter list');
+    throw new Error("Empty response while fetching the chapter list");
   }
   const root = safeJson(jsonText);
   // A non-blank but unusable response (an error page, a proxy block page,
@@ -313,13 +745,10 @@ function parseChapterList(
   // here would make parseNovel stop fetching and present an incomplete
   // chapter list as though it were complete.
   if (!isRecord(root) || !Array.isArray(root.data)) {
-    throw new Error('Invalid chapter-list response (not the expected JSON)');
+    throw new Error("Invalid chapter-list response (not the expected JSON)");
   }
   const items: ChapterInfo[] = [];
-  let lastPage = 1;
-  const meta = root.meta;
-  if (isRecord(meta) && typeof meta.last_page === 'number')
-    lastPage = meta.last_page;
+  const lastPage = readLastPage(root);
   for (const c of root.data) {
     if (!isRecord(c)) continue;
     const slug = str(c.chapter_slug).trim();
@@ -329,11 +758,19 @@ function parseChapterList(
     const idx = parseFloat(str(c.index));
     items.push({
       slug,
-      name: title ? name + ': ' + decodeEntities(title) : name,
+      name: title ? name + ": " + decodeEntities(title) : name,
       number: isNaN(idx) ? 0 : idx,
       publishedAt: str(c.created_at),
       locked,
     });
+  }
+  // A page that HAS entries but yields none usable is the same failure
+  // as a malformed response: returning it would present an empty or
+  // partial chapter list as though it were complete. (Individually
+  // malformed entries alongside valid ones are still skipped — one bad
+  // entry must not take the whole novel down with it.)
+  if (root.data.length > 0 && items.length === 0) {
+    throw new Error("Invalid chapter-list response (no usable entries)");
   }
   return { items, lastPage };
 }
@@ -345,17 +782,17 @@ function parseChapterList(
  * affects chapter order.
  */
 function chapterDisplayName(c: ChapterInfo): string {
-  return c.locked ? '🔒 ' + c.name : c.name;
+  return c.locked ? "🔒 " + c.name : c.name;
 }
 
 function proxiedImageUrl(url: string, width: number): string {
-  const bare = url.replace(/^https?:\/\//i, '');
+  const bare = url.replace(/^https?:\/\//i, "");
   return (
-    'https://images.weserv.nl/?url=' +
+    "https://images.weserv.nl/?url=" +
     encodeURIComponent(bare) +
-    '&w=' +
+    "&w=" +
     width +
-    '&q=80&output=webp'
+    "&q=80&output=webp"
   );
 }
 
@@ -363,27 +800,31 @@ function shrinkIllustrations(html: string): string {
   return html.replace(
     /<img\b([^>]*?)\bsrc="(https?:\/\/media\.reaperscans\.net\/[^"]+)"([^>]*?)>/gi,
     (_m, pre, src, post) =>
-      '<img' + pre + ' src="' + proxiedImageUrl(src, 800) + '"' + post + '>',
+      "<img" + pre + ' src="' + proxiedImageUrl(src, 800) + '"' + post + ">",
   );
 }
 
-/**
- * Covers are served directly from the site's CDN. An earlier version
- * routed them through the images.weserv.nl proxy for smaller list
- * thumbnails, but a single URL field cannot carry a fallback: if the
- * proxy is blocked or down, every cover breaks while the site's own CDN
- * still works. The direct URL avoids that external dependency.
- * Non-URL values pass through.
- */
-function coverUrl(thumbnail: string): string {
-  const t = (thumbnail || '').trim();
-  if (!/^https?:\/\//i.test(t)) return t;
-  return t;
-}
-
 type ChapterContentResult =
-  | { status: 'ok'; html: string }
-  | { status: 'premium' | 'notfound' | 'empty' };
+  | { status: "ok"; html: string }
+  | { status: "premium" | "notfound" | "empty" };
+
+/**
+ * Status for a page whose flight data yielded no chapter body. Gated and
+ * missing pages carry no body (the real premium page has no
+ * chapter_content at all — its banner sits in the page markup), so the
+ * page-level heuristics run only here, after extraction failed. Running
+ * them on every page misfired: a free chapter whose story text quotes
+ * "This chapter is premium!" was blocked as premium, and a novel titled
+ * "404 ..." lost every chapter to the title check.
+ */
+function noBodyStatus(html: string): ChapterContentResult {
+  if (/this chapter is premium!/i.test(html)) return { status: "premium" };
+  // Only the real <title> element counts for the 404 check: Next.js flight
+  // data always embeds a notFound template containing similar wording.
+  const title = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
+  if (title && /^\s*404/i.test(title[1])) return { status: "notfound" };
+  return { status: "empty" };
+}
 
 /**
  * Extract the chapter body from a chapter page's HTML.
@@ -404,23 +845,17 @@ function parseChapterContent(
   html: string,
   knownTitles?: string[],
 ): ChapterContentResult {
-  if (/this chapter is premium!/i.test(html)) return { status: 'premium' };
-  // Only the real <title> element counts for the 404 check: Next.js flight
-  // data always embeds a notFound template containing similar wording.
-  const title = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
-  if (title && /^\s*404/i.test(title[1])) return { status: 'notfound' };
-
   const flight = extractFlightText(html);
   // chapter_content is either a flight-row reference ("$<rowId>") or the
   // chapter HTML inline (gallery/illustration chapters). The value is a
   // JSON string, so internal quotes arrive escaped.
   const contentM = /"chapter_content":"((?:[^"\\]|\\.)*)"/.exec(flight);
-  if (!contentM) return { status: 'empty' };
+  if (!contentM) return noBodyStatus(html);
   let raw: string;
   try {
     raw = JSON.parse('"' + contentM[1] + '"');
   } catch {
-    return { status: 'empty' };
+    return noBodyStatus(html);
   }
 
   let payload: string;
@@ -431,50 +866,51 @@ function parseChapterContent(
     // end boundary: flight metadata follows the payload on the same line,
     // so a "next row" lookahead overshoots.
     const rowRe = new RegExp(
-      '\\n' +
-        rowRef[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
-        ':T([0-9a-f]+),',
+      "\\n" +
+        rowRef[1].replace(/[.*+?^${}()|[\]\\]/g, "\\$&") +
+        ":T([0-9a-f]+),",
     );
     const row = rowRe.exec(flight);
-    if (!row) return { status: 'empty' };
+    if (!row) return noBodyStatus(html);
     const byteLen = parseInt(row[1], 16);
-    if (!(byteLen > 0)) return { status: 'empty' };
+    if (!(byteLen > 0)) return noBodyStatus(html);
     const payloadStart = row.index + row[0].length;
     payload = sliceUtf8Bytes(flight, payloadStart, byteLen);
   } else if (/^\s*</.test(raw)) {
     payload = raw;
   } else {
-    return { status: 'empty' };
+    return noBodyStatus(html);
   }
-  if (!payload) return { status: 'empty' };
+  if (!payload) return { status: "empty" };
 
   // Paragraph breaks inside the payload are literal \r\n / \n sequences.
   const body = payload
-    .replace(/\\r\\n/g, '\n')
-    .replace(/\\n/g, '\n')
-    .replace(/\\r/g, '\n')
+    .replace(/\\r\\n/g, "\n")
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "\n")
     .trim();
-  if (!body) return { status: 'empty' };
+  if (!body) return { status: "empty" };
 
   // Split into top-level blocks in document order. Paragraphs, headings,
-  // figures and standalone images are recognized; anything else that
-  // carries text (lists, tables, blockquotes, divs) is kept too — dropping
-  // it would silently lose chapter content. Only the site's promo header /
-  // footer (banner, credits, title repeats, discord plug) is trimmed from
-  // the edges.
+  // figures and standalone images are recognized; container elements
+  // (lists, tables, blockquotes, divs) are matched as whole blocks so
+  // their inner paragraphs keep their structure, and anything else that
+  // carries text is kept too — dropping it would silently lose chapter
+  // content. Only the site's promo header / footer (banner, credits,
+  // title repeats, discord plug) is trimmed from the edges.
   const blocks: string[] = [];
   const blockRe =
-    /<p[\s\S]*?<\/p>|<h[1-6][\s\S]*?<\/h[1-6]>|<figure[\s\S]*?<\/figure>|<img[^>]*>/gi;
+    /<ul[\s\S]*?<\/ul>|<ol[\s\S]*?<\/ol>|<table[\s\S]*?<\/table>|<blockquote[\s\S]*?<\/blockquote>|<div[\s\S]*?<\/div>|<p[\s\S]*?<\/p>|<h[1-6][\s\S]*?<\/h[1-6]>|<figure[\s\S]*?<\/figure>|<img[^>]*>/gi;
   let last = 0;
   let bm: RegExpExecArray | null;
   while ((bm = blockRe.exec(body)) !== null) {
     const gap = body.slice(last, bm.index);
-    if (gap.replace(/<[^>]+>/g, '').trim()) blocks.push(gap.trim());
+    if (gap.replace(/<[^>]+>/g, "").trim()) blocks.push(gap.trim());
     blocks.push(bm[0]);
     last = bm.index + bm[0].length;
   }
   const tail = body.slice(last);
-  if (tail.replace(/<[^>]+>/g, '').trim()) blocks.push(tail.trim());
+  if (tail.replace(/<[^>]+>/g, "").trim()) blocks.push(tail.trim());
   if (blocks.length === 0) blocks.push(body);
 
   let start = 0;
@@ -483,21 +919,21 @@ function parseChapterContent(
     isPromoParagraph(p) || isCreditLine(p) || isTitleRepeat(p, knownTitles);
   while (start < end && isEdgeJunk(blocks[start])) start++;
   while (end > start && isEdgeJunk(blocks[end - 1])) end--;
-  const cleaned = blocks.slice(start, end).join('\n');
+  const cleaned = blocks.slice(start, end).join("\n");
   // An image-only chapter (illustrations with no text) is still real
   // content — it must not be reported as empty.
   if (!paragraphText(cleaned) && !/<img[\s>]/i.test(cleaned))
-    return { status: 'empty' };
+    return { status: "empty" };
   // The reader renders this HTML unsanitized, so strip anything that
   // could run code (event handlers, scripts, javascript: URLs) first.
-  return { status: 'ok', html: sanitizeHtml(shrinkIllustrations(cleaned)) };
+  return { status: "ok", html: sanitizeHtml(shrinkIllustrations(cleaned)) };
 }
 
 function mapStatus(s: string): string {
-  if (s === 'Ongoing') return NovelStatus.Ongoing;
-  if (s === 'Completed') return NovelStatus.Completed;
-  if (s === 'Hiatus' || s === 'On Hiatus') return NovelStatus.OnHiatus;
-  if (s === 'Cancelled' || s === 'Dropped') return NovelStatus.Cancelled;
+  if (s === "Ongoing") return NovelStatus.Ongoing;
+  if (s === "Completed") return NovelStatus.Completed;
+  if (s === "Hiatus" || s === "On Hiatus") return NovelStatus.OnHiatus;
+  if (s === "Cancelled" || s === "Dropped") return NovelStatus.Cancelled;
   return NovelStatus.Unknown;
 }
 
@@ -505,11 +941,11 @@ function mapStatus(s: string): string {
 // The API honors `status` but ignores `tags` and `sort`, so the filter
 // menu offers status only.
 const STATUS_FILTER_OPTIONS = [
-  { label: 'All', value: 'all' },
-  { label: 'Ongoing', value: 'Ongoing' },
-  { label: 'Completed', value: 'Completed' },
-  { label: 'Dropped', value: 'Dropped' },
-  { label: 'Canceled', value: 'Canceled' },
+  { label: "All", value: "all" },
+  { label: "Ongoing", value: "Ongoing" },
+  { label: "Completed", value: "Completed" },
+  { label: "Dropped", value: "Dropped" },
+  { label: "Canceled", value: "Canceled" },
 ] as const;
 
 /**
@@ -517,32 +953,44 @@ const STATUS_FILTER_OPTIONS = [
  * the raw string or a { type, value } wrapper object.
  */
 function extractFilterValue(filters: unknown, key: string): string {
-  if (!filters || typeof filters !== 'object') return '';
+  if (!filters || typeof filters !== "object") return "";
   const f = (filters as Record<string, unknown>)[key];
-  if (f === null || f === undefined) return '';
+  if (f === null || f === undefined) return "";
   const v =
-    typeof f === 'object' && 'value' in f ? (f as { value: unknown }).value : f;
-  return typeof v === 'string' ? v : '';
+    typeof f === "object" && "value" in f ? (f as { value: unknown }).value : f;
+  return typeof v === "string" ? v : "";
 }
 
 class WeTriedTLS implements Plugin.PluginBase {
-  id = 'wetriedtls';
-  name = 'We Tried TLS';
-  icon = 'src/en/wetriedtls/icon.png';
+  id = "wetriedtls";
+  name = "We Tried TLS";
+  icon = "src/en/wetriedtls/icon.png";
   site = SITE;
-  version = '1.0.6';
+  version = "1.0.6";
 
   // Novel/chapter titles behind each chapter path, recorded by parseNovel.
   // parseChapter passes them to parseChapterContent so the site's repeated
   // title header can be told apart from a genuine bold-only content line
-  // (which must be kept).
-  private chapterTitles: Record<string, string[]> = {};
+  // (which must be kept). Bounded: the plugin is a session singleton, so
+  // without a cap this grows with every novel browsed — when the cap is
+  // hit the oldest entries are evicted (a cold entry only means a title
+  // header may be kept, the parser's safe default).
+  private chapterTitles = new Map<string, string[]>();
+
+  private rememberTitles(path: string, titles: string[]): void {
+    this.chapterTitles.set(path, titles);
+    while (this.chapterTitles.size > MAX_TITLE_CACHE_ENTRIES) {
+      const oldest = this.chapterTitles.keys().next();
+      if (oldest.done) break;
+      this.chapterTitles.delete(oldest.value);
+    }
+  }
 
   filters = {
     status: {
       type: FilterTypes.Picker,
-      label: 'Status',
-      value: 'all',
+      label: "Status",
+      value: "all",
       options: STATUS_FILTER_OPTIONS,
     },
   } satisfies Filters;
@@ -551,20 +999,24 @@ class WeTriedTLS implements Plugin.PluginBase {
     pageNo: number,
     { filters }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
-    const status = extractFilterValue(filters, 'status');
-    const page = parseQueryResults(await fetchText(catalogUrl(pageNo, status)));
+    const status = extractFilterValue(filters, "status");
+    const page = parseQueryResults(
+      await fetchApiText(catalogUrl(pageNo, status)),
+    );
     if (pageNo > page.lastPage) return [];
-    return page.items.map(n => ({
+    return page.items.map((n) => ({
       name: n.title,
       path: n.slug,
-      cover: coverUrl(n.cover),
+      cover: n.cover,
     }));
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const slug = novelPath.split('/').filter(Boolean).pop() || '';
-    const detail = parseSeriesDetail(await fetchText(API + '/series/' + slug));
-    if (!detail) throw new Error('Could not load novel details');
+    const slug = novelPath.split("/").filter(Boolean).pop() || "";
+    const detail = parseSeriesDetail(
+      await fetchApiText(API + "/series/" + slug),
+    );
+    if (!detail) throw new Error("Could not load novel details");
 
     // The chapter list is paginated (500 per page keeps it to ~2
     // requests even for the longest series). Free chapters come from
@@ -576,20 +1028,24 @@ class WeTriedTLS implements Plugin.PluginBase {
     let pageNo = 1;
     let lastPage = 1;
     do {
-      const json = await fetchText(
+      if (pageNo > MAX_LIST_PAGES)
+        throw new Error("Chapter list pagination did not terminate");
+      const json = await fetchApiText(
         API +
-          '/chapters/' +
+          "/chapters/" +
           detail.id +
-          '?page=' +
+          "?page=" +
           pageNo +
-          '&perPage=500&order=asc',
+          "&perPage=500&order=asc",
       );
       // The official fetchText returns '' when the request fails. That must
       // never be treated as a valid page: parseChapterList would default
       // lastPage to 1 and parseNovel would return an incomplete chapter
       // list as though it were complete. Fail loudly instead.
       if (!json || !json.trim())
-        throw new Error('Failed to load the chapter list (page ' + pageNo + ')');
+        throw new Error(
+          "Failed to load the chapter list (page " + pageNo + ")",
+        );
       const page = parseChapterList(json);
       lastPage = page.lastPage;
       for (const c of page.items) all.push(c);
@@ -602,14 +1058,16 @@ class WeTriedTLS implements Plugin.PluginBase {
       let paidPageNo = 1;
       let paidLastPage = 1;
       do {
+        if (paidPageNo > MAX_LIST_PAGES)
+          throw new Error("Paid chapter list pagination did not terminate");
         const page = parseChapterList(
-          await fetchText(
+          await fetchApiText(
             API +
-              '/chapters/' +
+              "/chapters/" +
               detail.id +
-              '/paid?query=&page=' +
+              "/paid?query=&page=" +
               paidPageNo +
-              '&perPage=1000&order=asc',
+              "&perPage=1000&order=asc",
           ),
           true,
         );
@@ -621,28 +1079,31 @@ class WeTriedTLS implements Plugin.PluginBase {
       // ignore: free chapters are already collected above
     }
 
-    const seen: Record<string, boolean> = {};
+    // A Set, not a plain object: with Record<string, boolean>, slugs like
+    // "constructor" or "toString" read inherited Object members as truthy
+    // and those chapters would be silently dropped as false duplicates.
+    const seen = new Set<string>();
     const chapters: Plugin.ChapterItem[] = [];
     all
-      .filter(c => {
-        if (!c.slug || seen[c.slug]) return false;
-        seen[c.slug] = true;
+      .filter((c) => {
+        if (!c.slug || seen.has(c.slug)) return false;
+        seen.add(c.slug);
         return true;
       })
       .sort((a, b) => a.number - b.number)
-      .forEach(c => {
+      .forEach((c) => {
         const displayName = chapterDisplayName(c);
-        const chapterPath = slug + '/' + c.slug;
+        const chapterPath = slug + "/" + c.slug;
         chapters.push({
           name: displayName,
           path: chapterPath,
           releaseTime: c.publishedAt,
           chapterNumber: c.number,
         });
-        this.chapterTitles[chapterPath] = [
+        this.rememberTitles(chapterPath, [
           detail.name,
-          displayName.replace(/^🔒\s*/, ''),
-        ];
+          displayName.replace(/^🔒\s*/, ""),
+        ]);
       });
 
     const novel: Plugin.SourceNovel = {
@@ -650,9 +1111,13 @@ class WeTriedTLS implements Plugin.PluginBase {
       name: detail.name,
       status: mapStatus(detail.status),
     };
-    if (detail.cover) novel.cover = coverUrl(detail.cover);
+    // Covers are served directly from the site's CDN: an earlier
+    // version proxied them for smaller thumbnails, but a single URL
+    // field cannot carry a fallback — if the proxy is blocked or down,
+    // every cover breaks while the CDN still works.
+    if (detail.cover) novel.cover = detail.cover;
     if (detail.author) novel.author = detail.author;
-    if (detail.genres.length) novel.genres = detail.genres.join(', ');
+    if (detail.genres.length) novel.genres = detail.genres.join(", ");
     if (detail.summary) novel.summary = detail.summary;
     novel.chapters = chapters;
     return novel;
@@ -660,26 +1125,26 @@ class WeTriedTLS implements Plugin.PluginBase {
 
   async parseChapter(chapterPath: string): Promise<string> {
     const result = parseChapterContent(
-      await fetchText(SITE + '/series/' + chapterPath),
-      this.chapterTitles[chapterPath],
+      await fetchText(SITE + "/series/" + chapterPath),
+      this.chapterTitles.get(chapterPath),
     );
-    if (result.status === 'ok') return result.html;
-    if (result.status === 'premium') {
+    if (result.status === "ok") return result.html;
+    if (result.status === "premium") {
       return (
-        '<p><strong>This chapter is premium on We Tried TLS.</strong></p>' +
-        '<p>It requires a paid subscription on the website and cannot be read here. ' +
-        'Free chapters of this novel still work.</p>'
+        "<p><strong>This chapter is premium on We Tried TLS.</strong></p>" +
+        "<p>It requires a paid subscription on the website and cannot be read here. " +
+        "Free chapters of this novel still work.</p>"
       );
     }
-    if (result.status === 'notfound') {
+    if (result.status === "notfound") {
       return (
-        '<p><strong>This chapter is no longer available on We Tried TLS.</strong></p>' +
-        '<p>It may have been removed or moved. Refresh the novel to update the chapter list.</p>'
+        "<p><strong>This chapter is no longer available on We Tried TLS.</strong></p>" +
+        "<p>It may have been removed or moved. Refresh the novel to update the chapter list.</p>"
       );
     }
     return (
-      '<p><strong>Could not load this chapter.</strong></p>' +
-      '<p>It may be temporarily unavailable on We Tried TLS.</p>'
+      "<p><strong>Could not load this chapter.</strong></p>" +
+      "<p>It may be temporarily unavailable on We Tried TLS.</p>"
     );
   }
 
@@ -688,24 +1153,24 @@ class WeTriedTLS implements Plugin.PluginBase {
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
     const page = parseQueryResults(
-      await fetchText(
+      await fetchApiText(
         API +
-          '/query?adult=true&query_string=' +
+          "/query?adult=true&query_string=" +
           encodeURIComponent(searchTerm) +
-          '&page=' +
+          "&page=" +
           pageNo,
       ),
     );
     if (pageNo > page.lastPage) return [];
-    return page.items.map(n => ({
+    return page.items.map((n) => ({
       name: n.title,
       path: n.slug,
-      cover: coverUrl(n.cover),
+      cover: n.cover,
     }));
   }
 
   resolveUrl = (path: string, _isNovel?: boolean): string =>
-    SITE + '/series/' + path;
+    SITE + "/series/" + path;
 }
 
 export default new WeTriedTLS();
