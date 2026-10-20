@@ -2,19 +2,17 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { Filters, FilterTypes } from '@libs/filterInputs';
-import dayjs from 'dayjs';
-
-type NovelCoolOptions = {
-  lang: string;
-  langCode: string;
-  app: Record<string, string>;
-};
+import { load as loadCheerio } from 'cheerio';
 
 export type NovelCoolMetadata = {
   id: string;
   sourceSite: string;
   sourceName: string;
-  options: NovelCoolOptions;
+  options: {
+    lang: string;
+    langCode: string;
+    app: Record<string, string>;
+  };
 };
 
 export class NovelCoolPlugin implements Plugin.PluginBase {
@@ -24,17 +22,18 @@ export class NovelCoolPlugin implements Plugin.PluginBase {
   site: string;
   mainUrl: string;
   version: string;
-  options: NovelCoolOptions;
+  options: NovelCoolMetadata['options'];
   filters: Filters;
 
   constructor(metadata: NovelCoolMetadata) {
     this.id = metadata.id;
     this.name = metadata.sourceName;
-    this.site = metadata.sourceSite;
+    this.site = 'https://en.novelcool.com';
+    this.mainUrl = this.site;
     this.icon = 'multisrc/novelcool/novelcool/icon.png';
-    this.mainUrl = 'https://api.novelcool.com';
-    this.version = '1.0.0';
-    this.options = metadata.options ?? ({} as NovelCoolOptions);
+    this.version = '2.0.0';
+    this.options = metadata.options;
+
     this.filters = {
       sortby: {
         label: 'Order by',
@@ -56,266 +55,332 @@ export class NovelCoolPlugin implements Plugin.PluginBase {
       showLatestNovels,
     }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
-    const sortby = showLatestNovels
-      ? 'latest'
-      : filters?.sortby?.value || 'hot';
+    let url: string;
 
-    const { list }: { list: Novel[] } = await fetchApi(
-      this.mainUrl + '/elite/' + sortby,
-      {
-        headers: {
-          'User-Agent': this.options.app.userAgent,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        method: 'post',
-        body: new URLSearchParams({
-          appId: this.options.app.appId,
-          secret: this.options.app.secret,
-          package_name: this.options.app.package_name,
-          lc_type: 'novel',
-          lang: this.options.langCode,
-          page: page.toString(),
-          page_size: '20',
-        }).toString(),
-      },
-    ).then((res: Response) => res.json());
+    if (showLatestNovels || filters?.sortby?.value === 'latest') {
+      url = `${this.mainUrl}/category/latest.html`;
+    } else if (filters?.sortby?.value === 'new_book') {
+      url = `${this.mainUrl}/category/new.html`;
+    } else {
+      url = `${this.mainUrl}/category/popular.html`;
+    }
+
+    if (page > 1) {
+      url += `?page=${page}`;
+    }
+
+    const html = await fetchApi(url).then(res => res.text());
+    const $ = loadCheerio(html);
+
     const novels: Plugin.NovelItem[] = [];
 
-    list.forEach(novel =>
-      novels.push({
-        name: novel.name,
-        cover: novel.cover,
-        path: novel.visit_path + '?id=' + novel.id,
-      }),
-    );
+    $('a[href*="/novel/"]').each((_, el) => {
+      const link = $(el).attr('href');
+      const name = $(el).attr('title') || $(el).text().trim();
+
+      if (!link || !name || !link.includes('/novel/')) return;
+
+      const path = this.cleanUrl(link);
+
+      if (
+        !novels.some(novel => novel.path === path) &&
+        !/^(Latest|Popular|Novel|Read|Home)$/i.test(name)
+      ) {
+        const cover =
+          $(el).find('img').attr('src') ||
+          $(el).closest('.book-item, .item, li').find('img').first().attr('src') ||
+          '';
+
+        novels.push({
+          name,
+          cover: this.absoluteUrl(cover),
+          path,
+        });
+      }
+    });
 
     return novels;
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const book_id = novelPath.split('?id=')[1];
-    const { info }: { info: Novel } = await fetchApi(
-      this.mainUrl + '/book/info/',
-      {
-        headers: {
-          'User-Agent': this.options.app.userAgent,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        method: 'post',
-        body: new URLSearchParams({
-          book_id,
-          appId: this.options.app.appId,
-          secret: this.options.app.secret,
-          package_name: this.options.app.package_name,
-          lang: this.options.langCode,
-        }).toString(),
-      },
-    ).then((res: Response) => res.json());
+    const url = this.absoluteUrl(novelPath);
 
-    const novel: Plugin.SourceNovel = {
-      path: novelPath,
-      name: info.name,
-      cover: info.cover,
-      genres: info.category_list.join(','),
-      summary: info.intro,
-      author: info.author,
-      artist: info.artist,
-      status:
-        info.completed === 'YES' ? NovelStatus.Completed : NovelStatus.Ongoing,
-      rating: (info.rate_star && parseFloat(info.rate_star)) || undefined,
-    };
+    const html = await fetchApi(url).then(res => res.text());
+    const $ = loadCheerio(html);
+
+    const name =
+      $('.bookinfo-title').first().text().trim() ||
+      $('h1').first().text().trim() ||
+      $('meta[property="og:title"]').attr('content') ||
+      '';
+
+    const cover =
+      $('.bookinfo-pic-img').attr('src') ||
+      $('meta[property="og:image"]').attr('content') ||
+      '';
+
+    const author =
+      $('.bookinfo-author').first().text().replace(/^Author:\s*/i, '').trim() ||
+      $('[itemprop="creator"]').first().text().trim();
+
+    const summary =
+      $('[itemprop="description"]').first().text().trim() ||
+      $('.bookinfo-intro').first().text().trim() ||
+      $('.bookinfo-summary').first().text().trim();
+
+    const genres: string[] = [];
+
+    $('[itemprop="genre"], .bookinfo-tag a, .bookinfo-category a').each(
+      (_, el) => {
+        const genre = $(el).text().trim();
+
+        if (genre && !genres.includes(genre)) {
+          genres.push(genre);
+        }
+      },
+    );
+
     const chapters: Plugin.ChapterItem[] = [];
 
-    const { list }: { list: ChapterNext[] } = await fetchApi(
-      this.mainUrl + '/chapter/book_list/',
-      {
-        headers: {
-          'User-Agent': this.options.app.userAgent,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        method: 'post',
-        body: new URLSearchParams({
-          book_id,
-          appId: this.options.app.appId,
-          secret: this.options.app.secret,
-          package_name: this.options.app.package_name,
-          lang: this.options.langCode,
-        }).toString(),
-      },
-    ).then((res: Response) => res.json());
+    $('.chapter-item-list a, .chapter-list a').each((index, el) => {
+      const href = $(el).attr('href');
+      const chapterName = $(el).text().trim();
 
-    list.forEach(chapter => {
-      if (!chapter.is_locked) {
-        chapters.push({
-          name: chapter.title,
-          path: chapter.book_id + '/' + chapter.id,
-          releaseTime: dayjs(parseInt(chapter.last_modify, 10) * 1000).format(
-            'LLL',
-          ),
-          chapterNumber: parseInt(chapter.order_id, 10),
-        });
-      }
+      if (!href || !chapterName) return;
+
+      const path = this.cleanUrl(href);
+
+      if (chapters.some(chapter => chapter.path === path)) return;
+
+      const date =
+        $(el).find('.chapter-item-date, .date').text().trim() ||
+        $(el).closest('.chapter-item, li').find('.date').text().trim() ||
+        '';
+
+      chapters.push({
+        name: chapterName,
+        path,
+        releaseTime: date,
+        chapterNumber: this.extractChapterNumber(chapterName, index + 1),
+      });
     });
 
-    novel.chapters = chapters.reverse();
-    return novel;
+    chapters.reverse();
+
+    return {
+      path: novelPath,
+      name,
+      cover: this.absoluteUrl(cover),
+      author,
+      artist: '',
+      genres: genres.join(','),
+      summary,
+      status: NovelStatus.Ongoing,
+      chapters,
+    };
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const [, chapter_id] = chapterPath.split('/');
-    const { info }: { info: Chapter } = await fetchApi(
-      this.mainUrl + '/chapter/info/',
-      {
-        headers: {
-          'User-Agent': this.options.app.userAgent,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        method: 'post',
-        body: new URLSearchParams({
-          chapter_id,
-          appId: this.options.app.appId,
-          secret: this.options.app.secret,
-          package_name: this.options.app.package_name,
-          lang: this.options.langCode,
-        }).toString(),
-      },
-    ).then((res: Response) => res.json());
+    const url = this.absoluteUrl(chapterPath);
 
-    return info.content;
+    const html = await fetchApi(url).then(res => res.text());
+    const $ = loadCheerio(html);
+
+    const images: string[] = [];
+
+    $('.mangaread-manga-pic').each((_, el) => {
+      const src =
+        $(el).attr('src') ||
+        $(el).attr('data-src') ||
+        $(el).attr('data-original');
+
+      if (src) {
+        const absolute = this.absoluteUrl(src);
+
+        if (!images.includes(absolute)) {
+          images.push(absolute);
+        }
+      }
+    });
+
+    /*
+     * A NovelCool chapter can contain many image pages.
+     * The chapter HTML itself provides the page URLs in .sl-page.
+     */
+    if (images.length === 0) {
+      $('.sl-page option').each((_, el) => {
+        const href = $(el).attr('value');
+
+        if (!href) return;
+
+        const pageUrl = this.absoluteUrl(href);
+
+        // Do not fetch here; page URLs are handled below.
+        if (!pageUrl) return;
+      });
+    }
+
+    /*
+     * NovelCool's reader uses:
+     *
+     * Chapter-ID-1.html
+     * Chapter-ID-2.html
+     * Chapter-ID-3.html
+     *
+     * etc.
+     *
+     * Fetch all page URLs exposed by the chapter selector.
+     */
+    const pageUrls: string[] = [];
+
+    $('.sl-page option').each((_, el) => {
+      const href = $(el).attr('value');
+
+      if (href) {
+        const absolute = this.absoluteUrl(href);
+
+        if (!pageUrls.includes(absolute)) {
+          pageUrls.push(absolute);
+        }
+      }
+    });
+
+    if (pageUrls.length > 0) {
+      const pageImages: string[] = [];
+
+      for (const pageUrl of pageUrls) {
+        try {
+          const pageHtml = await fetchApi(pageUrl).then(res => res.text());
+          const $$ = loadCheerio(pageHtml);
+
+          const src =
+            $$('.mangaread-manga-pic').first().attr('src') ||
+            $$('.mangaread-manga-pic').first().attr('data-src') ||
+            $$('.mangaread-manga-pic').first().attr('data-original');
+
+          if (src) {
+            const absolute = this.absoluteUrl(src);
+
+            if (!pageImages.includes(absolute)) {
+              pageImages.push(absolute);
+            }
+          }
+        } catch {
+          // Ignore an individual broken page.
+        }
+      }
+
+      if (pageImages.length > 0) {
+        return pageImages
+          .map(
+            image =>
+              `<img src="${this.escapeHtml(image)}" style="display:block;width:100%;height:auto;" />`,
+          )
+          .join('\n');
+      }
+    }
+
+    if (images.length > 0) {
+      return images
+        .map(
+          image =>
+            `<img src="${this.escapeHtml(image)}" style="display:block;width:100%;height:auto;" />`,
+        )
+        .join('\n');
+    }
+
+    return '<p>Unable to load chapter images.</p>';
   }
 
   async searchNovels(
     searchTerm: string,
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
-    const { list }: { list: Novel[] } = await fetchApi(
-      this.mainUrl + '/book/search/',
-      {
-        headers: {
-          'User-Agent': this.options.app.userAgent,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        method: 'post',
-        body: new URLSearchParams({
-          appId: this.options.app.appId,
-          secret: this.options.app.secret,
-          package_name: this.options.app.package_name,
-          keyword: searchTerm,
-          lc_type: 'novel',
-          lang: this.options.langCode,
-          page: pageNo.toString(),
-          page_size: '20',
-        }).toString(),
-      },
-    ).then((res: Response) => res.json());
+    const url =
+      `${this.mainUrl}/search.html?keyword=` +
+      encodeURIComponent(searchTerm) +
+      (pageNo > 1 ? `&page=${pageNo}` : '');
+
+    const html = await fetchApi(url).then(res => res.text());
+    const $ = loadCheerio(html);
+
     const novels: Plugin.NovelItem[] = [];
 
-    list.forEach(novel =>
+    $('a[href*="/novel/"]').each((_, el) => {
+      const href = $(el).attr('href');
+      const name =
+        $(el).attr('title') ||
+        $(el).find('h3, h4').first().text().trim() ||
+        $(el).text().trim();
+
+      if (!href || !name || !href.includes('/novel/')) return;
+
+      const path = this.cleanUrl(href);
+
+      if (novels.some(novel => novel.path === path)) return;
+
+      const cover =
+        $(el).find('img').attr('src') ||
+        $(el).closest('.book-item, .item, li').find('img').first().attr('src') ||
+        '';
+
       novels.push({
-        name: novel.name,
-        cover: novel.cover,
-        path: novel.visit_path + '?id=' + novel.id,
-      }),
-    );
+        name,
+        cover: this.absoluteUrl(cover),
+        path,
+      });
+    });
 
     return novels;
   }
 
-  resolveUrl = (path: string, isNovel?: boolean) =>
-    this.site + (isNovel ? '/novel/' : '/chapter/') + path.split('?id=')[0];
+  resolveUrl = (path: string, isNovel?: boolean) => {
+    return this.absoluteUrl(path);
+  };
+
+  private absoluteUrl(url: string): string {
+    if (!url) return '';
+
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+
+    if (url.startsWith('//')) {
+      return 'https:' + url;
+    }
+
+    if (url.startsWith('/')) {
+      return this.mainUrl + url;
+    }
+
+    return this.mainUrl + '/' + url;
+  }
+
+  private cleanUrl(url: string): string {
+    if (!url) return '';
+
+    try {
+      const parsed = new URL(url, this.mainUrl);
+      return parsed.pathname + parsed.search;
+    } catch {
+      return url;
+    }
+  }
+
+  private extractChapterNumber(
+    name: string,
+    fallback: number,
+  ): number {
+    const match = name.match(/chapter\s*([\d.]+)/i);
+
+    return match ? parseFloat(match[1]) : fallback;
+  }
+
+  private escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
 }
-
-type Novel = {
-  id: string;
-  lang: string;
-  url: string;
-  visit_path: string;
-  name: string;
-  alternative: string;
-  publish_year: string;
-  warning: string;
-  char_index: string;
-  author: string;
-  artist: string;
-  intro: string;
-  tags?: string;
-  category: string;
-  completed: 'YES' | 'NO';
-  last_chapter_id: string;
-  last_chapter_title: string;
-  all_views: string;
-  rate_star: string;
-  rate_mark: string;
-  rate_num: string;
-  follow_num: string;
-  pic_num: string;
-  make_time: Date;
-  copy_limit: string;
-  copyright: string;
-  user_id: string;
-  show_it: 'ALLOW';
-  type: string;
-  elite: string;
-  book_id: string;
-  is_novel: string;
-  is_new: string;
-  is_hot: string;
-  cover: string;
-  og_url?: string;
-  no: string;
-  last_url?: string;
-  category_str: string;
-  category_list: string[];
-  // star_list: any[];
-  int_mark: string;
-  time: string;
-  show_ads: string;
-  first_chapter_id?: string;
-  first_chapter_type?: number;
-  is_following: boolean;
-  copyright_limit: boolean;
-  share_title?: string;
-};
-
-type Chapter = {
-  id: string;
-  user_id: string;
-  vol_id: string;
-  lang: string;
-  order_id: string;
-  book_id: string;
-  title: string;
-  type: number;
-  url: string;
-  content: string;
-  content_size: string;
-  fixed: string;
-  group_name: string;
-  last_modify: string;
-  add_time: Date;
-  prev: ChapterNext;
-  next: ChapterNext;
-  blank: boolean;
-  o_url: string;
-  is_locked: boolean;
-  show_url: boolean;
-  is_following: boolean;
-  share_title: string;
-};
-
-type ChapterNext = {
-  id: string;
-  book_id: string;
-  type: number;
-  lang: string;
-  vol_id: string;
-  order_id: string;
-  title: string;
-  last_modify: string;
-  url: string;
-  no: string;
-  is_locked: boolean;
-  is_new: boolean;
-  tf_time: string;
-  url_pre?: string;
-};
