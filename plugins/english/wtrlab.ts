@@ -1,5 +1,5 @@
 import { Plugin } from '@/types/plugin';
-import { fetchApi } from '@libs/fetch';
+import { FetchInit, fetchApi } from '@libs/fetch';
 import { FilterTypes, Filters } from '@libs/filterInputs';
 import { CheerioAPI, load as parseHTML } from 'cheerio';
 import { gcm } from '@libs/aes';
@@ -35,6 +35,7 @@ function resolveTokens(
 ): string {
   if (!str) return '';
   return str.replace(
+    // eslint-disable-next-line no-control-regex
     /%\{(?:"([^"]*)":\s*"?([A-Za-z0-9+/=_-]+)"?|([^|{}%\u0000-\u001F\u007F\u2028\u2029]+?)\s*\|\s*([A-Za-z0-9+/=_-]+))\}/g,
     (match, safe1, b64_1, safe2, b64_2) => {
       const safe = (safe1 ?? safe2 ?? '').trim();
@@ -53,7 +54,7 @@ class WTRLAB implements Plugin.PluginBase {
   id = 'WTRLAB';
   name = 'WTR-LAB';
   site = 'https://wtr-lab.com/';
-  version = '1.2.5';
+  version = '1.2.6';
   icon = 'src/en/wtrlab/icon.png';
   sourceLang = 'en/';
   baggage = '';
@@ -107,6 +108,44 @@ class WTRLAB implements Plugin.PluginBase {
   }
 
   /**
+   * Throw a WebView hint when Cloudflare answered with its managed challenge.
+   *
+   * The whole site sits behind a challenge that answers with a
+   * "Just a moment..." page, marked `cf-mitigated: challenge`, until it is
+   * solved in WebView. Parsing that page as wtr-lab markup used to surface as
+   * "Could not find __NEXT_DATA__" or a JSON syntax error, which hid the
+   * actual fix from the user. The header is the only rule used, so a plain
+   * 403/503 from the origin is not mistaken for a challenge.
+   */
+  assertNotChallenged(res: Response): void {
+    if (res.headers.get('cf-mitigated') === 'challenge') {
+      throw Object.assign(
+        new Error(
+          `Cloudflare protection detected (HTTP ${res.status}). Please open the plugin in WebView to solve the challenge, then try again.`,
+        ),
+        { status: res.status },
+      );
+    }
+  }
+
+  /**
+   * Fetch a wtr-lab page or JSON route whose failure leaves nothing to parse:
+   * a challenge gets the WebView hint, any other failed response a plain
+   * error naming the status and URL.
+   */
+  async fetchSite(url: string, init?: FetchInit): Promise<Response> {
+    const res = await fetchApi(url, init);
+    this.assertNotChallenged(res);
+    if (!res.ok) {
+      throw Object.assign(
+        new Error(`Request failed (HTTP ${res.status}): ${url}`),
+        { status: res.status },
+      );
+    }
+    return res;
+  }
+
+  /**
    * Resolve the chapter payload.
    *
    * The reader API used to carry the body inline at data.data. It now returns
@@ -144,6 +183,7 @@ class WTRLAB implements Plugin.PluginBase {
         ...(cookie && sameSite ? { Cookie: cookie } : {}),
       },
     });
+    this.assertNotChallenged(res);
     const text = await res.text();
     try {
       return JSON.parse(text)?.data?.data ?? null;
@@ -201,6 +241,7 @@ class WTRLAB implements Plugin.PluginBase {
           'Referer': this.site,
         },
       });
+      this.assertNotChallenged(res);
       const landedOn = (res.url || '').replace(this.site, '/') || 'unknown';
       return `Sign-in: redeem token HTTP ${res.status}, ended at ${landedOn}`;
     } catch (e) {
@@ -221,6 +262,7 @@ class WTRLAB implements Plugin.PluginBase {
           ...(cookie ? { Cookie: cookie } : {}),
         },
       });
+      this.assertNotChallenged(res);
       const text = await res.text();
       let body = null;
       try {
@@ -348,7 +390,7 @@ class WTRLAB implements Plugin.PluginBase {
     }
 
     if (showLatestNovels) {
-      const response = await fetchApi(this.site + 'api/home/recent', {
+      const response = await this.fetchSite(this.site + 'api/home/recent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -374,9 +416,9 @@ class WTRLAB implements Plugin.PluginBase {
 
       return novels;
     } else {
-      const finderPage = await fetchApi(this.site + 'en/novel-finder').then(
-        res => res.text(),
-      );
+      const finderPage = await this.fetchSite(
+        this.site + 'en/novel-finder',
+      ).then(res => res.text());
       const finderCheerio = parseHTML(finderPage);
       const nextData = finderCheerio('#__NEXT_DATA__').html();
       if (!nextData) {
@@ -386,7 +428,7 @@ class WTRLAB implements Plugin.PluginBase {
 
       link = `${this.site}_next/data/${buildId}/en/novel-finder.json?${params.toString()}`;
 
-      const response = await fetchApi(link);
+      const response = await this.fetchSite(link);
       const json = await response.json();
       const seenIds = new Set();
 
@@ -409,9 +451,10 @@ class WTRLAB implements Plugin.PluginBase {
   }
 
   async fetchTokens() {
-    const body = await fetchApi(this.site + this.sourceLang).then(res =>
-      res.text(),
-    );
+    // Missing tokens are not fatal, so only a challenge stops here.
+    const res = await fetchApi(this.site + this.sourceLang);
+    this.assertNotChallenged(res);
+    const body = await res.text();
     const $ = parseHTML(body);
 
     this.baggage = $('meta[name="baggage"]').attr('content') ?? '';
@@ -419,7 +462,9 @@ class WTRLAB implements Plugin.PluginBase {
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const body = await fetchApi(this.site + novelPath).then(res => res.text());
+    const body = await this.fetchSite(this.site + novelPath).then(res =>
+      res.text(),
+    );
     const loadedCheerio = parseHTML(body);
 
     const baggage = loadedCheerio('meta[name="baggage"]').attr('content');
@@ -479,8 +524,8 @@ class WTRLAB implements Plugin.PluginBase {
     if (!novel.name) {
       novel.name = resolveTokens(
         loadedCheerio('h1.text-uppercase').text() ||
-        loadedCheerio('h1.long-title').text() ||
-        loadedCheerio('.title-wrap h1').text().trim(),
+          loadedCheerio('h1.long-title').text() ||
+          loadedCheerio('.title-wrap h1').text().trim(),
       );
     }
 
@@ -493,8 +538,8 @@ class WTRLAB implements Plugin.PluginBase {
     if (!novel.summary) {
       novel.summary = resolveTokens(
         loadedCheerio('.description').text().trim() ||
-        loadedCheerio('.desc-wrap .description').text().trim() ||
-        loadedCheerio('.lead').text().trim(),
+          loadedCheerio('.desc-wrap .description').text().trim() ||
+          loadedCheerio('.lead').text().trim(),
       );
     }
 
@@ -526,8 +571,7 @@ class WTRLAB implements Plugin.PluginBase {
 
         if (Array.isArray(pageProps?.tags)) {
           for (const tag of pageProps.tags) {
-            const title =
-              tag?.title && resolveTokens(String(tag.title).trim());
+            const title = tag?.title && resolveTokens(String(tag.title).trim());
             if (title) labels.push(title);
           }
         }
@@ -604,6 +648,7 @@ class WTRLAB implements Plugin.PluginBase {
       try {
         chapters = await this.fetchAllChapters(rawId, slug);
       } catch (error) {
+        if (String(error).includes('Cloudflare protection')) throw error;
         console.error('Failed to fetch chapters via API:', error);
         chapters = [];
       }
@@ -698,7 +743,9 @@ class WTRLAB implements Plugin.PluginBase {
     }
 
     for (const src of URLs) {
+      // A failed script just moves on to the next one; a challenge won't pass.
       const script = await fetchApi(`${this.site}${src}`);
+      this.assertNotChallenged(script);
       const raw = await script.text();
       index = raw.indexOf(searchKey);
       if (index >= 0) {
@@ -753,7 +800,7 @@ class WTRLAB implements Plugin.PluginBase {
     }
 
     if (!rawId || !chapterNo) {
-      const body = await fetchApi(url).then(res => res.text());
+      const body = await this.fetchSite(url).then(res => res.text());
 
       loadedCheerio = parseHTML(body);
       const chapterJson = loadedCheerio('#__NEXT_DATA__').html() + '';
@@ -800,6 +847,8 @@ class WTRLAB implements Plugin.PluginBase {
           force_retry: false,
         }),
       });
+
+      this.assertNotChallenged(apiResponse);
 
       // Read as text first: an auth redirect or a Cloudflare challenge returns
       // HTML, and .json() would throw before we could report what came back.
@@ -904,7 +953,7 @@ class WTRLAB implements Plugin.PluginBase {
       chapterContent.toString().startsWith('str:')
     ) {
       if (!loadedCheerio) {
-        const body = await fetchApi(url).then(res => res.text());
+        const body = await this.fetchSite(url).then(res => res.text());
 
         loadedCheerio = parseHTML(body);
       }
@@ -1016,7 +1065,7 @@ class WTRLAB implements Plugin.PluginBase {
       const end = start + batchSize - 1;
 
       try {
-        const response = await fetchApi(
+        const response = await this.fetchSite(
           `${this.site}api/chapters/${rawId}?start=${start}&end=${end}`,
           {
             headers: {
@@ -1055,6 +1104,7 @@ class WTRLAB implements Plugin.PluginBase {
 
         start += batchSize;
       } catch (error) {
+        if (String(error).includes('Cloudflare protection')) throw error;
         console.error(`Failed to fetch chapters ${start}-${end}:`, error);
         hasMore = false;
         break;
