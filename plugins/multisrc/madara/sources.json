@@ -222,8 +222,7 @@
     "sourceName": "Foxaholic",
     "options": {
       "useNewChapterEndpoint": true,
-      "resolveCoverDataUri": true,
-      "versionIncrements": 1
+      "resolveCoverDataUri": true
     }
   },
   {
@@ -414,8 +413,7 @@
     "sourceName": "Belle Repository",
     "options": {
       "useNewChapterEndpoint": true,
-      "lang": "English",
-      "versionIncrements": 1
+      "lang": "English"
     }
   },
   {
@@ -632,8 +630,7 @@
     "sourceName": "BoxNovel",
     "options": {
       "lang": "English",
-      "useNewChapterEndpoint": true,
-      "versionIncrements": 2
+      "useNewChapterEndpoint": true
     }
   },
   {
@@ -660,8 +657,7 @@
     "sourceName": "Lovelyblossoms",
     "options": {
       "useNewChapterEndpoint": true,
-      "browserHeaders": true,
-      "versionIncrements": 1
+      "browserHeaders": true
     }
   },
   {
