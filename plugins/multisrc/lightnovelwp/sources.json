@@ -334,5 +334,14 @@
     "id": "dobynovels",
     "sourceSite": "https://dobynovels.com/",
     "sourceName": "DobyNovels"
+  },
+  {
+    "id": "ossantl",
+    "sourceSite": "https://ossantl.my.id/",
+    "sourceName": "OssanTL",
+    "options": {
+      "lang": "English",
+      "reverseChapters": true
+    }
   }
 ]
