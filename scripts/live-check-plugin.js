@@ -24,6 +24,55 @@ const CLOUDFLARE_HEADER_HINTS = ['cf-ray', 'cf-cache-status', 'cf-request-id'];
 
 /** @typedef {'PASS' | 'FAIL' | 'INCONCLUSIVE'} StepStatus */
 
+/**
+ * Cloudflare detection for the plugin's own page loads. fetchApi/fetchText
+ * resolve for any HTTP status (see src/lib/fetch.ts), so a challenge page
+ * reaches the plugin as an ordinary response and parses to an empty result.
+ * Wrapping the global fetch lets the checker see those responses without
+ * changing what plugins receive.
+ */
+let currentStep = null;
+
+function describeCloudflareChallenge(res) {
+  if (res.headers.get('cf-mitigated')?.toLowerCase() === 'challenge') {
+    return `HTTP ${res.status} (Cloudflare challenge)`;
+  }
+  if (
+    (res.status === 403 || res.status === 503) &&
+    CLOUDFLARE_HEADER_HINTS.some(h => res.headers.has(h))
+  ) {
+    return `HTTP ${res.status} (Cloudflare)`;
+  }
+  return null;
+}
+
+function installChallengeDetector() {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (...args) => {
+    const res = await originalFetch(...args);
+    const step = currentStep;
+    if (step && !step.blockedBy) {
+      const reason = describeCloudflareChallenge(res);
+      if (reason) step.blockedBy = reason;
+    }
+    return res;
+  };
+}
+
+/**
+ * A step that did not pass, but whose page loads were challenged by
+ * Cloudflare, says nothing about the plugin: report it as INCONCLUSIVE.
+ * Steps that passed, and failures with no observed challenge, are untouched.
+ */
+function reclassifyBlockedSteps(steps) {
+  for (const step of steps) {
+    if (step.status === 'FAIL' && step.blockedBy) {
+      step.status = 'INCONCLUSIVE';
+      step.detail = `Blocked by Cloudflare: ${step.blockedBy} (was: ${step.detail})`;
+    }
+  }
+}
+
 function isNetworkOrBlockError(error) {
   const code = error?.code || error?.cause?.code;
   const message = String(error?.message || '');
@@ -117,7 +166,14 @@ async function loadPluginInstance(pluginPath) {
 }
 
 function makeStep(name) {
-  return { name, status: /** @type {StepStatus} */ ('FAIL'), detail: '' };
+  const step = {
+    name,
+    status: /** @type {StepStatus} */ ('FAIL'),
+    detail: '',
+    blockedBy: null,
+  };
+  currentStep = step;
+  return step;
 }
 
 /**
@@ -305,6 +361,7 @@ async function checkPlugin(pluginPath) {
     return result;
   }
 
+  currentStep = null;
   const probe = await probeSiteReachability(plugin.site);
   if (!probe.reachable) {
     const step = makeStep('siteReachability');
@@ -314,7 +371,12 @@ async function checkPlugin(pluginPath) {
     return result;
   }
 
-  result.steps = await runChecks(plugin);
+  try {
+    result.steps = await runChecks(plugin);
+  } finally {
+    currentStep = null;
+  }
+  reclassifyBlockedSteps(result.steps);
   return result;
 }
 
@@ -373,6 +435,7 @@ function printReport(results) {
 }
 
 async function main() {
+  installChallengeDetector();
   const pluginPaths = process.argv.slice(2);
   if (pluginPaths.length === 0) {
     console.error(
@@ -394,7 +457,11 @@ async function main() {
   process.exitCode = hasFail ? 1 : 0;
 }
 
-main().catch(error => {
-  console.error('Fatal error:', error);
-  process.exitCode = 1;
-});
+export { describeCloudflareChallenge, installChallengeDetector, checkPlugin };
+
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+  main().catch(error => {
+    console.error('Fatal error:', error);
+    process.exitCode = 1;
+  });
+}
