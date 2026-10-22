@@ -47,7 +47,7 @@ class CoteReader implements Plugin.PluginBase {
   name = 'COTE Reader';
   site = 'https://cote-reader.me';
   icon = 'src/en/cotereader/icon.png';
-  version = '1.0.6';
+  version = '1.0.7';
 
   private canonicalIds = new Set([
     'cote',
@@ -82,8 +82,18 @@ class CoteReader implements Plugin.PluginBase {
     if (!cover) return defaultCover;
     if (cover.startsWith('http://') || cover.startsWith('https://'))
       return cover;
+    if (cover.startsWith('//')) return `https:${cover}`;
     if (cover.startsWith('/')) return `${this.site}${cover}`;
     return `${this.site}/${cover}`;
+  }
+
+  // The app passes cover URLs through resolveUrl (EPUB export does
+  // this), so absolute and protocol-relative URLs must pass through
+  // unchanged — prefixing the site onto them breaks the cover.
+  resolveUrl(path: string): string {
+    if (/^https?:\/\//i.test(path)) return path;
+    if (path.indexOf('//') === 0) return 'https:' + path;
+    return `${this.site}/${path.replace(/^\/+/, '')}`;
   }
 
   private cleanId(novelPath: string): string {

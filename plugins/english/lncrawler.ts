@@ -322,7 +322,7 @@ class LNCrawler implements Plugin.PluginBase {
   name = 'LNCrawler';
   icon = 'src/en/lncrawler/icon.png';
   site = 'https://lncrawler.monster';
-  version = '1.0.0';
+  version = '1.0.1';
 
   async popularNovels(pageNo: number): Promise<Plugin.NovelItem[]> {
     // The search endpoint is the only listing with a language filter;
@@ -426,8 +426,11 @@ class LNCrawler implements Plugin.PluginBase {
     return pageNo > page.totalPages ? [] : page.cards;
   }
 
-  resolveUrl = (path: string) =>
-    /^https?:\/\//i.test(path) ? path : `${this.site}/novels/${path}`;
+  resolveUrl = (path: string) => {
+    if (/^https?:\/\//i.test(path)) return path;
+    if (path.indexOf('//') === 0) return 'https:' + path;
+    return `${this.site}/novels/${path}`;
+  };
 }
 
 export default new LNCrawler();

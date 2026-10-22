@@ -15,7 +15,7 @@ class LNTPlugin implements Plugin.PluginBase {
   name = 'Light Novel Translations';
   icon = 'src/en/lightnoveltranslations/icon.png';
   site = 'https://lightnovelstranslations.com/';
-  version = '1.0.0';
+  version = '1.0.1';
   filters: Filters | undefined = undefined;
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
@@ -29,36 +29,36 @@ class LNTPlugin implements Plugin.PluginBase {
       // filters,
     }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
-    let link = this.site + 'read/';
-    link += `page/${pageNo}`;
-    link += `?sortby=${showLatestNovels ? 'most-recent' : 'most-liked'}`;
+    const sortby = showLatestNovels ? 'most-recent' : 'most-liked';
+    const link =
+      pageNo > 1
+        ? `${this.site}browse/page/${pageNo}/?sortby=${sortby}`
+        : `${this.site}browse/?sortby=${sortby}`;
 
     const body = await fetchApi(link);
     const html = await body.text();
 
+    return this.parseNovelCards(html);
+  }
+
+  parseNovelCards(html: string): Plugin.NovelItem[] {
     const loadedCheerio = loadCheerio(html);
 
     const baseUrl = this.site;
     const novels: Plugin.NovelItem[] = [];
-    loadedCheerio('div.read_list-story-item').each((i, el) => {
-      const tempNovel = {} as Plugin.NovelItem;
-      const img = loadedCheerio(el)
-        .find('.item_thumb')
-        .find('img')
-        .first()
-        .attr('src');
-      let path = loadedCheerio(el)
-        .find('.item_thumb')
-        .find('a')
-        .first()
-        .attr('href');
+    loadedCheerio('.read_list-story-item').each((i, el) => {
+      const card = loadedCheerio(el);
+      const thumbLink = card.find('.item_thumb').find('a').first();
+      const img = card.find('.item_thumb').find('img').first().attr('src');
+      let path = thumbLink.attr('href');
       path = path ? path.slice(baseUrl.length) : '';
-      const title = loadedCheerio(el)
-        .find('.item_thumb')
-        .find('a')
-        .first()
-        .attr('title');
-      tempNovel.name = title ? title : '';
+      const title =
+        thumbLink.attr('aria-label') ||
+        card.find('.wrap_item_content').find('h3').first().text().trim() ||
+        thumbLink.attr('title') ||
+        '';
+      const tempNovel = {} as Plugin.NovelItem;
+      tempNovel.name = title;
       tempNovel.path = path;
       tempNovel.cover = img;
       novels.push(tempNovel);
@@ -110,12 +110,7 @@ class LNTPlugin implements Plugin.PluginBase {
       .first()
       .text()
       .trim();
-
-    const body2 = await fetchApi(url.replace('?tab=table_contents', ''));
-    const html2 = await body2.text().then(r => r.replace(/>\s+</g, '><'));
-    const loadedCheerio2 = loadCheerio(html2);
-
-    novel.summary = loadedCheerio2('div.novel_text')
+    novel.summary = loadedCheerio('div.novel_text')
       .find('p')
       .first()
       .text()
@@ -157,52 +152,15 @@ class LNTPlugin implements Plugin.PluginBase {
     // get novels using the search term
 
     if (pageNo !== 1) return [];
-    const searchUrl = this.site + '/read';
-    const formData = new FormData();
-    formData.append('field-search', searchTerm);
+    const searchUrl = `${this.site}browse/?search=${encodeURIComponent(searchTerm)}`;
 
-    const results = await fetchApi(searchUrl, {
-      method: 'POST',
-      body: formData,
-    });
-
+    const results = await fetchApi(searchUrl);
     const body = await results.text();
-    const loadedCheerio = loadCheerio(body);
-    const novels: Plugin.NovelItem[] = [];
-    loadedCheerio('div.read_list-story-item').each((i, el) => {
-      const tempNovel = {} as Plugin.NovelItem;
-      const img = loadedCheerio(el)
-        .find('.item_thumb')
-        .find('img')
-        .first()
-        .attr('src');
-      let path = loadedCheerio(el)
-        .find('.item_thumb')
-        .find('a')
-        .first()
-        .attr('href');
-      path = path ? path.slice(this.site.length) : '';
-      const title = loadedCheerio(el)
-        .find('.item_thumb')
-        .find('a')
-        .first()
-        .attr('title');
-      tempNovel.name = title ? title : '';
-      tempNovel.path = path;
-      tempNovel.cover = img;
-      novels.push(tempNovel);
-    });
 
-    // type SearchEntry = {
-    //   title: string;
-    //   thumbnail: string;
-    //   permalink: string;
-    // };
-    return novels;
+    return this.parseNovelCards(body);
   }
 
-  resolveUrl = (path: string, isNovel?: boolean) =>
-    this.site + (isNovel ? '/book/' : '/chapter/') + path;
+  resolveUrl = (path: string) => this.site + path;
 }
 
 export default new LNTPlugin();
