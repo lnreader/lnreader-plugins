@@ -207,9 +207,36 @@ function parseNovelSources(data: unknown): NovelSources {
  * is English). Falls back to the largest source overall when the novel
  * has no English source, so the novel still opens.
  */
-function chooseSource(detail: NovelSources): SourceOption {
+/**
+ * Pick the source the plugin reads through. When the catalog was
+ * filtered to languages, those are carried in the novel path
+ * (`slug?lang=a,b`) and a source in one of them wins — first listed
+ * language first. Without them this is: the English source with the
+ * most available chapters (the site's preferred source wins ties when
+ * it is English), falling back to the largest source overall when the
+ * novel has no English source, so the novel still opens.
+ */
+function chooseSource(
+  detail: NovelSources,
+  preferLangs: string[] = [],
+): SourceOption {
   let bestEn: SourceOption | undefined;
   let bestAny: SourceOption | undefined;
+  for (const lang of preferLangs) {
+    let bestInLang: SourceOption | undefined;
+    for (const s of detail.sources) {
+      if (s.available <= 0 || s.language !== lang) continue;
+      if (
+        !bestInLang ||
+        s.available > bestInLang.available ||
+        (s.available === bestInLang.available &&
+          s.slug === detail.preferredSlug)
+      ) {
+        bestInLang = s;
+      }
+    }
+    if (bestInLang) return bestInLang;
+  }
   for (const s of detail.sources) {
     if (s.available <= 0) continue;
     if (!bestAny || s.available > bestAny.available) bestAny = s;
@@ -346,6 +373,7 @@ const LANGUAGES: { label: string; value: string }[] = [
 ];
 
 const SORT_OPTIONS: { label: string; value: string }[] = [
+  { label: 'Default', value: '' },
   { label: 'Title', value: 'title' },
   { label: 'Rating', value: 'rating' },
   { label: 'Date added', value: 'date_added' },
@@ -355,6 +383,7 @@ const SORT_OPTIONS: { label: string; value: string }[] = [
 ];
 
 const STATUS_OPTIONS: { label: string; value: string }[] = [
+  { label: 'All', value: '' },
   { label: 'Ongoing', value: 'Ongoing' },
   { label: 'Completed', value: 'Completed' },
   { label: 'On Hiatus', value: 'On Hiatus' },
@@ -363,6 +392,7 @@ const STATUS_OPTIONS: { label: string; value: string }[] = [
 ];
 
 const ADULT_OPTIONS: { label: string; value: string }[] = [
+  { label: 'Default', value: '' },
   { label: 'Hide adult content', value: 'hide' },
   { label: 'Show everything', value: 'show' },
   { label: 'Adult content only', value: 'only' },
@@ -399,6 +429,7 @@ class LNCrawler implements Plugin.PluginBase {
       label: 'Order',
       value: '',
       options: [
+        { label: 'Default', value: '' },
         { label: 'Ascending', value: 'asc' },
         { label: 'Descending', value: 'desc' },
       ],
@@ -470,11 +501,23 @@ class LNCrawler implements Plugin.PluginBase {
       'Failed to load popular novels',
     );
     const page = parseNovelListPage(data);
-    return pageNo > page.totalPages ? [] : page.cards;
+    return this.tagWithLanguages(page, pageNo, options);
+  }
+
+  /** Selected languages carried in the novel path, if any (`slug?lang=a,b`). */
+  private langsFromPath(novelPath: string): string[] {
+    const url = new URL(novelPath, this.site);
+    const raw = url.searchParams.get('lang') || '';
+    return raw.split(',').filter(Boolean);
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const slug = novelPath.replace(/^\/novels\//, '').replace(/\/+$/, '');
+    // The path may be a bare slug (`shadow-slave?lang=en`) or a resolved
+    // site URL (`.../novels/shadow-slave?lang=en`); the last path
+    // segment is the novel slug either way.
+    const slug =
+      new URL(novelPath, this.site).pathname.split('/').filter(Boolean).pop() ||
+      '';
     const detail = parseNovelSources(
       await fetchJson(
         `${API}/novels/${encodeURIComponent(slug)}/`,
@@ -484,7 +527,7 @@ class LNCrawler implements Plugin.PluginBase {
     if (!detail.name) {
       throw new Error('Could not load the novel ' + novelPath);
     }
-    const source = chooseSource(detail);
+    const source = chooseSource(detail, this.langsFromPath(novelPath));
     const base =
       `${API}/novels/${encodeURIComponent(slug)}` +
       `/${encodeURIComponent(source.slug)}`;
@@ -561,7 +604,26 @@ class LNCrawler implements Plugin.PluginBase {
       'Failed to search novels',
     );
     const page = parseNovelListPage(data);
-    return pageNo > page.totalPages ? [] : page.cards;
+    return this.tagWithLanguages(page, pageNo, options);
+  }
+
+  /**
+   * Catalog cards carry the chosen languages in their path
+   * (`slug?lang=a,b`) so parseNovel can pick a chapter source that
+   * matches them; used only when a language filter is actually set.
+   */
+  private tagWithLanguages(
+    page: ListPage,
+    pageNo: number,
+    options?: Plugin.PopularNovelsOptions<typeof this.filters>,
+  ): Plugin.NovelItem[] {
+    if (pageNo > page.totalPages) return [];
+    const langs = (options?.filters?.languages?.value || [])
+      .filter(Boolean)
+      .join(',');
+    if (!langs) return page.cards;
+    const suffix = `?lang=${encodeURIComponent(langs)}`;
+    return page.cards.map(card => ({ ...card, path: card.path + suffix }));
   }
 
   resolveUrl = (path: string) => {
