@@ -20,7 +20,7 @@ class RuRanobe implements Plugin.PluginBase {
   // Cloudflare, which drops requests to ruranobe.ru on some networks
   imageHost = 'https://znovel.space';
   apiUrl = 'https://znovel.space/api/site/v2/graphql';
-  version = '1.0.1';
+  version = '1.0.0';
   icon = 'src/ru/ruranobe/icon.png';
 
   async fetchNovels(
