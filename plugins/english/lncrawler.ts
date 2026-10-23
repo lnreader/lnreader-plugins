@@ -403,7 +403,7 @@ class LNCrawler implements Plugin.PluginBase {
   name = 'LNCrawler';
   icon = 'src/en/lncrawler/icon.png';
   site = 'https://lncrawler.monster';
-  version = '1.1.0';
+  version = '1.1.1';
 
   filters = {
     languages: {
