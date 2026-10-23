@@ -27,7 +27,7 @@ class ficbook implements Plugin.PluginBase {
       url += '/' + (filters?.sort?.value || 'fanfiction') + '?p=' + pageNo;
     }
 
-    const result = await fetchApi(url).then(res => res.text());
+    const result = await this.fetchPage(url);
     return this.parseNovelList(result);
   }
 
@@ -52,9 +52,7 @@ class ficbook implements Plugin.PluginBase {
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const result = await fetchApi(this.site + novelPath).then(res =>
-      res.text(),
-    );
+    const result = await this.fetchPage(this.site + novelPath);
     const loadedCheerio = parseHTML(result);
 
     const novel: Plugin.SourceNovel = {
@@ -126,9 +124,7 @@ class ficbook implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const result = await fetchApi(this.site + chapterPath).then(res =>
-      res.text(),
-    );
+    const result = await this.fetchPage(this.site + chapterPath);
     const loadedCheerio = parseHTML(result);
     let chapterText = '';
 
@@ -155,15 +151,28 @@ class ficbook implements Plugin.PluginBase {
     searchTerm: string,
     pageNo: number | undefined = 1,
   ): Promise<Plugin.NovelItem[]> {
-    const result = await fetchApi(
+    const result = await this.fetchPage(
       this.site +
         '/find-fanfics-846555?title=' +
         encodeURIComponent(searchTerm) +
         '&p=' +
         pageNo,
-    ).then(res => res.text());
+    );
 
     return this.parseNovelList(result);
+  }
+
+  // Cloudflare may answer with a challenge page instead of the content
+  async fetchPage(url: string): Promise<string> {
+    const res = await fetchApi(url);
+    const body = await res.text();
+
+    if (!res.ok || /<title>\s*Just a moment/i.test(body)) {
+      throw new Error(
+        'ficbook недоступен (' + res.status + '), откройте сайт в WebView',
+      );
+    }
+    return body;
   }
 
   parseDate = (dateString: string | undefined = '') => {
