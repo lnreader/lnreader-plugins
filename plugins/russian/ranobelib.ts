@@ -602,7 +602,11 @@ function jsonToHtml(json: HTML[], images: Attachment[], html = '') {
           '</h2>';
         break;
       case 'text':
-        html += element.text;
+        // literal text like "Ранг <S>" must not turn into tags
+        html += (element.text || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
         break;
       default:
         html += JSON.stringify(element, null, '\t'); //maybe I missed something.
