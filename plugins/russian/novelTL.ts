@@ -3,7 +3,7 @@ import { FilterTypes, Filters } from '@libs/filterInputs';
 import { defaultCover } from '@libs/defaultCover';
 import { fetchApi } from '@libs/fetch';
 import { NovelStatus } from '@libs/novelStatus';
-import dayjs from 'dayjs';
+import { load as parseHTML } from 'cheerio';
 
 const statusKey: Record<string, string> = {
   'active': NovelStatus.Ongoing,
@@ -16,7 +16,10 @@ class TL implements Plugin.PluginBase {
   id = 'TL';
   name = 'NovelTL';
   site = 'https://novel.tl';
-  version = '1.0.2';
+  // same image storage without Cloudflare: novel.tl drops image downloads
+  // on some networks while the small API responses still get through
+  imageHost = 'https://znovel.space';
+  version = '1.0.3';
   icon = 'src/ru/noveltl/icon.png';
 
   async fetchNovels(
@@ -36,7 +39,7 @@ class TL implements Plugin.PluginBase {
         Referer: this.site,
         body: JSON.stringify({
           query:
-            'query Projects($hostname:String! $filter:SearchFilter $page:Int $limit:Int){projects(section:{fullUrl:$hostname}filter:$filter page:{pageSize:$limit,pageNumber:$page}){content{title fullUrl covers{url}}}}',
+            'query Projects($hostname:String! $filter:SearchFilter $page:Int $limit:Int){projects(section:{fullUrl:$hostname}filter:$filter page:{pageSize:$limit,pageNumber:$page}){content{title fullUrl covers{url thumbnail(width:240)}}}}',
           variables: {
             filter: {
               query: searchTerm || undefined,
@@ -60,9 +63,7 @@ class TL implements Plugin.PluginBase {
       novels.push({
         name: novel.title,
         path: novel.fullUrl,
-        cover: novel?.covers?.[0]?.url
-          ? this.site + novel.covers[0].url
-          : defaultCover,
+        cover: this.getCover(novel.covers),
       }),
     );
 
@@ -93,7 +94,7 @@ class TL implements Plugin.PluginBase {
         Referer: this.site,
         body: JSON.stringify({
           query:
-            'query Book($url:String){project(project:{fullUrl:$url}){title translationStatus fullUrl covers{url}persons(langs:["ru","en","*"],roles:["author","illustrator"]){role name{firstName lastName}}genres{nameRu nameEng}tags{nameRu nameEng}annotation{text}subprojects{content{title volumes{content{shortName chapters{title publishDate fullUrl published}}}}}}}',
+            'query Book($url:String){project(project:{fullUrl:$url}){title translationStatus fullUrl covers{url thumbnail(width:480)}persons(langs:["ru","en","*"],roles:["author","illustrator"]){role name{firstName lastName}}genres{nameRu nameEng}tags{nameRu nameEng}annotation{text}subprojects{content{title volumes{content{shortName chapters{title publishDate fullUrl published}}}}}}}',
           variables: {
             url: novelPath,
           },
@@ -104,10 +105,8 @@ class TL implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: data.project?.title || '',
-      cover: data.project?.covers?.[0]?.url
-        ? this.site + data.project.covers[0].url
-        : defaultCover,
-      summary: data.project?.annotation?.text,
+      cover: this.getCover(data.project?.covers),
+      summary: this.parseSummary(data.project?.annotation?.text),
       status:
         statusKey[data.project?.translationStatus || 'unknown'] ||
         NovelStatus.Unknown,
@@ -134,25 +133,36 @@ class TL implements Plugin.PluginBase {
     });
 
     const chapters: Plugin.ChapterItem[] = [];
+    // The app casts chapter pages to integers and shows a single page as '1',
+    // so every subproject (main series, spin-offs...) gets a numeric page.
+    let pageCount = 0;
 
-    data.project?.subprojects?.content?.forEach(work =>
+    data.project?.subprojects?.content?.forEach(work => {
+      const page = String(pageCount + 1);
+      const chaptersBefore = chapters.length;
+
       work.volumes.content.forEach((volume, volumeIndex) =>
         volume.chapters.forEach((chapter, chapterIndex) => {
           if (chapter.published) {
             chapters.push({
               name:
+                (work.title ? work.title + '. ' : '') +
                 (volume.shortName || 'Том ' + (volumeIndex + 1)) +
                 ' ' +
                 (chapter.title || 'Глава ' + (chapterIndex + 1)),
               path: chapter.fullUrl,
-              releaseTime: dayjs(chapter.publishDate).format('LLL'),
+              releaseTime: chapter.publishDate,
               chapterNumber: chapters.length + 1,
-              page: work.title || 'Основная серия',
+              page,
             });
           }
         }),
-      ),
-    );
+      );
+
+      if (chapters.length > chaptersBefore) {
+        pageCount++;
+      }
+    });
 
     novel.chapters = chapters;
     return novel;
@@ -176,8 +186,33 @@ class TL implements Plugin.PluginBase {
       }),
     }).then(res => res.json());
 
-    const chapterText = data.chapter?.text?.text || '';
-    return chapterText;
+    const chapterText: string = data.chapter?.text?.text || '';
+    // illustrations use site-relative links
+    return chapterText
+      .replace(
+        /(src|srcset|href)="\/images\//g,
+        '$1="' + this.imageHost + '/images/',
+      )
+      .replace(/(src|srcset|href)="\/(?!\/)/g, '$1="' + this.site + '/');
+  }
+
+  private getCover(covers?: Cover[]): string {
+    const cover = covers?.[0]?.thumbnail || covers?.[0]?.url;
+    // thumbnails come percent-encoded, original urls may contain raw cyrillic
+    return cover ? this.imageHost + encodeURI(decodeURI(cover)) : defaultCover;
+  }
+
+  private parseSummary(html?: string): string | undefined {
+    if (!html) return undefined;
+
+    const $ = parseHTML(html);
+    $('br').replaceWith('\n');
+    const paragraphs = $('p')
+      .map((_, el) => $(el).text().trim())
+      .get()
+      .filter(text => text);
+
+    return paragraphs.length ? paragraphs.join('\n\n') : $.root().text().trim();
   }
 
   resolveUrl = (path: string) => 'https://' + path;
@@ -882,6 +917,7 @@ type Project = {
 
 type Cover = {
   url: string;
+  thumbnail?: string;
 };
 
 type Genre = {
@@ -919,7 +955,7 @@ type VolumesContent = {
 
 type ChapterElement = {
   title: null | string;
-  publishDate: Date;
+  publishDate: string;
   fullUrl: string;
   published: boolean;
 };
