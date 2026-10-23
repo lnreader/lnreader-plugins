@@ -10,7 +10,7 @@ class Zelluloza implements Plugin.PluginBase {
   id = 'zelluloza';
   name = 'Целлюлоза';
   site = 'https://zelluloza.ru';
-  version = '1.1.0';
+  version = '1.0.4';
   nonce = '';
   icon = 'src/ru/zelluloza/icon.png';
 
