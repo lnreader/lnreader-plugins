@@ -107,7 +107,7 @@ export class RulatePlugin implements Plugin.PluginBase {
       summary: htmlToText(book.response.description || ''),
       author: book.response.author,
       status:
-        book.response.status === 'Р—Р°РІРµСЂС€С‘РЅ'
+        book.response.status === 'Завершён'
           ? NovelStatus.Completed
           : NovelStatus.Ongoing,
       rating:
@@ -133,7 +133,7 @@ export class RulatePlugin implements Plugin.PluginBase {
       chaptersData.response.forEach((chapter: ChapterResponse) => {
         if (chapter.can_read && chapter.subscription === 0) {
           chapters.push({
-            name: chapter.title + (chapter.illustrated ? ' рџ–јпёЏ' : ''),
+            name: chapter.title + (chapter.illustrated ? ' 🖼️' : ''),
             path: novelPath + '/' + chapter.id,
             releaseTime: dayjs(chapter.cdate * 1000).format('LLL'),
             chapterNumber: chapter.ord,
