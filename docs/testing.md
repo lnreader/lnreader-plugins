@@ -34,7 +34,8 @@ Each step reports one of three outcomes:
 
 ## CI
 
-Any PR that touches a file under `plugins/**/*.ts` (excluding multisrc-generated files) runs this
+Any PR that touches a file under `plugins/**/*.ts` (excluding multisrc-generated files and
+parked `*.broken.ts` sources) runs this
 same check automatically against just the changed plugins, and posts the results as a job summary
 on the workflow run (visible from the PR's checks list, under the Actions tab) — not as a PR
 comment. The check only fails the PR on a genuine `FAIL` — `INCONCLUSIVE` results (a site being
