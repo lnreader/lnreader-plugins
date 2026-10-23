@@ -14,7 +14,7 @@ class RNRF implements Plugin.PluginBase {
   name = 'РанобэРФ';
   // ранобе.рф; the old ранобэ.рф domain no longer resolves
   site = 'https://xn--80acm4afj.xn--p1ai';
-  version = '2.0.0';
+  version = '1.0.2';
   icon = 'src/ru/ranoberf/icon.png';
 
   async popularNovels(
