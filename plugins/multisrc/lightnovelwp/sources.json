@@ -293,26 +293,18 @@
   },
   {
     "id": "TCSega",
-    "sourceSite": "https://teamchmantranslations.com",
+    "sourceSite": "https://teamchmantranslations.com/",
     "sourceName": "TC & Sega",
     "options": {
       "lang": "Spanish",
-      "reverseChapters": true
+      "reverseChapters": true,
+      "versionIncrements": 1
     }
   },
   {
     "id": "transweaver",
     "sourceSite": "https://transweaver.com/",
     "sourceName": "Translation Weaver",
-    "options": {
-      "lang": "English",
-      "reverseChapters": true
-    }
-  },
-  {
-    "id": "kdtnovels",
-    "sourceSite": "https://kdtnovels.net/",
-    "sourceName": "KDT Novels",
     "options": {
       "lang": "English",
       "reverseChapters": true
@@ -326,7 +318,7 @@
       "lang": "English",
       "reverseChapters": true,
       "hasLocked": true
-    } 
+    }
   },
   {
     "id": "blumeverse",
@@ -336,11 +328,20 @@
       "lang": "English",
       "reverseChapters": true,
       "hasLocked": true
-    } 
+    }
   },
   {
     "id": "dobynovels",
     "sourceSite": "https://dobynovels.com/",
     "sourceName": "DobyNovels"
+  },
+  {
+    "id": "ossantl",
+    "sourceSite": "https://ossantl.my.id/",
+    "sourceName": "OssanTL",
+    "options": {
+      "lang": "English",
+      "reverseChapters": true
+    }
   }
 ]

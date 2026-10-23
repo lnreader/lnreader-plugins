@@ -221,7 +221,9 @@
     "sourceSite": "https://www.foxaholic.com/",
     "sourceName": "Foxaholic",
     "options": {
-      "useNewChapterEndpoint": true
+      "useNewChapterEndpoint": true,
+      "resolveCoverDataUri": true,
+      "versionIncrements": 1
     }
   },
   {
@@ -408,13 +410,12 @@
   },
   {
     "id": "bellereservoir",
-    "sourceSite": "https://bellereservoir.com/",
-    "sourceName": "Belle Reservoir",
+    "sourceSite": "https://bellerepository.com/",
+    "sourceName": "Belle Repository",
     "options": {
       "useNewChapterEndpoint": true,
       "lang": "English",
-      "down": true,
-      "downSince": 1777153113000
+      "versionIncrements": 1
     }
   },
   {
@@ -669,6 +670,23 @@
     "sourceName": "Tangerine Archive",
     "options": {
       "lang": "English",
+      "useNewChapterEndpoint": true
+    }
+  },
+  {
+    "id": "bailiantales",
+    "sourceSite": "https://bailiantales.com/",
+    "sourceName": "BaiLianTales",
+    "options": {
+      "useNewChapterEndpoint": true
+    }
+  },
+  {
+    "id": "anslid",
+    "sourceSite": "https://anslid.com/",
+    "sourceName": "Anslid",
+    "options": {
+      "lang": "Spanish",
       "useNewChapterEndpoint": true
     }
   }

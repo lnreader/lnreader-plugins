@@ -4,10 +4,28 @@ import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { defaultCover } from '@libs/defaultCover';
 
+function checkResponse(res: Response, body: string, context: string) {
+  if (!res.ok) {
+    if (res.status >= 500 || res.status === 429 || res.status === 403) {
+      throw Object.assign(
+        new Error(`AO3 request timed out / blocked: HTTP ${res.status}`),
+        { status: res.status, response: res },
+      );
+    }
+    throw new Error(`Failed to ${context}: HTTP ${res.status}`);
+  }
+  if (body.includes('Retry later')) {
+    throw Object.assign(
+      new Error('AO3 rate limit: request timed out by server (Retry later)'),
+      { status: 429, response: res },
+    );
+  }
+}
+
 class ArchiveOfOurOwn implements Plugin.PluginBase {
   id = 'archiveofourown';
   name = 'Archive Of Our Own';
-  version = '1.0.4';
+  version = '1.0.5';
   icon = 'src/en/ao3/icon.png';
   site = 'https://archiveofourown.org/';
 
@@ -109,17 +127,33 @@ class ArchiveOfOurOwn implements Plugin.PluginBase {
     }
 
     const link = `${this.site}works/search?${params.toString()}`;
-    const body = await fetchApi(link).then(r => r.text());
+    const res = await fetchApi(link, {
+      headers: { Cookie: 'view_adult=true' },
+    });
+    const body = await res.text();
+    checkResponse(res, body, 'fetch popular novels');
     const loadedCheerio = parseHTML(body);
     return this.parseNovels(loadedCheerio);
   }
 
   async parseNovel(novelUrl: string): Promise<Plugin.SourceNovel> {
-    const result = await fetchApi(new URL(novelUrl, this.site).toString());
-    const urlchapter = novelUrl + '/navigate';
-    const chapters = await fetchApi(new URL(urlchapter, this.site).toString());
+    const novelHttpUrl = new URL(novelUrl, this.site);
+    novelHttpUrl.searchParams.set('view_adult', 'true');
+    const navHttpUrl = new URL(
+      novelHttpUrl.pathname.replace(/\/$/, '') + '/navigate',
+      this.site,
+    );
+    navHttpUrl.searchParams.set('view_adult', 'true');
+    const headers = { Cookie: 'view_adult=true' };
+
+    const [result, chapters] = await Promise.all([
+      fetchApi(novelHttpUrl.toString(), { headers }),
+      fetchApi(navHttpUrl.toString(), { headers }),
+    ]);
     const body = await result.text();
     const chapterlisttext = await chapters.text();
+    checkResponse(result, body, 'fetch novel details');
+    checkResponse(chapters, chapterlisttext, 'fetch novel chapters');
     const chapterlistload = parseHTML(chapterlisttext);
     const loadedCheerio = parseHTML(body);
 
@@ -163,115 +197,51 @@ class ArchiveOfOurOwn implements Plugin.PluginBase {
       .map(el => loadedCheerio(el).text().trim())
       .join(',');
     novel.summary = `Fandom:\n${fandom}\n\nRating:\n${rating}\n\nWarning:\n${warning}\n\nSummary:\n${summary}\n\nSeries:\n${series}\n\nRelationships:\n${relation}\n\nCharacters:\n${character}\n\nStats:\n${stats}`;
+
     const chapterItems: Plugin.ChapterItem[] = [];
-    const longReleaseDate: string[] = [];
-    // let match: RegExpExecArray | null;
-    chapterlistload('ol.index').each((i, ele) => {
-      chapterlistload(ele)
-        .find('li')
-        .each((i, el) => {
-          // const chapterNameMatch = chapterlistload(el).find('a').text().trim();
-          const releaseTimeText = chapterlistload(el)
-            .find('span.datetime')
-            .text()
-            .replace(/\(([^)]+)\)/g, '$1')
-            .trim();
-          const releaseTime = releaseTimeText
-            ? new Date(releaseTimeText).toISOString()
-            : '';
-          longReleaseDate.push(releaseTime);
-        });
+    chapterlistload('ol.index li').each((i, el) => {
+      const a = chapterlistload(el).find('a');
+      const href = a.attr('href')?.trim();
+      if (!href) return;
+      const releaseTimeText = chapterlistload(el)
+        .find('span.datetime')
+        .text()
+        .replace(/[()]/g, '')
+        .trim();
+      chapterItems.push({
+        name: a.text().trim() || `Chapter ${i + 1}`,
+        path: href.replace(/^\//, ''),
+        releaseTime: releaseTimeText
+          ? new Date(releaseTimeText).toISOString()
+          : null,
+      });
     });
-    const releaseTimeText = loadedCheerio('.wrapper dd.published')
-      .text()
-      .trim();
-    const releaseTime = releaseTimeText
-      ? new Date(releaseTimeText).toISOString()
-      : '';
-    let dateCounter = 0;
-    if (loadedCheerio('#chapter_index select').length > 0) {
-      loadedCheerio('#chapter_index select').each((i, selectEl) => {
-        loadedCheerio(selectEl)
-          .find('option')
-          .each((i, el) => {
-            const chapterName = loadedCheerio(el).text().trim();
-            const chapterUrlCode = loadedCheerio(el).attr('value')?.trim();
-            const chapterUrl = `${novelUrl}/chapters/${chapterUrlCode}`;
-            const releaseDate: string = longReleaseDate[dateCounter];
-            dateCounter++;
-            if (chapterUrl) {
-              chapterItems.push({
-                name: chapterName,
-                path: chapterUrl,
-                releaseTime: releaseDate,
-              });
-            }
-          });
-      });
-    }
+
     if (chapterItems.length === 0) {
-      loadedCheerio('#chapters h3.title').each((i, titleEl) => {
-        const fullTitleText = loadedCheerio(titleEl).text().trim();
-        const chapterNameMatch = fullTitleText.match(/:\s*(.*)$/);
-        let chapterName = chapterNameMatch ? chapterNameMatch[1].trim() : '';
-        const chapterUrlRaw = loadedCheerio(titleEl)
-          .find('a')
-          .attr('href')
-          ?.trim();
-        const chapterUrlCode = chapterUrlRaw?.match(/\/chapters\/(\d+)/)?.[1];
-        const chapterUrl = `${novelUrl}/chapters/${chapterUrlCode}`;
-
-        if (chapterUrl) {
-          if (chapterName === '') {
-            const novelTitle = loadedCheerio('.work .title.heading')
-              .text()
-              .trim();
-            chapterName = novelTitle;
-          }
-          chapterItems.push({
-            name: chapterName,
-            path: chapterUrl,
-            releaseTime: releaseTime,
-          });
-        }
+      const releaseTimeText = loadedCheerio('.wrapper dd.published')
+        .text()
+        .trim();
+      chapterItems.push({
+        name: novel.name,
+        path: novelUrl,
+        releaseTime: releaseTimeText
+          ? new Date(releaseTimeText).toISOString()
+          : null,
       });
-      if (chapterItems.length === 0) {
-        loadedCheerio('.work.navigation.actions li a').each((i, el) => {
-          const href = loadedCheerio(el).attr('href');
-          if (href && href.includes('/downloads/')) {
-            const chapterUrlCodeMatch = href.match(/updated_at=(\d+)/);
-            const chapterUrlCode = chapterUrlCodeMatch
-              ? chapterUrlCodeMatch[1]
-              : null;
-            let chapterName = loadedCheerio('h2.title.heading').text().trim();
-
-            const chapterUrl = `${novelUrl}/chapters/${chapterUrlCode}`;
-
-            if (chapterUrl) {
-              if (chapterName === '') {
-                const novelTitle = loadedCheerio('.work .title.heading')
-                  .text()
-                  .trim();
-                chapterName = novelTitle;
-              }
-              chapterItems.push({
-                name: chapterName,
-                path: chapterUrl,
-                releaseTime: releaseTime,
-              });
-            }
-          }
-        });
-      }
     }
-    novel.chapters = chapterItems;
 
+    novel.chapters = chapterItems;
     return novel;
   }
 
   async parseChapter(chapterUrl: string): Promise<string> {
-    const result = await fetchApi(new URL(chapterUrl, this.site).toString());
+    const chapterHttpUrl = new URL(chapterUrl, this.site);
+    chapterHttpUrl.searchParams.set('view_adult', 'true');
+    const result = await fetchApi(chapterHttpUrl.toString(), {
+      headers: { Cookie: 'view_adult=true' },
+    });
     const body = await result.text();
+    checkResponse(result, body, 'fetch chapter');
 
     const loadedCheerio = parseHTML(body);
 
@@ -289,7 +259,10 @@ class ArchiveOfOurOwn implements Plugin.PluginBase {
     });
     loadedCheerio('h3.landmark.heading#work').remove();
 
-    const chapterText = loadedCheerio('div#chapters > div').html() || '';
+    const chapterText =
+      loadedCheerio('div#chapters > div').html() ||
+      loadedCheerio('div#chapters').html() ||
+      '';
 
     return chapterText;
   }
@@ -306,8 +279,11 @@ class ArchiveOfOurOwn implements Plugin.PluginBase {
     });
     const searchUrl = `${this.site}works/search?${params.toString()}`;
 
-    const result = await fetchApi(searchUrl);
+    const result = await fetchApi(searchUrl, {
+      headers: { Cookie: 'view_adult=true' },
+    });
     const body = await result.text();
+    checkResponse(result, body, 'search novels');
 
     const loadedCheerio = parseHTML(body);
     return this.parseNovels(loadedCheerio);

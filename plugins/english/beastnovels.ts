@@ -2,6 +2,7 @@ import { load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
+import { storage } from '@libs/storage';
 import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
@@ -20,7 +21,8 @@ import { NovelStatus } from '@libs/novelStatus';
  *                 the catalog entry.
  * - Chapter page: `/series/<slug>/<n>` — text in `.chapter-content`.
  *                 Premium chapters (`data-premium="1"`) redirect to the
- *                 login page, so only free chapters are listed.
+ *                 login page, so they are listed as locked (🔒) and can
+ *                 be hidden with the "Hide locked chapters" setting.
  */
 
 type BeastBook = {
@@ -38,9 +40,17 @@ type BeastBook = {
 class BeastNovels implements Plugin.PluginBase {
   id = 'beastnovels';
   name = 'Beast Novels';
-  version = '1.0.0';
+  version = '1.1.0';
   icon = 'src/en/beastnovels/icon.png';
   site = 'https://beastnovels.com/';
+
+  pluginSettings = {
+    hideLocked: {
+      value: '',
+      label: 'Hide locked chapters',
+      type: 'Switch',
+    },
+  };
 
   private async fetchText(url: string): Promise<string> {
     const res = await fetchApi(url);
@@ -154,14 +164,18 @@ class BeastNovels implements Plugin.PluginBase {
         break;
     }
 
+    const hideLocked = storage.get('hideLocked');
     const chapters: Plugin.ChapterItem[] = [];
-    $('a.chapter-row[data-premium="0"]').each((_, el) => {
+    $('a.chapter-row').each((_, el) => {
       const href = $(el).attr('href');
       if (!href) return;
+      const locked = $(el).attr('data-premium') === '1';
+      if (locked && hideLocked) return;
       const num = $(el).find('.chapter-card__num').text().trim();
       const number = parseFloat($(el).attr('data-chapter-number') || '');
+      const name = $(el).find('.chapter-card__title').text().trim() || num;
       chapters.push({
-        name: $(el).find('.chapter-card__title').text().trim() || num,
+        name: locked ? `🔒 ${name}` : name,
         path: href.replace(this.site, ''),
         chapterNumber: isNaN(number) ? undefined : number,
       });
@@ -188,6 +202,14 @@ class BeastNovels implements Plugin.PluginBase {
     const html = await this.fetchText(this.site + chapterPath);
     const $ = parseHTML(html);
     const content = $('.chapter-content');
+    if (!content.length) {
+      // Premium chapters redirect to the login page.
+      throw new Error(
+        $('input[type="password"]').length
+          ? 'This chapter is locked. Unlock it on Beast Novels to read it.'
+          : 'Could not find the chapter text.',
+      );
+    }
     content.find('script, style, iframe').remove();
     content.find('*').each((_, el) => {
       if (el.type !== 'tag') return;
