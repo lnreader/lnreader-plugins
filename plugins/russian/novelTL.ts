@@ -187,6 +187,9 @@ class TL implements Plugin.PluginBase {
     }).then(res => res.json());
 
     const chapterText: string = data.chapter?.text?.text || '';
+    if (!chapterText.trim()) {
+      throw new Error('Текст главы недоступен');
+    }
     // illustrations use site-relative links
     return chapterText
       .replace(
@@ -219,7 +222,9 @@ class TL implements Plugin.PluginBase {
     );
   }
 
-  resolveUrl = (path: string) => 'https://' + path;
+  // novel and chapter paths are 'host/path', covers are already absolute
+  resolveUrl = (path: string) =>
+    /^https?:\/\//i.test(path) ? path : 'https://' + path;
 
   filters = {
     tags: {
