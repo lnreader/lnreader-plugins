@@ -1,5 +1,6 @@
 export default {
   Arabic: '‎العربية',
+  Bangla: 'বাংলা',
   Chinese: '中文, 汉语, 漢語',
   English: 'English',
   French: 'Français',
