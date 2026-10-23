@@ -5,6 +5,7 @@ import { fetchApi } from '@libs/fetch';
 import { NovelStatus } from '@libs/novelStatus';
 import { storage, localStorage } from '@libs/storage';
 import dayjs from 'dayjs';
+import { load as parseHTML } from 'cheerio';
 
 const statusKey: Record<number, string> = {
   1: NovelStatus.Ongoing,
@@ -29,7 +30,7 @@ class RLIB implements Plugin.PluginBase {
   name = 'RanobeLib';
   site = 'https://ranobelib.me';
   apiSite = 'https://api.cdnlibs.org/api/manga/';
-  version = '2.2.6';
+  version = '2.2.7';
   icon = 'src/ru/ranobelib/icon.png';
   webStorageUtilized = true;
   imageRequestInit = {
@@ -120,12 +121,13 @@ class RLIB implements Plugin.PluginBase {
       path: novelPath,
       name: data.rus_name || data.name,
       cover: data.cover?.default || defaultCover,
-      summary:
+      summary: htmlToText(
         typeof data.summary === 'string'
-          ? data.summary.trim()
+          ? data.summary
           : data.summary?.type === 'doc'
             ? jsonToHtml(data.summary.content, [])
-            : undefined,
+            : '',
+      ),
     };
 
     if (data.status?.id) {
@@ -259,7 +261,8 @@ class RLIB implements Plugin.PluginBase {
 
   getUser = () => {
     const user = storage.get('user') as
-      { token: string; id: number } | undefined;
+      | { token: string; id: number }
+      | undefined;
     if (user) {
       return { token: { Authorization: 'Bearer ' + user.token }, ui: user.id };
     }
@@ -507,6 +510,20 @@ class RLIB implements Plugin.PluginBase {
 }
 
 export default new RLIB();
+
+// the app shows summaries as plain text
+function htmlToText(html: string) {
+  const $ = parseHTML(html);
+  $('br').replaceWith('\n');
+  $('p, div, li, h1, h2, h3, h4, h5, h6, blockquote').after('\n\n');
+  return (
+    $.root()
+      .text()
+      .replace(/[ \t]*\n[ \t]*/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim() || undefined
+  );
+}
 
 function jsonToHtml(json: HTML[], images: Attachment[], html = '') {
   json.forEach(element => {
