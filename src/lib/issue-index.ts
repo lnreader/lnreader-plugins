@@ -1,4 +1,3 @@
-import localIssueIndex from './issue-index.min.json';
 export type CategoryCode = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 export type IssueGroup = [CategoryCode, number, ...number[]];
 export type IssueIndex = Record<string, IssueGroup[]>;
@@ -66,8 +65,8 @@ export function parseIssueIndex(value: unknown): IssueIndex {
   return value as IssueIndex;
 }
 
-async function fetchAndParse(url: string): Promise<IssueIndex> {
-  const response = await fetch(url, { cache: 'no-store' });
+export async function fetchIssueIndex(): Promise<IssueIndex> {
+  const response = await fetch(ISSUE_INDEX_URL, { cache: 'no-store' });
   if (!response.ok) {
     throw new Error(`Issue index request failed (HTTP ${response.status}).`);
   }
@@ -79,14 +78,6 @@ async function fetchAndParse(url: string): Promise<IssueIndex> {
     throw new Error(INVALID_FORMAT);
   }
   return parseIssueIndex(value);
-}
-
-export async function fetchIssueIndex(): Promise<IssueIndex> {
-  try {
-    return await fetchAndParse(ISSUE_INDEX_URL);
-  } catch {
-    return parseIssueIndex(localIssueIndex);
-  }
 }
 
 export function getIssueGroups(

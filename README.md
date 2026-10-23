@@ -43,6 +43,8 @@ VITE_ISSUE_INDEX_URL=https://example.com/issue-index.min.json
 
 If unset, the playground uses `https://raw.githubusercontent.com/LNReader/lnreader-plugins/issue-index/issue-index.min.json`.
 
+Request or validation failures show an error with a Retry action. The playground does not use a bundled local snapshot.
+
 ### Mobile App
 
 **From GitHub (Automated):**
