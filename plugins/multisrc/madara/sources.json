@@ -680,5 +680,14 @@
     "options": {
       "useNewChapterEndpoint": true
     }
+  },
+  {
+    "id": "anslid",
+    "sourceSite": "https://anslid.com/",
+    "sourceName": "Anslid",
+    "options": {
+      "lang": "Spanish",
+      "useNewChapterEndpoint": true
+    }
   }
 ]
