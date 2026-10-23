@@ -11,25 +11,24 @@ class FuckNovelpia implements Plugin.PluginBase {
   name = 'FuckNovelpia';
   icon = 'src/en/fucknovelpia/icon.png';
   site = 'https://fucknovelpia.com/';
-  version = '1.1.2';
-
-  browserHeaders = {
-    'User-Agent':
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Accept-Language': 'en-US,en;q=0.9',
-  };
+  version = '1.1.3';
 
   sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   // The site intermittently swaps in anti-scrape pages (nginx 403, a custom
-  // "Blocked" 429 page, or a Cloudflare rate-limit page) whose bodies contain
-  // no reader markup. Parsing those silently produced empty chapters/novel
-  // lists (issue #2540), so surface them as errors instead, and wait out the
-  // rate limiter once before giving up.
+  // "Blocked" 429 page, or a Cloudflare challenge) whose bodies contain no
+  // reader markup. Parsing those silently produced empty chapters/novel lists
+  // (issue #2540), so surface them as errors instead, and wait out the rate
+  // limiter once before giving up.
+  //
+  // Do not override User-Agent. fetchApi already sends the app's configured
+  // agent, the same one WebView uses when the reader solves Cloudflare.
+  // A hardcoded desktop agent does not match that cf_clearance cookie, so the
+  // site keeps answering 403 after the check succeeds (issue #2730).
   async fetchHtml(url: string): Promise<string> {
-    let response = await fetchApi(url, { headers: this.browserHeaders });
+    let response = await fetchApi(url);
     if (response.status === 429) {
       // Its 429s usually omit Retry-After, and Number(null) is 0, so parse it
       // explicitly to keep the fallback wait instead of retrying instantly.
@@ -39,10 +38,17 @@ class FuckNovelpia implements Plugin.PluginBase {
       );
       const waitMs = (isNaN(retryAfter) ? 2 : Math.min(retryAfter, 10)) * 1000;
       await this.sleep(waitMs);
-      response = await fetchApi(url, { headers: this.browserHeaders });
+      response = await fetchApi(url);
     }
     if (!response.ok) {
-      throw new Error(`FuckNovelpia returned HTTP ${response.status}`);
+      const status = response.status;
+      const message =
+        status === 403 || status === 503
+          ? `Cloudflare protection detected (HTTP ${status}). Open the plugin in WebView, complete the check, then try again.`
+          : `FuckNovelpia returned HTTP ${status}`;
+      const error = new Error(message) as Error & { status?: number };
+      error.status = status;
+      throw error;
     }
     return await response.text();
   }
