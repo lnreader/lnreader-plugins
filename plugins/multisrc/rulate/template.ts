@@ -3,6 +3,7 @@ import { FilterToValues, Filters } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import dayjs from 'dayjs';
+import { load as parseHTML } from 'cheerio';
 
 export type RulateMetadata = {
   id: string;
@@ -103,7 +104,7 @@ export class RulatePlugin implements Plugin.PluginBase {
           c?.map?.((g: { title?: string; name?: string }) => g.title || g.name),
         )
         .join(','),
-      summary: book.response.description,
+      summary: htmlToText(book.response.description || ''),
       author: book.response.author,
       status:
         book.response.status === 'Завершён'
@@ -162,6 +163,20 @@ export class RulatePlugin implements Plugin.PluginBase {
   }
   resolveUrl = (path: string, isNovel?: boolean) =>
     this.site + '/book/' + path + (isNovel ? '/' : '/ready_new');
+}
+
+// the app shows summaries as plain text
+function htmlToText(html: string) {
+  const $ = parseHTML(html);
+  $('br').replaceWith('\n');
+  $('p, div, li, h1, h2, h3, h4, h5, h6, blockquote, hr').after('\n\n');
+  return (
+    $.root()
+      .text()
+      .replace(/[ \t]*\n[ \t]*/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim() || undefined
+  );
 }
 
 type SearchResponse = {
