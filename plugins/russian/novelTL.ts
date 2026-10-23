@@ -206,13 +206,17 @@ class TL implements Plugin.PluginBase {
     if (!html) return undefined;
 
     const $ = parseHTML(html);
+    // keep all text in document order, block elements become paragraphs
     $('br').replaceWith('\n');
-    const paragraphs = $('p')
-      .map((_, el) => $(el).text().trim())
-      .get()
-      .filter(text => text);
+    $('p, div, li, h1, h2, h3, h4, h5, h6, blockquote').after('\n\n');
 
-    return paragraphs.length ? paragraphs.join('\n\n') : $.root().text().trim();
+    return (
+      $.root()
+        .text()
+        .replace(/[ \t]*\n[ \t]*/g, '\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim() || undefined
+    );
   }
 
   resolveUrl = (path: string) => 'https://' + path;
