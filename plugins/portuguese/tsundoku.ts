@@ -8,29 +8,23 @@ import { Filters, FilterTypes } from '@libs/filterInputs';
 class TsundokuPlugin implements Plugin.PluginBase {
   id = 'tsundoku';
   name = 'Tsundoku Traduções';
-  version = '1.0.1';
+  version = '1.0.2';
   icon = 'src/pt-br/tsundoku/icon.png';
   site = 'https://tsundoku.com.br';
 
-  parseDate(date: string): string {
-    const monthMapping: Record<string, number> = {
-      janeiro: 1,
-      fevereiro: 2,
-      marco: 3,
-      abril: 4,
-      maio: 5,
-      junho: 6,
-      julho: 7,
-      agosto: 8,
-      setembro: 9,
-      outubro: 10,
-      novembro: 11,
-      dezembro: 12,
-    };
-    const [month, day, year] = date.split(/,?\s+/);
-    return dayjs(
-      `${year}-${monthMapping[month.normalize('NFD').replace(/[\u0300-\u036f]/g, '')]}-${day}`,
-    ).toISOString();
+  parseDate(date: string): string | null {
+    const match = date.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (!match) return null;
+
+    const [, day, month, year] = match;
+
+    // A missing or unrecognised date must not throw; the chapter just has no release time.
+    const parsed = dayjs(`${year}-${Number(month)}-${day}`);
+    const isCalendarDate =
+      parsed.isValid() &&
+      parsed.date() === Number(day) &&
+      parsed.month() === Number(month) - 1;
+    return isCalendarDate ? parsed.toISOString() : null;
   }
 
   parseNovels(loadedCheerio: CheerioAPI) {
