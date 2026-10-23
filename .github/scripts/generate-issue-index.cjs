@@ -235,6 +235,10 @@ function buildIssueIndex(issues, pluginKeys, warn = console.warn) {
       }
     }
   }
+  return formatIssueIndex(index);
+}
+
+function formatIssueIndex(index) {
   const result = {};
   const pluginIds = [...index.keys()].sort((a, b) =>
     a < b ? -1 : a > b ? 1 : 0,
@@ -248,6 +252,7 @@ function buildIssueIndex(issues, pluginKeys, warn = console.warn) {
     const value = [...groups.entries()]
       .sort(([a], [b]) => b - a)
       .map(([code, numbers]) => [code, ...numbers.sort((a, b) => a - b)]);
+    if (value.length === 0) continue;
     Object.defineProperty(result, id, {
       value,
       enumerable: true,
@@ -256,6 +261,79 @@ function buildIssueIndex(issues, pluginKeys, warn = console.warn) {
     });
   }
   return result;
+}
+
+function updateIssueIndex(
+  index,
+  issueNumber,
+  issue,
+  pluginKeys,
+  warn = console.warn,
+) {
+  if (!Number.isSafeInteger(issueNumber) || issueNumber <= 0)
+    throw new TypeError('Issue number must be a positive safe integer.');
+  if (index === null || typeof index !== 'object' || Array.isArray(index))
+    throw new Error('Issue index format is invalid.');
+  for (const groups of Object.values(index)) {
+    if (!Array.isArray(groups))
+      throw new Error('Issue index format is invalid.');
+    let previousCode = Infinity;
+    const seen = new Set();
+    for (const group of groups) {
+      if (!Array.isArray(group) || group.length < 2)
+        throw new Error('Issue index format is invalid.');
+      const [code, ...numbers] = group;
+      if (
+        !Number.isInteger(code) ||
+        code < 0 ||
+        code > 6 ||
+        code >= previousCode
+      )
+        throw new Error('Issue index format is invalid.');
+      previousCode = code;
+      let previousNumber = 0;
+      for (const number of numbers) {
+        if (
+          !Number.isSafeInteger(number) ||
+          number <= 0 ||
+          number <= previousNumber ||
+          seen.has(number)
+        )
+          throw new Error('Issue index format is invalid.');
+        previousNumber = number;
+        seen.add(number);
+      }
+    }
+  }
+  if (issue !== null) {
+    validateIssue(issue);
+    if (issue.number !== issueNumber)
+      throw new Error(
+        'Fetched issue number does not match the requested issue.',
+      );
+  }
+  const remaining = new Map();
+  for (const [id, groups] of Object.entries(index)) {
+    const issues = new Map();
+    for (const [code, ...numbers] of groups) {
+      for (const number of numbers) {
+        if (number !== issueNumber) issues.set(number, code);
+      }
+    }
+    if (issues.size) remaining.set(id, issues);
+  }
+  const replacement = buildIssueIndex(
+    issue === null ? [] : [issue],
+    pluginKeys,
+    warn,
+  );
+  for (const [id, groups] of Object.entries(replacement)) {
+    if (!remaining.has(id)) remaining.set(id, new Map());
+    for (const [code, ...numbers] of groups) {
+      for (const number of numbers) remaining.get(id).set(number, code);
+    }
+  }
+  return formatIssueIndex(remaining);
 }
 
 function flattenIssuePages(value) {
@@ -268,20 +346,50 @@ function flattenIssuePages(value) {
 }
 
 function runCli(args) {
-  if (args.length !== 2)
-    throw new Error(
-      'Usage: node .github/scripts/generate-issue-index.cjs <issues-json-path> <output-path>',
-    );
-  const [issuesPath, outputPath] = args;
-  const raw = JSON.parse(fs.readFileSync(issuesPath, 'utf8'));
-  const issues = flattenIssuePages(raw);
-  for (const issue of issues) validateIssue(issue);
+  const usage =
+    'Usage: node .github/scripts/generate-issue-index.cjs full <issues-json-path> <output-path> | update <index-json-path> <issue-number> <issue-json-path> <output-path>';
+  const [mode, ...modeArgs] = args;
+  if (
+    (mode === 'full' && modeArgs.length !== 2) ||
+    (mode === 'update' && modeArgs.length !== 4) ||
+    (mode !== 'full' && mode !== 'update')
+  )
+    throw new Error(usage);
   const pluginKeys = JSON.parse(
     fs.readFileSync('.github/scripts/keys.json', 'utf8'),
   );
-  const index = buildIssueIndex(issues, pluginKeys, message =>
-    process.stderr.write(`${message}\n`),
-  );
+  let index;
+  let outputPath;
+  if (mode === 'full') {
+    const [issuesPath, targetPath] = modeArgs;
+    const issues = flattenIssuePages(
+      JSON.parse(fs.readFileSync(issuesPath, 'utf8')),
+    );
+    for (const issue of issues) validateIssue(issue);
+    index = buildIssueIndex(issues, pluginKeys, message =>
+      process.stderr.write(`${message}\n`),
+    );
+    outputPath = targetPath;
+  } else {
+    const [indexPath, numberText, issuePath, targetPath] = modeArgs;
+    if (!/^[1-9][0-9]*$/.test(numberText))
+      throw new TypeError('Issue number must be a positive safe integer.');
+    const issueNumber = Number(numberText);
+    if (!Number.isSafeInteger(issueNumber))
+      throw new TypeError('Issue number must be a positive safe integer.');
+    const previous = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
+    const issue = JSON.parse(fs.readFileSync(issuePath, 'utf8'));
+    if (issue !== null && (Array.isArray(issue) || typeof issue !== 'object'))
+      throw new TypeError('Fetched issue must be an object or null.');
+    index = updateIssueIndex(
+      previous,
+      issueNumber,
+      issue,
+      pluginKeys,
+      message => process.stderr.write(`${message}\n`),
+    );
+    outputPath = targetPath;
+  }
   const serialized = JSON.stringify(index);
   fs.writeFileSync(outputPath, serialized);
 }
@@ -295,4 +403,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { buildIssueIndex };
+module.exports = { buildIssueIndex, updateIssueIndex };
