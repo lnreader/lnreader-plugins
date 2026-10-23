@@ -16,10 +16,11 @@ class RuRanobe implements Plugin.PluginBase {
   id = 'ruranobe';
   name = 'РуРанобэ';
   site = 'https://ruranobe.ru';
-  // same image storage without Cloudflare: ruranobe.ru drops image downloads
-  // on some networks while the small API responses still get through
+  // znovel.space serves the same platform (API and images) without
+  // Cloudflare, which drops requests to ruranobe.ru on some networks
   imageHost = 'https://znovel.space';
-  version = '1.0.0';
+  apiUrl = 'https://znovel.space/api/site/v2/graphql';
+  version = '1.0.1';
   icon = 'src/ru/ruranobe/icon.png';
 
   async fetchNovels(
@@ -27,36 +28,31 @@ class RuRanobe implements Plugin.PluginBase {
     filters?: Plugin.PopularNovelsOptions<typeof this.filters>['filters'],
     searchTerm?: string,
   ): Promise<Plugin.NovelItem[]> {
-    const { data }: response = await fetchApi(
-      this.site + '/api/site/v2/graphql',
-      {
-        method: 'post',
-        headers: {
-          Accept: 'application/json, text/plain, */*',
-          'Accept-Language': 'ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3',
-          'Content-Type': 'application/json',
-        },
-        Referer: this.site,
-        body: JSON.stringify({
-          query:
-            'query Projects($hostname:String! $filter:SearchFilter $page:Int $limit:Int){projects(section:{fullUrl:$hostname}filter:$filter page:{pageSize:$limit,pageNumber:$page}){content{title fullUrl covers{url thumbnail(width:240)}}}}',
-          variables: {
-            filter: {
-              query: searchTerm || undefined,
-              tags: filters?.tags?.value?.length
-                ? filters.tags.value
-                : undefined,
-              genres: filters?.genres?.value?.length
-                ? filters.genres.value
-                : undefined,
-            },
-            hostname: 'ruranobe.ru',
-            limit: 40,
-            page,
-          },
-        }),
+    const { data }: response = await fetchApi(this.apiUrl, {
+      method: 'post',
+      headers: {
+        Accept: 'application/json, text/plain, */*',
+        'Accept-Language': 'ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3',
+        'Content-Type': 'application/json',
       },
-    ).then(res => res.json());
+      Referer: this.site,
+      body: JSON.stringify({
+        query:
+          'query Projects($hostname:String! $filter:SearchFilter $page:Int $limit:Int){projects(section:{fullUrl:$hostname}filter:$filter page:{pageSize:$limit,pageNumber:$page}){content{title fullUrl covers{url thumbnail(width:240)}}}}',
+        variables: {
+          filter: {
+            query: searchTerm || undefined,
+            tags: filters?.tags?.value?.length ? filters.tags.value : undefined,
+            genres: filters?.genres?.value?.length
+              ? filters.genres.value
+              : undefined,
+          },
+          hostname: 'ruranobe.ru',
+          limit: 40,
+          page,
+        },
+      }),
+    }).then(res => res.json());
 
     const novels: Plugin.NovelItem[] = [];
     data?.projects?.content?.forEach(novel =>
@@ -82,25 +78,22 @@ class RuRanobe implements Plugin.PluginBase {
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const { data }: response = await fetchApi(
-      this.site + '/api/site/v2/graphql',
-      {
-        method: 'post',
-        headers: {
-          Accept: 'application/json, text/plain, */*',
-          'Accept-Language': 'ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3',
-          'Content-Type': 'application/json',
-        },
-        Referer: this.site,
-        body: JSON.stringify({
-          query:
-            'query Book($url:String){project(project:{fullUrl:$url}){title translationStatus fullUrl covers{url thumbnail(width:480)}persons(langs:["ru","en","*"],roles:["author","illustrator"]){role name{firstName lastName}}genres{nameRu nameEng}tags{nameRu nameEng}annotation{text}subprojects{content{title volumes{content{shortName chapters{title publishDate fullUrl published}}}}}}}',
-          variables: {
-            url: novelPath,
-          },
-        }),
+    const { data }: response = await fetchApi(this.apiUrl, {
+      method: 'post',
+      headers: {
+        Accept: 'application/json, text/plain, */*',
+        'Accept-Language': 'ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3',
+        'Content-Type': 'application/json',
       },
-    ).then(res => res.json());
+      Referer: this.site,
+      body: JSON.stringify({
+        query:
+          'query Book($url:String){project(project:{fullUrl:$url}){title translationStatus fullUrl covers{url thumbnail(width:480)}persons(langs:["ru","en","*"],roles:["author","illustrator"]){role name{firstName lastName}}genres{nameRu nameEng}tags{nameRu nameEng}annotation{text}subprojects{content{title volumes{content{shortName chapters{title publishDate fullUrl published}}}}}}}',
+        variables: {
+          url: novelPath,
+        },
+      }),
+    }).then(res => res.json());
 
     const novel: Plugin.SourceNovel = {
       path: novelPath,
@@ -169,7 +162,7 @@ class RuRanobe implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const { data } = await fetchApi(this.site + '/api/site/v2/graphql', {
+    const { data } = await fetchApi(this.apiUrl, {
       method: 'post',
       headers: {
         Accept: 'application/json, text/plain, */*',
