@@ -174,7 +174,9 @@ class GalaxyNovels implements Plugin.PluginBase {
 
         chapters = index.chapters.map(ch => ({
           name: ch.label + (ch.title ? `: ${ch.title}` : ''),
-          path: `${novelPath}chapter-${ch.id}/`,
+          path: ch.url
+            ? new URL(ch.url, this.site).pathname
+            : `${novelPath}chapter-${ch.id}/`,
           chapterNumber: ch.position,
           releaseTime: ch.date_iso?.split('T')[0] || '',
         }));
@@ -192,15 +194,12 @@ class GalaxyNovels implements Plugin.PluginBase {
         const chapterName =
           $el.find('h3 a').text().trim() ||
           $el.find('a.wor-novel-chapter-item__num').text().trim();
-        const chapterId = $el.attr('data-chapter-id');
         const timeEl = $el.find('time');
         const releaseTime = timeEl.attr('datetime')?.split('T')[0] || '';
 
         if (!chapterLink) return;
 
-        const path = chapterId
-          ? `${novelPath}chapter-${chapterId}/`
-          : new URL(chapterLink, this.site).pathname;
+        const path = new URL(chapterLink, this.site).pathname;
         const numMatch = path.match(/chapter-(\d+)/);
         const chapterNumber = numMatch ? parseInt(numMatch[1]) : 0;
 
@@ -226,7 +225,8 @@ class GalaxyNovels implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const idMatch = chapterPath.match(/chapter-(\d+)/);
+    // Only legacy `chapter-<id>/` paths carry the post id; real URLs are `chapter-<number>/<slug>/`
+    const idMatch = chapterPath.match(/chapter-(\d+)\/?$/);
     const chapterId = idMatch?.[1];
 
     if (chapterId) {
@@ -244,9 +244,12 @@ class GalaxyNovels implements Plugin.PluginBase {
     const url = `${this.baseUrl}${chapterPath}`;
     const html = await this.fetchHtml(url);
     const $ = loadCheerio(html);
+    $('[data-wor-decoy], [hidden]').remove();
     const content = $(
-      'article.wor-chapter-content, .wor-chapter-text, .entry-content',
-    ).html();
+      '.wor-reader-text-surface, article.wor-chapter-content, .wor-chapter-text, .entry-content',
+    )
+      .first()
+      .html();
     return content || '<p>Content not available.</p>';
   }
 
