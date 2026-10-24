@@ -1,7 +1,7 @@
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
-import { load as loadCheerio } from 'cheerio';
+import { CheerioAPI, load as loadCheerio } from 'cheerio';
 import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
@@ -25,13 +25,16 @@ const NOVEL_LABEL = 'Web Novel';
 const PAGE_SIZE = 25;
 const CHAPTER_PATH = /^\/\d{4}\/\d{2}\/[^/]+\.html$/;
 const PLACEHOLDER_COVER = 'No_image_available';
+const MAX_PARTS = 20;
 
 class Toasteful implements Plugin.PluginBase {
   id = 'toasteful';
   name = 'Toasteful';
   site = 'https://www.toasteful.com';
   icon = 'src/en/toasteful/icon.png';
-  version = '1.0.1';
+  version = '1.0.2';
+
+  private listedCache = new Map<string, Set<string>>();
 
   filters: Filters = {
     genres: {
@@ -279,6 +282,67 @@ class Toasteful implements Plugin.PluginBase {
   async parseChapter(chapterPath: string): Promise<string> {
     const url = this.resolveUrl(chapterPath);
     const $ = loadCheerio(await (await this.request(url)).text());
+    // Some novels (e.g. mob-yandere) link only part 1 of a chapter from the
+    // novel page; the other parts are separate posts reached by "Next CH.".
+    const novelHref = $('.ChapterNav a.all').attr('href');
+    let next = $('.ChapterNav a.next').attr('href');
+    const parts = [this.chapterContent($)];
+    if (novelHref) {
+      const novelPath = new URL(novelHref, this.site).pathname;
+      let currentPath = new URL(url).pathname;
+      const firstSlug = this.slug(currentPath);
+      const seen = new Set([currentPath]);
+      while (parts.length < MAX_PARTS) {
+        // Some posts ship an empty "Next CH." that the site fills in by
+        // guessing the next part number; guess the same way.
+        if (!next) {
+          const part = /^(.*)-(\d+)$/.exec(this.slug(currentPath));
+          if (!part) break;
+          next = currentPath.replace(
+            /[^/]+\.html$/,
+            `${part[1]}-${Number(part[2]) + 1}.html`,
+          );
+        }
+        let nextPath: string;
+        try {
+          const parsed = new URL(next, this.site);
+          if (parsed.origin !== this.site) break;
+          nextPath = parsed.pathname;
+        } catch {
+          break;
+        }
+        if (seen.has(nextPath)) break;
+        if (
+          !this.isPartOf(firstSlug, this.slug(nextPath), this.slug(novelPath))
+        )
+          break;
+        if ((await this.listedPaths(novelPath)).has(nextPath)) break;
+        const response = await fetchApi(this.site + nextPath);
+        if (response.status === 404) break;
+        if (!response.ok) {
+          throw new Error(`Toasteful: HTTP ${response.status}.`);
+        }
+        seen.add(nextPath);
+        currentPath = nextPath;
+        const $part = loadCheerio(await response.text());
+        next = $part('.ChapterNav a.next').attr('href');
+        const content = this.chapterContent($part);
+        // An empty part would otherwise hide behind part 1's length.
+        if (!loadCheerio(content).text().trim())
+          throw new Error(
+            `Toasteful: no readable chapter text was found in ${nextPath}.`,
+          );
+        parts.push(content);
+      }
+    }
+
+    const chapter = parts.join('<hr>');
+    if (loadCheerio(chapter).text().trim().length < 200)
+      throw new Error('Toasteful: no readable chapter text was found.');
+    return chapter;
+  }
+
+  private chapterContent($: CheerioAPI): string {
     const content = $('.content-post').first().length
       ? $('.content-post').first()
       : $('.post-body').first();
@@ -296,10 +360,46 @@ class Toasteful implements Plugin.PluginBase {
       if (node.is('div') && node.find('p,div').length) return;
       if (junk.test(node.text().trim())) node.remove();
     });
-    const chapter = content.html() || '';
-    if (loadCheerio(chapter).text().trim().length < 200)
-      throw new Error('Toasteful: no readable chapter text was found.');
-    return chapter;
+    return content.html() || '';
+  }
+
+  private slug(path: string): string {
+    return /([^/]+)\.html$/.exec(path)?.[1] || '';
+  }
+
+  // A part shares its chapter's slug stem: "x-4-1" -> "x-4-2", "x-v1c23" ->
+  // "x-v1c23-2". The stem must be longer than the novel slug, so the next
+  // chapter ("x-379" -> "x-380") is never taken for a part.
+  private isPartOf(
+    firstSlug: string,
+    nextSlug: string,
+    novelSlug: string,
+  ): boolean {
+    const stem = nextSlug.startsWith(firstSlug + '-')
+      ? firstSlug
+      : firstSlug.replace(/-\d+$/, '');
+    return stem.startsWith(novelSlug + '-') && nextSlug.startsWith(stem + '-');
+  }
+
+  // Posts the novel page links are chapters of their own, never parts.
+  private async listedPaths(novelPath: string): Promise<Set<string>> {
+    let paths = this.listedCache.get(novelPath);
+    if (!paths) {
+      const $ = loadCheerio(
+        await (await this.request(this.site + novelPath)).text(),
+      );
+      paths = new Set<string>();
+      for (const el of $('.post-body a[href]').toArray()) {
+        try {
+          const parsed = new URL($(el).attr('href')!, this.site);
+          if (parsed.origin === this.site) paths.add(parsed.pathname);
+        } catch {
+          continue;
+        }
+      }
+      this.listedCache.set(novelPath, paths);
+    }
+    return paths;
   }
 
   async searchNovels(
