@@ -1027,6 +1027,9 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
     const result = await fetchApi(url, fetchOptions);
     this.lastSearch = Date.now();
 
+    // Some sites (e.g. novelfull.com) return 404 for pages past the last one
+    if (result.status === 404 && page > 1) return [];
+
     if (!result.ok) {
       throw new Error(
         `Could not reach site ('${result.status}') try to open in webview.`,
