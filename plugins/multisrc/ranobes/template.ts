@@ -15,6 +15,8 @@ export type RanobesMetadata = {
   options?: RanobesOptions;
 };
 
+const SITE_PAGE_SIZE = 25;
+
 export class RanobesPlugin implements Plugin.PluginBase {
   id: string;
   name: string;
@@ -28,12 +30,17 @@ export class RanobesPlugin implements Plugin.PluginBase {
     this.name = metadata.sourceName;
     this.icon = 'multisrc/ranobes/ranobes/icon.png';
     this.site = metadata.sourceSite;
-    this.version = '2.0.2';
+    this.version = '2.0.3';
     this.options = metadata.options as RanobesOptions;
   }
 
-  async safeFecth(url: string, init?: FetchInit): Promise<string> {
+  async safeFecth(
+    url: string,
+    init?: FetchInit,
+    emptyOn404?: boolean,
+  ): Promise<string> {
     const r = await fetchApi(url, init);
+    if (r.status === 404 && emptyOn404) return '';
     if (!r.ok)
       throw new Error(
         'Could not reach site (' + r.status + ') try to open in webview.',
@@ -46,6 +53,7 @@ export class RanobesPlugin implements Plugin.PluginBase {
       (title == 'Bot Verification' ||
         title == 'You are being redirected...' ||
         title == 'Un instant...' ||
+        title == 'One moment...' ||
         title == 'Just a moment...' ||
         title == 'Redirecting...')
     )
@@ -195,6 +203,8 @@ export class RanobesPlugin implements Plugin.PluginBase {
     let isCover = false;
     let isAuthor = false;
     let isSummary = false;
+    let isDescription = false;
+    let isStyle = false;
     let isStatus = false;
     let isStatusText = false;
     let isGenres = false;
@@ -224,6 +234,21 @@ export class RanobesPlugin implements Plugin.PluginBase {
             attribs['itemprop'] === 'description')
         ) {
           isSummary = true;
+        }
+        // newer markup: the first cont-text block inside .r-desription
+        if (name === 'div' && attribs['class']?.includes('r-desription')) {
+          isDescription = true;
+        }
+        if (
+          isDescription &&
+          name === 'div' &&
+          attribs['class']?.startsWith('cont-text')
+        ) {
+          isSummary = true;
+          isDescription = false;
+        }
+        if (name === 'style') {
+          isStyle = true;
         }
         if (
           name === 'li' &&
@@ -280,8 +305,8 @@ export class RanobesPlugin implements Plugin.PluginBase {
         if (isAuthor) {
           novel.author = data;
         }
-        if (isSummary) {
-          novel.summary += data.trim();
+        if (isSummary && !isStyle) {
+          novel.summary += data;
         }
         if (isStatusText) {
           novel.status =
@@ -311,6 +336,12 @@ export class RanobesPlugin implements Plugin.PluginBase {
           isGenresText = false;
           isStatus = false;
         }
+        if (name === 'style') {
+          isStyle = false;
+        }
+        if (name === 'p' && isSummary) {
+          novel.summary += '\n\n';
+        }
         if (name === 'div') {
           isSummary = false;
           isGenres = false;
@@ -333,26 +364,125 @@ export class RanobesPlugin implements Plugin.PluginBase {
     });
     parser.write(html);
     parser.end();
+    novel.summary = novel.summary
+      ?.replace(/[ \t]*\n[ \t]*/g, '\n')
+      .replace(/[ \t]{2,}/g, ' ')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
     novel.genres = genreArray.join(', ');
     novel.totalPages = Math.ceil((maxChapters || 1) / 25);
-    novel.chapters = chapters;
 
-    if (novel.chapters[0].path) {
-      novel.latestChapter = novel.chapters[0];
+    // The novel page only lists the latest chapters, so the list comes from
+    // the table of contents. Errors are not swallowed: the latest chapters
+    // would end up on page 1 in the wrong order.
+    const toc = await this.getToc(novelPath, html);
+    novel.totalPages = Math.max(Math.ceil(toc.total / toc.pageSize), 1);
+    novel.latestChapter = toc.newest[0];
+    novel.chapters = (await this.getAppPage(toc, 1)).map(chapter => ({
+      ...chapter,
+      page: '1',
+    }));
+    if (!novel.chapters.length && chapters.length) {
+      novel.chapters = chapters.reverse();
     }
 
     return novel;
   }
 
   async parsePage(novelPath: string, page: string): Promise<Plugin.SourcePage> {
+    const cached = this.tocCache[novelPath];
+    const toc = cached
+      ? await this.refreshToc(cached)
+      : await this.getToc(novelPath);
+    return { chapters: await this.getAppPage(toc, parseInt(page, 10) || 1) };
+  }
+
+  tocCache: Record<string, Toc> = {};
+
+  // The site's table of contents is newest first, so every new chapter
+  // shifts all its pages. Chapters are placed by their index counted from
+  // the first chapter, which does not change when new ones are published:
+  // app page k shows indexes [size * (k - 1), size * k).
+  async getAppPage(toc: Toc, page: number): Promise<Plugin.ChapterItem[]> {
+    const size = toc.pageSize;
+    const from = size * (page - 1);
+    const to = Math.min(toc.total, size * page) - 1;
+    if (from > to) return [];
+
+    // site page p holds newest-first positions [size * (p - 1), size * p)
+    const firstSitePage = Math.floor((toc.total - 1 - to) / size) + 1;
+    const lastSitePage = Math.floor((toc.total - 1 - from) / size) + 1;
+    const result: Plugin.ChapterItem[] = [];
+
+    for (let sitePage = firstSitePage; sitePage <= lastSitePage; sitePage++) {
+      // toc.newest is fresh: getToc/refreshToc read it right before this call
+      const list =
+        sitePage === 1
+          ? toc.newest
+          : (await this.fetchChapterList(toc.chaptersPath, sitePage)).chapters;
+      list.forEach((chapter, position) => {
+        const index = toc.total - 1 - (size * (sitePage - 1) + position);
+        if (index >= from && index <= to) result[index - from] = chapter;
+      });
+    }
+    return result.filter(chapter => chapter);
+  }
+
+  // re-reads the newest page and counts the chapters published since
+  async refreshToc(toc: Toc): Promise<Toc> {
+    const newest = (await this.fetchChapterList(toc.chaptersPath, 1)).chapters;
+    const added = newest.findIndex(
+      chapter => chapter.path === toc.newest[0]?.path,
+    );
+    if (added < 0) return this.buildToc(toc.novelPath, toc.chaptersPath);
+    toc.total += added;
+    toc.newest = newest;
+    return toc;
+  }
+
+  async getToc(novelPath: string, novelHtml?: string): Promise<Toc> {
+    // the table of contents slug may differ from the novel slug, take the
+    // link from the novel page
+    const html = novelHtml ?? (await this.safeFecth(this.site + novelPath));
     const pagePath =
       this.id == 'ranobes'
         ? novelPath.split('-')[0]
         : '/' + novelPath.split('-').slice(1).join('-').split('.')[0];
-    const firstUrl =
-      this.site + '/chapters' + pagePath.replace(this.options.path + '/', '');
-    const pageBody = await this.safeFecth(firstUrl + '/page/' + page);
+    const chaptersPath =
+      html.match(/\/chapters\/[^"'/?#]+\/(?=["'])/)?.[0].slice(0, -1) ||
+      '/chapters' + pagePath.replace(this.options.path + '/', '');
+    return this.buildToc(novelPath, chaptersPath);
+  }
 
+  async buildToc(novelPath: string, chaptersPath: string): Promise<Toc> {
+    const first = await this.fetchChapterList(chaptersPath, 1);
+    // every site page but the last one is full (25 chapters on both sites)
+    const pageSize =
+      first.pagesCount > 1 ? first.chapters.length : SITE_PAGE_SIZE;
+    const lastPageCount =
+      first.pagesCount > 1
+        ? (await this.fetchChapterList(chaptersPath, first.pagesCount)).chapters
+            .length
+        : first.chapters.length;
+    const toc: Toc = {
+      novelPath,
+      chaptersPath,
+      pageSize,
+      total: pageSize * (first.pagesCount - 1) + lastPageCount,
+      newest: first.chapters,
+    };
+    this.tocCache[novelPath] = toc;
+    return toc;
+  }
+
+  // chapters of one site page, newest first
+  async fetchChapterList(
+    chaptersPath: string,
+    sitePage: number,
+  ): Promise<{ chapters: Plugin.ChapterItem[]; pagesCount: number }> {
+    const pageBody = await this.safeFecth(
+      this.site + chaptersPath + '/page/' + sitePage,
+    );
     const baseUrl = this.site;
     let isScript = false;
     let isChapter = false;
@@ -418,12 +548,20 @@ export class RanobesPlugin implements Plugin.PluginBase {
     parser.end();
 
     if (dataJson.chapters?.length) {
-      chapters = this.parseChapters(dataJson);
+      // parseChapters returns oldest first
+      chapters = this.parseChapters(dataJson).reverse();
     }
 
-    return {
-      chapters,
-    };
+    const pageLinks = pageBody
+      .split(chaptersPath + '/page/')
+      .slice(1)
+      .map(rest => parseInt(rest, 10) || 1);
+    const pagesCount = Math.max(
+      parseInt(dataJson.pages_count, 10) || 1,
+      sitePage,
+      ...pageLinks,
+    );
+    return { chapters, pagesCount };
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
@@ -457,7 +595,8 @@ export class RanobesPlugin implements Plugin.PluginBase {
       });
     } else {
       const link = `${this.site}/search/${searchTerm}/page/${page}`;
-      html = await this.safeFecth(link);
+      // the English site answers 404 when nothing is found
+      html = await this.safeFecth(link, undefined, true);
     }
     return this.parseNovels(html);
   }
@@ -468,4 +607,13 @@ type ChapterEntry = {
   title: string;
   date: string;
   link: string;
+};
+
+type Toc = {
+  novelPath: string;
+  chaptersPath: string;
+  pageSize: number;
+  total: number;
+  // the site's first table of contents page, newest first
+  newest: Plugin.ChapterItem[];
 };
