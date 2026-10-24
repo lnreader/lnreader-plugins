@@ -19,6 +19,63 @@ const YEAR_REGEX = /year|año/i;
 const REVERSE_ALPHA = 'zyxwvutsrqponmlkjihgfedcbaZYXWVUTSRQPONMLKJIHGFEDCBA';
 const FORWARD_ALPHA = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
+const ROMAN_NUMERALS: Record<string, number> = {
+  I: 1,
+  II: 2,
+  III: 3,
+  IV: 4,
+  V: 5,
+  VI: 6,
+  VII: 7,
+  VIII: 8,
+  IX: 9,
+  X: 10,
+  XI: 11,
+  XII: 12,
+  XIII: 13,
+  XIV: 14,
+  XV: 15,
+  XVI: 16,
+  XVII: 17,
+  XVIII: 18,
+  XIX: 19,
+  XX: 20,
+};
+
+const extractVolumeNumber = (title: string): number | null => {
+  if (!title) return null;
+  const keywordMatch = title.match(
+    /(?:vol(?:ume)?|arc|book|part|chapter|season|act|tome|권|부|tom|том|جلد|مجلد)\.?\s*(\d+(?:\.\d+)?)/i,
+  );
+  if (keywordMatch) return parseFloat(keywordMatch[1]);
+  const leadingMatch = title.match(/^\s*(\d+(?:\.\d+)?)\b/);
+  if (leadingMatch) return parseFloat(leadingMatch[1]);
+  const romanMatch = title.match(
+    /(?:(?:vol(?:ume)?|arc|book|part|chapter|season|act|tome)\s+|^\s*)(XX|XIX|XVIII|XVII|XVI|XV|XIV|XIII|XII|XI|IX|X|VIII|VII|VI|IV|V|III|II|I)\b/i,
+  );
+  if (romanMatch) {
+    return ROMAN_NUMERALS[romanMatch[1].toUpperCase()] ?? null;
+  }
+  return null;
+};
+
+const extractChapterNumber = (title: string): number | null => {
+  if (!title) return null;
+  const cleaned = title.replace(/^🔒\s*/, '').trim();
+  if (/^(?:ss|side\s*story|extra|short\s*story)\b/i.test(cleaned)) {
+    return null;
+  }
+  const keywordMatch = cleaned.match(
+    /(?:ch(?:ap(?:ter)?)?|ep(?:isode)?|part|act|장|화|편|глава|फصل)\.?\s*(\d+(?:\.\d+)?)/i,
+  );
+  if (keywordMatch) return parseFloat(keywordMatch[1]);
+  const leadingMatch = cleaned.match(
+    /^\s*(?:v(?:ol(?:ume)?)?\.?\s*\d+\s*[-:.,]?\s*)?(\d+(?:\.\d+)?)\b/i,
+  );
+  if (leadingMatch) return parseFloat(leadingMatch[1]);
+  return null;
+};
+
 type MadaraOptions = {
   useNewChapterEndpoint?: boolean;
   lang?: string;
@@ -496,20 +553,19 @@ export class MadaraPlugin implements Plugin.PluginBase {
       loadedCheerio = parseHTML(html);
     }
 
-    const chapterElements = loadedCheerio('.wp-manga-chapter');
-    const totalChapters = chapterElements.length;
     const defaultDate = dayjs().format('LL');
-
-    chapterElements.each((chapterIndex, element) => {
+    const parseChapterElement = (
+      element: AnyNode,
+    ): Omit<Plugin.ChapterItem, 'chapterNumber'> | null => {
       const $el = loadedCheerio(element);
       const $a = $el.find('a');
       const chapterUrl = $a.attr('href') || '';
 
-      if (!chapterUrl || chapterUrl === '#') return;
+      if (!chapterUrl || chapterUrl === '#') return null;
 
       const elementClass = (element as Element).attribs?.class || '';
       const locked = elementClass.includes('premium-block');
-      if (locked && this.hideLocked) return;
+      if (locked && this.hideLocked) return null;
 
       let chapterName = $a.text().trim();
       if (locked) {
@@ -519,15 +575,98 @@ export class MadaraPlugin implements Plugin.PluginBase {
       const rawDate = $el.find('span.chapter-release-date').text().trim();
       const releaseDate = rawDate ? this.parseData(rawDate) : defaultDate;
 
-      chapters.push({
+      return {
         name: chapterName,
         path: chapterUrl.replace(/https?:\/\/.*?\//, ''),
         releaseTime: releaseDate || null,
-        chapterNumber: totalChapters - chapterIndex,
-      });
-    });
+      };
+    };
 
-    novel.chapters = chapters.reverse();
+    let volumeElements = loadedCheerio(
+      '.main.version-chap > li.parent, ul.volumns > li.parent',
+    );
+    if (volumeElements.length === 0) {
+      volumeElements = loadedCheerio('li.parent.has-child');
+    }
+
+    const orderedRawChapters: Omit<Plugin.ChapterItem, 'chapterNumber'>[] = [];
+
+    if (volumeElements.length > 0) {
+      const volumes: {
+        title: string;
+        chapters: Omit<Plugin.ChapterItem, 'chapterNumber'>[];
+      }[] = [];
+
+      volumeElements.each((_, volEl) => {
+        const $vol = loadedCheerio(volEl);
+        const title = $vol.children('a').first().text().trim();
+        const volChapters: Omit<Plugin.ChapterItem, 'chapterNumber'>[] = [];
+
+        $vol.find('.wp-manga-chapter').each((__, chapEl) => {
+          const parsed = parseChapterElement(chapEl);
+          if (parsed) volChapters.push(parsed);
+        });
+
+        if (volChapters.length > 0) {
+          volChapters.reverse();
+          volumes.push({ title, chapters: volChapters });
+        }
+      });
+
+      let ascScore = 0;
+      let descScore = 0;
+
+      const volNums = volumes
+        .map(v => extractVolumeNumber(v.title))
+        .filter((n): n is number => n !== null);
+      for (let i = 1; i < volNums.length; i++) {
+        if (volNums[i] > volNums[i - 1]) ascScore += 2;
+        else if (volNums[i] < volNums[i - 1]) descScore += 2;
+      }
+
+      const chapNums = volumes
+        .map(
+          v =>
+            extractChapterNumber(v.chapters[0]?.name || '') ??
+            extractChapterNumber(v.chapters[v.chapters.length - 1]?.name || ''),
+        )
+        .filter((n): n is number => n !== null);
+      for (let i = 1; i < chapNums.length; i++) {
+        if (chapNums[i] > chapNums[i - 1]) ascScore += 1;
+        else if (chapNums[i] < chapNums[i - 1]) descScore += 1;
+      }
+
+      if (ascScore === descScore) {
+        const dateTimes = volumes
+          .map(v => dayjs(v.chapters[0]?.releaseTime || '').valueOf())
+          .filter(t => !Number.isNaN(t));
+        for (let i = 1; i < dateTimes.length; i++) {
+          if (dateTimes[i] > dateTimes[i - 1]) ascScore += 1;
+          else if (dateTimes[i] < dateTimes[i - 1]) descScore += 1;
+        }
+      }
+
+      const orderedVolumes =
+        ascScore > descScore ? volumes : [...volumes].reverse();
+      for (const vol of orderedVolumes) {
+        orderedRawChapters.push(...vol.chapters);
+      }
+    } else {
+      loadedCheerio('.wp-manga-chapter').each((_, element) => {
+        const parsed = parseChapterElement(element);
+        if (parsed) orderedRawChapters.push(parsed);
+      });
+      orderedRawChapters.reverse();
+    }
+
+    for (let i = 0; i < orderedRawChapters.length; i++) {
+      chapters.push({
+        ...orderedRawChapters[i],
+        chapterNumber: i + 1,
+      });
+    }
+
+    novel.chapters = chapters;
     return novel;
   }
 
