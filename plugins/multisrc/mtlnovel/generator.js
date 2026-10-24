@@ -1,7 +1,10 @@
-import list from './sources.json' with { type: 'json' };
+import allSources from './sources.json' with { type: 'json' };
+import { activeSources } from '../activeSources.js';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+
+const list = activeSources(allSources, 'mtlnovel');
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 

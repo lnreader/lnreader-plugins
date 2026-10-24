@@ -1,8 +1,11 @@
-import list from './sources.json' with { type: 'json' };
+import allSources from './sources.json' with { type: 'json' };
+import { activeSources } from '../activeSources.js';
 import defaultSettings from './settings.json' with { type: 'json' };
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+
+const list = activeSources(allSources, 'ifreedom');
 
 const folder = dirname(fileURLToPath(import.meta.url));
 

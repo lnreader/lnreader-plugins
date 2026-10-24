@@ -4,7 +4,10 @@ import { dirname, join } from 'path';
 
 const folder = dirname(fileURLToPath(import.meta.url));
 
-import list from './sources.json' with { type: 'json' };
+import allSources from './sources.json' with { type: 'json' };
+import { activeSources } from '../activeSources.js';
+
+const list = activeSources(allSources, 'fictioneer');
 
 export const generateAll = function () {
   return list.map(source => {

@@ -13,20 +13,36 @@ const isScriptGenerator = s => {
   return !!s && typeof s === 'function';
 };
 
+const PLUGINS_DIR = './plugins';
+
+// Drops a generator's previous output, so sources that are now skipped
+// (e.g. marked down) or renamed do not linger when the playground runs
+// generation without `clean:multisrc` first.
+const removeGenerated = name => {
+  for (const lang of fs.readdirSync(PLUGINS_DIR)) {
+    const dir = path.join(PLUGINS_DIR, lang);
+    if (lang === 'multisrc' || !fs.lstatSync(dir).isDirectory()) continue;
+    for (const file of fs.readdirSync(dir)) {
+      if (file.endsWith(`[${name}].ts`)) fs.unlinkSync(path.join(dir, file));
+    }
+  }
+};
+
 const generate = async name => {
   try {
     const generateAll = (await import(`./${name}/generator.js`)).generateAll;
     if (!isScriptGenerator(generateAll)) return false;
     const sources = generateAll();
+    // only after generateAll succeeded, so a broken generator keeps its output
+    removeGenerated(name);
     for (let source of sources) {
       const { lang, filename, pluginScript } = source;
       if (!lang || !filename || !pluginScript) {
         console.warn(name, ': lang, filename, pluginScript are required!');
         continue;
       }
-      const pluginsDir = './plugins';
       const filePath = path.join(
-        pluginsDir,
+        PLUGINS_DIR,
         lang.toLowerCase(),
         filename.replace(/[\s-.]+/g, '') + `[${name}].ts`,
       );
