@@ -100,7 +100,7 @@ class HexNovels implements Plugin.PluginBase {
     const re =
       /\{id:"([0-9a-f-]{36})",name:"(?:[^"\\]|\\.)*",title:"((?:[^"\\]|\\.)*)",number:([0-9.]+),volume:(\d+)[^}]*?branchId:"([0-9a-f-]{36})"[^}]*?createdAt:"([^"]+)"/g;
     const byId = new Map<string, ChapterData>();
-    for (const m of chaptersHtml.matchAll(re)) {
+    for (const m of Array.from(chaptersHtml.matchAll(re))) {
       byId.set(m[1], {
         id: m[1],
         title: unescape(m[2]),
@@ -113,12 +113,12 @@ class HexNovels implements Plugin.PluginBase {
 
     // Several translation branches can exist; use the one with the most chapters
     const branches = new Map<string, ChapterData[]>();
-    for (const ch of byId.values()) {
+    for (const ch of Array.from(byId.values())) {
       const list = branches.get(ch.branchId) || [];
       list.push(ch);
       branches.set(ch.branchId, list);
     }
-    const chapters = [...branches.values()].sort(
+    const chapters = Array.from(branches.values()).sort(
       (a, b) => b.length - a.length,
     )[0];
 
@@ -137,6 +137,7 @@ class HexNovels implements Plugin.PluginBase {
   async parseChapter(chapterPath: string): Promise<string> {
     const $ = parseHTML(await this.fetchHtml(`${this.site}/${chapterPath}`));
     const content = $('.typeset-content').first();
+    if (!content.length) throw new Error('Chapter content not found');
     // Illustration-only chapters load their (encrypted) images client-side
     if (!content.text().trim() && !content.find('img').length) {
       return '<p>Эта глава содержит только иллюстрации, они недоступны в приложении.</p>';
