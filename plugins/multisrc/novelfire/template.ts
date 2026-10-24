@@ -446,7 +446,19 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
 
   async parseChapter(chapterPath: string): Promise<string> {
     const url = this.site + chapterPath;
-    const loadedCheerio = await this.getCheerio(url, false);
+    let loadedCheerio = await this.getCheerio(url, false);
+
+    // Chapters may redirect to a mirror (e.g. readnovel.site) that serves a
+    // "Loading..." page and forwards via JavaScript. Follow that redirect.
+    if (loadedCheerio('#content').length === 0) {
+      const redirect = loadedCheerio('script')
+        .text()
+        .match(/window\.location\.href\s*=\s*["']([^"']+)["']/);
+      if (redirect) {
+        const target = redirect[1].replace(/\\\//g, '/');
+        loadedCheerio = await this.getCheerio(target, false);
+      }
+    }
 
     const chapterText = loadedCheerio('#content');
 
