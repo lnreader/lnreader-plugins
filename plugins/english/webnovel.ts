@@ -7,7 +7,7 @@ import { storage } from '@libs/storage';
 class Webnovel implements Plugin.PluginBase {
   id = 'webnovel';
   name = 'Webnovel';
-  version = '1.0.3';
+  version = '1.1.0';
   icon = 'src/en/webnovel/icon.png';
   site = 'https://www.webnovel.com';
   headers = {
@@ -72,6 +72,8 @@ class Webnovel implements Plugin.PluginBase {
       filters,
     }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
+    const sort = filters?.sort?.value || '1';
+
     if (filters?.fanfic_search.value) {
       return this.searchNovelsInternal(
         filters.fanfic_search.value,
@@ -79,8 +81,37 @@ class Webnovel implements Plugin.PluginBase {
         'fanfic',
       );
     }
+
     let url = this.site + '/stories/';
     const params = new URLSearchParams();
+
+    if (filters?.tag?.value && filters.tag.value !== '0') {
+      params.append('orderBy', sort);
+      params.append('pageIndex', pageNo.toString());
+      url = `${this.site}/tags/${filters.tag.value}-novel?${params.toString()}`;
+
+      const result = await fetchApi(url, {
+        headers: this.headers,
+      });
+      const body = await result.text();
+      const loadedCheerio = parseHTML(body);
+
+      return this.parseTagNovels(loadedCheerio);
+    }
+
+    if (filters?.browse_type?.value === 'fanfic') {
+      params.append('orderBy', filters.sort.value);
+      params.append('pageIndex', pageNo.toString());
+      url = this.site + '/stories/fanfic?' + params.toString();
+
+      const result = await fetchApi(url, {
+        headers: this.headers,
+      });
+      const body = await result.text();
+      const loadedCheerio = parseHTML(body);
+
+      return this.parseNovels(loadedCheerio, true, false);
+    }
 
     if (showLatestNovels) {
       url += `novel?orderBy=5&pageIndex=${pageNo}`;
@@ -164,6 +195,32 @@ class Webnovel implements Plugin.PluginBase {
     });
 
     return chapters;
+  }
+
+  /**
+   * Tag pages (/tags/{tag}-novel) use a different listing than the bookcity:
+   * `div.g_book_item` cards whose `a[title]` carries the novel name and path.
+   */
+  async parseTagNovels(loadedCheerio: CheerioAPI): Promise<Plugin.NovelItem[]> {
+    return loadedCheerio('.g_book_item')
+      .map((i_, ele) => {
+        const anchor = loadedCheerio(ele).find('a[title]').first();
+        const novelName = anchor.attr('title') || 'No Title Found';
+        const novelCover =
+          loadedCheerio(ele).find('img').attr('data-original') ||
+          loadedCheerio(ele).find('img').attr('src');
+        const novelPath = anchor.attr('href');
+
+        if (!novelPath) return null;
+
+        return {
+          name: novelName,
+          cover: novelCover ? 'https:' + novelCover : '',
+          path: novelPath,
+        };
+      })
+      .get()
+      .filter(novel => novel !== null);
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
@@ -329,6 +386,20 @@ class Webnovel implements Plugin.PluginBase {
       ],
       type: FilterTypes.Picker,
     },
+    browse_type: {
+      label: 'Browse',
+      value: 'novel',
+      options: [
+        { label: 'Novels', value: 'novel' },
+        { label: 'Fanfics', value: 'fanfic' },
+      ],
+      type: FilterTypes.Picker,
+    },
+    tag: {
+      label: 'Tag (A-Z browse)',
+      options: TAG_OPTIONS,
+      type: FilterTypes.Picker,
+    },
     fanfic_search: {
       label: 'Search fanfics (Overrides other filters)',
       value: '',
@@ -338,3 +409,89 @@ class Webnovel implements Plugin.PluginBase {
 }
 
 export default new Webnovel();
+
+/** Tag slugs currently indexed at webnovel.com/tags, sorted A-Z. */
+const TAG_OPTIONS = [
+  { label: 'Abandoned', value: 'abandoned' },
+  { label: 'Academy', value: 'academy' },
+  { label: 'Action', value: 'action' },
+  { label: 'Adventure', value: 'adventure' },
+  { label: 'Another World', value: 'anotherworld' },
+  { label: 'Antihero', value: 'antihero' },
+  { label: 'Apocalypse', value: 'apocalypse' },
+  { label: 'Arranged Marriage', value: 'arrangedmarriage' },
+  { label: 'Aventura', value: 'aventura' },
+  { label: 'Beast Taming', value: 'beast-taming' },
+  { label: 'Beauty', value: 'beauty' },
+  { label: 'Betrayal', value: 'betrayal' },
+  { label: 'Blood Pumping', value: 'bloodpumping' },
+  { label: 'Campus', value: 'campus' },
+  { label: 'CEO', value: 'ceo' },
+  { label: 'Cheats', value: 'cheats' },
+  { label: 'Comedy', value: 'comedy' },
+  { label: 'Crossdressing', value: 'crossdressing' },
+  { label: 'Cultivation', value: 'cultivation' },
+  { label: 'Dark', value: 'dark' },
+  { label: 'Devil', value: 'devil' },
+  { label: 'Disaster', value: 'disaster' },
+  { label: 'Doctor', value: 'doctor' },
+  { label: 'Dragon', value: 'dragon' },
+  { label: 'Ecchi', value: 'ecchi' },
+  { label: 'Evolution', value: 'evolution' },
+  { label: 'Face Slapping', value: 'faceslapping' },
+  { label: 'Fast Paced', value: 'fastpaced' },
+  { label: 'Future', value: 'future' },
+  { label: 'Genius', value: 'genius' },
+  { label: 'Golden Finger', value: 'goldenfinger' },
+  { label: 'Harem', value: 'harem' },
+  { label: 'High IQ', value: 'highiq' },
+  { label: 'Historical', value: 'historical' },
+  { label: 'Humor', value: 'humor' },
+  { label: 'Immortal', value: 'immortal' },
+  { label: 'Isekai', value: 'isekai' },
+  { label: 'Level Up', value: 'levelup' },
+  { label: 'Love at First Sight', value: 'loveatfirstsight' },
+  { label: 'Magic', value: 'magic' },
+  { label: 'Martial Arts', value: 'martialarts' },
+  { label: 'Mecha', value: 'mecha' },
+  { label: 'Military', value: 'military' },
+  { label: 'Multiple Leads', value: 'multipleleads' },
+  { label: 'Mystery', value: 'mystery' },
+  { label: 'Myth', value: 'myth' },
+  { label: 'Nonhuman', value: 'nonhuman' },
+  { label: 'Ordinary', value: 'ordinary' },
+  { label: 'Overpowered', value: 'overpowered' },
+  { label: 'Positive', value: 'positive' },
+  { label: 'Powerful Couple', value: 'powerfulcouple' },
+  { label: 'R18', value: 'r18' },
+  { label: 'Rare Bloodline', value: 'rarebloodline' },
+  { label: 'Rebirth', value: 'rebirth' },
+  { label: 'Reincarnation', value: 'reincarnation' },
+  { label: 'Revenge', value: 'revenge' },
+  { label: 'Romance', value: 'romance' },
+  { label: 'Seductive', value: 'seductive' },
+  { label: 'Shapeshifter', value: 'shapeshifter' },
+  { label: 'Sistema', value: 'sistema' },
+  { label: 'Slice of Life', value: 'sliceoflife' },
+  { label: 'Smut', value: 'smut' },
+  { label: 'Soldier', value: 'soldier' },
+  { label: 'Summons', value: 'summons' },
+  { label: 'Supernatural', value: 'supernatural' },
+  { label: 'Superpowers', value: 'superpowers' },
+  { label: 'Survival', value: 'survival' },
+  { label: 'System', value: 'system' },
+  { label: 'Teen', value: 'teen' },
+  { label: 'The Strong Acting Weak', value: 'thestrongactingweak' },
+  { label: 'Time Travel', value: 'timetravel' },
+  { label: 'Tragedy', value: 'tragedy' },
+  { label: 'Transmigration', value: 'transmigration' },
+  { label: 'Unprincipled', value: 'unprincipled' },
+  { label: 'Urban', value: 'urban' },
+  { label: 'Vampire', value: 'vampire' },
+  { label: 'Video Game', value: 'videogame' },
+  { label: 'Villain', value: 'villain' },
+  { label: 'Weak to Strong', value: 'weaktostrong' },
+  { label: 'Werewolf', value: 'werewolf' },
+  { label: 'Wizards', value: 'wizards' },
+  { label: 'Zero to Hero', value: 'zerotohero' },
+] as const;
