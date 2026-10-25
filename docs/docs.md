@@ -21,8 +21,8 @@
 
 1. Pick the language folder your source belongs to under `plugins/<language>/` (full language name,
    e.g. `plugins/english/`), and create a `.ts` file there — e.g. `plugins/english/myNovelSite.ts`.
-   - **File naming convention (`camelCase`)**: The file name MUST strictly follow `camelCase` (e.g. `myNovelSite.ts`, `nobleMTL.ts`). Do **not** use `snake_case`, `kebab-case`, or `PascalCase`.
-   - **Plugin ID (`camelCase` / lowercase)**: The `id` property should use `camelCase` or lowercase alphanumeric characters (e.g. `'myNovelSite'`, `'nobleMTL'`), matching the file name without `.ts` and unique across the repo.
+   - **Coding conventions (`camelCase`)**: All code lines, properties, variables, methods, and parameters inside the plugin must adhere to standard TypeScript `camelCase` (e.g. `popularNovels`, `parseNovel`, `parseChapter`, `pageNo`, `showLatestNovels`, `novelPath`, `chapterPath`, `releaseTime`, `chapterNumber`).
+   - **Plugin ID**: The `id` property should use `camelCase` or lowercase alphanumeric characters (e.g. `'myNovelSite'`, `'nobleMTL'`), matching the file name without `.ts` and unique across the repo.
    - **Class naming (`PascalCase`)**: The plugin class must use `PascalCase` (e.g. `TemplatePlugin`, `MyNovelSitePlugin`) implementing `Plugin.PluginBase`.
    - **Default export**: The file MUST export an instantiated instance of the plugin as default export (`export default new MyNovelSitePlugin();`).
 2. Copy [`docs/plugin-template.ts`](./plugin-template.ts) into that file as a starting point. It
