@@ -24,9 +24,15 @@
 1. Remember to create your plugin inside the language folder corresponding to the language of the novels.
    These folders are spelled out in full, e.g. `plugins/english/`, `plugins/portuguese/` (see the
    existing folders under `plugins/` for the full list).
-2. The file should have the `.ts` extension.
-   Example: `plugins/english/nobleMTL.ts`
-3. Add a 96x96px icon at `public/static/src/<lang>/<plugin-name>/icon.png`, then reference it from
+2. The file name MUST strictly use **`camelCase`** with the `.ts` extension.
+   Example: `plugins/english/nobleMTL.ts`, `plugins/english/myNovelSite.ts`.
+   Do **NOT** use `kebab-case` (`noble-mtl.ts`), `snake_case` (`noble_mtl.ts`), or `PascalCase` (`NobleMtl.ts`).
+3. Follow the standard template structure ([`docs/plugin-template.ts`](./plugin-template.ts)):
+   - **File name**: `camelCase` (`myNovelSite.ts`).
+   - **Plugin ID**: `camelCase` or lowercase alphanumeric (`myNovelSite`, `nobleMTL`), unique across the repo.
+   - **Plugin class**: `PascalCase` (`MyNovelSitePlugin implements Plugin.PluginBase`).
+   - **Export**: Always export an instantiated instance (`export default new MyNovelSitePlugin();`), not the class.
+4. Add a 96x96px icon at `public/static/src/<lang>/<plugin-name>/icon.png`, then reference it from
    your plugin as `icon = 'src/<lang>/<plugin-name>/icon.png'` (without the `public/static` prefix
    — see [PluginBase::icon](./docs.md#pluginbaseicon)).
 

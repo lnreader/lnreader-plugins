@@ -45,9 +45,8 @@ Read `README.md` for the project entry points, `docs/quickstart.md` before addin
 
 - Before adding a plugin, check `plugins/multisrc/` for a matching site theme. Prefer adding a
   `sources.json` entry to an existing generator over duplicating its parser in a standalone file.
-- Put standalone plugins in the folder matching the novels' language, using a `.ts` extension.
-- Implement `Plugin.PluginBase` and export one instantiated plugin as the default export. Keep the
-  plugin `id` unique and stable.
+- Put standalone plugins in the folder matching the novels' language, using a `.ts` extension. The file name MUST strictly use `camelCase` (e.g. `nobleMTL.ts`, `myNovelSite.ts`). Do not use kebab-case, snake_case, or PascalCase.
+- Implement `Plugin.PluginBase` using a PascalCase class (e.g. `TemplatePlugin`, `NobleMTLPlugin`) and export one instantiated plugin as the default export (`export default new NobleMTLPlugin();`). Keep the plugin `id` unique, stable, and formatted in `camelCase` or lowercase alphanumeric characters.
 - Use imports from `@libs/*` for plugin runtime helpers. In particular, use `@libs/fetch`, not
   `@/lib/fetch`. Consult `docs/plugin-template.ts` and nearby plugins for supported helpers.
 - Plugins are compiled for an ES5/Hermes/React Native environment. Do not assume Node-only or
