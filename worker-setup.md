@@ -428,6 +428,73 @@ async function parseEpub(zip) {
   };
 }
 
+const ALLOWED_TAGS = new Set([
+  'a', 'abbr', 'article', 'aside', 'b', 'blockquote', 'br', 'caption', 'cite', 'code', 'dd', 'del',
+  'dfn', 'div', 'dl', 'dt', 'em', 'figcaption', 'figure', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr',
+  'i', 'img', 'ins', 'kbd', 'li', 'mark', 'ol', 'p', 'pre', 'rb', 'rp', 'rt', 'ruby', 's', 'section',
+  'small', 'span', 'strong', 'sub', 'sup', 'table', 'tbody', 'td', 'tfoot', 'th', 'thead', 'tr', 'u',
+  'ul',
+]);
+const VOID_TAGS = new Set(['br', 'hr', 'img']);
+const ALLOWED_ATTRS = {
+  '*': new Set(['title', 'lang', 'dir']),
+  a: new Set(['href']),
+  img: new Set(['src', 'alt', 'width', 'height']),
+  td: new Set(['colspan', 'rowspan']),
+  th: new Set(['colspan', 'rowspan']),
+  ol: new Set(['start']),
+};
+const URL_ATTRS = {
+  href: /^(https?:|mailto:|#)/i,
+  src: /^(https?:|data:image\/(png|jpe?g|gif|webp|svg\+xml);base64,)/i,
+};
+const NAMED_ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", colon: ':', tab: '\t', newline: '\n' };
+
+const escapeHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const escapeAttr = (s) => escapeHtml(s).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+function decodeEntities(s) {
+  return s.replace(/&(?:#x([0-9a-f]+)|#(\d+)|([a-z]+));?/gi, (all, hex, dec, name) => {
+    if (name) return NAMED_ENTITIES[name.toLowerCase()] ?? all;
+    const code = hex ? parseInt(hex, 16) : parseInt(dec, 10);
+    return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : '';
+  });
+}
+
+function cleanAttrs(tag, raw) {
+  const allowed = ALLOWED_ATTRS[tag];
+  const re = /([^\s"'<>\/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
+  let out = '';
+  for (const m of raw.matchAll(re)) {
+    const name = m[1].toLowerCase();
+    if (!ALLOWED_ATTRS['*'].has(name) && !(allowed && allowed.has(name))) continue;
+    let value = decodeEntities(m[2] ?? m[3] ?? m[4] ?? '');
+    if (URL_ATTRS[name]) {
+      value = value.replace(/[\u0000-\u0020\u007f-\u009f]/g, '');
+      if (!URL_ATTRS[name].test(value)) continue;
+    }
+    out += ' ' + name + '="' + escapeAttr(value) + '"';
+  }
+  return out;
+}
+
+// Allowlist sanitizer: unknown tags are dropped (text is kept), every attribute and URL is checked.
+function sanitizeHtml(input) {
+  const html = input
+    .replace(/<(script|style|iframe|object|embed|noscript|template|textarea|title|head)\b[\s\S]*?<\/\1\s*>/gi, '')
+    .replace(/<!--[\s\S]*?-->/g, '');
+  return html.replace(
+    /<[!?][^>]*>|<(\/?)([a-zA-Z][\w:-]*)((?:"[^"]*"|'[^']*'|[^'">])*)>|</g,
+    (all, close, name, attrs) => {
+      if (name === undefined) return all === '<' ? '&lt;' : '';
+      const tag = name.toLowerCase();
+      if (!ALLOWED_TAGS.has(tag)) return '';
+      if (close) return VOID_TAGS.has(tag) ? '' : '</' + tag + '>';
+      return '<' + tag + cleanAttrs(tag, attrs) + '>';
+    },
+  );
+}
+
 async function chapterHtml(zip, path) {
   const raw = await readText(zip, path);
   if (!raw) throw new Error('Chapter file missing');
@@ -456,7 +523,7 @@ async function chapterHtml(zip, path) {
     const uri = uris.get(resolvePath(dir, src));
     return uri ? pre + quote + uri + quote : all;
   });
-  return html;
+  return sanitizeHtml(html);
 }
 
 export default {
@@ -539,7 +606,9 @@ export default {
             name: f.name.replace(/\.(epub|pdf)$/i, ''),
             cover: f.thumbnailLink
               ? f.thumbnailLink.replace(/=s\d+$/, '=s400')
-              : url.origin + '/cover/' + f.id + '?key=' + encodeURIComponent(env.ACCESS_KEY),
+              : isPdf(f)
+                ? ''
+                : url.origin + '/cover/' + f.id + '?key=' + encodeURIComponent(env.ACCESS_KEY),
           })),
         );
       }
@@ -577,7 +646,9 @@ export default {
         const meta = await fileMeta(env, m[1]);
         if (isPdf(meta)) {
           const link = url.origin + '/file/' + m[1] + '?key=' + encodeURIComponent(env.ACCESS_KEY);
-          return json({ html: '<p><a href="' + link + '">Open ' + plain(meta.name) + '</a></p>' });
+          return json({
+            html: sanitizeHtml('<p><a href="' + escapeAttr(link) + '">Open ' + escapeHtml(meta.name) + '</a></p>'),
+          });
         }
         const zip = await loadEpub(env, ctx, m[1]);
         const info = await parseEpub(zip);
