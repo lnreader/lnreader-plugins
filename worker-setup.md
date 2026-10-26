@@ -148,6 +148,7 @@ All routes except `/login` and `/callback` require `?key=ACCESS_KEY` or an `Auth
 
 - Only files your account can see are listed. Search matches file names.
 - EPUBs are cached in Cloudflare's edge cache for 1 hour to speed up chapter loading.
+- Size limits protect the worker's memory: EPUBs over 50 MB are refused with a "Book is too large" error, single files inside a book over 15 MB are not read, and at most 10 MB of images are inlined per chapter.
 - PDFs show a single "Open PDF" chapter containing a link; they are not converted to text.
 - Chapter titles come from the EPUB table of contents; if missing, they are named `Section N`.
 
@@ -248,6 +249,33 @@ function toBase64(bytes) {
   return btoa(bin);
 }
 
+const MAX_EPUB_BYTES = 50 * 1024 * 1024; // largest EPUB the worker will load
+const MAX_ENTRY_BYTES = 15 * 1024 * 1024; // largest single file read out of an EPUB (uncompressed)
+const MAX_CHAPTER_IMAGE_BYTES = 10 * 1024 * 1024; // total image bytes inlined into one chapter
+
+async function readLimited(stream, limit, message) {
+  const reader = stream.getReader();
+  const chunks = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.length;
+    if (total > limit) {
+      await reader.cancel();
+      throw new Error(message);
+    }
+    chunks.push(value);
+  }
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return out;
+}
+
 function readZip(buf) {
   const view = new DataView(buf);
   let eocd = -1;
@@ -266,12 +294,13 @@ function readZip(buf) {
   for (let n = 0; n < count; n++) {
     const method = view.getUint16(offset + 10, true);
     const csize = view.getUint32(offset + 20, true);
+    const usize = view.getUint32(offset + 24, true);
     const nameLen = view.getUint16(offset + 28, true);
     const extraLen = view.getUint16(offset + 30, true);
     const commentLen = view.getUint16(offset + 32, true);
     const localOffset = view.getUint32(offset + 42, true);
     const name = decoder.decode(new Uint8Array(buf, offset + 46, nameLen));
-    entries.set(name, { method, csize, localOffset });
+    entries.set(name, { method, csize, usize, localOffset });
     offset += 46 + nameLen + extraLen + commentLen;
   }
   return { buf, view, entries };
@@ -280,13 +309,16 @@ function readZip(buf) {
 async function readEntry(zip, name) {
   const entry = zip.entries.get(name);
   if (!entry) return null;
+  if (entry.csize > MAX_ENTRY_BYTES || entry.usize > MAX_ENTRY_BYTES) {
+    throw new Error('File inside the book is too large to read: ' + name);
+  }
   const nameLen = zip.view.getUint16(entry.localOffset + 26, true);
   const extraLen = zip.view.getUint16(entry.localOffset + 28, true);
   const start = entry.localOffset + 30 + nameLen + extraLen;
   const data = new Uint8Array(zip.buf, start, entry.csize);
   if (entry.method === 0) return data;
   const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
-  return new Uint8Array(await new Response(stream).arrayBuffer());
+  return readLimited(stream, MAX_ENTRY_BYTES, 'File inside the book is too large to read: ' + name);
 }
 
 async function readText(zip, name) {
@@ -336,8 +368,11 @@ async function loadEpub(env, ctx, id) {
   if (!res) {
     res = await drive(env, 'files/' + id, { alt: 'media' });
     if (!res.ok) throw new Error('Download failed (' + res.status + ')');
-    const copy = new Response(res.clone().body, { headers: { 'cache-control': 'max-age=3600' } });
-    ctx.waitUntil(cache.put(cacheKey, copy));
+    const tooBig = 'Book is too large (limit ' + MAX_EPUB_BYTES / 1024 / 1024 + ' MB)';
+    if (parseInt(res.headers.get('content-length') || '0', 10) > MAX_EPUB_BYTES) throw new Error(tooBig);
+    const bytes = await readLimited(res.body, MAX_EPUB_BYTES, tooBig);
+    ctx.waitUntil(cache.put(cacheKey, new Response(bytes, { headers: { 'cache-control': 'max-age=3600' } })));
+    return readZip(bytes.buffer);
   }
   return readZip(await res.arrayBuffer());
 }
@@ -528,9 +563,17 @@ async function chapterHtml(zip, path) {
     if (!/^(data:|https?:)/i.test(m[3])) wanted.add(resolvePath(dir, decodeEntities(m[3])));
   }
   const uris = new Map();
+  let imageBytes = 0;
   for (const p of wanted) {
-    const data = await readEntry(zip, p);
-    if (data) uris.set(p, 'data:' + mimeOf(p) + ';base64,' + toBase64(data));
+    let data = null;
+    try {
+      data = await readEntry(zip, p);
+    } catch {
+      data = null; // oversized image: leave it out instead of failing the chapter
+    }
+    if (!data || imageBytes + data.length > MAX_CHAPTER_IMAGE_BYTES) continue;
+    imageBytes += data.length;
+    uris.set(p, 'data:' + mimeOf(p) + ';base64,' + toBase64(data));
   }
   html = html.replace(imgRe, (all, pre, quote, src) => {
     const uri = uris.get(resolvePath(dir, decodeEntities(src)));
@@ -687,7 +730,13 @@ export default {
         const data = info.cover ? await readEntry(zip, info.cover) : null;
         if (!data) return new Response('no cover', { status: 404 });
         return new Response(data, {
-          headers: { 'content-type': mimeOf(info.cover), 'cache-control': 'public, max-age=86400' },
+          headers: {
+            'content-type': mimeOf(info.cover),
+            'cache-control': 'private, max-age=86400',
+            'x-content-type-options': 'nosniff',
+            // Book-provided SVG must never run scripts if opened directly on the worker's origin.
+            'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+          },
         });
       }
 
@@ -695,8 +744,14 @@ export default {
       if (m) {
         const res = await drive(env, 'files/' + m[1], { alt: 'media' });
         if (!res.ok) throw new Error('Download failed (' + res.status + ')');
+        const type = res.headers.get('content-type') || '';
+        const pdf = /^application\/pdf\b/i.test(type);
         return new Response(res.body, {
-          headers: { 'content-type': res.headers.get('content-type') || 'application/octet-stream' },
+          headers: {
+            'content-type': pdf ? 'application/pdf' : 'application/octet-stream',
+            'content-disposition': pdf ? 'inline' : 'attachment',
+            'x-content-type-options': 'nosniff',
+          },
         });
       }
 
