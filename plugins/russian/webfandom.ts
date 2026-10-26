@@ -136,10 +136,16 @@ class WebFandom implements Plugin.PluginBase {
       headers: { Accept: 'application/json' },
     });
     const body = await res.text();
-    if (res.status === 404) throw new Error('Страница не найдена (404)');
+    // keep the status so callers (and the live check) can tell a block
+    // (403/503) from a broken plugin
+    const fail = (message: string) =>
+      Object.assign(new Error(message), { status: res.status });
+    if (res.status === 404) throw fail('Страница не найдена (404)');
+
+    let data;
     try {
       // the API uses snake_case keys
-      return JSON.parse(body, (key, value) => {
+      data = JSON.parse(body, (key, value) => {
         if (!value || typeof value !== 'object' || Array.isArray(value)) {
           return value;
         }
@@ -152,8 +158,12 @@ class WebFandom implements Plugin.PluginBase {
         return result;
       });
     } catch {
-      throw new Error('Пройдите проверку: откройте сайт в WebView');
+      throw fail('Пройдите проверку: откройте сайт в WebView');
     }
+    if (!res.ok) {
+      throw fail('Не удалось загрузить данные (' + res.status + ')');
+    }
+    return data;
   }
 
   lastSegment = (path: string) =>
