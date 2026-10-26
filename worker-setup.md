@@ -213,7 +213,7 @@ function attr(tag, name) {
   const m = tag.match(
     new RegExp('\\b' + name + '\\s*=\\s*"([^"]*)"|\\b' + name + "\\s*=\\s*'([^']*)'", 'i'),
   );
-  return m ? (m[1] !== undefined ? m[1] : m[2]) : null;
+  return m ? decodeEntities(m[1] !== undefined ? m[1] : m[2]) : null;
 }
 
 function resolvePath(base, href) {
@@ -352,7 +352,7 @@ async function readToc(zip, manifest, base) {
     const html = await readText(zip, navPath);
     if (html) {
       for (const m of html.matchAll(/<a\b[^>]*href\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)) {
-        const target = resolvePath(navBase, m[1]);
+        const target = resolvePath(navBase, decodeEntities(m[1]));
         const label = plain(m[2]);
         if (label && !map.has(target)) map.set(target, label);
       }
@@ -367,7 +367,7 @@ async function readToc(zip, manifest, base) {
       if (xml) {
         const re = /<navPoint\b[\s\S]*?<text>([\s\S]*?)<\/text>[\s\S]*?<content\b[^>]*src\s*=\s*["']([^"']+)["']/gi;
         for (const m of xml.matchAll(re)) {
-          const target = resolvePath(ncxBase, m[2]);
+          const target = resolvePath(ncxBase, decodeEntities(m[2]));
           const label = plain(m[1]);
           if (label && !map.has(target)) map.set(target, label);
         }
@@ -437,8 +437,8 @@ const ALLOWED_TAGS = new Set([
 ]);
 const VOID_TAGS = new Set(['br', 'hr', 'img']);
 const ALLOWED_ATTRS = {
-  '*': new Set(['title', 'lang', 'dir']),
-  a: new Set(['href']),
+  '*': new Set(['id', 'title', 'lang', 'dir']),
+  a: new Set(['href', 'name']),
   img: new Set(['src', 'alt', 'width', 'height']),
   td: new Set(['colspan', 'rowspan']),
   th: new Set(['colspan', 'rowspan']),
@@ -448,6 +448,8 @@ const URL_ATTRS = {
   href: /^(https?:|mailto:|#)/i,
   src: /^(https?:|data:image\/(png|jpe?g|gif|webp|svg\+xml);base64,)/i,
 };
+const ID_PREFIX = 'lnr-';
+const ID_RE = /^[\p{L}\p{N}_.:-]{1,200}$/u;
 const NAMED_ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", colon: ':', tab: '\t', newline: '\n' };
 
 const escapeHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -461,16 +463,27 @@ function decodeEntities(s) {
   });
 }
 
-function cleanAttrs(tag, raw) {
+function cleanAttrs(tag, raw, rewriteHref) {
   const allowed = ALLOWED_ATTRS[tag];
   const re = /([^\s"'<>\/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
   let out = '';
   for (const m of raw.matchAll(re)) {
-    const name = m[1].toLowerCase();
+    let name = m[1].toLowerCase();
     if (!ALLOWED_ATTRS['*'].has(name) && !(allowed && allowed.has(name))) continue;
     let value = decodeEntities(m[2] ?? m[3] ?? m[4] ?? '');
-    if (URL_ATTRS[name]) {
+    if (tag === 'a' && name === 'name') name = 'id';
+    if (name === 'id') {
+      // Prefixed so book ids can never clash with (or clobber) names in the reader page.
+      if (!ID_RE.test(value)) continue;
+      value = ID_PREFIX + value;
+    } else if (URL_ATTRS[name]) {
       value = value.replace(/[\u0000-\u0020\u007f-\u009f]/g, '');
+      if (name === 'href' && rewriteHref) value = rewriteHref(value);
+      if (name === 'href' && value.startsWith('#')) {
+        const frag = safeDecode(value.slice(1));
+        if (!ID_RE.test(frag)) continue;
+        value = '#' + ID_PREFIX + frag;
+      }
       if (!URL_ATTRS[name].test(value)) continue;
     }
     out += ' ' + name + '="' + escapeAttr(value) + '"';
@@ -479,7 +492,7 @@ function cleanAttrs(tag, raw) {
 }
 
 // Allowlist sanitizer: unknown tags are dropped (text is kept), every attribute and URL is checked.
-function sanitizeHtml(input) {
+function sanitizeHtml(input, rewriteHref) {
   const html = input
     .replace(/<(script|style|iframe|object|embed|noscript|template|textarea|title|head)\b[\s\S]*?<\/\1\s*>/gi, '')
     .replace(/<!--[\s\S]*?-->/g, '');
@@ -490,7 +503,7 @@ function sanitizeHtml(input) {
       const tag = name.toLowerCase();
       if (!ALLOWED_TAGS.has(tag)) return '';
       if (close) return VOID_TAGS.has(tag) ? '' : '</' + tag + '>';
-      return '<' + tag + cleanAttrs(tag, attrs) + '>';
+      return '<' + tag + cleanAttrs(tag, attrs, rewriteHref) + '>';
     },
   );
 }
@@ -512,7 +525,7 @@ async function chapterHtml(zip, path) {
   const imgRe = /(<img\b[^>]*?\bsrc\s*=\s*)(["'])([^"']+)\2/gi;
   const wanted = new Set();
   for (const m of html.matchAll(imgRe)) {
-    if (!/^(data:|https?:)/i.test(m[3])) wanted.add(resolvePath(dir, m[3]));
+    if (!/^(data:|https?:)/i.test(m[3])) wanted.add(resolvePath(dir, decodeEntities(m[3])));
   }
   const uris = new Map();
   for (const p of wanted) {
@@ -520,10 +533,20 @@ async function chapterHtml(zip, path) {
     if (data) uris.set(p, 'data:' + mimeOf(p) + ';base64,' + toBase64(data));
   }
   html = html.replace(imgRe, (all, pre, quote, src) => {
-    const uri = uris.get(resolvePath(dir, src));
+    const uri = uris.get(resolvePath(dir, decodeEntities(src)));
     return uri ? pre + quote + uri + quote : all;
   });
-  return sanitizeHtml(html);
+  // Links inside the same chapter file become anchors; links to other book files cannot be
+  // followed from a single chapter, so they lose their href instead of pointing nowhere.
+  const rewriteHref = (href) => {
+    if (/^(https?:|mailto:)/i.test(href)) return href;
+    const hash = href.indexOf('#');
+    const file = hash < 0 ? href : href.slice(0, hash);
+    const frag = hash < 0 ? '' : href.slice(hash);
+    if (!file || resolvePath(dir, file) === path) return frag;
+    return '';
+  };
+  return sanitizeHtml(html, rewriteHref);
 }
 
 export default {
