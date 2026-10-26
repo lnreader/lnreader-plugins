@@ -20,7 +20,7 @@ const BASE_HEADERS = {
   Origin: 'https://ranobelib.me/',
   'Site-Id': '3',
   'client-time-zone':
-    Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Moscow',
+    Intl.DateTimeFormat().resolvedOptions?.().timeZone || 'Europe/Moscow',
   'User-Agent':
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 YaBrowser/25.12.0.0 Safari/537.36',
 };
@@ -30,7 +30,7 @@ class RLIB implements Plugin.PluginBase {
   name = 'RanobeLib';
   site = 'https://ranobelib.me';
   apiSite = 'https://api.cdnlibs.org/api/manga/';
-  version = '2.2.7';
+  version = '2.2.8';
   icon = 'src/ru/ranobelib/icon.png';
   webStorageUtilized = true;
   imageRequestInit = {

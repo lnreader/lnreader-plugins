@@ -3,11 +3,86 @@ import { fetchApi } from '@libs/fetch';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
 import { storage } from '@libs/storage';
+import { NovelStatus } from '@libs/novelStatus';
+
+const MOBILE_SITE = 'https://m.webnovel.com';
+
+type Named = { name?: string }[] | null;
+type BookInfo = {
+  bookId?: string;
+  bookName?: string;
+  authorName?: string;
+  authorItems?: Named;
+  description?: string;
+  categoryName?: string;
+  tagInfos?: { tagName?: string }[] | null;
+  actionStatus?: number;
+  totalScore?: number;
+  voters?: number;
+  pvNum?: number;
+  chapterNum?: number;
+  totalChapterNum?: number;
+  updateFrequency?: number;
+  frequencyUnit?: string;
+  updateTime?: number;
+  coverUpdateTime?: number;
+  groupItems?: Named;
+  translatorItems?: Named;
+  editorItems?: Named;
+};
+type TabInfo = { power?: { nums?: number }; golden?: { nums?: number } };
+type MobileChapter = { publishTime?: number };
+/** `props` of a m.webnovel.com page's `__NEXT_DATA__` */
+type NextProps = {
+  initialProps?: {
+    pageProps?: { initData?: { bookInfo?: BookInfo; tabInfo?: TabInfo } };
+  };
+  initialState?: {
+    entities?: { chapter?: Record<string, MobileChapter> };
+  };
+};
+
+const STATUS: Record<number, string> = {
+  30: NovelStatus.Ongoing,
+  50: NovelStatus.Completed,
+};
+
+const grouped = (n: number) =>
+  String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+/** Same as the site: 82255255 -> "82.2M" (truncated, not rounded) */
+const compact = (n: number) => {
+  const units: [number, string][] = [
+    [1e9, 'B'],
+    [1e6, 'M'],
+    [1e3, 'K'],
+  ];
+  for (const [div, suffix] of units) {
+    if (n >= div) return (Math.floor((n / div) * 10) / 10).toFixed(1) + suffix;
+  }
+  return grouped(n);
+};
+
+const names = (items?: Named) =>
+  (items || []).map(i => i.name?.trim()).filter((n): n is string => !!n);
+
+const titleCase = (s: string) =>
+  s
+    .trim()
+    .toLowerCase()
+    .replace(/(^|\s)\S/g, c => c.toUpperCase());
+
+const bookIdOf = (novelPath: string) => novelPath.match(/(\d+)\/?$/)?.[1];
+
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const stat = (n: unknown, format: (n: number) => string) =>
+  typeof n === 'number' && n >= 0 ? format(n) : undefined;
 
 class Webnovel implements Plugin.PluginBase {
   id = 'webnovel';
   name = 'Webnovel';
-  version = '1.0.3';
+  version = '1.1.0';
   icon = 'src/en/webnovel/icon.png';
   site = 'https://www.webnovel.com';
   headers = {
@@ -126,22 +201,76 @@ class Webnovel implements Plugin.PluginBase {
     return this.parseNovels(loadedCheerio, true, false);
   }
 
-  async parseChapters(novelPath: string): Promise<Plugin.ChapterItem[]> {
-    const url = this.site + novelPath + '/catalog';
-    const result = await fetchApi(url, {
-      headers: this.headers,
-    });
-    const body = await result.text();
+  /** Desktop page; retries a Cloudflare "Just a moment" 403 once, then throws */
+  async fetchDesktop(url: string): Promise<string> {
+    let status = 0;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (attempt) await delay(1500);
+      const result = await fetchApi(url, { headers: this.headers });
+      if (result.ok) return result.text();
+      status = result.status;
+    }
+    throw new Error(
+      `Webnovel: HTTP ${status} for ${url} (Cloudflare? open the novel in WebView, then retry)`,
+    );
+  }
 
+  /**
+   * Best effort: undefined on Cloudflare blocks, network or parse errors.
+   * No User-Agent override: the app's default is the WebView's, so its
+   * Cloudflare cookies apply (m.webnovel.com redirects desktop agents).
+   */
+  async fetchNextData(url: string): Promise<NextProps | undefined> {
+    let html = '';
+    for (let attempt = 0; attempt < 2 && !html; attempt++) {
+      if (attempt) await delay(1500);
+      try {
+        const result = await fetchApi(url);
+        if (result.status === 404) return undefined;
+        if (result.ok) html = await result.text();
+      } catch {
+        // network error: retry once
+      }
+    }
+    // indexOf, not a regex: pages are 1-3 MB
+    const tag = html.indexOf('id="__NEXT_DATA__"');
+    if (tag < 0) return undefined;
+    const start = html.indexOf('>', tag) + 1;
+    try {
+      return JSON.parse(html.slice(start, html.indexOf('</script>', start)))
+        .props;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * Paths come from the desktop catalog and must not change: the app keys
+   * chapters on (novelId, path). Mobile chapters (same ids) add dates.
+   */
+  parseChapterList(body: string, mobile?: NextProps): Plugin.ChapterItem[] {
     const loadedCheerio = parseHTML(body);
+    const mobileChapters = mobile?.initialState?.entities?.chapter || {};
 
     const chapters: Plugin.ChapterItem[] = [];
 
     loadedCheerio('.volume-item').each((i_v_, ele_v) => {
-      const originalVolumeName = loadedCheerio(ele_v).first().text().trim();
-      const volumeNameMatch = originalVolumeName.match(/Volume\s(\d+)/);
-      const volumeName = volumeNameMatch
-        ? `Volume ${volumeNameMatch[1]}`
+      // "Volume 0 : Auxiliary Volume" or "Volume 1"
+      const heading = loadedCheerio(ele_v)
+        .find('h4')
+        .first()
+        .text()
+        .replace(/\s+/g, ' ')
+        .trim();
+      const volumeMatch =
+        heading.match(/^Volume\s*(\d+)\s*(?::\s*(.+))?$/) ||
+        loadedCheerio(ele_v)
+          .first()
+          .text()
+          .match(/Volume\s(\d+)/);
+      const volumeName = volumeMatch
+        ? `Volume ${volumeMatch[1]}` +
+          (volumeMatch[2]?.trim() ? `: ${volumeMatch[2].trim()}` : '')
         : 'Unknown Volume';
 
       loadedCheerio(ele_v)
@@ -153,11 +282,19 @@ class Webnovel implements Plugin.PluginBase {
               'No Title Found');
           const chapterPath = loadedCheerio(ele_c).find('a').attr('href');
           const locked = loadedCheerio(ele_c).find('svg').length;
+          const publishTime =
+            mobileChapters[loadedCheerio(ele_c).attr('data-cid') || '']
+              ?.publishTime;
 
           if (chapterPath && !(locked && this.hideLocked)) {
             chapters.push({
               name: locked ? `${chapterName} 🔒` : chapterName,
               path: chapterPath,
+              // Absolute only: relative dates would change on every refresh
+              releaseTime:
+                publishTime && !isNaN(new Date(publishTime).getTime())
+                  ? new Date(publishTime).toISOString()
+                  : undefined,
             });
           }
         });
@@ -166,47 +303,146 @@ class Webnovel implements Plugin.PluginBase {
     return chapters;
   }
 
+  /** Desktop `g_data.book= {...}`: JSON except for escapes like `\ ` */
+  parseGData(body: string): BookInfo | undefined {
+    const start = body.indexOf('{', body.indexOf('g_data.book='));
+    const end = body.indexOf(',g_data.', start);
+    if (body.indexOf('g_data.book=') < 0 || end < 0) return undefined;
+    try {
+      return JSON.parse(
+        body
+          .slice(start, end)
+          .replace(/\\(["\\/bfnrtu])|\\/g, (m, valid) => (valid ? m : '')),
+      ).bookInfo;
+    } catch {
+      return undefined;
+    }
+  }
+
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const url = this.site + novelPath;
-    const result = await fetchApi(url, {
-      headers: this.headers,
-    });
-    const body = await result.text();
+    // Required, so first: if Cloudflare blocks it we throw before the extras
+    const catalog = await this.fetchDesktop(this.site + novelPath + '/catalog');
+    const bookId = bookIdOf(novelPath);
+    // The mobile book page is ~200 KB vs up to 3.4 MB desktop and has more
+    // stats; only the mobile catalog has absolute chapter dates
+    const [mobileBook, mobileCatalog] = await Promise.all([
+      this.fetchNextData(MOBILE_SITE + novelPath),
+      bookId
+        ? this.fetchNextData(`${MOBILE_SITE}/book/${bookId}/catalog`)
+        : undefined,
+    ]);
+    const initData = mobileBook?.initialProps?.pageProps?.initData;
 
-    const loadedCheerio = parseHTML(body);
+    // Throws when blocked: placeholders would overwrite real metadata
+    const body = initData?.bookInfo
+      ? ''
+      : await this.fetchDesktop(this.site + novelPath);
 
-    const novel: Plugin.SourceNovel = {
+    return {
+      ...this.buildNovel(novelPath, body, initData),
+      chapters: this.parseChapterList(catalog, mobileCatalog),
+    };
+  }
+
+  /** From mobile data, else desktop `g_data`, else desktop HTML */
+  buildNovel(
+    novelPath: string,
+    desktopBody: string,
+    initData?: { bookInfo?: BookInfo; tabInfo?: TabInfo },
+  ): Plugin.SourceNovel {
+    const book = initData?.bookInfo || this.parseGData(desktopBody) || {};
+    const tab = initData?.tabInfo;
+    const loadedCheerio = parseHTML(desktopBody);
+
+    const genres: string[] = [];
+    [book.categoryName]
+      .concat((book.tagInfos || []).map(t => t.tagName))
+      .forEach(genre => {
+        const name = genre && titleCase(genre);
+        if (name && genres.indexOf(name) < 0) genres.push(name);
+      });
+
+    const translators = names(book.groupItems).length
+      ? names(book.groupItems)
+      : names(book.translatorItems);
+    const editors = names(book.editorItems).filter(
+      n => names(book.translatorItems).indexOf(n) < 0,
+    );
+    const chapterCount = book.totalChapterNum || book.chapterNum;
+    const info: { label: string; value: string }[] = [];
+    const add = (label: string, value?: string) => {
+      if (value) info.push({ label, value });
+    };
+    add('Views', stat(book.pvNum, compact));
+    add('Power Stones', stat(tab?.power?.nums, grouped));
+    add('Golden Tickets', stat(tab?.golden?.nums, grouped));
+    add('Chapters', stat(chapterCount, grouped));
+    add(
+      'Schedule',
+      book.updateFrequency && book.frequencyUnit
+        ? `${book.updateFrequency} ${book.frequencyUnit.replace(/\s*\/\s*/g, '/')}`
+        : undefined,
+    );
+    add(
+      'Updated',
+      book.updateTime && !isNaN(new Date(book.updateTime).getTime())
+        ? new Date(book.updateTime).toISOString().slice(0, 10)
+        : undefined,
+    );
+    add('Translator', translators.join(', '));
+    add('Editor', editors.join(', '));
+
+    const htmlStatus = loadedCheerio('.det-hd-detail svg')
+      .filter((i_, ele) => loadedCheerio(ele).attr('title') === 'Status')
+      .next()
+      .text()
+      .trim();
+
+    const name = book.bookName || loadedCheerio('.g_thumb > img').attr('alt');
+    if (!name) {
+      throw new Error(`Webnovel: no novel data found for ${novelPath}`);
+    }
+    const bookId = bookIdOf(novelPath);
+    const coverSrc = loadedCheerio('.g_thumb > img').attr('src');
+
+    return {
       path: novelPath,
-      name: loadedCheerio('.g_thumb > img').attr('alt') || 'No Title Found',
-      cover: 'https:' + loadedCheerio('.g_thumb > img').attr('src'),
-      genres: loadedCheerio('.det-hd-detail > .det-hd-tag').attr('title') || '',
+      name,
+      cover:
+        bookId && book.coverUpdateTime
+          ? `https://book-pic.webnovel.com/bookcover/${bookId}?imageMogr2/thumbnail/600x&imageId=${book.coverUpdateTime}`
+          : coverSrc && 'https:' + coverSrc,
+      genres: genres.length
+        ? genres.join(',')
+        : loadedCheerio('.det-hd-detail > .det-hd-tag').attr('title') || '',
       summary:
+        book.description?.replace(/\r\n?/g, '\n').trim() ||
         loadedCheerio('.j_synopsis > p')
           .find('br')
           .replaceWith('\n')
           .end()
           .text()
-          .trim() || 'No Summary Found',
+          .trim() ||
+        'No Summary Found',
       author:
+        book.authorName ||
+        names(book.authorItems).join(', ') ||
         loadedCheerio('.det-info .c_s')
           .filter((i_, ele) => {
             return loadedCheerio(ele).text().trim() === 'Author:';
           })
           .next()
           .text()
-          .trim() || 'No Author Found',
+          .trim() ||
+        'No Author Found',
       status:
-        loadedCheerio('.det-hd-detail svg')
-          .filter((i_, ele) => {
-            return loadedCheerio(ele).attr('title') === 'Status';
-          })
-          .next()
-          .text()
-          .trim() || 'Unknown Status',
-      chapters: await this.parseChapters(novelPath),
+        (book.actionStatus && STATUS[book.actionStatus]) ||
+        htmlStatus ||
+        NovelStatus.Unknown,
+      rating: book.totalScore || undefined,
+      ratingCount: book.voters || undefined,
+      info: info.length ? info : undefined,
     };
-
-    return novel;
   }
 
   async parseChapter(chapterPath: string): Promise<string> {

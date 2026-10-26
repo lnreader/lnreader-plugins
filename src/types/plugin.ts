@@ -33,6 +33,15 @@ export namespace Plugin {
     status?: string;
     /** Rating out of 5 as float */
     rating?: number;
+    /** Number of ratings behind `rating` */
+    ratingCount?: number;
+    /**
+     * Display-ready extra stats, shown in order
+     * ```js
+     * novel.info = [{ label: 'Views', value: '82.2M' }];
+     * ```
+     */
+    info?: { label: string; value: string }[];
     chapters?: ChapterItem[];
   } & NovelItem;
 
