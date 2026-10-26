@@ -33,6 +33,10 @@ class GoogleDrivePlugin implements Plugin.PluginBase {
     },
   };
 
+  private isConfigured(): boolean {
+    return Boolean(storage.get('workerUrl') && storage.get('accessKey'));
+  }
+
   private async call<T>(route: string, params: Record<string, string> = {}): Promise<T> {
     const workerUrl = String(storage.get('workerUrl') || '').replace(/\/+$/, '');
     const accessKey = String(storage.get('accessKey') || '');
@@ -57,11 +61,13 @@ class GoogleDrivePlugin implements Plugin.PluginBase {
   }
 
   async popularNovels(pageNo: number): Promise<Plugin.NovelItem[]> {
+    if (!this.isConfigured()) return [];
     const items = await this.call<DriveItem[]>('/list', { page: String(pageNo) });
     return this.toNovels(items);
   }
 
   async searchNovels(searchTerm: string, pageNo: number): Promise<Plugin.NovelItem[]> {
+    if (!this.isConfigured()) return [];
     const items = await this.call<DriveItem[]>('/list', {
       q: searchTerm,
       page: String(pageNo),
