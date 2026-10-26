@@ -23,7 +23,7 @@ class GoogleDrivePlugin implements Plugin.PluginBase {
   pluginSettings = {
     workerUrl: {
       value: '',
-      label: 'Worker URL (https://name.workers.dev)',
+      label: 'Worker URL (setup guide: https://github.com/lnreader/lnreader-plugins/blob/master/worker-setup.md)',
       type: 'Text',
     },
     accessKey: {
