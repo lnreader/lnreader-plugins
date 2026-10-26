@@ -78,7 +78,7 @@ class WebFandom implements Plugin.PluginBase {
           // tags often repeat the genres
           .filter((name, index, names) => names.indexOf(name) === index)
           .join(',') || undefined,
-      status: statuses[data.publication_status] || NovelStatus.Unknown,
+      status: statuses[data.publicationStatus] || NovelStatus.Unknown,
     };
 
     // one request is enough: the API returns the whole list in a single page
@@ -96,7 +96,7 @@ class WebFandom implements Plugin.PluginBase {
         chapter.chapter +
         (chapter.name ? ' - ' + chapter.name : ''),
       path: '/reader/novella/' + chapter.slug,
-      releaseTime: chapter.date_create,
+      releaseTime: chapter.dateCreate,
       chapterNumber: index + 1,
     }));
 
@@ -110,7 +110,7 @@ class WebFandom implements Plugin.PluginBase {
         this.lastSegment(chapterPath) +
         '/',
     );
-    if (!data.is_access || data.is_access_adult === false) {
+    if (!data.isAccess || data.isAccessAdult === false) {
       throw new Error('Глава доступна только после входа на сайте');
     }
 
@@ -138,7 +138,19 @@ class WebFandom implements Plugin.PluginBase {
     const body = await res.text();
     if (res.status === 404) throw new Error('Страница не найдена (404)');
     try {
-      return JSON.parse(body);
+      // the API uses snake_case keys
+      return JSON.parse(body, (key, value) => {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) {
+          return value;
+        }
+        const result: Record<string, unknown> = {};
+        for (const name in value) {
+          result[
+            name.replace(/_([a-z])/g, (match, letter) => letter.toUpperCase())
+          ] = value[name];
+        }
+        return result;
+      });
     } catch {
       throw new Error('Пройдите проверку: откройте сайт в WebView');
     }
@@ -262,7 +274,7 @@ type CatalogItem = {
 
 type Publication = CatalogItem & {
   description?: string | null;
-  publication_status: string;
+  publicationStatus: string;
   authors?: Named[];
   genres?: Named[];
   tags?: Named[];
@@ -273,12 +285,12 @@ type ChapterItem = {
   volume: number;
   chapter: number;
   name?: string | null;
-  date_create: string;
+  dateCreate: string;
 };
 
 type Chapter = {
-  is_access: boolean;
-  is_access_adult?: boolean;
+  isAccess: boolean;
+  isAccessAdult?: boolean;
   content?: {
     number: number;
     type: string;
