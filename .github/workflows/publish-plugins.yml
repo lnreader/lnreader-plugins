@@ -11,7 +11,7 @@ on:
       - '.github/workflows/publish-plugins.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: ${{ github.workflow }}
