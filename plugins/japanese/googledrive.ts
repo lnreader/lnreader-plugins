@@ -17,10 +17,15 @@ class GoogleDrivePlugin implements Plugin.PluginBase {
   id = 'googledrive';
   name = 'Google Drive';
   icon = 'src/jp/googledrive/icon.png';
-  site = 'https://github.com/HK-white-h/lnreader-drive-plugin/blob/master/worker-setup.md';
+  site = 'https://drive.google.com';
   version = '1.0.0';
 
   pluginSettings = {
+    setupGuide: {
+      value: 'https://github.com/lnreader/lnreader-plugins/blob/master/worker-setup.md',
+      label: 'Setup guide (copy this link into a browser)',
+      type: 'Text',
+    },
     workerUrl: {
       value: '',
       label: 'Worker URL (click on website setup guide)',
