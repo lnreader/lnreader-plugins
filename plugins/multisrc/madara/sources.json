@@ -76,6 +76,8 @@
     "sourceName": "MeioNovel",
     "options": {
       "useNewChapterEndpoint": true,
+      "versionIncrements": 1,
+      "customJs": "chapterText.find('p').each((_, p) => { const el = loadedCheerio(p); if (!el.find('br').length) return; const lines = (el.html() || '').split(/<br\\s*\\/?>/i).map(l => l.replace(/\\uFEFF/g, '').trim()).filter(l => l.replace(/&nbsp;|\\u00A0/g, '').trim()); el.replaceWith(lines.map(l => '<p>' + l + '</p>').join('')); });",
       "lang": "Indonesian"
     }
   },
