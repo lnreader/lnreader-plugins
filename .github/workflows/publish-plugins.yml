@@ -1,4 +1,4 @@
-name: Publish Plugins
+name: Publish Plugins 
 
 on:
   push:
