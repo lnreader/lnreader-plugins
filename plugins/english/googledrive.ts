@@ -28,7 +28,7 @@ class GoogleDrivePlugin implements Plugin.PluginBase {
     },
     workerUrl: {
       value: '',
-      label: 'Worker URL (click on website setup guide)',
+      label: 'Worker URL',
       type: 'Text',
     },
     accessKey: {
