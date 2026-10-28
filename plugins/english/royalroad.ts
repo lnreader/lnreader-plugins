@@ -9,7 +9,7 @@ import { storage } from '@libs/storage';
 class RoyalRoad implements Plugin.PluginBase {
   id = 'royalroad';
   name = 'Royal Road';
-  version = '2.3.3';
+  version = '2.3.4';
   icon = 'src/en/royalroad/icon.png';
   site = 'https://www.royalroad.com/';
 
@@ -22,22 +22,31 @@ class RoyalRoad implements Plugin.PluginBase {
     },
   };
 
-  // Royal Road answers with a bot check (Anubis "Making sure you're not a bot!",
-  // or Cloudflare's "Just a moment...") until it is passed in WebView. Parsing
-  // that page finds nothing, which the app showed as "No results found" or
-  // "No readable content was found", so name the check instead.
+  // Royal Road puts an Anubis proof-of-work check in front of its pages. Until
+  // the client has the Anubis cookie, every page is the check page (HTTP 200).
+  // Pass the check the same way a browser does. The app keeps the cookie for
+  // later requests, until the IP address changes or the cookie expires.
   async fetchHtml(url: string): Promise<string> {
-    const result = await fetchApi(url);
-    const html = await result.text();
-    if (
-      result.headers.get('cf-mitigated') === 'challenge' ||
-      html.includes('id="anubis_challenge"')
-    ) {
-      throw new Error(
-        'Royal Road is showing a bot check. Open it in WebView and wait for the page to load, then try again.',
-      );
+    // Let a check that is in progress finish, so this request uses its cookie.
+    if (anubisCheck) await anubisCheck.catch(() => '');
+    const html = await fetchPageHtml(url);
+    const challenge = readAnubisChallenge(html);
+    if (!challenge) return html;
+
+    let page: string;
+    if (anubisCheck) {
+      await anubisCheck;
+      page = await fetchPageHtml(url);
+    } else {
+      anubisCheck = passAnubisChallenge(html, challenge, url);
+      try {
+        page = await anubisCheck;
+      } finally {
+        anubisCheck = undefined;
+      }
     }
-    return html;
+    if (readAnubisChallenge(page)) throw new Error(BOT_CHECK_ERROR);
+    return page;
   }
 
   parseNovels(html: string) {
@@ -993,3 +1002,238 @@ enum ParsingState {
   InHidden,
   Novel,
 }
+
+type AnubisChallenge = {
+  rules: { algorithm: string; difficulty: number };
+  challenge: { id: string; randomData: string };
+};
+
+const BOT_CHECK_ERROR =
+  "Royal Road's bot check could not be passed. Open a novel from Royal Road in WebView, wait for it to load, then try again.";
+
+// Difficulty 4 needs about 65,000 hashes: a few seconds on a phone. Each step
+// up is 16 times more work, so stop and ask for WebView instead.
+const MAX_ANUBIS_DIFFICULTY = 4;
+
+let anubisCheck: Promise<string> | undefined;
+
+async function fetchPageHtml(
+  url: string,
+  passingChallenge = false,
+): Promise<string> {
+  const response = await fetchApi(url);
+  const cloudflareChallenge =
+    response.headers.get('cf-mitigated') === 'challenge';
+
+  if (cloudflareChallenge || !response.ok) {
+    throw Object.assign(
+      new Error(
+        cloudflareChallenge || passingChallenge
+          ? BOT_CHECK_ERROR
+          : `Royal Road request failed (HTTP ${response.status}). Try again later.`,
+      ),
+      { response },
+    );
+  }
+  return response.text();
+}
+
+function readAnubisChallenge(html: string): AnubisChallenge | undefined {
+  const json = readJsonScript(html, 'anubis_challenge');
+  return json ? JSON.parse(json) : undefined;
+}
+
+function readJsonScript(html: string, id: string): string | undefined {
+  const match = html.match(
+    new RegExp(
+      '<script id="' + id + '" type="application/json">([\\s\\S]*?)</script>',
+    ),
+  );
+  return match?.[1];
+}
+
+// Solve the check and send the answer. Anubis then sets its cookie and
+// redirects to `url`, so the result is the page that was asked for.
+async function passAnubisChallenge(
+  html: string,
+  { rules, challenge }: AnubisChallenge,
+  url: string,
+): Promise<string> {
+  if (
+    (rules.algorithm !== 'fast' && rules.algorithm !== 'slow') ||
+    typeof rules.difficulty !== 'number' ||
+    rules.difficulty < 0 ||
+    rules.difficulty % 1 !== 0 ||
+    rules.difficulty > MAX_ANUBIS_DIFFICULTY
+  ) {
+    throw new Error(BOT_CHECK_ERROR);
+  }
+  const basePrefix = JSON.parse(
+    readJsonScript(html, 'anubis_base_prefix') || '""',
+  );
+  const start = Date.now();
+  const { nonce, hash } = await solveProofOfWork(
+    challenge.randomData,
+    rules.difficulty,
+  );
+  const params = new URLSearchParams({
+    id: challenge.id,
+    response: hash,
+    nonce: String(nonce),
+    redir: url,
+    elapsedTime: String(Date.now() - start),
+  });
+  const origin = url.match(/^https?:\/\/[^/]+/)?.[0];
+  return fetchPageHtml(
+    `${origin}${basePrefix}/.within.website/x/cmd/anubis/api/pass-challenge?${params.toString()}`,
+    true,
+  );
+}
+
+// Find the nonce for which sha256(data + nonce), in hex, starts with
+// `difficulty` zeros. The app has no SHA-256 for plugins, so it is done here.
+async function solveProofOfWork(
+  data: string,
+  difficulty: number,
+): Promise<{ nonce: number; hash: string }> {
+  const search = nonceSearch(data, difficulty);
+  for (let from = 0; ; from += 4096) {
+    const found = search(from, from + 4096);
+    if (found) return found;
+    // Let the app do other work between batches of hashes.
+    await new Promise(resolve => setTimeout(resolve, 0));
+  }
+}
+
+// Return a function that tries the nonces from `from` to `to` (exclusive).
+// The full 64-byte blocks of `data` are hashed only once; each nonce then
+// hashes only the last block or two. The search loop is synchronous, because
+// a loop inside an async function is slow after the ES5 build.
+function nonceSearch(data: string, difficulty: number) {
+  const schedule: number[] = new Array(64);
+  const prefixState = SHA256_INIT.slice();
+  const fullBlocks = data.length >> 6;
+  const words: number[] = new Array(32);
+  for (let block = 0; block < fullBlocks; block++) {
+    writeAscii(words, data.slice(block * 64, block * 64 + 64), 16);
+    sha256Block(prefixState, words, 0, schedule);
+  }
+  const tail = data.slice(fullBlocks * 64);
+  const state: number[] = new Array(8);
+  const zeroBits = 32 - 4 * difficulty;
+
+  return (from: number, to: number) => {
+    for (let nonce = from; nonce < to; nonce++) {
+      const rest = tail + nonce;
+      const blocks = rest.length + 9 > 64 ? 2 : 1;
+      writeAscii(words, rest, blocks * 16);
+      words[rest.length >> 2] |= 0x80 << (24 - (rest.length & 3) * 8);
+      words[blocks * 16 - 1] = (fullBlocks * 64 + rest.length) * 8;
+      for (let i = 0; i < 8; i++) state[i] = prefixState[i];
+      for (let block = 0; block < blocks; block++) {
+        sha256Block(state, words, block * 16, schedule);
+      }
+      if (difficulty === 0 || state[0] >>> zeroBits === 0) {
+        return { nonce, hash: toHex(state) };
+      }
+    }
+    return undefined;
+  };
+}
+
+// Write `text` as big-endian 32-bit words and zero the rest of `count` words.
+function writeAscii(words: number[], text: string, count: number) {
+  for (let i = 0; i < count; i++) words[i] = 0;
+  for (let i = 0; i < text.length; i++) {
+    words[i >> 2] |= text.charCodeAt(i) << (24 - (i & 3) * 8);
+  }
+}
+
+function toHex(state: number[]): string {
+  let hex = '';
+  for (let i = 0; i < 8; i++) {
+    hex += ('0000000' + (state[i] >>> 0).toString(16)).slice(-8);
+  }
+  return hex;
+}
+
+// SHA-256 compression of the 16 words at `offset` into `state`.
+function sha256Block(
+  state: number[],
+  words: number[],
+  offset: number,
+  w: number[],
+) {
+  let a = state[0];
+  let b = state[1];
+  let c = state[2];
+  let d = state[3];
+  let e = state[4];
+  let f = state[5];
+  let g = state[6];
+  let h = state[7];
+  for (let i = 0; i < 64; i++) {
+    if (i < 16) {
+      w[i] = words[offset + i] | 0;
+    } else {
+      const x = w[i - 15];
+      const y = w[i - 2];
+      w[i] =
+        ((((x >>> 7) | (x << 25)) ^ ((x >>> 18) | (x << 14)) ^ (x >>> 3)) +
+          w[i - 7] +
+          (((y >>> 17) | (y << 15)) ^ ((y >>> 19) | (y << 13)) ^ (y >>> 10)) +
+          w[i - 16]) |
+        0;
+    }
+    const t1 =
+      (h +
+        (((e >>> 6) | (e << 26)) ^
+          ((e >>> 11) | (e << 21)) ^
+          ((e >>> 25) | (e << 7))) +
+        ((e & f) ^ (~e & g)) +
+        SHA256_K[i] +
+        w[i]) |
+      0;
+    const t2 =
+      ((((a >>> 2) | (a << 30)) ^
+        ((a >>> 13) | (a << 19)) ^
+        ((a >>> 22) | (a << 10))) +
+        ((a & b) ^ (a & c) ^ (b & c))) |
+      0;
+    h = g;
+    g = f;
+    f = e;
+    e = (d + t1) | 0;
+    d = c;
+    c = b;
+    b = a;
+    a = (t1 + t2) | 0;
+  }
+  state[0] = (state[0] + a) | 0;
+  state[1] = (state[1] + b) | 0;
+  state[2] = (state[2] + c) | 0;
+  state[3] = (state[3] + d) | 0;
+  state[4] = (state[4] + e) | 0;
+  state[5] = (state[5] + f) | 0;
+  state[6] = (state[6] + g) | 0;
+  state[7] = (state[7] + h) | 0;
+}
+
+const SHA256_INIT = [
+  0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c,
+  0x1f83d9ab, 0x5be0cd19,
+];
+
+const SHA256_K = [
+  0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1,
+  0x923f82a4, 0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
+  0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786,
+  0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+  0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147,
+  0x06ca6351, 0x14292967, 0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13,
+  0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85, 0xa2bfe8a1, 0xa81a664b,
+  0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+  0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a,
+  0x5b9cca4f, 0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208,
+  0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
+];
