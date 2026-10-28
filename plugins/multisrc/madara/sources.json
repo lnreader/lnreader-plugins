@@ -224,8 +224,7 @@
     "sourceName": "Foxaholic",
     "options": {
       "useNewChapterEndpoint": true,
-      "resolveCoverDataUri": true,
-      "versionIncrements": 1
+      "resolveCoverDataUri": true
     }
   },
   {

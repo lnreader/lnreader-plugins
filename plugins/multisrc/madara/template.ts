@@ -51,7 +51,7 @@ const extractVolumeNumber = (title: string): number | null => {
   const leadingMatch = title.match(/^\s*(\d+(?:\.\d+)?)\b/);
   if (leadingMatch) return parseFloat(leadingMatch[1]);
   const romanMatch = title.match(
-    /(?:(?:vol(?:ume)?|arc|book|part|chapter|season|act|tome)\s+|^\s*)(XX|XIX|XVIII|XVII|XVI|XV|XIV|XIII|XII|XI|IX|X|VIII|VII|VI|IV|V|III|II|I)\b/i,
+    /(?:(?:vol(?:ume)?|arc|book|part|chapter|season|act|tome)\.?\s+|^\\s*)(XX|XIX|XVIII|XVII|XVI|XV|XIV|XIII|XII|XI|IX|X|VIII|VII|VI|IV|V|III|II|I)\b/i,
   );
   if (romanMatch) {
     return ROMAN_NUMERALS[romanMatch[1].toUpperCase()] ?? null;
@@ -115,7 +115,7 @@ export class MadaraPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/madara/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `2.3.${versionIncrements}`;
+    this.version = `2.4.${versionIncrements}`;
     this.options = metadata.options;
     this.filters = metadata.filters;
 
@@ -646,10 +646,70 @@ export class MadaraPlugin implements Plugin.PluginBase {
         }
       }
 
+      const volumeChapterElements = volumeElements.find('.wp-manga-chapter');
+      const volumeChapterSet = new Set(volumeChapterElements.toArray());
+      const standaloneChapters: Omit<Plugin.ChapterItem, 'chapterNumber'>[] =
+        [];
+      loadedCheerio('.wp-manga-chapter').each((_, el) => {
+        if (!volumeChapterSet.has(el)) {
+          const parsed = parseChapterElement(el);
+          if (parsed) standaloneChapters.push(parsed);
+        }
+      });
+      if (standaloneChapters.length > 0) {
+        standaloneChapters.reverse();
+      }
+
       const orderedVolumes =
-        ascScore > descScore ? volumes : [...volumes].reverse();
+        descScore > ascScore ? [...volumes].reverse() : volumes;
       for (const vol of orderedVolumes) {
         orderedRawChapters.push(...vol.chapters);
+      }
+
+      if (standaloneChapters.length > 0) {
+        const firstStandaloneNum = extractChapterNumber(
+          standaloneChapters[0].name,
+        );
+        const lastStandaloneNum = extractChapterNumber(
+          standaloneChapters[standaloneChapters.length - 1].name,
+        );
+        const firstVolNum = extractChapterNumber(
+          orderedRawChapters[0]?.name || '',
+        );
+        const lastVolNum = extractChapterNumber(
+          orderedRawChapters[orderedRawChapters.length - 1]?.name || '',
+        );
+
+        if (
+          firstStandaloneNum !== null &&
+          lastVolNum !== null &&
+          firstStandaloneNum > lastVolNum
+        ) {
+          orderedRawChapters.push(...standaloneChapters);
+        } else if (
+          lastStandaloneNum !== null &&
+          firstVolNum !== null &&
+          lastStandaloneNum < firstVolNum
+        ) {
+          orderedRawChapters.unshift(...standaloneChapters);
+        } else {
+          const firstStandaloneTime = dayjs(
+            standaloneChapters[0].releaseTime || '',
+          ).valueOf();
+          const lastVolTime = dayjs(
+            orderedRawChapters[orderedRawChapters.length - 1]?.releaseTime ||
+              '',
+          ).valueOf();
+          if (
+            !Number.isNaN(firstStandaloneTime) &&
+            !Number.isNaN(lastVolTime) &&
+            firstStandaloneTime > lastVolTime
+          ) {
+            orderedRawChapters.push(...standaloneChapters);
+          } else {
+            orderedRawChapters.unshift(...standaloneChapters);
+          }
+        }
       }
     } else {
       loadedCheerio('.wp-manga-chapter').each((_, element) => {
