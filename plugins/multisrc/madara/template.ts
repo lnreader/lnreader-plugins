@@ -51,7 +51,7 @@ const extractVolumeNumber = (title: string): number | null => {
   const leadingMatch = title.match(/^\s*(\d+(?:\.\d+)?)\b/);
   if (leadingMatch) return parseFloat(leadingMatch[1]);
   const romanMatch = title.match(
-    /(?:(?:vol(?:ume)?|arc|book|part|chapter|season|act|tome)\.?\s+|^\\s*)(XX|XIX|XVIII|XVII|XVI|XV|XIV|XIII|XII|XI|IX|X|VIII|VII|VI|IV|V|III|II|I)\b/i,
+    /(?:(?:vol(?:ume)?|arc|book|part|chapter|season|act|tome)\.?\s+|^\s*)(XX|XIX|XVIII|XVII|XVI|XV|XIV|XIII|XII|XI|IX|X|VIII|VII|VI|IV|V|III|II|I)\b/i,
   );
   if (romanMatch) {
     return ROMAN_NUMERALS[romanMatch[1].toUpperCase()] ?? null;
