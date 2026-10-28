@@ -17,7 +17,15 @@ class HexNovels implements Plugin.PluginBase {
   name = 'HexNovels';
   icon = 'src/ru/hexnovels/icon.png';
   site = 'https://hexnovels.me';
-  version = '1.0.0';
+  version = '1.0.1';
+
+  // Paths are site-relative with a leading slash. Library entries saved by
+  // 1.0.0 lack it, so accept both forms.
+  private normalizePath(path: string): string {
+    return '/' + path.replace(this.site, '').replace(/^\/+/, '');
+  }
+
+  resolveUrl = (path: string) => this.site + this.normalizePath(path);
 
   private async fetchHtml(url: string): Promise<string> {
     const res = await fetchApi(url);
@@ -31,10 +39,10 @@ class HexNovels implements Plugin.PluginBase {
     const seen = new Set<string>();
     $('a[href^="/content/"]').each((_, el) => {
       const a = $(el);
-      const path = a.attr('href')?.substring(1);
+      const path = a.attr('href');
       const name = a.find('p.line-clamp-2').text().trim();
       const cover = a.find('img').attr('src');
-      if (!path || !name || !cover || path.split('/').length !== 2) return;
+      if (!path || !name || !cover || path.split('/').length !== 3) return;
       if (seen.has(path)) return;
       seen.add(path);
       novels.push({ name, path, cover });
@@ -62,10 +70,11 @@ class HexNovels implements Plugin.PluginBase {
     );
   }
 
-  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const html = await this.fetchHtml(`${this.site}/${novelPath}`);
+  async parseNovel(path: string): Promise<Plugin.SourceNovel> {
+    const novelPath = this.normalizePath(path);
+    const html = await this.fetchHtml(this.resolveUrl(novelPath));
     const $ = parseHTML(html);
-    const slug = novelPath.split('/')[1];
+    const slug = novelPath.split('/')[2];
 
     const novel: Plugin.SourceNovel = {
       path: novelPath,
@@ -94,7 +103,7 @@ class HexNovels implements Plugin.PluginBase {
 
     // All chapters (for every translation branch) are embedded in the chapters page
     const chaptersHtml = await this.fetchHtml(
-      `${this.site}/${novelPath}/chapters`,
+      `${this.resolveUrl(novelPath)}/chapters`,
     );
     const unescape = (s: string) => JSON.parse(`"${s}"`) as string;
     const re =
@@ -135,7 +144,7 @@ class HexNovels implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const $ = parseHTML(await this.fetchHtml(`${this.site}/${chapterPath}`));
+    const $ = parseHTML(await this.fetchHtml(this.resolveUrl(chapterPath)));
     const content = $('.typeset-content').first();
     if (!content.length) throw new Error('Chapter content not found');
     // Illustration-only chapters load their (encrypted) images client-side

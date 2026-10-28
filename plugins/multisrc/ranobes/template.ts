@@ -1,4 +1,5 @@
 import { Parser } from 'htmlparser2';
+import { load as parseHTML } from 'cheerio';
 import { fetchApi, FetchInit } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
@@ -28,7 +29,7 @@ export class RanobesPlugin implements Plugin.PluginBase {
     this.name = metadata.sourceName;
     this.icon = 'multisrc/ranobes/ranobes/icon.png';
     this.site = metadata.sourceSite;
-    this.version = '2.0.2';
+    this.version = '2.0.3';
     this.options = metadata.options as RanobesOptions;
   }
 
@@ -429,11 +430,10 @@ export class RanobesPlugin implements Plugin.PluginBase {
   async parseChapter(chapterPath: string): Promise<string> {
     const html = await this.safeFecth(this.site + chapterPath);
 
-    const indexA = html.indexOf('<div class="text" id="arrticle">');
-    const indexB = html.indexOf('<div class="category grey ellipses">', indexA);
-
-    const chapterText = html.substring(indexA, indexB);
-    return chapterText;
+    const $ = parseHTML(html);
+    const content = $('#arrticle');
+    content.find('script, style, ins, [id^="bg-ssp"]').remove();
+    return content.html()?.trim() || '';
   }
 
   async searchNovels(

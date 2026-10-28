@@ -9,7 +9,7 @@ import { storage } from '@libs/storage';
 class RoyalRoad implements Plugin.PluginBase {
   id = 'royalroad';
   name = 'Royal Road';
-  version = '2.3.2';
+  version = '2.3.3';
   icon = 'src/en/royalroad/icon.png';
   site = 'https://www.royalroad.com/';
 
@@ -21,6 +21,24 @@ class RoyalRoad implements Plugin.PluginBase {
       type: 'Switch',
     },
   };
+
+  // Royal Road answers with a bot check (Anubis "Making sure you're not a bot!",
+  // or Cloudflare's "Just a moment...") until it is passed in WebView. Parsing
+  // that page finds nothing, which the app showed as "No results found" or
+  // "No readable content was found", so name the check instead.
+  async fetchHtml(url: string): Promise<string> {
+    const result = await fetchApi(url);
+    const html = await result.text();
+    if (
+      result.headers.get('cf-mitigated') === 'challenge' ||
+      html.includes('id="anubis_challenge"')
+    ) {
+      throw new Error(
+        'Royal Road is showing a bot check. Open it in WebView and wait for the page to load, then try again.',
+      );
+    }
+    return html;
+  }
 
   parseNovels(html: string) {
     const baseUrl = this.site;
@@ -100,14 +118,13 @@ class RoyalRoad implements Plugin.PluginBase {
     }
 
     const link = `${this.site}fictions/search?${params.toString()}`;
-    const body = await fetchApi(link).then(r => r.text());
+    const body = await this.fetchHtml(link);
 
     return this.parseNovels(body);
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const result = await fetchApi(this.site + novelPath);
-    const html = await result.text();
+    const html = await this.fetchHtml(this.site + novelPath);
     const novel: Partial<Plugin.SourceNovel> = {
       path: novelPath,
     };
@@ -303,8 +320,9 @@ class RoyalRoad implements Plugin.PluginBase {
   // LNReader asks for a page when it has no stored chapters for it, e.g. a novel
   // that was saved without its chapter list. Every chapter is on the fiction page.
   async parsePage(novelPath: string, page: string): Promise<Plugin.SourcePage> {
-    const result = await fetchApi(this.site + novelPath);
-    const chapters = this.parseChapters(await result.text());
+    const chapters = this.parseChapters(
+      await this.fetchHtml(this.site + novelPath),
+    );
     // Page "1" is asked for when the app has no stored pages at all, so give it
     // the whole list; any other page is a volume title.
     return {
@@ -316,8 +334,7 @@ class RoyalRoad implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const result = await fetchApi(this.site + chapterPath);
-    const html = await result.text();
+    const html = await this.fetchHtml(this.site + chapterPath);
 
     let state = ParsingState.Idle;
     let stateDepth = 0;
@@ -483,7 +500,7 @@ class RoyalRoad implements Plugin.PluginBase {
       globalFilters: 'true',
     });
     const searchUrl = `${this.site}fictions/search?${params.toString()}`;
-    const body = await fetchApi(searchUrl).then(r => r.text());
+    const body = await this.fetchHtml(searchUrl);
 
     return this.parseNovels(body);
   }
