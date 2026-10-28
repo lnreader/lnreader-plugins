@@ -298,10 +298,11 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   name = 'Fenrir Realm';
   icon = 'src/en/fenrirrealm/icon.png';
   site = 'https://fenrirealm.com';
-  version = '1.1.4';
+  version = '1.1.5';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   private cachedReadToken: CachedReadToken | null = null;
+  private lastMintRefusal: Response | null = null;
 
   hideLocked = storage.get('hideLocked');
   pluginSettings = {
@@ -405,6 +406,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
     chapterTarget?: string | number | null,
     cid?: number | null,
   ): Promise<boolean> {
+    this.lastMintRefusal = null;
     try {
       const payload: Record<string, string> = {};
       if (
@@ -427,7 +429,10 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
           headers,
           body: JSON.stringify(payload),
         });
-        if (!res.ok) return null;
+        if (!res.ok) {
+          this.lastMintRefusal = res;
+          return null;
+        }
         const data = await res.json();
         return data?.active &&
           typeof data.token === 'string' &&
@@ -443,6 +448,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
         data = await requestMint(null);
       }
       if (data) {
+        this.lastMintRefusal = null;
         const numericId =
           typeof cid === 'number' && cid > 0
             ? cid
@@ -457,6 +463,17 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
     } catch {
       return false;
     }
+  }
+
+  private verifyInWebViewError(refusal?: Response | null): Error {
+    const error: Error & { status?: number; response?: Response } = new Error(
+      'Chapter is protected by Cloudflare Turnstile. Please open this chapter in WebView to verify and try again.',
+    );
+    if (refusal && !refusal.ok) {
+      error.status = refusal.status;
+      error.response = refusal;
+    }
+    return error;
   }
 
   private async getReadToken(
@@ -623,13 +640,20 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
 
     const res = await fetchApi(
       `${this.site}/api/new/v2/series?${params.toString()}`,
-    ).then(r =>
-      r.json().catch(() => {
-        throw new Error(
-          'There was an error fetching the data from the server. Please try to open it in WebView',
-        );
-      }),
-    );
+    ).then(async r => {
+      const error: Error & { status?: number } = new Error(
+        'There was an error fetching the data from the server. Please try to open it in WebView',
+      );
+      // Keep the real HTTP status so a block page is distinguishable from a
+      // parsing failure.
+      if (!r.ok) {
+        error.status = r.status;
+        throw error;
+      }
+      return r.json().catch(() => {
+        throw error;
+      });
+    });
 
     return (res.data || []).map((r: APINovel) => this.parseNovelFromApi(r));
   }
@@ -730,6 +754,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
 
   async parseChapter(chapterPath: string): Promise<string> {
     const [slugPath, chapterId] = chapterPath.split('~~');
+    this.lastMintRefusal = null;
     const apiUrl = chapterId
       ? `${this.site}/api/new/v2/chapters/${chapterId}`
       : `${this.site}/api/new/v2/series/${slugPath}`;
@@ -761,6 +786,15 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
         }
         this.captureReadTokenHeader(res, initialCid);
       }
+      if (!res.ok && res.status === 403) {
+        throw this.verifyInWebViewError(
+          this.lastMintRefusal?.status === 403 ? this.lastMintRefusal : res,
+        );
+      }
+    }
+
+    if (res.status === 401 || res.status === 503) {
+      throw this.verifyInWebViewError(res);
     }
 
     if (res.ok) {
@@ -841,9 +875,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
 
       if (json.content_format === 'locked') {
         this.cachedReadToken = null;
-        throw new Error(
-          'Chapter is protected by Cloudflare Turnstile. Please open this chapter in WebView to verify and try again.',
-        );
+        throw this.verifyInWebViewError(this.lastMintRefusal);
       }
 
       if (typeof json.content === 'string' && json.content) {
@@ -852,7 +884,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
     }
 
     // Fallback or old method
-    const url = `${this.site}/series/${slugPath}`;
+    const url = this.resolveUrl(chapterPath);
     const result = await fetchApi(url);
     const body = await result.text();
 
@@ -881,7 +913,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
 
     // Fallback to SvelteKit JSON if HTML parsing fails or is empty
     try {
-      const jsonUrl = `${this.site}/series/${slugPath}/__data.json?x-sveltekit-invalidated=001`;
+      const jsonUrl = `${this.resolveUrl(chapterPath)}/__data.json?x-sveltekit-invalidated=001`;
       const jsonRes = await fetchApi(jsonUrl);
       const json: Nodes = await jsonRes.json();
 
@@ -940,7 +972,12 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   }
 
   resolveUrl(path: string): string {
-    return `${this.site}/series/${path.split('~~')[0]}`;
+    // Volume chapter slugs already include the volume (e.g. "vol1/1"), so a
+    // path built as novel/vol1/vol1/1 must drop the repeated volume segment.
+    const chapterPath = path
+      .split('~~')[0]
+      .replace(/^([^/]+)\/([^/]+)\/\2\//, '$1/$2/');
+    return `${this.site}/series/${chapterPath}`;
   }
 
   filters = {
