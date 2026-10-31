@@ -58,7 +58,7 @@ export class MadaraPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/madara/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `2.3.${versionIncrements}`;
+    this.version = `2.4.${versionIncrements}`;
     this.options = metadata.options;
     this.filters = metadata.filters;
 
@@ -496,20 +496,17 @@ export class MadaraPlugin implements Plugin.PluginBase {
       loadedCheerio = parseHTML(html);
     }
 
-    const chapterElements = loadedCheerio('.wp-manga-chapter');
-    const totalChapters = chapterElements.length;
     const defaultDate = dayjs().format('LL');
-
-    chapterElements.each((chapterIndex, element) => {
+    const parseChapterEl = (element: AnyNode): Plugin.ChapterItem | null => {
       const $el = loadedCheerio(element);
       const $a = $el.find('a');
       const chapterUrl = $a.attr('href') || '';
 
-      if (!chapterUrl || chapterUrl === '#') return;
+      if (!chapterUrl || chapterUrl === '#') return null;
 
       const elementClass = (element as Element).attribs?.class || '';
       const locked = elementClass.includes('premium-block');
-      if (locked && this.hideLocked) return;
+      if (locked && this.hideLocked) return null;
 
       let chapterName = $a.text().trim();
       if (locked) {
@@ -519,15 +516,50 @@ export class MadaraPlugin implements Plugin.PluginBase {
       const rawDate = $el.find('span.chapter-release-date').text().trim();
       const releaseDate = rawDate ? this.parseData(rawDate) : defaultDate;
 
-      chapters.push({
+      return {
         name: chapterName,
         path: chapterUrl.replace(/https?:\/\/.*?\//, ''),
         releaseTime: releaseDate || null,
-        chapterNumber: totalChapters - chapterIndex,
+      };
+    };
+
+    const volumeElements = loadedCheerio('li.parent.has-child');
+    if (volumeElements.length > 0) {
+      volumeElements.each((_, volEl) => {
+        const volChapters: Plugin.ChapterItem[] = [];
+        loadedCheerio(volEl)
+          .find('.wp-manga-chapter')
+          .each((_, element) => {
+            const chap = parseChapterEl(element);
+            if (chap) volChapters.push(chap);
+          });
+        chapters.push(...volChapters.reverse());
       });
+
+      const outsideChapters: Plugin.ChapterItem[] = [];
+      loadedCheerio('.wp-manga-chapter').each((_, element) => {
+        if (!loadedCheerio(element).parents('li.parent.has-child').length) {
+          const chap = parseChapterEl(element);
+          if (chap) outsideChapters.push(chap);
+        }
+      });
+      if (outsideChapters.length > 0) {
+        chapters.push(...outsideChapters.reverse());
+      }
+    } else {
+      const flatChapters: Plugin.ChapterItem[] = [];
+      loadedCheerio('.wp-manga-chapter').each((_, element) => {
+        const chap = parseChapterEl(element);
+        if (chap) flatChapters.push(chap);
+      });
+      chapters.push(...flatChapters.reverse());
+    }
+
+    chapters.forEach((chapter, index) => {
+      chapter.chapterNumber = index + 1;
     });
 
-    novel.chapters = chapters.reverse();
+    novel.chapters = chapters;
     return novel;
   }
 
