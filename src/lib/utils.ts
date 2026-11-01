@@ -34,3 +34,16 @@ export const isUrlAbsolute = (url: string) => {
   }
   return false; // Anything else must be relative
 };
+
+/**
+ * Returns a displayable cover URL, routing external URLs through Vite proxy
+ */
+export const getCoverUrl = (cover?: string | null): string => {
+  if (!cover) {
+    return '/static/coverNotAvailable.webp';
+  }
+  if (cover.startsWith('http://') || cover.startsWith('https://')) {
+    return `/${cover}`;
+  }
+  return cover;
+};

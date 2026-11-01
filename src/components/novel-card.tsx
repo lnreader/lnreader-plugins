@@ -9,6 +9,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Plugin } from '@/types/plugin';
+import { getCoverUrl } from '@/lib/utils';
 
 type NovelCardProps = {
   novel: Plugin.NovelItem;
@@ -25,10 +26,7 @@ export function NovelCard({ novel, onParse }: NovelCardProps) {
     <div className="group cursor-pointer flex flex-col h-full">
       <div className="relative mb-2 overflow-hidden rounded-lg bg-muted aspect-[3/4]">
         <img
-          src={
-            (novel.cover ? '/' : '') + novel.cover ||
-            '/static/coverNotAvailable.webp'
-          }
+          src={getCoverUrl(novel.cover)}
           alt={novel.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
