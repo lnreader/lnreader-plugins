@@ -4,12 +4,30 @@ import { Filters, FilterTypes } from '@libs/filterInputs';
 import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
+async function fetchJson<T = any>(url: string, context: string): Promise<T> {
+  const response = await fetchApi(url);
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch ${context}: ${response.status} ${response.statusText}`,
+    );
+  }
+  const text = await response.text();
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    const preview = text.slice(0, 80).replace(/\s+/g, ' ').trim();
+    throw new Error(
+      `Failed to parse ${context}: Expected JSON response but received unexpected content ("${preview}...")`,
+    );
+  }
+}
+
 class ChikariPlugin implements Plugin.PluginBase {
   id = 'chikari';
   name = 'Chikari';
   icon = 'src/en/chikari/icon.png';
   site = 'https://chikari.moe';
-  version = '1.0.1';
+  version = '1.0.2';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   // Define the filters for the app's filter menu
@@ -69,28 +87,33 @@ class ChikariPlugin implements Plugin.PluginBase {
     },
   } satisfies Filters;
 
-async popularNovels(
+  async popularNovels(
     pageNo: number,
-    { showLatestNovels, filters }: Plugin.PopularNovelsOptions<typeof this.filters>,
+    {
+      showLatestNovels,
+      filters,
+    }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
     const limit = 60;
     const offset = (pageNo - 1) * limit;
 
-    let sort = 'popular'; 
+    let sort = 'popular';
     let genreQuery = '';
 
     if (showLatestNovels) {
       sort = 'updated';
     } else if (filters && filters.sort) {
       // Safely extract string value if wrapped in an object ({ type, value })
-      sort = typeof filters.sort === 'object' ? filters.sort.value : filters.sort;
+      sort =
+        typeof filters.sort === 'object' ? filters.sort.value : filters.sort;
     }
 
     // Safely extract the genres payload
     const genresFilter = filters?.genres;
-    const genreValues = typeof genresFilter === 'object' && 'value' in genresFilter 
-      ? genresFilter.value 
-      : genresFilter;
+    const genreValues =
+      typeof genresFilter === 'object' && 'value' in genresFilter
+        ? genresFilter.value
+        : genresFilter;
 
     if (genreValues) {
       // 1. If passed as an Array
@@ -102,7 +125,7 @@ async popularNovels(
             genreQuery += `&genre=${genre}`;
           }
         });
-      } 
+      }
       // 2. If passed as an Object ({ include: [], exclude: [] })
       else if (typeof genreValues === 'object') {
         if (Array.isArray(genreValues.include)) {
@@ -118,16 +141,15 @@ async popularNovels(
       }
     }
 
-    const url = `${this.site}/api/novels?sort=${sort}${genreQuery}&limit=${limit}&offset=${offset}`;
+    const url = `${this.site}/api/series?type=novel&sort=${sort}${genreQuery}&limit=${limit}&offset=${offset}`;
 
     // console.log('Fetching URL:', url);
 
-    const response = await fetchApi(url);
-    const json = await response.json();
+    const json = await fetchJson(url, 'popular novels');
 
     const novels: Plugin.NovelItem[] = (json.items || []).map((item: any) => ({
       name: item.title,
-      path: item.slug, 
+      path: item.slug,
       cover: item.cover_url || defaultCover,
     }));
 
@@ -140,10 +162,9 @@ async popularNovels(
   ): Promise<Plugin.NovelItem[]> {
     const limit = 36;
     const offset = (pageNo - 1) * limit;
-    const url = `${this.site}/api/novels?sort=popular&q=${encodeURIComponent(searchTerm)}&limit=${limit}&offset=${offset}`;
+    const url = `${this.site}/api/series?type=novel&sort=popular&q=${encodeURIComponent(searchTerm)}&limit=${limit}&offset=${offset}`;
 
-    const response = await fetchApi(url);
-    const json = await response.json();
+    const json = await fetchJson(url, 'search novels');
 
     const novels: Plugin.NovelItem[] = (json.items || []).map((item: any) => ({
       name: item.title,
@@ -156,17 +177,18 @@ async popularNovels(
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
     const detailUrl = `${this.site}/api/novels/${novelPath}`;
-    const detailResponse = await fetchApi(detailUrl);
-    const detailJson = await detailResponse.json();
+    const detailJson = await fetchJson(detailUrl, 'novel details');
 
-    const authorName = detailJson.authors && detailJson.authors.length > 0
-      ? detailJson.authors.map((a: any) => a.name).join(', ')
-      : 'Unknown';
+    const authorName =
+      detailJson.authors && detailJson.authors.length > 0
+        ? detailJson.authors.map((a: any) => a.name).join(', ')
+        : 'Unknown';
 
     // Parse the genres array into a comma-separated string
-    const genres = detailJson.genres && detailJson.genres.length > 0
-      ? detailJson.genres.map((g: any) => g.name).join(', ')
-      : '';
+    const genres =
+      detailJson.genres && detailJson.genres.length > 0
+        ? detailJson.genres.map((g: any) => g.name).join(', ')
+        : '';
 
     const novel: Plugin.SourceNovel = {
       path: novelPath,
@@ -175,19 +197,21 @@ async popularNovels(
       author: authorName,
       summary: detailJson.description || '',
       genres: genres, // Handled here!
-      status: detailJson.status === 'releasing' ? NovelStatus.Ongoing : NovelStatus.Completed,
+      status:
+        detailJson.status === 'releasing'
+          ? NovelStatus.Ongoing
+          : NovelStatus.Completed,
     };
 
     const chapters: Plugin.ChapterItem[] = [];
-    
+
     let offset = 0;
     const limit = 500;
     let hasMoreChapters = true;
 
     while (hasMoreChapters) {
       const chaptersUrl = `${this.site}/api/novels/${novelPath}/chapters?order=asc&limit=${limit}&offset=${offset}`;
-      const chaptersResponse = await fetchApi(chaptersUrl);
-      const chaptersJson = await chaptersResponse.json();
+      const chaptersJson = await fetchJson(chaptersUrl, 'chapters');
 
       const fetchedChapters = chaptersJson.items;
 
@@ -218,12 +242,11 @@ async popularNovels(
 
   async parseChapter(chapterPath: string): Promise<string> {
     const url = `${this.site}/${chapterPath}`;
-    
-    const response = await fetchApi(url);
-    const json = await response.json();
+
+    const json = await fetchJson(url, 'chapter');
 
     const rawText = json.body || '';
-    
+
     const chapterHtml = rawText
       .split('\n')
       .map((paragraph: string) => `<p>${paragraph.trim()}</p>`)
