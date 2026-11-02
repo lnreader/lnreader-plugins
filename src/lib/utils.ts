@@ -42,6 +42,9 @@ export const getCoverUrl = (cover?: string | null): string => {
   if (!cover) {
     return '/static/coverNotAvailable.webp';
   }
+  if (cover.startsWith('//')) {
+    return `/https:${cover}`;
+  }
   if (cover.startsWith('http://') || cover.startsWith('https://')) {
     return `/${cover}`;
   }

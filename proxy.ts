@@ -63,18 +63,16 @@ const proxySettingMiddleware: Connect.NextHandleFunction = (req, res) => {
 };
 
 const getProxyTargetUrl = (req: Connect.IncomingMessage): string => {
-  if (req.url?.startsWith('http://') || req.url?.startsWith('https://')) {
-    return req.url;
+  const url = req.url || '';
+  if (
+    (url.startsWith('http://') || url.startsWith('https://')) &&
+    !url.includes('localhost')
+  ) {
+    return url;
   }
   const protocol = req.originalUrl?.startsWith('/http:') ? 'http:' : 'https:';
-  const urlPath = req.url || '';
-  if (urlPath.startsWith('//')) {
-    return protocol + urlPath;
-  }
-  if (urlPath.startsWith('/')) {
-    return `${protocol}/${urlPath}`;
-  }
-  return `${protocol}//${urlPath}`;
+  const cleanPath = url.replace(/^\/+/, '');
+  return `${protocol}//${cleanPath}`;
 };
 
 const proxyHandlerMiddle: Connect.NextHandleFunction = (req, res) => {
@@ -164,11 +162,7 @@ const proxyRequest: Connect.SimpleHandleFunction = (req, res) => {
       (error, stdout) => {
         if (error) {
           res.statusCode = 500;
-          res.write(
-            Buffer.isBuffer(stdout) && stdout.length > 0
-              ? stdout
-              : `exec error: ${error}`,
-          );
+          res.write(`exec error: ${error}`);
           res.end();
           return;
         }
