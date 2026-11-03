@@ -1,3 +1,14 @@
+/**
+ * BROKEN - مركز الروايات (markazriwayat.com) serves no novel content on any route:
+ * a Cloudflare challenge answers direct requests, and the origin behind it only
+ * returns a "Coming Soon" placeholder with a theme 404 on every deeper path.
+ * There is nothing left to parse, so this source is excluded from production
+ * compilation by the `.broken.ts` suffix.
+ *
+ * Successor source: Galaxy Novels (galaxynovels.com) - announced by the same
+ * operators on their Coming Soon page as their affiliated site - is already
+ * available as the `galaxynovels` plugin.
+ */
 import { load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
@@ -11,7 +22,6 @@ class Markazriwayat implements Plugin.PluginBase {
   version = '1.0.0';
   icon = 'src/ar/markazriwayat/icon.png';
   site = 'https://markazriwayat.com/';
-
 
   filters = {
     order: {
@@ -82,15 +92,16 @@ class Markazriwayat implements Plugin.PluginBase {
     try {
       if (page > 1) return [];
       const apiUrl = `${this.site}wp-json/theam/v1/novel-search?term=${encodeURIComponent(searchTerm)}&per_page=20`;
-      const res = await fetchApi(apiUrl)
+      const res = await fetchApi(apiUrl);
       if (!res.ok) return [];
       const data = await res.json();
       return (data.items || []).map(
         (item: { title: string; link: string; cover?: string }) => ({
-        name: item.title,
-        path: item.link.replace(this.site, ''),
-        cover: item.cover || defaultCover,
-      }));
+          name: item.title,
+          path: item.link.replace(this.site, ''),
+          cover: item.cover || defaultCover,
+        }),
+      );
     } catch {
       // Fallback: use library search HTML
       try {
