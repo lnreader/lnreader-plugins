@@ -5,6 +5,19 @@ import { NovelStatus } from '@libs/novelStatus';
 import { Filters } from '@libs/filterInputs';
 import { load } from 'cheerio';
 
+const escapeMap: Record<string, string> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+  '\xA0': '&nbsp;',
+  '\u200C': '',
+};
+const escapeHtmlRegex = /[&<>"'\xA0\u200C]/g;
+const escapeHtml = (text: string) =>
+  text.replace(escapeHtmlRegex, char => escapeMap[char]);
+
 type ReadNovelFullOptions = {
   lang?: string;
   versionIncrements?: number;
@@ -55,7 +68,7 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/readnovelfull/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `2.3.${3 + versionIncrements}`;
+    this.version = `2.3.${4 + versionIncrements}`;
     this.options = metadata.options;
     this.filters = metadata.filters;
     if (this.options?.imageReferer) {
@@ -70,6 +83,19 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
   lastSearch: number | null = null;
   searchInterval = 3400;
 
+  private resolvePath(href: string): string {
+    return href.startsWith('/')
+      ? href.substring(1)
+      : href.startsWith('http')
+        ? new URL(href).pathname.substring(1)
+        : href;
+  }
+
+  private resolveCover(cover?: string): string | undefined {
+    if (!cover) return undefined;
+    return cover.startsWith('http') ? cover : new URL(cover, this.site).href;
+  }
+
   async sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
@@ -82,7 +108,14 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
     const { listClass } = this.options;
     const isListStart = (cls?: string) => {
       if (!cls) return false;
-      if (listClass) return cls.split(/\s+/).includes(listClass);
+      if (listClass) {
+        return (
+          cls === listClass ||
+          cls.startsWith(listClass + ' ') ||
+          cls.endsWith(' ' + listClass) ||
+          cls.includes(' ' + listClass + ' ')
+        );
+      }
       return cls.includes('archive') || cls === 'col-content'; // legacy behaviour
     };
 
@@ -118,8 +151,9 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
                 attribs['data-original'],
                 attribs.src,
               ].find(attr => attr && !attr.startsWith('data:'));
-              if (cover) {
-                tempNovel.cover = new URL(cover, this.site).href;
+              const resolvedCover = this.resolveCover(cover);
+              if (resolvedCover) {
+                tempNovel.cover = resolvedCover;
               }
             }
             break;
@@ -132,7 +166,7 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
             if (state === ParsingState.NovelName) {
               const href = attribs.href;
               if (href) {
-                tempNovel.path = new URL(href, this.site).pathname.substring(1);
+                tempNovel.path = this.resolvePath(href);
                 tempNovel.name = attribs.title;
               }
             }
@@ -467,8 +501,9 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
                 attribs.src,
               ].find(attr => attr && !attr.startsWith('data:'));
               const name = attribs.title;
-              if (cover) {
-                novel.cover = new URL(cover, this.site).href;
+              const resolvedCover = this.resolveCover(cover);
+              if (resolvedCover) {
+                novel.cover = resolvedCover;
               }
               if (name) {
                 novel.name = name;
@@ -782,10 +817,7 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
             }
 
             if (chapterHref !== undefined) {
-              const path = new URL(chapterHref, this.site).pathname.substring(
-                1,
-              );
-              tempAjaxChapter.path = path;
+              tempAjaxChapter.path = this.resolvePath(chapterHref);
               tempAjaxChapter.name = initialName;
             }
           },
@@ -861,18 +893,6 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
     const popState = () =>
       stateStack.length > 1 ? stateStack.pop() : currentState();
 
-    const escapeMap: Record<string, string> = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#39;',
-      ' ': '&nbsp;',
-      '\u200C': '', // this is probably a breaking change, report if paragraphs look weird
-    };
-    const escapeHtml = (text: string) =>
-      text.replace(/[&<>"'\xA0\u200C]/g, char => escapeMap[char]);
-
     const parser = new Parser({
       onopentag(name, attribs) {
         const state = currentState();
@@ -919,31 +939,38 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
 
           if (attrKeys.length === 0) {
             chapterHtml.push(`<${name}>`);
-          } else if (attrKeys.every(key => attribs[key].trim() === '')) {
-            // Handle tags with empty attributes as text content
-            // eg: novel/rising-up-from-a-nobleman-to-intergalactic-warlord/chapter-184
-            skipClosingTag = true;
-            currentTagToSkip = name;
-            const uppercaseName = name.replace(/\b\w/g, char =>
-              char.toUpperCase(),
-            );
-            chapterHtml.push(
-              escapeHtml(`<${uppercaseName} ${attrKeys.join(' ')}>`),
-            );
           } else {
-            // Normal tag with attributes
-            const attrString = attrKeys
-              .map(key => ` ${key}="${attribs[key].replace(/"/g, '&quot;')}"`)
-              .join('');
-            chapterHtml.push(`<${name}${attrString}>`);
+            let hasNonEmptyAttr = false;
+            let attrString = '';
+            for (const key of attrKeys) {
+              const val = attribs[key];
+              if (val.trim() !== '') {
+                hasNonEmptyAttr = true;
+              }
+              attrString += ` ${key}="${val.replace(/"/g, '&quot;')}"`;
+            }
+
+            if (!hasNonEmptyAttr) {
+              // Handle tags with empty attributes as text content
+              // eg: novel/rising-up-from-a-nobleman-to-intergalactic-warlord/chapter-184
+              skipClosingTag = true;
+              currentTagToSkip = name;
+              const uppercaseName = name.replace(/\b\w/g, char =>
+                char.toUpperCase(),
+              );
+              chapterHtml.push(
+                escapeHtml(`<${uppercaseName} ${attrKeys.join(' ')}>`),
+              );
+            } else {
+              chapterHtml.push(`<${name}${attrString}>`);
+            }
           }
         }
       },
 
       ontext(text) {
         if (currentState() === ParsingState.Chapter) {
-          const data = escapeHtml(text);
-          chapterHtml.push(data.trim().replace(/\s\s+/, ' '));
+          chapterHtml.push(escapeHtml(text).replace(/\s+/g, ' '));
         }
       },
 
@@ -995,8 +1022,11 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
     page: number,
   ): Promise<Plugin.NovelItem[]> {
     const now = Date.now();
-    if (this.lastSearch && now - this.lastSearch <= this.searchInterval) {
-      await this.sleep(this.searchInterval);
+    if (this.lastSearch) {
+      const elapsed = now - this.lastSearch;
+      if (elapsed < this.searchInterval) {
+        await this.sleep(this.searchInterval - elapsed);
+      }
     }
 
     const {
