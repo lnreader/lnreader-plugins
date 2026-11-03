@@ -49,8 +49,10 @@ function describeCloudflareChallenge(res) {
 function installChallengeDetector() {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (...args) => {
-    const res = await originalFetch(...args);
+    // Attribute the response to the step that sent the request, not to
+    // whichever step is current when a late response finally arrives.
     const step = currentStep;
+    const res = await originalFetch(...args);
     if (step && !step.blockedBy) {
       const reason = describeCloudflareChallenge(res);
       if (reason) step.blockedBy = reason;

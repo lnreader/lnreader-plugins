@@ -95,3 +95,52 @@ test('challenged response does not downgrade a passing step', async () => {
   });
   assert.equal(step.status, 'PASS');
 });
+
+test('late challenge response from an earlier step does not mask a later real failure', async () => {
+  let releaseLate;
+  const lateGate = new Promise(resolve => (releaseLate = resolve));
+  const server = await new Promise(resolve => {
+    const s = http.createServer(async (req, res) => {
+      if (req.url === '/late') {
+        // Headers are withheld until the later step releases them.
+        await lateGate;
+        res.writeHead(403, { 'cf-mitigated': 'challenge' });
+        return res.end('<html>Just a moment...</html>');
+      }
+      if (req.url === '/release') releaseLate();
+      res.writeHead(200, { 'content-type': 'text/html' });
+      res.end('<html></html>');
+    });
+    s.listen(0, '127.0.0.1', () => resolve(s));
+  });
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'live-check-test-'));
+  const file = path.join(dir, 'plugin.js');
+  await fs.writeFile(
+    file,
+    `const site = 'http://127.0.0.1:${server.address().port}';
+     let late;
+     module.exports = { default: {
+       site,
+       popularNovels: async () => {
+         // Not awaited: the request outlives this step.
+         late = fetch(site + '/late');
+         return [{ name: 'a', path: '/a' }];
+       },
+       searchNovels: async () => {
+         await fetch(site + '/release');
+         await late; // the challenge arrives while this step is current
+         throw new Error('real plugin bug');
+       },
+     } };`,
+  );
+  try {
+    const { steps } = await checkPlugin(file);
+    const byName = Object.fromEntries(steps.map(s => [s.name, s]));
+    assert.equal(byName.popularNovels.status, 'PASS');
+    assert.equal(byName.searchNovels.status, 'FAIL');
+    assert.equal(byName.searchNovels.detail, 'real plugin bug');
+  } finally {
+    server.close();
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
