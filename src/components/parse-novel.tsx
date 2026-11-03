@@ -22,6 +22,7 @@ import {
 import { useAppStore } from '@/store';
 import { Plugin } from '@/types/plugin';
 import { useEpubExport } from '@/hooks/useEpubExport';
+import { getCoverUrl } from '@/lib/utils';
 
 type ParseNovelSectionProps = {
   onNavigateToParseChapter?: () => void;
@@ -241,10 +242,7 @@ const ParseNovelSection = React.memo(function ParseNovelSection({
                     }
                   >
                     <img
-                      src={
-                        (sourceNovel.cover ? '/' : '') + sourceNovel.cover ||
-                        '/static/coverNotAvailable.webp'
-                      }
+                      src={getCoverUrl(sourceNovel.cover)}
                       alt={sourceNovel.name}
                       className="w-32 h-48 rounded-lg object-cover hover:opacity-80 transition-opacity"
                       title="Click to copy cover URL"

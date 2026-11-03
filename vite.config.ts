@@ -19,6 +19,7 @@ export default defineConfig({
       configureServer: server => {
         server.middlewares.use('/settings', proxySettingMiddleware);
         server.middlewares.use('/https:', proxyHandlerMiddle);
+        server.middlewares.use('/http:', proxyHandlerMiddle);
       },
     },
   ],

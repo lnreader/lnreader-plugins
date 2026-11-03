@@ -62,8 +62,21 @@ const proxySettingMiddleware: Connect.NextHandleFunction = (req, res) => {
   });
 };
 
+const getProxyTargetUrl = (req: Connect.IncomingMessage): string => {
+  const url = req.url || '';
+  if (
+    (url.startsWith('http://') || url.startsWith('https://')) &&
+    !url.includes('localhost')
+  ) {
+    return url;
+  }
+  const protocol = req.originalUrl?.startsWith('/http:') ? 'http:' : 'https:';
+  const cleanPath = url.replace(/^\/+/, '');
+  return `${protocol}//${cleanPath}`;
+};
+
 const proxyHandlerMiddle: Connect.NextHandleFunction = (req, res) => {
-  const rawUrl = 'https:' + req.url;
+  const rawUrl = getProxyTargetUrl(req);
   if (req.headers['access-control-request-method']) {
     res.setHeader(
       'access-control-allow-methods',
@@ -143,17 +156,21 @@ const proxyRequest: Connect.SimpleHandleFunction = (req, res) => {
         }
       : {};
 
-    exec(curl, options, (error, stdout) => {
-      if (error) {
-        res.statusCode = 500;
-        res.write(`exec error: ${error}`);
+    exec(
+      curl,
+      { ...options, encoding: 'buffer', maxBuffer: 50 * 1024 * 1024 },
+      (error, stdout) => {
+        if (error) {
+          res.statusCode = 500;
+          res.write(`exec error: ${error}`);
+          res.end();
+          return;
+        }
+        res.statusCode = 200;
+        res.write(stdout);
         res.end();
-        return;
-      }
-      res.statusCode = 200;
-      res.write(stdout);
-      res.end();
-    });
+      },
+    );
   } else if (settings.fetchMode === FetchMode.NODE_FETCH) {
     const headers = new Headers();
     if (settings.useUserAgent)
@@ -170,7 +187,8 @@ const proxyRequest: Connect.SimpleHandleFunction = (req, res) => {
             res.setHeader(key, val);
           }
         });
-        res.write(await res2.text());
+        const arrayBuffer = await res2.arrayBuffer();
+        res.write(Buffer.from(arrayBuffer));
         res.end();
       })
       .catch(err => {
