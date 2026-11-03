@@ -389,12 +389,14 @@ export class MadaraPlugin implements Plugin.PluginBase {
           .get()
           .join(', ');
       const nhvStatus = loadedCheerio('.nhv-novel-status').text().trim();
-      if (!novel.status && nhvStatus)
-        novel.status = nhvStatus.includes('مستمرة')
-          ? NovelStatus.Ongoing
-          : nhvStatus.includes('متوقفة')
-            ? NovelStatus.OnHiatus
-            : NovelStatus.Completed;
+      if (!novel.status && nhvStatus) {
+        // Only recognised labels are mapped; unknown values stay unset.
+        if (nhvStatus.includes('مستمرة')) novel.status = NovelStatus.Ongoing;
+        else if (nhvStatus.includes('متوقفة'))
+          novel.status = NovelStatus.OnHiatus;
+        else if (nhvStatus.includes('مكتملة'))
+          novel.status = NovelStatus.Completed;
+      }
       if (!novel.rating) {
         const nhvRating = parseFloat(
           loadedCheerio('.nhv-simple-rating__avg').text().trim(),
@@ -407,7 +409,8 @@ export class MadaraPlugin implements Plugin.PluginBase {
     {
       if (!novel.genres)
         novel.genres = loadedCheerio('.genres-content').text().trim();
-      if (!novel.status)
+      // An NHV page that carries a status label was handled above.
+      if (!novel.status && !loadedCheerio('.nhv-novel-status').text().trim())
         novel.status = loadedCheerio('.manga-status')
           .text()
           .trim()
