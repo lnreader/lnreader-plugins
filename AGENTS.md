@@ -67,6 +67,7 @@ Read `README.md` for the project entry points, `docs/quickstart.md` before addin
 
 ## Multi-source plugins
 
+- Locate a multi-source plugin by domain or ID (e.g. from an issue label like `plugin: free web novel[fwn.com]` or target URL) by searching `plugins/multisrc/*/sources.json`, not `plugins/<language>/` (which contains only disposable generated outputs).
 - Treat files named like `plugins/<language>/<name>[<generator>].ts` as generated output. Do not
   edit or commit them; they are gitignored and ESLint intentionally excludes them.
 - Change the generator's `sources.json`, `template.ts`, filters, custom assets, or `generator.js`
@@ -138,6 +139,7 @@ Use Conventional Commits: `type(scope): description`
 - Lowercase type, imperative mood ("add" not "added"/"adds")
 
 Examples:
+
 - feat(<generator>): add new source
 - fix(<language>/<plugin>): correct chapter list parsing
 
