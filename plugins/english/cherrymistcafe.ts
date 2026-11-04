@@ -149,10 +149,15 @@ class CherryMistCafePlugin implements Plugin.PluginBase {
   name = 'Cherry Mist Cafe';
   icon = 'src/en/cherrymistcafe/icon.png';
   site = 'https://cherrymist.cafe';
-  version = '2.0.0';
+  version = '2.0.1';
 
   private async getJson<T>(url: string): Promise<T> {
-    const res = await fetchApi(url);
+    const res = await fetchApi(url, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36',
+      },
+    });
     if (!res.ok) {
       // The API answers misses with {"error":"Not found"}; without this a
       // removed series parses as an untitled novel with no chapters.
