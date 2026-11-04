@@ -7,7 +7,7 @@ import { defaultCover } from '@libs/defaultCover';
 class dilartube implements Plugin.PluginBase {
   id = 'dilartube';
   name = 'dilar tube';
-  version = '1.0.2';
+  version = '1.0.3';
   icon = 'src/ar/dilartube/icon.png';
   site = 'https://golden.rest/';
 
@@ -153,15 +153,18 @@ class dilartube implements Plugin.PluginBase {
     searchTerm: string,
     // page: number,
   ): Promise<Plugin.NovelItem[]> {
-    const formData = new FormData();
-    formData.append('query', searchTerm);
-    formData.append('includes', '["Manga","Team","Member"]');
-    const response = await fetchApi('https://dilar.tube/api/quick_search', {
+    const response = await fetchApi(`${this.site}api/quick_search`, {
       method: 'POST',
-      body: formData,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: searchTerm,
+        includes: ['Manga', 'Team', 'Member'],
+      }),
     }).then(r => r.json());
-    const data: ApiResponse = response[0];
-    return this.parseNovels(data);
+    if (!Array.isArray(response)) {
+      throw new Error(response?.error ?? 'Unexpected search response');
+    }
+    return response[0] ? this.parseNovels(response[0]) : [];
   }
 
   filters: Filters | undefined = undefined;
