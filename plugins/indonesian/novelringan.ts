@@ -3,12 +3,38 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 
+const base64Chars =
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+const decodeBase64Utf8 = (input: string): string => {
+  const clean = input.replace(/=+$/, '');
+  let bits = 0;
+  let bitCount = 0;
+  let escaped = '';
+  for (let i = 0; i < clean.length; i++) {
+    const index = base64Chars.indexOf(clean.charAt(i));
+    if (index < 0) continue;
+    bits = (bits << 6) | index;
+    bitCount += 6;
+    if (bitCount >= 8) {
+      bitCount -= 8;
+      const byte = (bits >> bitCount) & 0xff;
+      escaped += '%' + ('0' + byte.toString(16)).slice(-2);
+    }
+  }
+  try {
+    return decodeURIComponent(escaped);
+  } catch {
+    return '';
+  }
+};
+
 class NovelRingan implements Plugin.PluginBase {
   id = 'novelringan.com';
   name = 'NovelRingan';
   icon = 'src/id/novelringan/icon.png';
   site = 'https://novelringan.com/';
-  version = '1.0.0';
+  version = '1.1.0';
   coverUriPrefix = 'https://i0.wp.com/novelringan.com/wp-content/uploads/';
 
   parseNovels(loadedCheerio: CheerioAPI) {
@@ -71,7 +97,7 @@ class NovelRingan implements Plugin.PluginBase {
       path: novelPath,
       name: styletag[0] || loadedCheerio('.entry-title').text() || 'Untitled',
       author: styletag[1],
-      summary: loadedCheerio('.maininfo span p').text(),
+      summary: loadedCheerio('.maininfo > span > p').first().text().trim(),
       chapters: [],
     };
 
@@ -120,9 +146,20 @@ class NovelRingan implements Plugin.PluginBase {
 
     const loadedCheerio = parseHTML(body);
 
-    loadedCheerio('.entry-content div[style="display:none"]').remove();
+    const content = loadedCheerio('#nr-nv-content').length
+      ? loadedCheerio('#nr-nv-content')
+      : loadedCheerio('.entry-content');
 
-    const chapterText = loadedCheerio('.entry-content').html() || '';
+    content.find('div[style*="display:none"], .nrln, script, ins').remove();
+
+    // The site hides some words in base64 `data-t` attributes and paints them
+    // with CSS; put the decoded text back inline.
+    content.find('.nr-shadow').each((i, el) => {
+      const encoded = loadedCheerio(el).attr('data-t');
+      loadedCheerio(el).replaceWith(encoded ? decodeBase64Utf8(encoded) : '');
+    });
+
+    const chapterText = content.html() || '';
 
     return chapterText;
   }
