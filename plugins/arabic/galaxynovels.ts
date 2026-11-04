@@ -11,7 +11,7 @@ type ChapterJSON = {
   label: string;
   title: string;
   url: string;
-  content_api: string;
+  content_api?: string;
   date_iso: string;
 };
 
@@ -21,19 +21,23 @@ type ChaptersIndex = {
   chapters: ChapterJSON[];
 };
 
-type ChapterContentResponse = {
-  schema: number;
-  data: {
-    content_html: string;
-    display_title: string;
-    navigation: { next_url: string; previous_url: string };
-  };
+type ChaptersManifest = {
+  novel_id: number;
+  total: number;
+  pack_url: string;
+  live_tail: ChapterJSON[];
+};
+
+type ChaptersPack = {
+  novel_id: number;
+  total: number;
+  chapters: ChapterJSON[];
 };
 
 class GalaxyNovels implements Plugin.PluginBase {
   id = 'galaxynovels';
   name = 'Galaxy Novels';
-  version = '1.1.1';
+  version = '1.1.2';
   icon = 'src/ar/galaxynovels/icon.png';
   site = 'https://galaxynovels.com/';
 
@@ -61,6 +65,71 @@ class GalaxyNovels implements Plugin.PluginBase {
   } satisfies Filters;
 
   private baseUrl = 'https://galaxynovels.com';
+
+  private toChapterPath(url: string | undefined): string {
+    if (!url) return '';
+    return url.startsWith('http') ? new URL(url).pathname : url;
+  }
+
+  private toChapterItem(
+    ch: ChapterJSON,
+    novelPath: string,
+  ): Plugin.ChapterItem {
+    return {
+      name: ch.label + (ch.title ? `: ${ch.title}` : ''),
+      path: this.toChapterPath(ch.url) || `${novelPath}chapter-${ch.id}/`,
+      chapterNumber: ch.position,
+      releaseTime: ch.date_iso?.split('T')[0] || '',
+    };
+  }
+
+  // The novel page only renders the latest 30 chapters (data-per-page="30")
+  // and the data-index-url endpoint is currently empty, so the full list is
+  // read from the static chapter manifest instead: the manifest points at a
+  // pack file holding every chapter, plus a live_tail with the newest ones.
+  // The tail is merged over the pack the way the site's own reader does, so
+  // chapters published after the pack was generated are included. Anything
+  // missing or malformed here returns null so parseNovel falls back to the
+  // page-derived list instead of an empty chapter list.
+  private async fetchManifestChapters(
+    manifestUrl: string | undefined,
+    novelPath: string,
+  ): Promise<Plugin.ChapterItem[] | null> {
+    if (!manifestUrl) return null;
+    try {
+      const manifestEndpoint = manifestUrl.startsWith('http')
+        ? manifestUrl
+        : `${this.baseUrl}${manifestUrl}`;
+      const manifest = await this.fetchJson<ChaptersManifest>(manifestEndpoint);
+      if (!manifest?.pack_url) return null;
+
+      const packEndpoint = manifest.pack_url.startsWith('http')
+        ? manifest.pack_url
+        : `${this.baseUrl}${manifest.pack_url}`;
+      const pack = await this.fetchJson<ChaptersPack>(packEndpoint);
+      if (!pack || !Array.isArray(pack.chapters)) return null;
+
+      const byId = new Map<number, ChapterJSON>();
+      for (const ch of pack.chapters) {
+        if (ch && typeof ch.id === 'number' && ch.url) byId.set(ch.id, ch);
+      }
+      const liveTail = Array.isArray(manifest.live_tail)
+        ? manifest.live_tail
+        : [];
+      for (const ch of liveTail) {
+        if (ch && typeof ch.id === 'number' && ch.url) byId.set(ch.id, ch);
+      }
+
+      const merged = Array.from(byId.values())
+        .filter(ch => typeof ch.position === 'number')
+        .sort((a, b) => a.position - b.position);
+      if (merged.length === 0) return null;
+
+      return merged.map(ch => this.toChapterItem(ch, novelPath));
+    } catch {
+      return null;
+    }
+  }
 
   private async fetchHtml(url: string): Promise<string> {
     const res = await fetchApi(url);
@@ -148,38 +217,27 @@ class GalaxyNovels implements Plugin.PluginBase {
     const status = statusMap[statusText] || NovelStatus.Unknown;
 
     const chaptersContainer = $('[data-wor-chapters-container]');
-    let chaptersIndexUrl = chaptersContainer.attr('data-index-url');
+    const chaptersIndexUrl = chaptersContainer.attr('data-index-url');
     const chaptersManifestUrl = chaptersContainer.attr('data-manifest-url');
 
     let chapters: Plugin.ChapterItem[] = [];
 
-    if (!chaptersIndexUrl && chaptersManifestUrl) {
-      // The page only renders 30 chapters; the full list is in the manifest's pack
-      try {
-        const manifest = await this.fetchJson<{ pack_url?: string }>(
-          chaptersManifestUrl,
-        );
-        chaptersIndexUrl = manifest.pack_url;
-      } catch {
-        // fallback to HTML parsing
-      }
+    const manifestChapters = await this.fetchManifestChapters(
+      chaptersManifestUrl,
+      novelPath,
+    );
+    if (manifestChapters && manifestChapters.length > 0) {
+      chapters = manifestChapters;
     }
 
-    if (chaptersIndexUrl) {
+    if (chapters.length === 0 && chaptersIndexUrl) {
       try {
         const indexUrl = chaptersIndexUrl.startsWith('http')
           ? chaptersIndexUrl
           : `${this.baseUrl}${chaptersIndexUrl}`;
         const index = await this.fetchJson<ChaptersIndex>(indexUrl);
 
-        chapters = index.chapters.map(ch => ({
-          name: ch.label + (ch.title ? `: ${ch.title}` : ''),
-          path: ch.url
-            ? new URL(ch.url, this.site).pathname
-            : `${novelPath}chapter-${ch.id}/`,
-          chapterNumber: ch.position,
-          releaseTime: ch.date_iso?.split('T')[0] || '',
-        }));
+        chapters = index.chapters.map(ch => this.toChapterItem(ch, novelPath));
       } catch {
         // fallback to HTML parsing
       }
@@ -199,7 +257,10 @@ class GalaxyNovels implements Plugin.PluginBase {
 
         if (!chapterLink) return;
 
-        const path = new URL(chapterLink, this.site).pathname;
+        // Only the full permalink resolves on the site; the data-chapter-id
+        // attribute holds the WordPress post id, and …/chapter-<post-id>/
+        // answers 404.
+        const path = this.toChapterPath(chapterLink);
         const numMatch = path.match(/chapter-(\d+)/);
         const chapterNumber = numMatch ? parseInt(numMatch[1]) : 0;
 
@@ -210,6 +271,9 @@ class GalaxyNovels implements Plugin.PluginBase {
           releaseTime,
         });
       });
+      // The page lists the newest chapter first (data-order="desc"), but the
+      // app expects the oldest first.
+      if (chaptersContainer.attr('data-order') === 'desc') chapters.reverse();
     }
 
     return {
@@ -225,32 +289,29 @@ class GalaxyNovels implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    // Only legacy `chapter-<id>/` paths carry the post id; real URLs are `chapter-<number>/<slug>/`
-    const idMatch = chapterPath.match(/chapter-(\d+)\/?$/);
-    const chapterId = idMatch?.[1];
-
-    if (chapterId) {
-      const apiUrl = `${this.baseUrl}/wp-json/wor-reader-app/v1/chapters/${chapterId}`;
-      try {
-        const response = await this.fetchJson<ChapterContentResponse>(apiUrl);
-        if (response.data?.content_html) {
-          return response.data.content_html;
-        }
-      } catch {
-        // fallback to HTML
-      }
-    }
-
     const url = `${this.baseUrl}${chapterPath}`;
     const html = await this.fetchHtml(url);
     const $ = loadCheerio(html);
-    $('[data-wor-decoy], [hidden]').remove();
-    const content = $(
-      '.wor-reader-text-surface, article.wor-chapter-content, .wor-chapter-text, .entry-content',
-    )
-      .first()
-      .html();
-    return content || '<p>Content not available.</p>';
+
+    // The body is server-rendered inside the article marked up as
+    // https://schema.org/Chapter, as the element with itemprop="text". Pick
+    // the first candidate that actually carries text: a themed wrapper can be
+    // present but empty, and cheerio selections are always truthy.
+    for (const selector of [
+      'article[itemtype*="Chapter"] [itemprop="text"]',
+      '[itemprop="text"]',
+      '[data-wor-reader-text]',
+      '.wor-reader-text-surface',
+    ]) {
+      const candidate = $(selector);
+      if (candidate.length && candidate.text().trim()) {
+        return candidate.html() || '';
+      }
+    }
+
+    // Throw rather than return placeholder text, which the reader would show
+    // (and a download would save) as if it were the chapter.
+    throw new Error('Chapter text not found on the page, open it in WebView.');
   }
 
   async searchNovels(
