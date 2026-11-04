@@ -241,6 +241,7 @@ class CherryMistCafePlugin implements Plugin.PluginBase {
 
     const chapters: (Plugin.ChapterItem & { order: number })[] = [];
     const perPage = 500;
+    const seenIds: Record<number, true> = {};
     let page = 1;
     for (;;) {
       const rows: ChapterRow[] = await this.getJson(
@@ -253,7 +254,13 @@ class CherryMistCafePlugin implements Plugin.PluginBase {
           page,
       );
       if (!rows || !rows.length) break;
+      let added = 0;
       for (const row of rows) {
+        // A page that repeats earlier rows (a server ignoring `page`) would
+        // otherwise loop forever now that the page count is uncapped.
+        if (seenIds[row.id]) continue;
+        seenIds[row.id] = true;
+        added++;
         chapters.push({
           name: row.title,
           path: 'chapter/' + row.id + '/' + row.slug,
@@ -265,9 +272,8 @@ class CherryMistCafePlugin implements Plugin.PluginBase {
           order: chapters.length,
         });
       }
-      if (rows.length < perPage) break;
+      if (!added || rows.length < perPage) break;
       page++;
-      if (page > 10) break;
     }
     // Newer uploads can have a null chapter_number; the API lists those first
     // although they follow the numbered ones, so keep them after in API order.
