@@ -6,7 +6,7 @@ import { Plugin } from '@/types/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.9.9';
+  version = '0.9.10';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -113,7 +113,20 @@ class NovelUpdates implements Plugin.PluginBase {
       novel.rating = parseFloat(rating);
     }
 
-    const novelId = loadedCheerio('input#mypostid').attr('value')!;
+    // Series pages no longer reliably expose input#mypostid; fall back to
+    // WordPress body class / sid links so chapter AJAX still works.
+    const novelId =
+      loadedCheerio('input#mypostid').attr('value') ||
+      loadedCheerio('body')
+        .attr('class')
+        ?.match(/\bpostid-(\d+)\b/)?.[1] ||
+      loadedCheerio('a[href*="sid="]')
+        .attr('href')
+        ?.match(/[?&]sid=(\d+)/)?.[1];
+    if (!novelId) {
+      throw new Error('Novel id not found on series page.');
+    }
+
     const formData = new FormData();
     formData.append('action', 'nd_getchapters');
     formData.append('mygrr', '0');
@@ -137,14 +150,21 @@ class NovelUpdates implements Plugin.PluginBase {
         .replace(/\b\w/g, l => l.toUpperCase())
         .trim();
 
-      const chapterPath =
-        'https:' + chaptersCheerio(el).find('a').first().next().attr('href');
+      const chapterHref = chaptersCheerio(el)
+        .find('a')
+        .first()
+        .next()
+        .attr('href');
+      if (!chapterHref) return;
 
-      if (chapterPath)
-        chapters.push({
-          name: chapterName,
-          path: chapterPath.replace(this.site, ''),
-        });
+      const chapterPath = (
+        chapterHref.startsWith('http') ? chapterHref : 'https:' + chapterHref
+      ).replace(this.site, '');
+
+      chapters.push({
+        name: chapterName,
+        path: chapterPath,
+      });
     });
 
     novel.chapters = chapters.reverse();
