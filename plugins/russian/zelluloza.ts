@@ -3,13 +3,15 @@ import { FilterTypes, Filters } from '@libs/filterInputs';
 import { fetchApi } from '@libs/fetch';
 import { NovelStatus } from '@libs/novelStatus';
 import { load as parseHTML } from 'cheerio';
+import { defaultCover } from '@libs/defaultCover';
 import dayjs from 'dayjs';
 
 class Zelluloza implements Plugin.PluginBase {
   id = 'zelluloza';
   name = 'Целлюлоза';
   site = 'https://zelluloza.ru';
-  version = '1.0.3';
+  version = '1.0.4';
+  nonce = '';
   icon = 'src/ru/zelluloza/icon.png';
 
   async popularNovels(
@@ -23,36 +25,13 @@ class Zelluloza implements Plugin.PluginBase {
 
     const genres = filters?.genres?.value || '0';
 
-    const body = await fetchApi(this.site + '/ajaxcall/', {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Referer: this.site + '/search/done/#result',
-        Origin: this.site,
-      },
-      method: 'POST',
-      body: new URLSearchParams({
-        op: 'morebooks',
-        par1: '',
-        par2: `206:0:${genres}:0.${sort}.0.0.0.0.0.0.0.0.0.0.0..0..:${pageNo}`,
-        par4: '',
-      }).toString(),
-    }).then(res => res.text());
-    const loadedCheerio = parseHTML(body);
-    const novels: Plugin.NovelItem[] = [];
-
-    loadedCheerio('div[style="display: flex;"]').each((index, element) => {
-      novels.push({
-        name: loadedCheerio(element).find('a[class="txt"]').attr('title') || '',
-        cover:
-          this.site +
-          loadedCheerio(element).find('img[class="shadow"]').attr('src'),
-        path: (
-          loadedCheerio(element).find('a[class="txt"]').attr('href') || ''
-        ).replace(/\D/g, ''),
-      });
+    const body = await this.ajax({
+      op: 'morebooks',
+      par1: '',
+      par2: `206:0:${genres}:0.${sort}.0.0.0.0.0.0.0.0.0.0.0..0..:${pageNo}`,
+      par4: '',
     });
-
-    return novels;
+    return this.parseNovelList(body);
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
@@ -65,15 +44,16 @@ class Zelluloza implements Plugin.PluginBase {
       path: novelPath,
       name: loadedCheerio('h2[class="bookname"]').text().trim(),
       cover: this.site + loadedCheerio('img[class="shadow"]').attr('src'),
-      genres: loadedCheerio('.gnres span[itemprop="genre"]')
-        .map((index, element) => loadedCheerio(element).text())
+      genres: loadedCheerio('.gnres__item')
+        .not('.gnres__item--age')
+        .map((index, element) => loadedCheerio(element).text().trim())
         .get()
         .join(','),
-      summary:
-        loadedCheerio('#bann_full').text() ||
-        loadedCheerio('#bann_short').text(),
-      author: loadedCheerio('.author_link').text(),
-      status: loadedCheerio('.tech_decription').text().includes('Пишется')
+      summary: loadedCheerio('.synopsis-text').first().text().trim(),
+      author: loadedCheerio('.author_link').first().text().trim(),
+      status: /Пишется|В процессе/.test(
+        loadedCheerio('.book-is-finished').first().text(),
+      )
         ? NovelStatus.Ongoing
         : NovelStatus.Completed,
     };
@@ -86,9 +66,10 @@ class Zelluloza implements Plugin.PluginBase {
         ).length;
         if (isFree) {
           const chapter = loadedCheerio(element).find('a[class="chptitle"]');
+          chapter.find('.bookinfo-top__chapter-start').remove(); // "Начать здесь"
           const releaseDate = loadedCheerio(element)
-            .find('div[class="stat"]')
-            .text();
+            .find('div.chapter-date')
+            .attr('title');
           chapters.push({
             name: chapter.text().trim(),
             path: (chapter.attr('href') || '').split('/').slice(2, 4).join('/'),
@@ -105,19 +86,11 @@ class Zelluloza implements Plugin.PluginBase {
 
   async parseChapter(chapterPath: string): Promise<string> {
     const [bookID, chapterID] = chapterPath.split('/');
-    const body = await fetchApi(this.site + '/ajaxcall/', {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Referer: this.resolveUrl(chapterPath),
-        Origin: this.site,
-      },
-      method: 'POST',
-      body: new URLSearchParams({
-        op: 'getbook',
-        par1: bookID,
-        par2: chapterID,
-      }).toString(),
-    }).then(res => res.text());
+    const body = await this.ajax({
+      op: 'getbook',
+      par1: bookID,
+      par2: chapterID.split('#')[0],
+    });
 
     const encrypted = body.split('<END>')[0].split('\n');
     const decrypted = encrypted
@@ -130,7 +103,13 @@ class Zelluloza implements Plugin.PluginBase {
       .replace(/\[\*]([\s\S]*?)\[\/]/g, '<b>$1</b>')
       .replace(/\[_]([\s\S]*?)\[\/]/g, '<u>$1</u>')
       .replace(/\[-]([\s\S]*?)\[\/]/g, '<s>$1</s>')
-      .replace(/\[~]([\s\S]*?)\[\/]/g, '<i>$1</i>'); /*
+      .replace(/\[~]([\s\S]*?)\[\/]/g, '<i>$1</i>')
+      .replace(
+        /\[ctr]([\s\S]*?)\[\/]/g,
+        '<div style="text-align: center">$1</div>',
+      )
+      // drop the remaining font/colour markers instead of showing them
+      .replace(/\[(!|rht|grn|red|blu|gry|geo|gld)]|\[\/]/g, ''); /*
       .replace(/\[!]([\s\S]*?)\[\/]/g, '<span style="font-family: Times New Roman">$1</span>')
       .replace(/\[ctr]([\s\S]*?)\[\/]/g, "<center>$1</center>")
       .replace(/\[rht]([\s\S]*?)\[\/]/g, '<span style="text-align: right">$1</span>')
@@ -148,41 +127,78 @@ class Zelluloza implements Plugin.PluginBase {
     searchTerm: string,
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
-    const body = await fetchApi(this.site + '/ajaxcall/', {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Referer: this.site + '/search/done/#result',
-        Origin: this.site,
-      },
-      method: 'POST',
-      body: new URLSearchParams({
-        op: 'morebooks',
-        par1: searchTerm || '',
-        par2: '206:0:0:0.0.0.0.0.0.0.10.0.0.0.0.0..0..:' + pageNo,
-        par4: '',
-      }).toString(),
-    }).then(res => res.text());
+    const body = await this.ajax({
+      op: 'morebooks',
+      par1: searchTerm || '',
+      par2: '206:0:0:0.0.0.0.0.0.0.10.0.0.0.0.0..0..:' + pageNo,
+      par4: '',
+    });
+    return this.parseNovelList(body);
+  }
+
+  parseNovelList(body: string): Plugin.NovelItem[] {
     const loadedCheerio = parseHTML(body);
     const novels: Plugin.NovelItem[] = [];
 
-    loadedCheerio('div[style="display: flex;"]').each((index, element) => {
-      novels.push({
-        name: loadedCheerio(element).find('a[class="txt"]').attr('title') || '',
-        cover:
-          this.site +
-          loadedCheerio(element).find('img[class="shadow"]').attr('src'),
-        path: (
-          loadedCheerio(element).find('a[class="txt"]').attr('href') || ''
-        ).replace(/\D/g, ''),
-      });
+    loadedCheerio('section.book-card-item').each((index, element) => {
+      const link = loadedCheerio(element)
+        .find('a.txt')
+        .filter((i, a) =>
+          /\/books\/\d+/.test(loadedCheerio(a).attr('href') || ''),
+        )
+        .first();
+      const path = (link.attr('href') || '').match(/\/books\/(\d+)/)?.[1];
+      const image = loadedCheerio(element)
+        .find('img[data-src], img.shadow')
+        .first();
+      const cover = image.attr('data-src') || image.attr('src');
+
+      if (path && !novels.some(novel => novel.path === path)) {
+        novels.push({
+          name: link.text().trim() || link.attr('title') || '',
+          cover: cover?.includes('/pics/') ? this.site + cover : defaultCover,
+          path,
+        });
+      }
     });
 
     return novels;
   }
 
+  // /ajaxcall/ requires the csrf nonce of the current session
+  async getNonce(refresh?: boolean): Promise<string> {
+    if (!this.nonce || refresh) {
+      const body = await fetchApi(this.site + '/').then(res => res.text());
+      this.nonce = body.match(/csrfNonce = '([0-9a-f]+)'/)?.[1] || '';
+    }
+    return this.nonce;
+  }
+
+  async ajax(params: Record<string, string>, retry = true): Promise<string> {
+    const res = await fetchApi(this.site + '/ajaxcall/', {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Referer: this.site + '/catalog',
+        Origin: this.site,
+      },
+      method: 'POST',
+      body: new URLSearchParams({
+        ...params,
+        book_id: '',
+        nonce: await this.getNonce(),
+      }).toString(),
+    });
+
+    if (res.status === 400 && retry) {
+      await this.getNonce(true);
+      return this.ajax(params, false);
+    }
+    return res.text();
+  }
+
   parseDate = (dateString: string | undefined = '') => {
     const [, day, month, year, hour, minute] =
-      dateString.match(/(\d{2})\.(\d{2})\.(\d{4})г (\d{2}):(\d{2})/) || [];
+      dateString.match(/(\d{2})\.(\d{2})\.(\d{4})г? (\d{2}):(\d{2})/) || [];
 
     if (day && month && year && hour && minute) {
       return dayjs(

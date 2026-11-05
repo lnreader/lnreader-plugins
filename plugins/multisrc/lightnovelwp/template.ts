@@ -42,7 +42,7 @@ export class LightNovelWPPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/lightnovelwp/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `1.1.${10 + versionIncrements}`;
+    this.version = `1.1.${12 + versionIncrements}`;
     this.options = metadata.options ?? ({} as LightNovelWPOptions);
     this.filters = metadata.filters satisfies Filters;
 
@@ -438,20 +438,87 @@ export class LightNovelWPPlugin implements Plugin.PluginBase {
         throw error;
       }
     }
-    return (
-      data
-        .match(/<div.*?class="epcontent ([^]*?)<div.*?class="?bottomnav/g)?.[0]
-        .match(/<p[^>]*>([^]*?)<\/p>/g)
-        ?.join('\n') || ''
-    );
-  }
+    // The chapter lives in the `epcontent` block. Older child themes closed
+    // it with a `bottomnav` div, but that wrapper is gone on current ones, so
+    // select the element itself rather than cutting the document between
+    // landmarks: a <script> inside the block then cannot end it early either.
+    const $ = load(data);
+    const content = $('.epcontent').first();
 
+    // No epcontent block means this was not a chapter page (a login wall or
+    // an error page served with 200). Returning the whole document here would
+    // show that page's text as the chapter, so report nothing instead.
+    if (!content.length) return '';
+
+    content.find('script, style, noscript').remove();
+    const pageUrl = this.site + chapterPath;
+    content.find('img').each((_, el) => {
+      const img = $(el);
+      let src = img.attr('src');
+      if (!src || src.startsWith('data:')) {
+        src = img.attr('data-lazy-src') || img.attr('data-src') || src;
+      }
+      if (!src) return;
+      // Resolve relative paths against the chapter page, as a browser would.
+      if (!/^[a-z][a-z\d+.-]*:/i.test(src)) {
+        try {
+          src = new URL(src, pageUrl).href;
+        } catch {
+          return;
+        }
+      }
+      img.attr('src', src);
+    });
+
+    // The app renders this HTML as is, so drop event handlers and URLs that
+    // would run script.
+    content.find('*').each((_, el) => {
+      const node = $(el);
+      for (const name of Object.keys(el.attribs)) {
+        if (/^on/i.test(name)) {
+          node.removeAttr(name);
+        } else if (name === 'href' || name === 'src') {
+          const value = el.attribs[name]
+            .split('')
+            .filter(c => c.charCodeAt(0) > 32)
+            .join('')
+            .toLowerCase();
+          if (
+            /^(javascript|vbscript):/.test(value) ||
+            (value.startsWith('data:') && !value.startsWith('data:image/'))
+          ) {
+            node.removeAttr(name);
+          }
+        }
+      }
+    });
+
+    // Keep paragraphs as HTML so inline formatting and images inside them
+    // survive, plus images outside any paragraph: illustration chapters hold
+    // only images, sometimes in bare <div>s with no <p> at all.
+    const blocks: string[] = [];
+    content.find('p, img').each((_, el) => {
+      const node = $(el);
+      if (node.is('img')) {
+        if (!node.parents('p').length) blocks.push($.html(node));
+      } else if (node.text().trim() || node.find('img').length) {
+        blocks.push($.html(node));
+      }
+    });
+
+    return blocks.join('\n');
+  }
   async searchNovels(
     searchTerm: string,
     page: number,
   ): Promise<Plugin.NovelItem[]> {
+    // Some sources' sites have no trailing slash (Lazy Girl Translations).
     const url =
-      this.site + 'page/' + page + '/?s=' + encodeURIComponent(searchTerm);
+      this.site.replace(/\/?$/, '/') +
+      'page/' +
+      page +
+      '/?s=' +
+      encodeURIComponent(searchTerm);
     const html = await this.safeFecth(url, true);
     return this.parseNovels(html);
   }

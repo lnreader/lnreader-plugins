@@ -12,6 +12,27 @@ const JSON_HEADERS = {
   'Content-Type': 'application/json',
 };
 
+// The site serves chapter pages as a streamed React SSR response. Requests
+// that do not look like a browser can receive a truncated document (without
+// the chapter data), so we send browser-like headers.
+const visitorId = () =>
+  'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.floor(Math.random() * 16);
+    return (c === 'x' ? r : (r % 4) + 8).toString(16);
+  });
+
+const HTML_HEADERS = {
+  'User-Agent':
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:156.0) Gecko/20100101 Firefox/156.0',
+  Accept:
+    'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+  'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+  Cookie: `nm_vid=${visitorId()}; PARAGLIDE_LOCALE=pt-BR`,
+};
+
+// End marker of the SSR stream. If it is missing, the document was truncated.
+const STREAM_END = '$_TSR.e()';
+
 type ApiNovelItem = {
   title: string;
   slug: string;
@@ -101,6 +122,8 @@ function decodeJsString(raw: string): string {
     .replace(/\\n/g,  '\n')
     .replace(/\\r/g,  '\r')
     .replace(/\\t/g,  '\t')
+    .replace(/\\\//g, '/')
+    .replace(/\\'/g, "'")
     .replace(/\\\\/g, '\\');
 }
 
@@ -164,7 +187,7 @@ class NovelMania implements Plugin.PluginBase {
   name    = 'Novel Mania';
   icon    = 'src/pt-br/novelmania/icon.png';
   site    = BASE;
-  version = '2.0.1';
+  version = '2.0.2';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   async popularNovels(
@@ -252,11 +275,50 @@ class NovelMania implements Plugin.PluginBase {
     // chapterPath is like /novels/avatar-do-rei-ar/capitulos/volume-1-capitulo-1
     // The chapter JSON API returns 403. Content and metadata are extracted from
     // the React SSR $R data stream embedded in the HTML page.
-    const html = await fetchApi(`${BASE}${chapterPath}`).then(r => r.text());
+    const url = `${BASE}${chapterPath}`;
+    const novelSlug = chapterPath.split('/')[2] ?? '';
+
+    // The streamed document may arrive truncated depending on how it is read,
+    // so try a few strategies until one returns the complete stream.
+    const attempts: { encoding?: string; buffer: boolean }[] = [
+      { buffer: false },
+      { buffer: true },
+      { encoding: 'identity', buffer: false },
+      { encoding: 'identity', buffer: true },
+      { encoding: 'gzip', buffer: true },
+    ];
+    let html = '';
+    for (const attempt of attempts) {
+      try {
+        const headers: Record<string, string> = {
+          ...HTML_HEADERS,
+          Referer: `${BASE}/novels/${novelSlug}`,
+        };
+        if (attempt.encoding) headers['Accept-Encoding'] = attempt.encoding;
+        const res = await fetchApi(url, { headers });
+        const body = attempt.buffer
+          ? new TextDecoder('utf-8').decode(await res.arrayBuffer())
+          : await res.text();
+        if (body.includes(STREAM_END)) {
+          html = body;
+          break;
+        }
+        if (body.length > html.length) html = body;
+      } catch {
+        // try the next strategy
+      }
+    }
 
     // --- Extract chapter content ---
-    const contentMatch = html.match(/[,{]content:"((?:[^"\\]|\\.)*)"/);
+    const contentMatch = html.match(
+      /[,{]"?content"?\s*:\s*"((?:[^"\\]|\\.)*)"/,
+    );
     const content = contentMatch?.[1] ? decodeJsString(contentMatch[1]) : '';
+    if (!content.trim()) {
+      throw new Error(
+        'Não foi possível carregar o texto do capítulo. Tente novamente.',
+      );
+    }
 
     // --- Extract chapter title from SSR stream ---
     // The chapter object has: ...,updatedAt:"ISO",title:"TITLE",slug:

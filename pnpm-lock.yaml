@@ -123,6 +123,9 @@ importers:
       dayjs:
         specifier: ^1.11.13
         version: 1.11.21
+      esbuild:
+        specifier: ^0.25.3
+        version: 0.25.12
       eslint:
         specifier: ^8.57.0
         version: 8.57.1

@@ -8,7 +8,7 @@ const rawText = fs.readFileSync(
 );
 
 async function main() {
-  console.log(`Fetching plugins from: ${dist}`);
+  console.log(`Fetching published plugin manifest from ${dist}...`);
 
   try {
     const response = await fetch(
@@ -22,7 +22,7 @@ async function main() {
     }
 
     const pluginsRaw = await response.json();
-    console.log(`Found ${pluginsRaw.length} plugins`);
+    console.log(`Loaded ${pluginsRaw.length} plugins from the manifest.`);
 
     const plugins = pluginsRaw.reduce((arr, plugin) => {
       arr[plugin.lang + ': ' + plugin.name] = plugin.id;
@@ -36,23 +36,40 @@ async function main() {
         fs.readFileSync('.github/scripts/keys.json', 'utf8'),
       );
       savedKeys = Object.keys(keys);
-      console.log(`Loaded ${savedKeys.length} existing plugin keys`);
+      console.log(`Loaded ${savedKeys.length} saved plugin keys.`);
     } catch (err) {
-      console.log('No existing keys file found, creating new one');
+      console.log('No saved plugin keys found; a new key map will be created.');
     }
 
-    if (!sameKeys(newKeys, savedKeys) && Array.isArray(newKeys)) {
-      console.log('Plugin list has changed, updating issue template...');
-      const text = newKeys.join('"\n        - "');
-      fs.writeFileSync(
-        '.github/ISSUE_TEMPLATE/report_issue.yml',
-        rawText.replace(/{#CHANGE#}/g, '- "' + text + '"'),
+    const text = newKeys.join('"\n        - "');
+    const issueTemplate = rawText.replace(/{#CHANGE#}/g, '- "' + text + '"');
+
+    const keysChanged = !sameKeys(newKeys, savedKeys) && Array.isArray(newKeys);
+    if (keysChanged) {
+      console.log(
+        `Plugin keys changed (${savedKeys.length} → ${newKeys.length}); writing keys.json.`,
       );
       fs.writeFileSync('.github/scripts/keys.json', JSON.stringify(plugins));
-      console.log('Issue template updated successfully');
     } else {
-      console.log('No changes detected in plugin list');
+      console.log('Plugin keys are up to date.');
     }
+
+    const templateChanged =
+      fs.readFileSync('.github/ISSUE_TEMPLATE/report_issue.yml', 'utf8') !==
+      issueTemplate;
+    if (templateChanged) {
+      fs.writeFileSync(
+        '.github/ISSUE_TEMPLATE/report_issue.yml',
+        issueTemplate,
+      );
+      console.log('Issue template changed; writing report_issue.yml.');
+    } else {
+      console.log('Issue template is up to date.');
+    }
+
+    console.log(
+      `Generation complete (${keysChanged || templateChanged ? 'changes written' : 'no changes'}).`,
+    );
 
     function sameKeys(a, b) {
       return a.length === b.length && a.every(value => b.includes(value));

@@ -1,9 +1,11 @@
 import { create, StateCreator } from 'zustand';
 import { PluginStore } from './pluginStore';
 import { NavigationStore } from './navigationStore';
+import { IssueStore } from './issueStore';
 
 export type AppStore = PluginStore &
-  NavigationStore & {
+  NavigationStore &
+  IssueStore & {
     theme: 'light' | 'dark';
     setTheme(value: 'light' | 'dark'): void;
   };
@@ -24,6 +26,7 @@ const getInitialTheme = (): 'light' | 'dark' => {
 export const useAppStore = create<AppStore>((set: SetStore, get: GetStore) => ({
   ...PluginStore(set, get),
   ...NavigationStore(set, get),
+  ...IssueStore(set, get),
   theme: getInitialTheme(),
   setTheme(theme: 'light' | 'dark') {
     set(state => ({

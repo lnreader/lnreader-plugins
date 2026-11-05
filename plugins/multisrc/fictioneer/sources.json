@@ -65,5 +65,25 @@
       "versionIncrements": 1,
       "browsePage": "stories"
     }
+  },
+  {
+    "id": "illusia",
+    "sourceSite": "https://illusia.com.br",
+    "sourceName": "Illusia",
+    "options": {
+      "browsePage": "historias",
+      "lang": "Portuguese",
+      "trimTrailingSlash": true,
+      "selectors": {
+        "browseCard": "#list-of-stories > li.illusia-card",
+        "searchCard": "#search-result-list > li.illusia-card",
+        "cardTitle": "h2.illusia-card__title > a",
+        "cardCover": "img.illusia-card__cover-img",
+        "novelTitle": "h1.illusia-single-story__title",
+        "novelAuthor": "span.illusia-single-story__credits-primary a.author",
+        "novelCover": "img.illusia-single-story__cover-img",
+        "novelSummary": "div.illusia-single-story__description"
+      }
+    }
   }
 ]

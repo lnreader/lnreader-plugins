@@ -11,7 +11,47 @@ class FuckNovelpia implements Plugin.PluginBase {
   name = 'FuckNovelpia';
   icon = 'src/en/fucknovelpia/icon.png';
   site = 'https://fucknovelpia.com/';
-  version = '1.1.1';
+  version = '1.1.3';
+
+  sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  // The site intermittently swaps in anti-scrape pages (nginx 403, a custom
+  // "Blocked" 429 page, or a Cloudflare challenge) whose bodies contain no
+  // reader markup. Parsing those silently produced empty chapters/novel lists
+  // (issue #2540), so surface them as errors instead, and wait out the rate
+  // limiter once before giving up.
+  //
+  // Do not override User-Agent. fetchApi already sends the app's configured
+  // agent, the same one WebView uses when the reader solves Cloudflare.
+  // A hardcoded desktop agent does not match that cf_clearance cookie, so the
+  // site keeps answering 403 after the check succeeds (issue #2730).
+  async fetchHtml(url: string): Promise<string> {
+    let response = await fetchApi(url);
+    if (response.status === 429) {
+      // Its 429s usually omit Retry-After, and Number(null) is 0, so parse it
+      // explicitly to keep the fallback wait instead of retrying instantly.
+      const retryAfter = parseInt(
+        response.headers.get('Retry-After') || '',
+        10,
+      );
+      const waitMs = (isNaN(retryAfter) ? 2 : Math.min(retryAfter, 10)) * 1000;
+      await this.sleep(waitMs);
+      response = await fetchApi(url);
+    }
+    if (!response.ok) {
+      const status = response.status;
+      const message =
+        status === 403 || status === 503
+          ? `Cloudflare protection detected (HTTP ${status}). Open the plugin in WebView, complete the check, then try again.`
+          : `FuckNovelpia returned HTTP ${status}`;
+      const error = new Error(message) as Error & { status?: number };
+      error.status = status;
+      throw error;
+    }
+    return await response.text();
+  }
 
   // Returns false once the site has silently clamped us past the real last page.
   hasRequestedPage(cheerio: CheerioAPI, requestedPage: number): boolean {
@@ -52,8 +92,7 @@ class FuckNovelpia implements Plugin.PluginBase {
 
   async parseLatestUpdates() {
     const link = this.site + 'updates.php';
-    const response = await fetchApi(link);
-    const html = await response.text();
+    const html = await this.fetchHtml(link);
     const novels: Plugin.NovelItem[] = [];
     let tempNovel: Partial<Plugin.NovelItem> = {};
     const seen = new Set<string>();
@@ -168,8 +207,7 @@ class FuckNovelpia implements Plugin.PluginBase {
 
     const link = this.site + 'search.php?' + params.toString();
 
-    const result = await fetchApi(link);
-    const body = await result.text();
+    const body = await this.fetchHtml(link);
 
     const loadedCheerio = parseHTML(body);
 
@@ -178,8 +216,7 @@ class FuckNovelpia implements Plugin.PluginBase {
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const result = await fetchApi(this.site + novelPath);
-    const body = await result.text();
+    const body = await this.fetchHtml(this.site + novelPath);
 
     const loadedCheerio = parseHTML(body);
 
@@ -267,14 +304,15 @@ class FuckNovelpia implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const result = await fetchApi(this.site + chapterPath);
-    const body = await result.text();
+    const body = await this.fetchHtml(this.site + chapterPath);
     const $ = parseHTML(body);
 
     const chapter = $('.reader').first();
 
     if (!chapter.length) {
-      return '';
+      // A 200 without reader markup is a changed/blocked page, not an empty
+      // chapter — never report a false empty-success.
+      throw new Error('Chapter content not found in page');
     }
 
     // Remove things that aren't part of the chapter
@@ -311,8 +349,7 @@ class FuckNovelpia implements Plugin.PluginBase {
 
     const link = this.site + 'search.php?' + params.toString();
 
-    const result = await fetchApi(link);
-    const body = await result.text();
+    const body = await this.fetchHtml(link);
     const loadedCheerio = parseHTML(body);
 
     if (!this.hasRequestedPage(loadedCheerio, page)) return [];

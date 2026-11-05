@@ -14,16 +14,20 @@ jobs:
   autoclose:
     name: Auto Close Invalid Issues
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+      actions: write
     steps:
       - name: Moderate Issues
         uses: tachiyomiorg/issue-moderator-action@v2
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-          duplicate-label: Duplicate
+          duplicate-label: duplicate
 
           duplicate-check-enabled: true
           duplicate-check-labels: |
-            ["Plugin Request", "Domain Changed"]
+            ["plugin request", "domain changed"]
 
           existing-check-enabled: false
 
@@ -46,3 +50,17 @@ jobs:
               }
             ]
           auto-close-ignore-label: do-not-autoclose
+
+      - name: Update moderated issue index
+        if: ${{ always() && !cancelled() && !github.event.issue.pull_request }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -n --arg ref "$DEFAULT_BRANCH" --arg number "$ISSUE_NUMBER" \
+            '{ref: $ref, inputs: {issue_number: $number}}' \
+            | gh api --method POST "repos/$REPOSITORY/actions/workflows/generate-issue-index.yml/dispatches" --input -

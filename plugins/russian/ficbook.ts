@@ -10,8 +10,7 @@ class ficbook implements Plugin.PluginBase {
   id = 'ficbook';
   name = 'ficbook';
   site = 'https://ficbook.net';
-  imageSite = 'https://images.ficbook.net/fanfic-covers/';
-  version = '1.0.1';
+  version = '1.0.2';
   icon = 'src/ru/ficbook/icon.png';
 
   async popularNovels(
@@ -28,8 +27,12 @@ class ficbook implements Plugin.PluginBase {
       url += '/' + (filters?.sort?.value || 'fanfiction') + '?p=' + pageNo;
     }
 
-    const result = await fetchApi(url).then(res => res.text());
-    const loadedCheerio = parseHTML(result);
+    const result = await this.fetchPage(url);
+    return this.parseNovelList(result);
+  }
+
+  parseNovelList(html: string): Plugin.NovelItem[] {
+    const loadedCheerio = parseHTML(html);
     const novels: Plugin.NovelItem[] = [];
 
     loadedCheerio('article.fanfic-inline').each((index, element) => {
@@ -49,9 +52,7 @@ class ficbook implements Plugin.PluginBase {
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const result = await fetchApi(this.site + novelPath).then(res =>
-      res.text(),
-    );
+    const result = await this.fetchPage(this.site + novelPath);
     const loadedCheerio = parseHTML(result);
 
     const novel: Plugin.SourceNovel = {
@@ -82,7 +83,13 @@ class ficbook implements Plugin.PluginBase {
     }
 
     if (!novel.cover || novel.cover?.includes('/design/')) {
-      novel.cover = defaultCover;
+      // the fic page no longer shows its own cover, only search results do
+      novel.cover =
+        (novel.name &&
+          (await this.searchNovels(novel.name, 1).catch(() => [])).find(
+            item => item.path === novelPath,
+          )?.cover) ||
+        defaultCover;
     } else {
       novel.cover = novel.cover.replace(/covers\/m_|covers\/d_/g, 'covers/');
     }
@@ -117,9 +124,7 @@ class ficbook implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const result = await fetchApi(this.site + chapterPath).then(res =>
-      res.text(),
-    );
+    const result = await this.fetchPage(this.site + chapterPath);
     const loadedCheerio = parseHTML(result);
     let chapterText = '';
 
@@ -146,29 +151,28 @@ class ficbook implements Plugin.PluginBase {
     searchTerm: string,
     pageNo: number | undefined = 1,
   ): Promise<Plugin.NovelItem[]> {
-    const formData = new FormData();
-    formData.append('term', searchTerm);
-    formData.append('page', pageNo.toString());
+    const result = await this.fetchPage(
+      this.site +
+        '/find-fanfics-846555?title=' +
+        encodeURIComponent(searchTerm) +
+        '&p=' +
+        pageNo,
+    );
 
-    const { data }: { data: Data } = await fetchApi(
-      this.site + '/search/fanfic',
-      {
-        method: 'POST',
-        body: formData,
-      },
-    ).then(res => res.json());
+    return this.parseNovelList(result);
+  }
 
-    const novels: Plugin.NovelItem[] = [];
+  // Cloudflare may answer with a challenge page instead of the content
+  async fetchPage(url: string): Promise<string> {
+    const res = await fetchApi(url);
+    const body = await res.text();
 
-    data?.data?.forEach(novel => {
-      const name = novel.title.trim();
-      const path = '/readfic/' + novel.slug;
-      const cover = novel.cover ? this.imageSite + novel.cover : defaultCover;
-
-      novels.push({ name, cover, path });
-    });
-
-    return novels;
+    if (!res.ok || /<title>\s*Just a moment/i.test(body)) {
+      throw new Error(
+        'ficbook недоступен (' + res.status + '), откройте сайт в WebView',
+      );
+    }
+    return body;
   }
 
   parseDate = (dateString: string | undefined = '') => {
@@ -2649,28 +2653,3 @@ class ficbook implements Plugin.PluginBase {
 }
 
 export default new ficbook();
-
-type Data = {
-  data?: DataEntity[] | null;
-  more: boolean;
-};
-type DataEntity = {
-  id: string;
-  slug: string;
-  author_id: number;
-  user_slug: string;
-  author_username: string;
-  real_author_id: string | null;
-  direction: number;
-  part_cnt: number;
-  title: string;
-  description: string;
-  enable_marks: boolean;
-  marks_plus: number;
-  is_premium: boolean;
-  status: number;
-  last_updated: string;
-  readedDate?: string | null;
-  reward_cnt: number;
-  cover?: string | null;
-};

@@ -21,6 +21,9 @@ type PortableBlock =
 
 type SanityVolume = {
   title: string;
+  displayTitle?: string;
+  series?: string;
+  seriesUsesRootPath?: boolean;
   volkeyword: string;
   mainImage?: { asset?: { url?: string } };
   banner?: { asset?: { url?: string } };
@@ -35,14 +38,22 @@ type SanityVolume = {
 
 type SanityAllVolumesEntry = {
   title: string;
+  displayTitle?: string;
+  series?: string;
+  seriesUsesRootPath?: boolean;
   volkeyword: string;
   mainImage?: { asset?: { url?: string } };
+  releaseDate?: string;
 };
 
 type NextData<T> = { props: { pageProps: T } };
 
 type HomePageProps = { allVolumes?: SanityAllVolumesEntry[] };
-type VolumePageProps = { vol?: SanityVolume; statusCode?: number };
+type VolumePageProps = {
+  vol?: SanityVolume;
+  volumeProps?: { vol?: SanityVolume };
+  statusCode?: number;
+};
 type ChapterPageProps = {
   chapter?: { content?: PortableBlock[] };
   statusCode?: number;
@@ -50,7 +61,7 @@ type ChapterPageProps = {
 
 /** One novel per volume — each is published as its own distinct book. */
 type CatalogueEntry = {
-  volkeyword: string;
+  path: string;
   name: string;
   cover: string;
   releaseDate: string;
@@ -68,7 +79,7 @@ class AnimeAnyway implements Plugin.PluginBase {
    * unlike "High School Syndrome" which is already self-explanatory — prefix
    * just the former so both are recognisable in a novel list.
    */
-  private readonly yearVolumePattern = /^Year\s+\d+\s+Vol\.?\s*\d+/i;
+  private readonly yearVolumePattern = /^Year\s+\d+\s+Vol(?:ume)?\.?\s*\d+/i;
 
   /**
    * Sanity's image CDN URL for a Portable Text image block, which only carries
@@ -94,10 +105,30 @@ class AnimeAnyway implements Plugin.PluginBase {
     return parsed.props?.pageProps;
   }
 
-  private displayName(title: string) {
+  private displayName(title: string, displayTitle?: string) {
+    const volumeTitle = displayTitle?.trim();
+    if (volumeTitle && volumeTitle.toLowerCase() !== title.toLowerCase()) {
+      return `${title}: ${volumeTitle}`;
+    }
+
     return this.yearVolumePattern.test(title)
       ? `Classroom of the Elite: ${title}`
       : title;
+  }
+
+  /** Supports both the legacy pageProps.vol and current volumeProps.vol. */
+  private getVolume(data?: VolumePageProps) {
+    return data?.vol ?? data?.volumeProps?.vol;
+  }
+
+  private getVolumePath(volume: {
+    series?: string;
+    seriesUsesRootPath?: boolean;
+    volkeyword: string;
+  }) {
+    return volume.series && volume.seriesUsesRootPath === false
+      ? `${volume.series}/${volume.volkeyword}`
+      : volume.volkeyword;
   }
 
   /**
@@ -113,10 +144,10 @@ class AnimeAnyway implements Plugin.PluginBase {
       const volumes = home?.allVolumes ?? [];
 
       return volumes.map(volume => ({
-        volkeyword: volume.volkeyword,
-        name: this.displayName(volume.title),
+        path: this.getVolumePath(volume),
+        name: this.displayName(volume.title, volume.displayTitle),
         cover: volume.mainImage?.asset?.url ?? defaultCover,
-        releaseDate: '',
+        releaseDate: volume.releaseDate ?? '',
       }));
     })();
 
@@ -138,14 +169,15 @@ class AnimeAnyway implements Plugin.PluginBase {
     let ordered = catalogue;
 
     if (showLatestNovels) {
-      // Release dates aren't on the homepage listing, only on each volume
-      // page — the catalogue is small, so fetch them all to sort "latest".
+      // Older catalogue payloads omit release dates, so fill only those gaps.
       await Promise.all(
         catalogue.map(async entry => {
-          const vol = await this.fetchPageData<VolumePageProps>(
-            entry.volkeyword,
+          if (entry.releaseDate) return;
+
+          const vol = this.getVolume(
+            await this.fetchPageData<VolumePageProps>(entry.path),
           );
-          entry.releaseDate = vol?.vol?.releaseDate ?? '';
+          entry.releaseDate = vol?.releaseDate ?? '';
         }),
       );
       ordered = [...catalogue].sort((a, b) =>
@@ -155,7 +187,7 @@ class AnimeAnyway implements Plugin.PluginBase {
 
     return ordered.map(entry => ({
       name: entry.name,
-      path: entry.volkeyword,
+      path: entry.path,
       cover: entry.cover,
     }));
   }
@@ -196,7 +228,7 @@ class AnimeAnyway implements Plugin.PluginBase {
       .sort((a, b) => b.score - a.score)
       .map(({ entry }) => ({
         name: entry.name,
-        path: entry.volkeyword,
+        path: entry.path,
         cover: entry.cover,
       }));
   }
@@ -265,13 +297,13 @@ class AnimeAnyway implements Plugin.PluginBase {
     };
 
     const data = await this.fetchPageData<VolumePageProps>(novelPath);
-    const vol = data?.vol;
+    const vol = this.getVolume(data);
     if (!vol) {
       novel.summary = 'This novel is not available on Anime Anyway.';
       return novel;
     }
 
-    novel.name = this.displayName(vol.title);
+    novel.name = this.displayName(vol.title, vol.displayTitle);
     novel.cover = vol.mainImage?.asset?.url ?? defaultCover;
     novel.summary = this.plainTextFromPortableText(vol.synopsis);
     novel.chapters = (vol.chapters ?? []).map((chapter, index) => ({

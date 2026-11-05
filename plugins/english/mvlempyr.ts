@@ -30,11 +30,14 @@ class MVLEMPYRPlugin implements Plugin.PluginBase {
   name = 'MVLEMPYR';
   icon = 'src/en/mvlempyr/icon.png';
   site = 'https://www.mvlempyr.io/';
-  version = '1.0.13';
+  version = '1.0.15';
 
   _chapSite = 'https://chap.heliosarchive.online/';
   _allNovels: (Plugin.NovelItem & ExtraNovelData)[] | undefined;
   _allNovelsPromise: Promise<(Plugin.NovelItem & ExtraNovelData)[]> | undefined;
+  private headers = {
+    'Cache-Control': 'no-store',
+  };
 
   checkCaptcha(loadedCheerio: CheerioAPI) {
     const title = loadedCheerio('title').text();
@@ -100,23 +103,24 @@ class MVLEMPYRPlugin implements Plugin.PluginBase {
     );
     return u;
   }
-
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
     const url = this.site + novelPath;
-    const result = await fetchApi(url);
+    const result = await fetchApi(url, { headers: this.headers });
+
     const body = await result.text();
 
     const loadedCheerio = parseHTML(body);
-
     this.checkCaptcha(loadedCheerio);
 
     const code = loadedCheerio('#novel-code').text();
     const newNovelId = this.convertNovelId(BigInt(parseInt(code)));
+
     const firstPostsReq = await fetchApi(
       this._chapSite +
         'wp-json/wp/v2/posts?tags=' +
         newNovelId +
         '&per_page=500&page=1',
+      { headers: this.headers },
     );
 
     const pages = parseInt(firstPostsReq.headers.get('X-Wp-Totalpages')) || 1;
@@ -134,6 +138,7 @@ class MVLEMPYRPlugin implements Plugin.PluginBase {
                 newNovelId +
                 '&per_page=500&page=' +
                 page,
+              { headers: this.headers },
             ).then(res => res.json()),
           ),
       )),
@@ -220,24 +225,50 @@ class MVLEMPYRPlugin implements Plugin.PluginBase {
   }
 
   async loadAll() {
-    const data = await fetchApi(
-      this._chapSite + 'wp-json/wp/v2/mvl-novels?per_page=10000',
-    ).then(r => r.json());
+    const baseUrl = this._chapSite + 'wp-json/wp/v2/mvl-novels';
+
+    const fetchPage = async (
+      page: number,
+      perPage: number,
+    ): Promise<MvlNovelItem[]> => {
+      const url = `${baseUrl}?per_page=${perPage}&page=${page}`;
+      const res = await fetchApi(url);
+
+      const text = await res.text();
+      if (!text) return [];
+      try {
+        const data = JSON.parse(text);
+        const items = Array.isArray(data) ? (data as MvlNovelItem[]) : [];
+        return items;
+      } catch (e) {
+        return [];
+      }
+    };
+
+    // Fire all 4 requests at once — no delay, no sequencing
+    const [big, p11, p12, p13] = await Promise.all([
+      fetchPage(1, 10000), // items 1 – 10,000
+      fetchPage(11, 1000), // items 10,001 – 11,000
+      fetchPage(12, 1000), // items 11,001 – 12,000
+      fetchPage(13, 1000), // items 12,001 – ~12,070 (may 400 if out of range → returns [])
+    ]);
+
+    const allData = big.concat(p11, p12, p13);
+
     // @ts-ignore
-    return data.map(novel => {
-      return {
-        name: novel.name,
-        path: 'novel/' + novel.slug,
-        cover: `https://assets.mvlempyr.app/images/600/${novel['novel-code']}.webp`,
-        avgReview: novel['average-review'],
-        reviewCount: novel['total-reviews'],
-        chapterCount: novel['total-chapters'],
-        created: new Date(novel['createdOn']).getTime(),
-        genres: novel.genre,
-        tags: novel.tags,
-        random: Math.random(),
-      };
-    });
+    const mapped = allData.map(novel => ({
+      name: novel.name,
+      path: 'novel/' + novel.slug,
+      cover: `https://assets.mvlempyr.app/images/600/${novel['novel-code']}.webp`,
+      avgReview: novel['average-review'],
+      reviewCount: novel['total-reviews'],
+      chapterCount: novel['total-chapters'],
+      created: new Date(novel['createdOn']).getTime(),
+      genres: novel.genre,
+      tags: novel.tags,
+      random: Math.random(),
+    }));
+    return mapped;
   }
 
   filters = {
@@ -1247,6 +1278,18 @@ type ExtraNovelData = {
   chapterCount: number;
   created: number;
   genres: string[];
+  tags: string[];
+};
+
+type MvlNovelItem = {
+  name: string;
+  slug: string;
+  'novel-code': string | number;
+  'average-review': number;
+  'total-reviews': number;
+  'total-chapters': number;
+  createdOn: string;
+  genre: string[];
   tags: string[];
 };
 

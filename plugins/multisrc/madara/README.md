@@ -23,6 +23,8 @@ To add a new source you need to add it to sources.json:
   - lang: the language of the source (default: "English") (check that the language
     exists in the languages (check folder names in "plugins/"))
   - useNewChapterEndpoint: if the source uses the new chapter endpoint
+  - browserHeaders: send browser-like `Accept`/`Accept-Language` headers, for
+    sites whose bot check rejects the default wildcard headers
   - versionIncrements: needs to be updated everytime the site url is updated
   - customJS: custom javascript that will be excuted when getting the text (if
     the site has a custom copyright that need to be removed)

@@ -1,6 +1,6 @@
 name: Request Feature
 description: Suggest an improvement for an existing plugin
-labels: [Feature Request]
+labels: [feature request]
 body:
   - type: textarea
     id: feature-description

@@ -15,12 +15,53 @@ class LNTPlugin implements Plugin.PluginBase {
   name = 'Light Novel Translations';
   icon = 'src/en/lightnoveltranslations/icon.png';
   site = 'https://lightnovelstranslations.com/';
-  version = '1.0.0';
+  version = '1.0.2';
   filters: Filters | undefined = undefined;
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   //flag indicates whether access to LocalStorage, SesesionStorage is required.
   webStorageUtilized?: boolean;
+
+  // The site serves only 6 novels per page, so one app page fetches
+  // several consecutive site pages and combines them. Otherwise opening
+  // the source shows a nearly empty grid next to sources that serve 20+
+  // novels per page.
+  pagesPerAppPage = 5;
+
+  // Site pages covered by one app page: app page 1 -> site pages 1-5,
+  // app page 2 -> site pages 6-10, and so on.
+  appPageSitePages(appPage: number): number[] {
+    const first = (appPage - 1) * this.pagesPerAppPage + 1;
+    const pages: number[] = [];
+    for (let i = 0; i < this.pagesPerAppPage; i++) {
+      pages.push(first + i);
+    }
+    return pages;
+  }
+
+  async fetchNovelCards(urls: string[]): Promise<Plugin.NovelItem[]> {
+    const novels: Plugin.NovelItem[] = [];
+    for (const url of urls) {
+      const body = await fetchApi(url);
+      const html = await body.text();
+      const cards = this.parseNovelCards(html);
+      novels.push(...cards);
+    }
+    return novels;
+  }
+
+  browsePageUrl(pageNo: number, sortby: string): string {
+    return pageNo > 1
+      ? `${this.site}browse/page/${pageNo}/?sortby=${sortby}`
+      : `${this.site}browse/?sortby=${sortby}`;
+  }
+
+  searchPageUrl(pageNo: number, searchTerm: string): string {
+    const query = `field-search=${encodeURIComponent(searchTerm)}`;
+    return pageNo > 1
+      ? `${this.site}browse/page/${pageNo}/?${query}`
+      : `${this.site}browse/?${query}`;
+  }
 
   async popularNovels(
     pageNo: number,
@@ -29,36 +70,31 @@ class LNTPlugin implements Plugin.PluginBase {
       // filters,
     }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
-    let link = this.site + 'read/';
-    link += `page/${pageNo}`;
-    link += `?sortby=${showLatestNovels ? 'most-recent' : 'most-liked'}`;
+    const sortby = showLatestNovels ? 'most-recent' : 'most-liked';
+    const urls = this.appPageSitePages(pageNo).map(page =>
+      this.browsePageUrl(page, sortby),
+    );
+    return this.fetchNovelCards(urls);
+  }
 
-    const body = await fetchApi(link);
-    const html = await body.text();
-
+  parseNovelCards(html: string): Plugin.NovelItem[] {
     const loadedCheerio = loadCheerio(html);
 
     const baseUrl = this.site;
     const novels: Plugin.NovelItem[] = [];
-    loadedCheerio('div.read_list-story-item').each((i, el) => {
-      const tempNovel = {} as Plugin.NovelItem;
-      const img = loadedCheerio(el)
-        .find('.item_thumb')
-        .find('img')
-        .first()
-        .attr('src');
-      let path = loadedCheerio(el)
-        .find('.item_thumb')
-        .find('a')
-        .first()
-        .attr('href');
+    loadedCheerio('.read_list-story-item').each((i, el) => {
+      const card = loadedCheerio(el);
+      const thumbLink = card.find('.item_thumb').find('a').first();
+      const img = card.find('.item_thumb').find('img').first().attr('src');
+      let path = thumbLink.attr('href');
       path = path ? path.slice(baseUrl.length) : '';
-      const title = loadedCheerio(el)
-        .find('.item_thumb')
-        .find('a')
-        .first()
-        .attr('title');
-      tempNovel.name = title ? title : '';
+      const title =
+        thumbLink.attr('aria-label') ||
+        card.find('.wrap_item_content').find('h3').first().text().trim() ||
+        thumbLink.attr('title') ||
+        '';
+      const tempNovel = {} as Plugin.NovelItem;
+      tempNovel.name = title;
       tempNovel.path = path;
       tempNovel.cover = img;
       novels.push(tempNovel);
@@ -110,12 +146,7 @@ class LNTPlugin implements Plugin.PluginBase {
       .first()
       .text()
       .trim();
-
-    const body2 = await fetchApi(url.replace('?tab=table_contents', ''));
-    const html2 = await body2.text().then(r => r.replace(/>\s+</g, '><'));
-    const loadedCheerio2 = loadCheerio(html2);
-
-    novel.summary = loadedCheerio2('div.novel_text')
+    novel.summary = loadedCheerio('div.novel_text')
       .find('p')
       .first()
       .text()
@@ -154,55 +185,16 @@ class LNTPlugin implements Plugin.PluginBase {
     searchTerm: string,
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
-    // get novels using the search term
-
-    if (pageNo !== 1) return [];
-    const searchUrl = this.site + '/read';
-    const formData = new FormData();
-    formData.append('field-search', searchTerm);
-
-    const results = await fetchApi(searchUrl, {
-      method: 'POST',
-      body: formData,
-    });
-
-    const body = await results.text();
-    const loadedCheerio = loadCheerio(body);
-    const novels: Plugin.NovelItem[] = [];
-    loadedCheerio('div.read_list-story-item').each((i, el) => {
-      const tempNovel = {} as Plugin.NovelItem;
-      const img = loadedCheerio(el)
-        .find('.item_thumb')
-        .find('img')
-        .first()
-        .attr('src');
-      let path = loadedCheerio(el)
-        .find('.item_thumb')
-        .find('a')
-        .first()
-        .attr('href');
-      path = path ? path.slice(this.site.length) : '';
-      const title = loadedCheerio(el)
-        .find('.item_thumb')
-        .find('a')
-        .first()
-        .attr('title');
-      tempNovel.name = title ? title : '';
-      tempNovel.path = path;
-      tempNovel.cover = img;
-      novels.push(tempNovel);
-    });
-
-    // type SearchEntry = {
-    //   title: string;
-    //   thumbnail: string;
-    //   permalink: string;
-    // };
-    return novels;
+    // The site's search box submits `field-search`, not `search`. Sending
+    // `search` is silently ignored and returns the default browse list for
+    // every term, so results looked identical no matter what was searched.
+    const urls = this.appPageSitePages(pageNo).map(page =>
+      this.searchPageUrl(page, searchTerm),
+    );
+    return this.fetchNovelCards(urls);
   }
 
-  resolveUrl = (path: string, isNovel?: boolean) =>
-    this.site + (isNovel ? '/book/' : '/chapter/') + path;
+  resolveUrl = (path: string) => this.site + path;
 }
 
 export default new LNTPlugin();

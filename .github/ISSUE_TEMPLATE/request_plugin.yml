@@ -1,6 +1,6 @@
 name: Request Plugin
 description: Request a new plugin for LNReader
-labels: [Plugin Request]
+labels: [plugin request]
 body:
   - type: markdown
     attributes:

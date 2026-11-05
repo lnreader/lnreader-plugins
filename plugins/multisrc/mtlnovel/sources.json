@@ -44,7 +44,9 @@
     "sourceSite": "https://ru.mtlnovels.com/",
     "sourceName": "MTL Novel (RU)",
     "options": {
-      "lang": "Russian"
+      "lang": "Russian",
+      "down": true,
+      "downSince": 1792779205411
     }
   }
 ]

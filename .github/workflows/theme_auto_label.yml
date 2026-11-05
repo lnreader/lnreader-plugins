@@ -13,12 +13,10 @@ concurrency:
 jobs:
   auto-label:
     name: Auto Label Theme
-    if: contains(github.event.issue.labels.*.name, 'Plugin Request')
+    if: contains(github.event.issue.labels.*.name, 'plugin request')
     runs-on: ubuntu-latest
     permissions:
       issues: write
-    outputs:
-      theme: ${{ steps.add_theme_label.outputs.theme }}
     env:
       REPO: ${{ github.repository }}
       ISSUE_NUMBER: ${{ github.event.issue.number }}
@@ -126,77 +124,17 @@ jobs:
         run: |
           echo "## Theme Detection Result" >> $GITHUB_STEP_SUMMARY
           if [[ "$MADARA" == "true" ]]; then
-            echo "🏷️ Adding label: Theme: Madara" >> $GITHUB_STEP_SUMMARY
-            gh issue edit $ISSUE_NUMBER --add-label "Theme: Madara" -R $REPO
-            echo "theme=madara" >> "$GITHUB_OUTPUT"
+            echo "🏷️ Adding label: theme: madara" >> $GITHUB_STEP_SUMMARY
+            gh issue edit $ISSUE_NUMBER --add-label "theme: madara" -R $REPO
           elif [[ "$LIGHNOVELWP" == "true" ]]; then
-            echo "🏷️ Adding label: Theme: Lighnovelwp" >> $GITHUB_STEP_SUMMARY
-            gh issue edit $ISSUE_NUMBER --add-label "Theme: Lighnovelwp" -R $REPO
-            echo "theme=lightnovelwp" >> "$GITHUB_OUTPUT"
+            echo "🏷️ Adding label: theme: lighnovelwp" >> $GITHUB_STEP_SUMMARY
+            gh issue edit $ISSUE_NUMBER --add-label "theme: lighnovelwp" -R $REPO
           elif [[ "$HOTNOVELPUB" == "true" ]]; then
-            echo "🏷️ Adding label: Theme: Hotnovelpub" >> $GITHUB_STEP_SUMMARY
-            gh issue edit $ISSUE_NUMBER --add-label "Theme: Hotnovelpub" -R $REPO
-            echo "theme=hotnovelpub" >> "$GITHUB_OUTPUT"
+            echo "🏷️ Adding label: theme: hotnovelpub" >> $GITHUB_STEP_SUMMARY
+            gh issue edit $ISSUE_NUMBER --add-label "theme: hotnovelpub" -R $REPO
           elif [[ "$FICTIONEER" == "true" ]]; then
-            echo "🏷️ Adding label: Theme: Fictioneer" >> $GITHUB_STEP_SUMMARY
-            gh issue edit $ISSUE_NUMBER --add-label "Theme: Fictioneer" -R $REPO
-            echo "theme=fictioneer" >> "$GITHUB_OUTPUT"
+            echo "🏷️ Adding label: theme: fictioneer" >> $GITHUB_STEP_SUMMARY
+            gh issue edit $ISSUE_NUMBER --add-label "theme: fictioneer" -R $REPO
           else
             echo "❌ No Theme Detected" >> $GITHUB_STEP_SUMMARY
           fi
-
-  create-source-pr:
-    name: Create MultiSrc Draft PR
-    needs: auto-label
-    if: needs.auto-label.outputs.theme != ''
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          ref: master
-
-      - name: Add Source Configuration
-        id: add_source
-        env:
-          ISSUE_BODY: ${{ github.event.issue.body }}
-          THEME: ${{ needs.auto-label.outputs.theme }}
-        run: node .github/scripts/add-multisrc-source.cjs
-
-      - name: Setup Node.js
-        if: steps.add_source.outputs.changed == 'true'
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version: '24'
-          cache: npm
-
-      - name: Install Dependencies
-        if: steps.add_source.outputs.changed == 'true'
-        run: npm ci --omit=dev --ignore-scripts
-
-      - name: Validate Source Configuration
-        if: steps.add_source.outputs.changed == 'true'
-        run: |
-          node -e "JSON.parse(require('fs').readFileSync('plugins/multisrc/${{ needs.auto-label.outputs.theme }}/sources.json', 'utf8'))"
-          npm run build:multisrc
-
-      - name: Create Draft Pull Request
-        if: steps.add_source.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
-        with:
-          commit-message: 'feat: Add ${{ steps.add_source.outputs.source_name }} MultiSrc Source'
-          branch: 'automation/multisrc-issue-${{ github.event.issue.number }}'
-          title: 'feat: Add ${{ steps.add_source.outputs.source_name }} MultiSrc Source'
-          body: |
-            Adds `${{ steps.add_source.outputs.source_name }}` to the `${{ needs.auto-label.outputs.theme }}` multi-source configuration.
-
-            Closes #${{ github.event.issue.number }}
-
-            This draft was generated from the theme detected for the plugin request. Before marking it ready, verify theme-specific options such as chapter ordering, browse paths, filters, custom parsing, and language.
-          labels: 'bot'
-          base: 'master'
-          delete-branch: true
-          draft: true

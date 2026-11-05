@@ -15,7 +15,7 @@ concurrency:
 jobs:
   auto-label:
     name: Auto Label Issues
-    if: ${{ github.event.issue.body && contains(github.event.issue.body, '### Plugin') && contains(github.event.issue.labels.*.name, 'Bug') }}
+    if: ${{ github.event.issue.body && contains(github.event.issue.body, '### Plugin') && contains(github.event.issue.labels.*.name, 'bug') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -64,13 +64,16 @@ jobs:
         run: |
           LABELS="$(jq --arg keys "$SELECTED_PLUGIN" '. as $data | $keys | split(", ") as $keyList | $keyList[] | . as $key | if $data[$key] != null then "\($key)[\($data[$key])]" else empty end' ./.github/scripts/keys.json | sed 's/"//g' | sed 's/^[^:]*: //')"
 
-          # Add "Plugin: " in front of each label
-          LABELS_WITH_PREFIX="$(echo "$LABELS" | sed 's/^/Plugin: /')"
+          LABELS="$(printf '%s' "$LABELS" | node -e "process.stdin.on('data', data => process.stdout.write(data.toString().toLowerCase()))")"
+
+          # Add "plugin: " in front of each label
+          LABELS_WITH_PREFIX="$(echo "$LABELS" | sed 's/^/plugin: /')"
 
           FINAL_LABELS="$LABELS_WITH_PREFIX"
 
           if [ -n "$SELECTED_LANGUAGE" ]; then
-            FINAL_LABELS="${FINAL_LABELS}"$'\n'"Language: $SELECTED_LANGUAGE"
+            LOWERCASE_LANGUAGE="$(printf '%s' "$SELECTED_LANGUAGE" | node -e "process.stdin.on('data', data => process.stdout.write(data.toString().toLowerCase()))")"
+            FINAL_LABELS="${FINAL_LABELS}"$'\n'"language: $LOWERCASE_LANGUAGE"
           fi
 
           # Save to GitHub environment
@@ -84,9 +87,9 @@ jobs:
           REPOSITORY: ${{ github.repository }}
         run: |
           jq -n \
-            --arg severity "$SELECTED_SEVERITY" \
+            --arg severity "$(printf '%s' "$SELECTED_SEVERITY" | node -e "process.stdin.on('data', data => process.stdout.write(data.toString().toLowerCase()))")" \
             --arg labels "$LABELS" \
-            '{labels: (["Severity: " + $severity] + ($labels | split("\n") | map(select(length > 0))))}' \
+            '{labels: (["severity: " + $severity] + ($labels | split("\n") | map(select(length > 0))))}' \
             | gh api --method POST "repos/$REPOSITORY/issues/$ISSUE_NUMBER/labels" --input -
 
       - name: Handle Missing Label

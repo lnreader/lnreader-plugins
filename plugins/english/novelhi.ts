@@ -10,7 +10,21 @@ class NovelHi implements Plugin.PluginBase {
   name = 'NovelHi';
   icon = 'src/en/novelhi/icon.png';
   site = 'https://novelhi.com/';
-  version = '1.1.1';
+  version = '1.1.2';
+
+  // Cover requests need browser headers: img.novelhi.com answers plain
+  // app requests with 403, while a browser loads the same URL fine.
+  // The app sends these headers for every cover and chapter image.
+  imageRequestInit: Plugin.ImageRequestInit = {
+    method: 'GET',
+    headers: {
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
+      'Referer': 'https://novelhi.com/',
+      'Accept':
+        'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+    },
+  };
 
   // flag indicates whether access to LocalStorage, SesesionStorage is required.
   webStorageUtilized?: boolean;
@@ -72,13 +86,24 @@ class NovelHi implements Plugin.PluginBase {
       throw Error('This Novel has been removed and is no longer available');
     }
 
+    // The cover img may sit inside a .cover / .decorate-img container,
+    // so read the img inside it first; a bare .attr('src') on the
+    // container returns undefined and falls back to the placeholder.
+    const pageCover =
+      loadedCheerio('.cover img, .decorate-img img').attr('src') ||
+      loadedCheerio('.cover img, .decorate-img img').attr('data-src') ||
+      loadedCheerio('.cover, .decorate-img').attr('src') ||
+      loadedCheerio('img[alt*="novel cover"]').attr('src') ||
+      loadedCheerio('img[alt*="novel cover"]').attr('data-src') ||
+      undefined;
+
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name:
         loadedCheerio('b.layui-icon').text().trim() ||
         loadedCheerio('.tit h1').text().trim() ||
         'Untitled',
-      cover: loadedCheerio('.cover,.decorate-img').attr('src') || defaultCover,
+      cover: pageCover || defaultCover,
     };
 
     let moreNovelInfo = this.loadedNovelCache.find(n => n.path === novelPath);
@@ -89,6 +114,11 @@ class NovelHi implements Plugin.PluginBase {
       );
     }
     if (moreNovelInfo) {
+      // The list API already returned a cover for this novel; use it
+      // when the novel page gave none, instead of leaving the placeholder.
+      if (!pageCover && moreNovelInfo.cover) {
+        novel.cover = moreNovelInfo.cover;
+      }
       novel.genres = moreNovelInfo.genres;
       novel.author = moreNovelInfo.author;
       novel.status =
@@ -175,6 +205,12 @@ class NovelHi implements Plugin.PluginBase {
     pageNo: number,
   ): Promise<CachedNovel[]> {
     return this.getNovels(pageNo, searchTerm);
+  }
+
+  resolveUrl(path: string): string {
+    if (/^https?:\/\//i.test(path)) return path;
+    if (path.startsWith('//')) return 'https:' + path;
+    return this.site + path.replace(/^\//, '');
   }
 
   filters = {

@@ -1,17 +1,24 @@
-import { load } from 'cheerio';
+import { CheerioAPI, load } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
+import { defaultCover } from '@libs/defaultCover';
+
+type IndraChapter = {
+  num?: number | string;
+  vip?: number | string;
+  title?: string;
+  date?: string;
+  link?: string;
+};
 
 class IndraTranslations implements Plugin.PluginBase {
   id = 'indratranslations';
   name = 'Indra Translations';
   site = 'https://indratranslations.com';
-  version = '1.2.1';
+  version = '1.3.0';
   icon = 'src/en/indratranslations/icon.png';
-  // customCSS = 'src/en/indratranslations/customCSS.css';
-  // (optional) Add these files to the repo and uncomment the lines above if you want an icon/custom CSS.
 
   // Browser-like headers (important for Cloudflare-y sites)
   private headers = {
@@ -39,6 +46,13 @@ class IndraTranslations implements Plugin.PluginBase {
     return this.site + '/' + u;
   }
 
+  private relative(url: string): string {
+    return url.replace(
+      /^https?:\/\/(www\.)?indratranslations\.com(?=[/?#]|$)/,
+      '',
+    );
+  }
+
   private clean(text: unknown): string {
     return String(text ?? '')
       .replace(/\s+/g, ' ')
@@ -51,247 +65,277 @@ class IndraTranslations implements Plugin.PluginBase {
   }
 
   /**
-   * Indra can render results in different templates.
-   * This tries multiple layouts and returns a single unified list.
+   * The series listing renders each novel as a clickable div
+   * (`onclick="location.href='…'"`) rather than an anchor.
    */
-  private parseNovelCards($: ReturnType<typeof load>) {
-    const out: { name: string; path: string; cover?: string }[] = [];
-    const seen = new Set<string>();
+  private parseNovelCards($: CheerioAPI): Plugin.NovelItem[] {
+    const novels: Plugin.NovelItem[] = [];
 
-    const push = (name?: string, path?: string, cover?: string) => {
-      const cleanName = this.clean(name);
-      const cleanPath = String(path || '')
-        .replace(this.site, '')
-        .trim();
-      if (!cleanName || !cleanPath) return;
-      if (!cleanPath.includes('/series/')) return;
-
-      // Normalize trailing slash for consistency
-      const normalized = cleanPath.endsWith('/') ? cleanPath : cleanPath + '/';
-      if (seen.has(normalized)) return;
-
-      seen.add(normalized);
-      out.push({
-        name: cleanName,
-        path: normalized,
-        cover: cover ? this.absolute(cover) : undefined,
-      });
-    };
-
-    // -------- Layout A (Madara-style): .page-item-detail ----------
-    $('.page-item-detail').each((_, el) => {
-      const a = $(el).find('a[href*="/series/"]').first();
-      const href = a.attr('href') || '';
-      const title =
-        this.clean(a.attr('title')) ||
-        this.clean($(el).find('h3 a').text()) ||
-        this.clean($(el).find('.post-title a').text());
-
-      const img =
-        $(el).find('img').attr('data-src') ||
-        $(el).find('img').attr('data-lazy-src') ||
-        $(el).find('img').attr('src');
-
-      if (href) push(title, href, img || undefined);
-    });
-
-    // -------- Layout B (common search tabs): .c-tabs-item__content ----------
-    $('.c-tabs-item__content').each((_, el) => {
-      const a =
-        $(el).find('a[href*="/series/"]').first() ||
-        $(el).find('.tab-thumb a[href*="/series/"]').first();
-
-      const href = a.attr?.('href') || '';
-      const title =
-        this.clean($(el).find('.post-title a').text()) ||
-        this.clean($(el).find('.tab-summary .post-title a').text()) ||
-        this.clean(a.attr?.('title')) ||
-        this.clean(a.text?.());
-
-      const img =
-        $(el).find('img').attr('data-src') ||
-        $(el).find('img').attr('data-lazy-src') ||
-        $(el).find('img').attr('src');
-
-      if (href) push(title, href, img || undefined);
-    });
-
-    // -------- Layout C (sometimes search results are in .row or .col wrappers) ----------
-    $('.row').each((_, el) => {
-      const a = $(el).find('a[href*="/series/"]').first();
-      const href = a.attr('href') || '';
+    $('.series-grid .series-card').each((_, el) => {
+      const card = $(el);
+      const href =
+        (card.attr('onclick') || '').match(
+          /location\.href\s*=\s*'([^']+)'/,
+        )?.[1] || card.find('a[href]').first().attr('href');
       if (!href) return;
 
-      const title =
-        this.clean($(el).find('h3 a').text()) ||
-        this.clean($(el).find('.post-title a').text()) ||
-        this.clean(a.attr('title')) ||
-        this.clean(a.text());
+      const name =
+        this.clean(card.find('.series-card-title').attr('title')) ||
+        this.clean(card.find('.series-card-title').text()) ||
+        this.clean(card.find('img').attr('alt'));
+      if (!name) return;
 
-      const img =
-        $(el).find('img').attr('data-src') ||
-        $(el).find('img').attr('data-lazy-src') ||
-        $(el).find('img').attr('src');
+      const img = card.find('.series-card-cover img');
+      const cover = this.absolute(
+        img.attr('data-src') || img.attr('data-lazy-src') || img.attr('src'),
+      );
 
-      push(title, href, img || undefined);
+      novels.push({
+        name,
+        path: this.relative(href),
+        cover: cover || defaultCover,
+      });
     });
 
-    // -------- Layout D (fallback: any anchor to /series/) ----------
-    // If everything else fails but links exist, still return something.
-    if (out.length === 0) {
-      $('a[href*="/series/"]').each((_, el) => {
-        const a = $(el);
-        const href = a.attr('href') || '';
-        if (!href) return;
-
-        const title =
-          this.clean(a.attr('title')) || this.clean(a.text()) || 'Unknown';
-
-        // Try to find an image near the link
-        const img =
-          a.find('img').attr('data-src') ||
-          a.find('img').attr('data-lazy-src') ||
-          a.find('img').attr('src') ||
-          a.closest('*').find('img').first().attr('data-src') ||
-          a.closest('*').find('img').first().attr('data-lazy-src') ||
-          a.closest('*').find('img').first().attr('src');
-
-        push(title, href, img || undefined);
-      });
-    }
-
-    return out;
+    return novels;
   }
 
-  async popularNovels(pageNo: number) {
-    if (pageNo !== 1) return [];
-    const html = await this.fetchHtml(`${this.site}/series/`);
-    const $ = load(html);
-    const parsed = this.parseNovelCards($);
-
-    return parsed.map(n => ({
-      name: n.name,
-      path: n.path,
-      cover: n.cover,
-    }));
+  private seriesUrl(pageNo: number, params: Record<string, string>): string {
+    const query = Object.keys(params)
+      .filter(key => params[key])
+      .map(key => `${key}=${encodeURIComponent(params[key])}`)
+      .join('&');
+    const base =
+      pageNo > 1
+        ? `${this.site}/series/page/${pageNo}/`
+        : `${this.site}/series/`;
+    return query ? `${base}?${query}` : base;
   }
 
-  async searchNovels(searchTerm: string, pageNo: number) {
-    if (pageNo !== 1) return [];
-    const url = `${this.site}/?s=${encodeURIComponent(searchTerm)}&post_type=wp-manga`;
-    const html = await this.fetchHtml(url);
-    const $ = load(html);
+  async popularNovels(
+    pageNo: number,
+    {
+      showLatestNovels,
+      filters,
+    }: Plugin.PopularNovelsOptions<typeof this.filters>,
+  ): Promise<Plugin.NovelItem[]> {
+    const url = this.seriesUrl(pageNo, {
+      orderby: showLatestNovels ? 'update' : filters.orderby.value,
+      genre: filters.genre.value,
+      status: filters.status.value,
+      type: filters.type.value,
+    });
+    const $ = load(await this.fetchHtml(url));
     return this.parseNovelCards($);
   }
 
-  async parseNovel(novelPath: string) {
-    const url = novelPath.startsWith('http')
-      ? novelPath
-      : this.site + novelPath;
+  async searchNovels(
+    searchTerm: string,
+    pageNo: number,
+  ): Promise<Plugin.NovelItem[]> {
+    const url = this.seriesUrl(pageNo, { keyword: searchTerm });
+    const $ = load(await this.fetchHtml(url));
+    return this.parseNovelCards($);
+  }
+
+  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+    // Novels used to live under /series/<slug>/; that URL now redirects to
+    // the first chapter, so map old library entries to /<slug>/.
+    const sitePath = this.relative(novelPath).replace(
+      /^\/series\/([^/?#]+)\/?(?:[?#].*)?$/,
+      '/$1/',
+    );
+    const url = sitePath.startsWith('http') ? sitePath : this.site + sitePath;
     const html = await this.fetchHtml(url);
     const $ = load(html);
 
-    const title =
-      this.clean($('h1.entry-title').text()) ||
+    const name =
+      this.clean($('h1.story-main-title').text()) ||
       this.clean($('h1').first().text()) ||
-      'Unknown';
+      'Untitled';
 
-    const cover = this.absolute(
-      $('.summary_image img').attr('data-src') ||
-        $('.summary_image img').attr('data-lazy-src') ||
-        $('.summary_image img').attr('src'),
-    );
+    const img = $('.story-cover-card img').first();
+    const cover =
+      this.absolute(
+        img.attr('data-src') || img.attr('data-lazy-src') || img.attr('src'),
+      ) || defaultCover;
 
-    const summary =
-      this.clean($('.summary__content').text()) ||
-      this.clean($('.description-summary').text()) ||
-      undefined;
+    const summary = $('#story-synopsis p')
+      .map((_, el) => this.clean($(el).text()))
+      .get()
+      .filter(Boolean)
+      .join('\n\n');
 
-    let statusText = '';
-    $('.post-content_item').each((_, el) => {
-      const label = this.clean(
-        $(el).find('.summary-heading').text(),
-      ).toLowerCase();
-      if (label.includes('status')) {
-        statusText = this.clean($(el).find('.summary-content').text());
-      }
-    });
+    const genres = $('.story-meta-list a[href*="/series-genre/"]')
+      .map((_, el) => this.clean($(el).text()))
+      .get()
+      .join(', ');
 
-    const chapters: { name: string; path: string; chapterNumber?: number }[] =
-      [];
-
-    $('li.wp-manga-chapter a').each((_, el) => {
-      const href = $(el).attr('href');
-      if (!href) return;
-      const name = this.clean($(el).text());
-      chapters.push({
-        name,
-        path: href.replace(this.site, ''),
-        chapterNumber: this.chapterNum(name),
-      });
-    });
-
-    if (chapters.length === 0) {
-      $('.wp-manga-chapter a').each((_, el) => {
-        const href = $(el).attr('href');
-        if (!href) return;
-        const name = this.clean($(el).text());
-        chapters.push({
-          name,
-          path: href.replace(this.site, ''),
-          chapterNumber: this.chapterNum(name),
-        });
-      });
-    }
-
-    chapters.sort((a, b) => (a.chapterNumber ?? 0) - (b.chapterNumber ?? 0));
-
-    const statusLower = String(statusText).toLowerCase();
-    const status =
-      statusLower.includes('complete') || statusLower.includes('completed')
-        ? NovelStatus.Completed
-        : NovelStatus.Ongoing;
+    const statusText = this.clean(
+      $('.story-meta-list a[href*="/trang-thai/"]').first().text(),
+    ).toLowerCase();
+    let status: string = NovelStatus.Unknown;
+    if (statusText.includes('complete')) status = NovelStatus.Completed;
+    else if (statusText.includes('ongoing')) status = NovelStatus.Ongoing;
+    else if (statusText.includes('drop')) status = NovelStatus.Cancelled;
+    else if (statusText.includes('hiatus')) status = NovelStatus.OnHiatus;
 
     return {
-      name: title,
-      path: novelPath.endsWith('/') ? novelPath : novelPath + '/',
+      name,
+      path:
+        novelPath.endsWith('/') || /[?#]/.test(novelPath)
+          ? novelPath
+          : novelPath + '/',
       cover,
-      summary,
+      summary: summary || this.clean($('#story-synopsis').text()) || undefined,
+      genres: genres || undefined,
       status,
-      chapters,
+      chapters: this.parseChapterList($, html),
     };
   }
 
-  async parseChapter(chapterPath: string) {
+  /**
+   * The page only renders the newest 100 chapters; the complete list
+   * (oldest first) is embedded as the `TD_Story_Chapters` JSON array.
+   */
+  private parseChapterList($: CheerioAPI, html: string): Plugin.ChapterItem[] {
+    const json = html.match(/TD_Story_Chapters\s*=\s*(\[.*\]);/)?.[1];
+    if (json) {
+      try {
+        const list: IndraChapter[] = JSON.parse(json);
+        return list
+          .filter(chap => chap.link)
+          .map(chap => {
+            const title = this.clean(chap.title);
+            return {
+              name: (Number(chap.vip) === 1 ? '🔒 ' : '') + title,
+              path: this.relative(String(chap.link)),
+              releaseTime: chap.date || undefined,
+              chapterNumber: Number(chap.num) || this.chapterNum(title),
+            };
+          });
+      } catch {
+        // fall back to the rendered list below
+      }
+    }
+
+    const chapters: Plugin.ChapterItem[] = [];
+    $('#chapter-list-container .chapter-item-wrapper a[href]').each((_, el) => {
+      const name = this.clean($(el).find('.text-truncate').first().text());
+      chapters.push({
+        name: ($(el).find('.chap-price-badge').length ? '🔒 ' : '') + name,
+        path: this.relative($(el).attr('href') || ''),
+        chapterNumber: this.chapterNum(name),
+      });
+    });
+    return chapters.reverse();
+  }
+
+  async parseChapter(chapterPath: string): Promise<string> {
     const url = chapterPath.startsWith('http')
       ? chapterPath
       : this.site + chapterPath;
-    const html = await this.fetchHtml(url);
-    const $ = load(html);
+    const $ = load(await this.fetchHtml(url));
 
-    const content = $('.reading-content').first().length
-      ? $('.reading-content').first()
-      : $('.text-left').first().length
-        ? $('.text-left').first()
-        : $('.entry-content').first();
+    const content = $('#chapter-content-text').first().length
+      ? $('#chapter-content-text').first()
+      : $('.chapter-content').first();
 
     if (!content.length) {
       return `\nUnable to load chapter content.\n\n`;
     }
 
-    content.find('script, style, ins, iframe, noscript').remove();
+    // Anti-scraping decoys that the site only hides with CSS.
+    content
+      .find(
+        'script, style, ins, iframe, noscript, .td-copy-honeypot, .td-ad-container, ' +
+          '.td-s-noise, .td-s-para-noise, .td-hidden-watermark, .td-canary-trap',
+      )
+      .remove();
+
+    // Paragraphs are shuffled in the markup and put back in place with the
+    // CSS `order` property; restore their reading order from `data-order`.
+    const flow = content.find('.td-reading-flow').first();
+    if (flow.length) {
+      const paragraphs = flow
+        .children()
+        .toArray()
+        .map((el, index) => ({
+          el,
+          index,
+          order: parseFloat($(el).attr('data-order') || '') || 0,
+        }))
+        .sort((a, b) => a.order - b.order || a.index - b.index);
+      return paragraphs
+        .map(({ el }) => {
+          $(el).removeAttr('style').removeAttr('data-order');
+          return $.html(el);
+        })
+        .join('\n');
+    }
 
     return content.html() ?? '';
   }
 
-  filters: Filters = {
-    sort: {
+  filters = {
+    orderby: {
       label: 'Sort',
-      value: 'Latest',
-      options: [{ label: 'Latest', value: 'Latest' }],
+      value: 'new',
+      options: [
+        { label: 'Newest', value: 'new' },
+        { label: 'Recently Updated', value: 'update' },
+        { label: 'Most Viewed', value: 'views' },
+        { label: 'Highest Rated', value: 'rating' },
+        { label: 'Most Chapters', value: 'chapters' },
+        { label: 'Most Nominated', value: 'nominate' },
+      ],
       type: FilterTypes.Picker,
     },
-  };
+    genre: {
+      label: 'Genre',
+      value: '',
+      options: [
+        { label: 'All', value: '' },
+        { label: 'Action', value: '51' },
+        { label: 'Adventure', value: '52' },
+        { label: 'Fantasy', value: '10' },
+        { label: 'Harem', value: '53' },
+        { label: 'Horror', value: '16' },
+        { label: 'Mature', value: '33' },
+        { label: 'Martial Arts', value: '63' },
+        { label: 'Mystery', value: '35' },
+        { label: 'Psychological', value: '54' },
+        { label: 'Romance', value: '74' },
+        { label: 'School Life', value: '29' },
+        { label: 'Sci-fi', value: '36' },
+        { label: 'Shounen', value: '70' },
+        { label: 'Slice of Life', value: '30' },
+        { label: 'Supernatural', value: '55' },
+      ],
+      type: FilterTypes.Picker,
+    },
+    status: {
+      label: 'Status',
+      value: '',
+      options: [
+        { label: 'All', value: '' },
+        { label: 'Completed', value: 'completed' },
+        { label: 'Dropped', value: 'dropped' },
+        { label: 'Ongoing', value: 'ongoing' },
+      ],
+      type: FilterTypes.Picker,
+    },
+    type: {
+      label: 'Type',
+      value: '',
+      options: [
+        { label: 'All', value: '' },
+        { label: 'Short Story', value: 'short' },
+        { label: 'Long Story', value: 'long' },
+      ],
+      type: FilterTypes.Picker,
+    },
+  } satisfies Filters;
 }
 
 export default new IndraTranslations();

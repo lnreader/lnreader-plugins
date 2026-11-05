@@ -2,8 +2,8 @@
 
 <p>
 <img alt="Total number of available plugins" src="https://raw.githubusercontent.com/LNReader/lnreader-plugins/plugins/v3.0.0/total.svg">
-<img alt="Open plugin requests" src="https://img.shields.io/github/issues/lnreader/lnreader-plugins/Plugin%20Request?color=success&label=plugin%20requests">
-<img alt="Open bug reports" src="https://img.shields.io/github/issues/lnreader/lnreader-plugins/Bug?color=red&label=bugs">
+<img alt="Open plugin requests" src="https://img.shields.io/github/issues/lnreader/lnreader-plugins/plugin%20request?color=success&label=plugin%20requests">
+<img alt="Open bug reports" src="https://img.shields.io/github/issues/lnreader/lnreader-plugins/bug?color=red&label=bugs">
 </p>
 
 Community-driven plugin repository for [LNReader](https://github.com/LNReader/lnreader). This repository hosts plugins and manages related issues and requests.
@@ -34,6 +34,16 @@ npm run dev:start
 ```
 
 Open [localhost:3000](http://localhost:3000) to test plugins interactively. See the [testing guide](./docs/website-tutorial.md) for details.
+
+The issue-report panel uses `VITE_ISSUE_INDEX_URL` when set. Add it to `.env.local` to use another index URL:
+
+```env
+VITE_ISSUE_INDEX_URL=https://example.com/issue-index.min.json
+```
+
+If unset, the playground uses `https://raw.githubusercontent.com/LNReader/lnreader-plugins/issue-index/issue-index.min.json`.
+
+Request or validation failures show an error with a Retry action. The playground does not use a bundled local snapshot.
 
 ### Mobile App
 
