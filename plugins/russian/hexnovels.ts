@@ -17,7 +17,7 @@ class HexNovels implements Plugin.PluginBase {
   name = 'HexNovels';
   icon = 'src/ru/hexnovels/icon.png';
   site = 'https://hexnovels.me';
-  version = '1.0.1';
+  version = '1.0.2';
 
   // Paths are site-relative with a leading slash. Library entries saved by
   // 1.0.0 lack it, so accept both forms.
@@ -30,7 +30,57 @@ class HexNovels implements Plugin.PluginBase {
   private async fetchHtml(url: string): Promise<string> {
     const res = await fetchApi(url);
     if (!res.ok) throw new Error(`Could not reach site (${res.status})`);
-    return res.text();
+    // The app runtime truncates `res.text()` at the first NUL byte, and the
+    // site's Next.js router payload embeds NUL-separated keys. Read the body
+    // as raw bytes and decode UTF-8 manually so the chapter data survives.
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    return this.decodeUtf8(bytes);
+  }
+
+  private decodeUtf8(bytes: Uint8Array): string {
+    const parts: string[] = [];
+    let codes: number[] = [];
+    let i = 0;
+    while (i < bytes.length) {
+      const b = bytes[i];
+      // NUL bytes only appear inside the serialized router state; dropping
+      // them keeps the surrounding HTML and JSON intact.
+      if (b === 0) {
+        i++;
+        continue;
+      }
+      if (b < 0x80) {
+        codes.push(b);
+        i++;
+      } else if (b < 0xe0) {
+        codes.push(((b & 0x1f) << 6) | (bytes[i + 1] & 0x3f));
+        i += 2;
+      } else if (b < 0xf0) {
+        codes.push(
+          ((b & 0x0f) << 12) |
+            ((bytes[i + 1] & 0x3f) << 6) |
+            (bytes[i + 2] & 0x3f),
+        );
+        i += 3;
+      } else {
+        const code =
+          ((b & 0x07) << 18) |
+          ((bytes[i + 1] & 0x3f) << 12) |
+          ((bytes[i + 2] & 0x3f) << 6) |
+          (bytes[i + 3] & 0x3f);
+        const surrogate = code - 0x10000;
+        codes.push(0xd800 + (surrogate >> 10), 0xdc00 + (surrogate & 0x3ff));
+        i += 4;
+      }
+      if (codes.length >= 1024) {
+        parts.push(String.fromCharCode.apply(undefined, codes));
+        codes = [];
+      }
+    }
+    if (codes.length) {
+      parts.push(String.fromCharCode.apply(undefined, codes));
+    }
+    return parts.join('');
   }
 
   private parseNovels(html: string): Plugin.NovelItem[] {
@@ -149,7 +199,7 @@ class HexNovels implements Plugin.PluginBase {
     if (!content.length) throw new Error('Chapter content not found');
     // Illustration-only chapters load their (encrypted) images client-side
     if (!content.text().trim() && !content.find('img').length) {
-      return '<p>Эта глава содержит только иллюстрации, они недоступны в приложении.</p>';
+      return '<p>Эта глава содержит только иллюстрации. Сайт загружает и расшифровывает изображения на стороне клиента, поэтому LNReader не может их показать. Откройте главу через WebView, чтобы увидеть изображения.</p>';
     }
     return content.html() || '';
   }
