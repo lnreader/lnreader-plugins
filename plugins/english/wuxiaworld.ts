@@ -1,19 +1,11 @@
 import { load as parseHTML } from 'cheerio';
-import { fetchApi, fetchProto } from '@libs/fetch';
+import { fetchApi, FetchInit } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { NovelStatus } from '@libs/novelStatus';
 
-type StringValue = {
-  value: string;
-};
-
-type BoolValue = {
-  value: boolean;
-};
-
 type DecimalValue = {
-  units: bigint;
+  units: number;
   nanos: number;
 };
 
@@ -22,49 +14,46 @@ type Timestamp = {
   nanos: number;
 };
 
+type ChapterItem = {
+  name: string;
+  slug: string;
+  number?: DecimalValue;
+  content?: string;
+  relatedUserInfo?: { isChapterUnlocked?: boolean };
+  offset: number;
+  publishedAt?: Timestamp;
+};
+
+type ChapterGroupItem = {
+  title: string;
+  chapterList: ChapterItem[];
+};
+
+type NovelItem = {
+  id?: number;
+  name?: string;
+  slug?: string;
+  status?: number;
+  description?: string;
+  synopsis?: string;
+  coverUrl?: string;
+  authorName?: string;
+  maxFreeChapter?: DecimalValue;
+  genres: string[];
+};
+
 type NovelEntry = {
   name: string;
   coverUrl: string;
   slug: string;
 };
 
-type RelatedChapterUserInfo = {
-  isChapterUnlocked?: BoolValue;
-};
-
-type ChapterItem = {
-  entityId: number;
-  name: string;
-  slug: string;
-  number?: DecimalValue;
-  content?: StringValue;
-  relatedUserInfo?: RelatedChapterUserInfo;
+/**
+ * Cursor over a protobuf message's bytes.
+ */
+type ByteReader = {
+  buffer: Uint8Array;
   offset: number;
-  publishedAt?: Timestamp;
-};
-
-type GetChapterResponse = {
-  item?: ChapterItem;
-};
-
-type ChapterGroupCounts = {
-  total: number;
-  advance: number;
-  normal: number;
-};
-
-type ChapterGroupItem = {
-  id: number;
-  title: string;
-  order: number;
-  fromChapterNumber?: DecimalValue;
-  toChapterNumber?: DecimalValue;
-  chapterList: ChapterItem[];
-  counts?: ChapterGroupCounts;
-};
-
-type GetChapterListResponse = {
-  items: ChapterGroupItem[];
 };
 
 enum NovelItem_Status {
@@ -74,30 +63,427 @@ enum NovelItem_Status {
   All = -1,
 }
 
-type NovelKarmaInfo = {
-  isActive: boolean;
-  isFree: boolean;
-  maxFreeChapter?: DecimalValue;
-  canUnlockWithVip: boolean;
+/**
+ * WuxiaWorld only speaks gRPC-web (`api2.wuxiaworld.com`), so requests and
+ * responses are protobuf-encoded here instead of via `@libs/fetch`'s
+ * `fetchProto`. The app implementation of `fetchProto` reads the response with
+ * `FileReader.readAsDataURL` and cuts a fixed
+ * `data:application/octet-stream;base64,` prefix off the result, while React
+ * Native builds that prefix from the blob's own MIME type, which the app's
+ * fetch implementation takes from the response headers. WuxiaWorld answers
+ * with `application/grpc-web`, whose prefix is shorter, so the fixed slice
+ * swallows the first bytes of the message frame and protobufjs rejects the
+ * request with `illegal tag: field number 0` - the app then never resolves
+ * `parseNovel` and the novel screen loads forever. `Response.arrayBuffer()`
+ * returns the raw bytes and does not have that problem.
+ */
+
+const readVarint = (reader: ByteReader) => {
+  let value = 0;
+  let multiplier = 1;
+
+  while (reader.offset < reader.buffer.length) {
+    const byte = reader.buffer[reader.offset++];
+    value += (byte & 0x7f) * multiplier;
+    if (byte < 0x80) return value;
+    multiplier *= 128;
+    // Wider varints (protobuf encodes negative values as uint64) exceed Number
+    // precision; -1 is the only negative value this API defines.
+    if (multiplier > 9007199254740992) return -1;
+  }
+
+  return value;
 };
 
-type NovelItem = {
-  id: number;
-  name: string;
-  slug: string;
-  status: NovelItem_Status;
-  visible: boolean;
-  description?: StringValue;
-  synopsis?: StringValue;
-  coverUrl?: StringValue;
-  translatorName?: StringValue;
-  authorName?: StringValue;
-  karmaInfo?: NovelKarmaInfo;
-  genres: string[];
+const readFieldHeader = (reader: ByteReader) => {
+  const header = readVarint(reader);
+  return { field: Math.floor(header / 8), wireType: header % 8 };
 };
 
-type GetNovelResponse = {
-  item?: NovelItem;
+const readBytes = (reader: ByteReader, length: number) => {
+  const bytes = reader.buffer.subarray(reader.offset, reader.offset + length);
+  reader.offset += length;
+  return bytes;
+};
+
+const readNested = (reader: ByteReader): ByteReader => ({
+  buffer: readBytes(reader, readVarint(reader)),
+  offset: 0,
+});
+
+const readSfixed32 = (reader: ByteReader) => {
+  const value =
+    reader.buffer[reader.offset] |
+    (reader.buffer[reader.offset + 1] << 8) |
+    (reader.buffer[reader.offset + 2] << 16) |
+    (reader.buffer[reader.offset + 3] << 24);
+  reader.offset += 4;
+  return value;
+};
+
+const skipField = (reader: ByteReader, wireType: number) => {
+  switch (wireType) {
+    case 0:
+      readVarint(reader);
+      return true;
+    case 1:
+      reader.offset += 8;
+      return true;
+    case 2:
+      readBytes(reader, readVarint(reader));
+      return true;
+    case 5:
+      reader.offset += 4;
+      return true;
+    default:
+      return false;
+  }
+};
+
+const decodeUtf8 = (bytes: Uint8Array) => {
+  let text = '';
+  let index = 0;
+
+  while (index < bytes.length) {
+    const first = bytes[index++];
+
+    if (first < 0x80) {
+      text += String.fromCharCode(first);
+    } else if (first < 0xe0) {
+      text += String.fromCharCode(
+        ((first & 0x1f) << 6) | (bytes[index++] & 0x3f),
+      );
+    } else if (first < 0xf0) {
+      const second = bytes[index++];
+      const third = bytes[index++];
+      text += String.fromCharCode(
+        ((first & 0x0f) << 12) | ((second & 0x3f) << 6) | (third & 0x3f),
+      );
+    } else {
+      const second = bytes[index++];
+      const third = bytes[index++];
+      const fourth = bytes[index++];
+      const surrogate =
+        (((first & 0x07) << 18) |
+          ((second & 0x3f) << 12) |
+          ((third & 0x3f) << 6) |
+          (fourth & 0x3f)) -
+        0x10000;
+      text += String.fromCharCode(
+        0xd800 + (surrogate >> 10),
+        0xdc00 + (surrogate & 0x3ff),
+      );
+    }
+  }
+
+  return text;
+};
+
+const encodeUtf8 = (text: string) => {
+  const bytes: number[] = [];
+
+  for (let index = 0; index < text.length; index++) {
+    const code = text.charCodeAt(index);
+
+    if (code < 0x80) {
+      bytes.push(code);
+    } else if (code < 0x800) {
+      bytes.push(0xc0 | (code >> 6), 0x80 | (code & 0x3f));
+    } else if (code >= 0xd800 && code <= 0xdbff) {
+      const pair = text.charCodeAt(index + 1);
+      index++;
+      const codePoint =
+        (0x10000 + ((code - 0xd800) << 10) + (pair - 0xdc00)) & 0x3ffff;
+      bytes.push(
+        0xf0 | (codePoint >> 18),
+        0x80 | ((codePoint >> 12) & 0x3f),
+        0x80 | ((codePoint >> 6) & 0x3f),
+        0x80 | (codePoint & 0x3f),
+      );
+    } else {
+      bytes.push(
+        0xe0 | (code >> 12),
+        0x80 | ((code >> 6) & 0x3f),
+        0x80 | (code & 0x3f),
+      );
+    }
+  }
+
+  return bytes;
+};
+
+const writeVarint = (bytes: number[], value: number) => {
+  let remaining = value;
+
+  while (remaining >= 128) {
+    bytes.push((remaining & 0x7f) | 0x80);
+    remaining = Math.floor(remaining / 128);
+  }
+
+  bytes.push(remaining);
+};
+
+const writeTag = (bytes: number[], field: number, wireType: number) =>
+  writeVarint(bytes, field * 8 + wireType);
+
+const writeBytes = (bytes: number[], payload: number[]) => {
+  for (const byte of payload) {
+    bytes.push(byte);
+  }
+};
+
+const writeStringField = (bytes: number[], field: number, text: string) => {
+  const payload = encodeUtf8(text);
+  writeTag(bytes, field, 2);
+  writeVarint(bytes, payload.length);
+  writeBytes(bytes, payload);
+};
+
+const writeMessageField = (
+  bytes: number[],
+  field: number,
+  payload: number[],
+) => {
+  writeTag(bytes, field, 2);
+  writeVarint(bytes, payload.length);
+  writeBytes(bytes, payload);
+};
+
+/**
+ * `GetNovelRequest` selects a novel by slug (field 2 of its `selector` oneof).
+ */
+const encodeGetNovelRequest = (slug: string) => {
+  const request: number[] = [];
+  writeStringField(request, 2, slug);
+  return request;
+};
+
+/**
+ * `GetChapterListRequest.novelId` is field 1.
+ */
+const encodeGetChapterListRequest = (novelId: number) => {
+  const request: number[] = [];
+  writeTag(request, 1, 0);
+  writeVarint(request, novelId);
+  return request;
+};
+
+/**
+ * `GetChapterRequest.chapterProperty` (field 1) holds a
+ * `GetChapterByProperty.slugs` (field 2) of `{ novelSlug, chapterSlug }`.
+ */
+const encodeGetChapterRequest = (novelSlug: string, chapterSlug: string) => {
+  const slugs: number[] = [];
+  writeStringField(slugs, 1, novelSlug);
+  writeStringField(slugs, 2, chapterSlug);
+
+  const property: number[] = [];
+  writeMessageField(property, 2, slugs);
+
+  const request: number[] = [];
+  writeMessageField(request, 1, property);
+  return request;
+};
+
+const decodeStringValue = (reader: ByteReader) => {
+  let text = '';
+
+  while (reader.offset < reader.buffer.length) {
+    const { field, wireType } = readFieldHeader(reader);
+    if (field === 1 && wireType === 2) {
+      text = decodeUtf8(readBytes(reader, readVarint(reader)));
+    } else if (!skipField(reader, wireType)) {
+      break;
+    }
+  }
+
+  return text;
+};
+
+const decodeDecimalValue = (reader: ByteReader): DecimalValue => {
+  const value: DecimalValue = { units: 0, nanos: 0 };
+
+  while (reader.offset < reader.buffer.length) {
+    const { field, wireType } = readFieldHeader(reader);
+    if (field === 1 && wireType === 0) {
+      value.units = readVarint(reader);
+    } else if (field === 2 && wireType === 5) {
+      value.nanos = readSfixed32(reader);
+    } else if (!skipField(reader, wireType)) {
+      break;
+    }
+  }
+
+  return value;
+};
+
+const decodeTimestamp = (reader: ByteReader): Timestamp => {
+  const value: Timestamp = { seconds: 0, nanos: 0 };
+
+  while (reader.offset < reader.buffer.length) {
+    const { field, wireType } = readFieldHeader(reader);
+    if (field === 1 && wireType === 0) {
+      value.seconds = readVarint(reader);
+    } else if (field === 2 && wireType === 0) {
+      value.nanos = readVarint(reader);
+    } else if (!skipField(reader, wireType)) {
+      break;
+    }
+  }
+
+  return value;
+};
+
+const decodeRelatedChapterUserInfo = (reader: ByteReader) => {
+  const info: { isChapterUnlocked?: boolean } = {};
+
+  while (reader.offset < reader.buffer.length) {
+    const { field, wireType } = readFieldHeader(reader);
+    if (field === 1 && wireType === 0) {
+      info.isChapterUnlocked = readVarint(reader) !== 0;
+    } else if (!skipField(reader, wireType)) {
+      break;
+    }
+  }
+
+  return info;
+};
+
+const decodeChapterItem = (reader: ByteReader): ChapterItem => {
+  const item: ChapterItem = { name: '', slug: '', offset: 0 };
+
+  while (reader.offset < reader.buffer.length) {
+    const { field, wireType } = readFieldHeader(reader);
+    if (field === 2 && wireType === 2) {
+      item.name = decodeUtf8(readBytes(reader, readVarint(reader)));
+    } else if (field === 3 && wireType === 2) {
+      item.slug = decodeUtf8(readBytes(reader, readVarint(reader)));
+    } else if (field === 4 && wireType === 2) {
+      item.number = decodeDecimalValue(readNested(reader));
+    } else if (field === 5 && wireType === 2) {
+      item.content = decodeStringValue(readNested(reader));
+    } else if (field === 16 && wireType === 2) {
+      item.relatedUserInfo = decodeRelatedChapterUserInfo(readNested(reader));
+    } else if (field === 17 && wireType === 0) {
+      item.offset = readVarint(reader);
+    } else if (field === 18 && wireType === 2) {
+      item.publishedAt = decodeTimestamp(readNested(reader));
+    } else if (!skipField(reader, wireType)) {
+      break;
+    }
+  }
+
+  return item;
+};
+
+const decodeChapterGroupItem = (reader: ByteReader): ChapterGroupItem => {
+  const group: ChapterGroupItem = { title: '', chapterList: [] };
+
+  while (reader.offset < reader.buffer.length) {
+    const { field, wireType } = readFieldHeader(reader);
+    if (field === 2 && wireType === 2) {
+      group.title = decodeUtf8(readBytes(reader, readVarint(reader)));
+    } else if (field === 6 && wireType === 2) {
+      group.chapterList.push(decodeChapterItem(readNested(reader)));
+    } else if (!skipField(reader, wireType)) {
+      break;
+    }
+  }
+
+  return group;
+};
+
+const decodeChapterListResponse = (reader: ByteReader) => {
+  const groups: ChapterGroupItem[] = [];
+
+  while (reader.offset < reader.buffer.length) {
+    const { field, wireType } = readFieldHeader(reader);
+    if (field === 1 && wireType === 2) {
+      groups.push(decodeChapterGroupItem(readNested(reader)));
+    } else if (!skipField(reader, wireType)) {
+      break;
+    }
+  }
+
+  return groups;
+};
+
+const readNovelKarmaInfo = (reader: ByteReader) => {
+  let maxFreeChapter: DecimalValue | undefined;
+
+  while (reader.offset < reader.buffer.length) {
+    const { field, wireType } = readFieldHeader(reader);
+    if (field === 3 && wireType === 2) {
+      maxFreeChapter = decodeDecimalValue(readNested(reader));
+    } else if (!skipField(reader, wireType)) {
+      break;
+    }
+  }
+
+  return maxFreeChapter;
+};
+
+const decodeNovelItem = (reader: ByteReader): NovelItem => {
+  const item: NovelItem = { genres: [] };
+
+  while (reader.offset < reader.buffer.length) {
+    const { field, wireType } = readFieldHeader(reader);
+    if (field === 1 && wireType === 0) {
+      item.id = readVarint(reader);
+    } else if (field === 2 && wireType === 2) {
+      item.name = decodeUtf8(readBytes(reader, readVarint(reader)));
+    } else if (field === 3 && wireType === 2) {
+      item.slug = decodeUtf8(readBytes(reader, readVarint(reader)));
+    } else if (field === 4 && wireType === 0) {
+      item.status = readVarint(reader);
+    } else if (field === 8 && wireType === 2) {
+      item.description = decodeStringValue(readNested(reader));
+    } else if (field === 9 && wireType === 2) {
+      item.synopsis = decodeStringValue(readNested(reader));
+    } else if (field === 10 && wireType === 2) {
+      item.coverUrl = decodeStringValue(readNested(reader));
+    } else if (field === 13 && wireType === 2) {
+      item.authorName = decodeStringValue(readNested(reader));
+    } else if (field === 14 && wireType === 2) {
+      item.maxFreeChapter = readNovelKarmaInfo(readNested(reader));
+    } else if (field === 16 && wireType === 2) {
+      item.genres.push(decodeUtf8(readBytes(reader, readVarint(reader))));
+    } else if (!skipField(reader, wireType)) {
+      break;
+    }
+  }
+
+  return item;
+};
+
+const decodeNovelResponse = (reader: ByteReader) => {
+  let item: NovelItem | null = null;
+
+  while (reader.offset < reader.buffer.length) {
+    const { field, wireType } = readFieldHeader(reader);
+    if (field === 1 && wireType === 2) {
+      item = decodeNovelItem(readNested(reader));
+    } else if (!skipField(reader, wireType)) {
+      break;
+    }
+  }
+
+  return item;
+};
+
+const decodeChapterResponse = (reader: ByteReader) => {
+  let item: ChapterItem | null = null;
+
+  while (reader.offset < reader.buffer.length) {
+    const { field, wireType } = readFieldHeader(reader);
+    if (field === 1 && wireType === 2) {
+      item = decodeChapterItem(readNested(reader));
+    } else if (!skipField(reader, wireType)) {
+      break;
+    }
+  }
+
+  return item;
 };
 
 class WuxiaWorld implements Plugin.PluginBase {
@@ -107,7 +493,7 @@ class WuxiaWorld implements Plugin.PluginBase {
   site = 'https://www.wuxiaworld.com/';
   apiSite = 'https://api2.wuxiaworld.com/wuxiaworld.api.v2.';
   filters?: Filters | undefined;
-  version = '0.5.1';
+  version = '0.6.0';
 
   parseNovels(data: { items: NovelEntry[] }) {
     const novels: Plugin.NovelItem[] = [];
@@ -136,36 +522,82 @@ class WuxiaWorld implements Plugin.PluginBase {
     return this.parseNovels(data);
   }
 
+  async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
+    const url =
+      this.site + 'api/novels/search?query=' + encodeURIComponent(searchTerm);
+
+    const result = await fetchApi(url);
+    const data = await result.json();
+
+    return this.parseNovels(data);
+  }
+
+  /**
+   * Sends a gRPC-web request frame and returns the message frame's bytes.
+   * Returns null for empty or malformed responses instead of throwing, so the
+   * app can show "no chapters" rather than loading forever.
+   */
+  async fetchProtoFrame(
+    request: number[],
+    url: string,
+  ): Promise<ByteReader | null> {
+    const frame = new Uint8Array(5 + request.length);
+    const length = request.length;
+
+    frame[1] = Math.floor(length / 16777216) & 0xff;
+    frame[2] = Math.floor(length / 65536) & 0xff;
+    frame[3] = Math.floor(length / 256) & 0xff;
+    frame[4] = length & 0xff;
+    frame.set(request, 5);
+
+    const response = await fetchApi(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/grpc-web+proto',
+      },
+      // React Native's fetch sends typed-array bodies as binary; FetchInit only
+      // declares FormData/string bodies.
+      body: frame as unknown as FetchInit['body'],
+    });
+
+    if (!response.ok) return null;
+
+    const payload = new Uint8Array(await response.arrayBuffer());
+    if (payload.length < 5) return null;
+
+    // Message frames carry flag 0; the trailing frame (flag 0x80) is a trailer.
+    const messageLength =
+      payload[1] * 16777216 +
+      payload[2] * 65536 +
+      payload[3] * 256 +
+      payload[4];
+
+    if (payload[0] !== 0 || messageLength + 5 > payload.length) return null;
+
+    return { buffer: payload.subarray(5, 5 + messageLength), offset: 0 };
+  }
+
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const data = await fetchProto<GetNovelResponse>(
-      {
-        proto: this.proto,
-        requestType: 'GetNovelRequest',
-        responseType: 'GetNovelResponse',
-        requestData: { slug: novelPath.split('/')[1] },
-      },
+    const slug = novelPath.split('/')[1];
+    const novelReader = await this.fetchProtoFrame(
+      encodeGetNovelRequest(slug),
       this.apiSite + 'Novels/GetNovel',
-      {
-        headers: {
-          'Content-Type': 'application/grpc-web+proto',
-        },
-      },
     );
+    const item = novelReader ? decodeNovelResponse(novelReader) : null;
 
     const novel: Plugin.SourceNovel = {
       path: novelPath,
-      name: data.item?.name || 'Untitled',
-      cover: data.item?.coverUrl?.value,
+      name: item?.name || 'Untitled',
+      cover: item?.coverUrl,
       summary: parseHTML(
-        data.item?.description?.value + '\n\n' + data.item?.synopsis?.value,
+        (item?.description || '') + '\n\n' + (item?.synopsis || ''),
       ).text(),
-      author: data.item?.authorName?.value,
-      genres: data.item?.genres.join(','),
+      author: item?.authorName,
+      genres: item?.genres.join(','),
       chapters: [],
     };
 
-    const status = data.item?.status;
-    switch (status) {
+    switch (item?.status) {
       case NovelItem_Status.Active:
         novel.status = NovelStatus.Ongoing;
         break;
@@ -179,48 +611,30 @@ class WuxiaWorld implements Plugin.PluginBase {
         novel.status = NovelStatus.Completed;
     }
 
-    // novel.summary = loadedCheerio('.relative > .absolute:first')
-    // 	   .children('span')
-    // 	   .map((i,el) => loadedCheerio(el).text().trim())
-    //     .toArray()
-    //     .join('\n');
-
-    // novel.genres = loadedCheerio("a.MuiLink-underlineNone")
-    // 	   .map((i,el) => loadedCheerio(el).text())
-    // 	   .toArray()
-    // 	   .join(',');
-
-    // novel.status = loadedCheerio("div.font-set-b10").text();
-
-    const list = await fetchProto<GetChapterListResponse>(
-      {
-        proto: this.proto,
-        requestType: 'GetChapterListRequest',
-        responseType: 'GetChapterListResponse',
-        requestData: { novelId: data.item?.id },
-      },
-      this.apiSite + 'Chapters/GetChapterList',
-      {
-        headers: {
-          'Content-Type': 'application/grpc-web+proto',
-        },
-      },
-    );
+    const listReader =
+      item?.id === undefined
+        ? null
+        : await this.fetchProtoFrame(
+            encodeGetChapterListRequest(item.id),
+            this.apiSite + 'Chapters/GetChapterList',
+          );
+    const groups = listReader ? decodeChapterListResponse(listReader) : [];
 
     const freeChapter =
-      Number(data.item?.karmaInfo?.maxFreeChapter?.units) +
-        (data.item?.karmaInfo?.maxFreeChapter?.nanos || 0) / 1000000000 || 50;
+      (item?.maxFreeChapter
+        ? item.maxFreeChapter.units + item.maxFreeChapter.nanos / 1000000000
+        : 0) || 50;
 
-    const chapter: Plugin.ChapterItem[] = list.items.flatMap(
-      (ChapterGroupItem: ChapterGroupItem) =>
-        ChapterGroupItem.chapterList.map((chapterItem: ChapterItem) => ({
-          page: ChapterGroupItem.title,
+    const chapter: Plugin.ChapterItem[] = groups.flatMap(
+      (group: ChapterGroupItem) =>
+        group.chapterList.map((chapterItem: ChapterItem) => ({
+          page: group.title,
           name:
             chapterItem.name +
-            (chapterItem.relatedUserInfo?.isChapterUnlocked?.value === false ||
+            (chapterItem.relatedUserInfo?.isChapterUnlocked === false ||
             (!chapterItem.relatedUserInfo &&
-              Number(chapterItem.number?.units) +
-                (chapterItem.number?.nanos || 0) / 1000000000 >
+              chapterItem.number &&
+              chapterItem.number.units + chapterItem.number.nanos / 1000000000 >
                 freeChapter)
               ? ' 🔒'
               : ''),
@@ -240,229 +654,14 @@ class WuxiaWorld implements Plugin.PluginBase {
 
   async parseChapter(chapterPath: string): Promise<string> {
     const paths = chapterPath.split('/');
-    const data = await fetchProto<GetChapterResponse>(
-      {
-        proto: this.proto,
-        requestType: 'GetChapterRequest',
-        responseType: 'GetChapterResponse',
-        requestData: {
-          chapterProperty: {
-            slugs: {
-              novelSlug: paths[1],
-              chapterSlug: paths[2],
-            },
-          },
-        },
-      },
+    const reader = await this.fetchProtoFrame(
+      encodeGetChapterRequest(paths[1], paths[2]),
       this.apiSite + 'Chapters/GetChapter',
-      {
-        headers: {
-          'Content-Type': 'application/grpc-web+proto',
-        },
-      },
     );
-    // loadedCheerio(".chapter-nav").remove();
-    // loadedCheerio("#chapter-content > script").remove();
-    // const chapterText = loadedCheerio("#chapter-content").html() || '';
+    const item = reader ? decodeChapterResponse(reader) : null;
 
-    const chapterText = data.item?.content?.value || '';
-    return chapterText;
+    return item?.content || '';
   }
-
-  async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
-    const url =
-      this.site + 'api/novels/search?query=' + encodeURIComponent(searchTerm);
-
-    const result = await fetchApi(url);
-    const data = await result.json();
-
-    return this.parseNovels(data);
-  }
-
-  proto = `
-    syntax = "proto3";
-    option optimize_for = CODE_SIZE;
-    package wuxiaworld.api.v2;
-
-    import public "google/protobuf/wrappers.proto";
-    import public "google/protobuf/timestamp.proto";
-    
-    message StringValue {
-        // The string value.
-        string value = 1;
-    }
-    
-    message BoolValue {
-        // The bool value.
-        bool value = 1;
-    }
-    
-    message Int32Value {
-        // The int32 value.
-        int32 value = 1;
-    }
-    
-    message DecimalValue {
-        // Whole units part of the amount
-        int64 units = 1;
-        // Nano units of the amount (10^-9)
-        // Must be the same sign as units
-        sfixed32 nanos = 2;
-    }
-    
-    message Timestamp {
-        int64 seconds = 1;
-        int32 nanos = 2;
-    }
-
-    message RelatedChapterUserInfo {
-        optional BoolValue isChapterUnlocked = 1;
-        optional BoolValue isNovelUnlocked = 2;
-        optional BoolValue isChapterFavorite = 3;
-        optional BoolValue isNovelOwned = 4;
-        optional BoolValue isChapterOwned = 5;
-    }
-
-    message ChapterNovelInfo {
-        int32 id = 1;
-        string name = 2;
-        optional StringValue coverUrl = 3;
-        string slug = 4;
-    }
-    
-    message ChapterParagraph {
-        string id = 1;
-        int32 chapterId = 2;
-        int32 totalComments = 3;
-        optional StringValue content = 4;
-    }
-    
-    message ChapterItem {
-        int32 entityId = 1;
-        string name = 2;
-        string slug = 3;
-        optional DecimalValue number = 4;
-        optional StringValue content = 5;
-        int32 novelId = 6;
-        bool visible = 7;
-        bool isTeaser = 8;
-        optional Timestamp whenToPublish = 9;
-        bool spoilerTitle = 10;
-        bool allowComments = 11;
-        optional ChapterNovelInfo novelInfo = 14;
-        optional RelatedChapterUserInfo relatedUserInfo = 16;
-        int32 offset = 17;
-        optional Timestamp publishedAt = 18;
-        optional StringValue translatorThoughts = 19;
-        repeated ChapterParagraph paragraphs = 21;
-    }
-    
-    message ChapterGroupCounts {
-        int32 total = 1;
-        int32 advance = 2;
-        int32 normal = 3;
-    }
-    
-    message ChapterGroupItem {
-        int32 id = 1;
-        string title = 2;
-        int32 order = 3;
-        optional DecimalValue fromChapterNumber = 4;
-        optional DecimalValue toChapterNumber = 5;
-        repeated ChapterItem chapterList = 6;
-        optional ChapterGroupCounts counts = 7;
-    }
-    
-    message GetChapterListRequest {
-        int32 novelId = 1;
-        message BaseChapterInfo {
-            oneof chapterInfo {
-                int32 chapterId = 1;
-                string slug = 2;
-                int32 offset = 3;
-            }
-        }
-        message FilterChapters {
-            optional Int32Value chapterGroupId = 1;
-            optional BoolValue isAdvanceChapter = 2;
-            optional BaseChapterInfo baseChapter = 3;
-        }
-        optional FilterChapters filter = 2;
-        optional Int32Value count = 3;
-    }
-    
-    message GetChapterListResponse {
-        repeated ChapterGroupItem items = 1;
-        optional ChapterNovelInfo novelInfo = 2;
-    }
-
-    message GetChapterByProperty {
-        message ByNovelAndChapterSlug {
-            string novelSlug = 1;
-            string chapterSlug = 2;
-        }
-        oneof byProperty {
-            int32 chapterId = 1;
-            ByNovelAndChapterSlug slugs = 2;
-        }
-    }
-    
-    message GetChapterRequest {
-        optional GetChapterByProperty chapterProperty = 1;
-    }
-    
-    message GetChapterResponse {
-        optional ChapterItem item = 1;
-    }
-
-    message NovelKarmaInfo {
-        bool isActive = 1;
-        bool isFree = 2;
-        optional DecimalValue maxFreeChapter = 3;
-        bool canUnlockWithVip = 4;
-    }
-
-    message NovelItem {
-        int32 id = 1;
-        string name = 2;
-        string slug = 3;
-        enum Status {
-            Finished = 0;
-            Active = 1;
-            Hiatus = 2;
-            All = -1;
-        }
-        Status status = 4;
-        bool visible = 7;
-        optional StringValue description = 8;
-        optional StringValue synopsis = 9;
-        optional StringValue coverUrl = 10;
-        optional StringValue translatorName = 11;
-        optional StringValue authorName = 13;
-        optional NovelKarmaInfo karmaInfo = 14;
-        repeated string genres = 16;
-    }
-
-    message GetNovelRequest {
-        oneof selector {
-            int32 id = 1;
-            string slug = 2;
-        }
-    }
-    
-    message GetNovelResponse {
-        optional NovelItem item = 1;
-    }
-
-    service Chapters {
-        rpc GetChapterList(GetChapterListRequest) returns (GetChapterListResponse);
-        rpc GetChapter(GetChapterRequest) returns (GetChapterResponse);
-    }
-
-    service Novels {
-        rpc GetNovel(GetNovelRequest) returns (GetNovelResponse);
-    }
-    `;
 }
 
 export default new WuxiaWorld();
