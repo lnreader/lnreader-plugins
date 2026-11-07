@@ -236,7 +236,10 @@ class HakoPlugin implements Plugin.PluginBase {
               page: this.currentVolume,
               chapterNumber: chapterNumber,
             };
-          } else if (attribs['class'] === 'chapter-time') {
+          } else if (
+            attribs['class'] === 'chapter-time' &&
+            this.tempChapter.path
+          ) {
             this.readingTime = true;
           }
         }
