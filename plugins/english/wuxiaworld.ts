@@ -334,12 +334,34 @@ const decodeTimestamp = (reader: ByteReader): Timestamp => {
   return value;
 };
 
+/**
+ * `google.protobuf.BoolValue` is a nested message, not a bare varint: an
+ * absent wrapper and a wrapper holding `false` both decode to `false`, which
+ * is what keeps the locked-chapter warning for explicitly locked chapters.
+ */
+const decodeBoolValue = (reader: ByteReader) => {
+  let value = false;
+
+  while (reader.offset < reader.buffer.length) {
+    const { field, wireType } = readFieldHeader(reader);
+    if (field === 1 && wireType === 0) {
+      value = readVarint(reader) !== 0;
+    } else if (!skipField(reader, wireType)) {
+      break;
+    }
+  }
+
+  return value;
+};
+
 const decodeRelatedChapterUserInfo = (reader: ByteReader) => {
   const info: { isChapterUnlocked?: boolean } = {};
 
   while (reader.offset < reader.buffer.length) {
     const { field, wireType } = readFieldHeader(reader);
-    if (field === 1 && wireType === 0) {
+    if (field === 1 && wireType === 2) {
+      info.isChapterUnlocked = decodeBoolValue(readNested(reader));
+    } else if (field === 1 && wireType === 0) {
       info.isChapterUnlocked = readVarint(reader) !== 0;
     } else if (!skipField(reader, wireType)) {
       break;
