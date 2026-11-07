@@ -1,15 +1,62 @@
 import { CheerioAPI, load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { FilterTypes, Filters } from '@libs/filterInputs';
+import { NovelStatus } from '@libs/novelStatus';
 import { Plugin } from '@/types/plugin';
 import dayjs from 'dayjs';
+
+const MONTHS = [
+  'jan',
+  'feb',
+  'mar',
+  'apr',
+  'may',
+  'jun',
+  'jul',
+  'aug',
+  'sep',
+  'oct',
+  'nov',
+  'dec',
+];
 
 class ScribbleHubPlugin implements Plugin.PluginBase {
   id = 'scribblehub';
   name = 'Scribble Hub';
   icon = 'src/en/scribblehub/icon.png';
   site = 'https://www.scribblehub.com/';
-  version = '1.0.2';
+  version = '1.1.0';
+
+  parseReleaseTime(dateText: string): string | null {
+    const relative = dateText.match(
+      /(\d+)\s+(second|minute|hour|day|week|month|year)s?\s+ago/i,
+    );
+    if (relative) {
+      const unit = relative[2].toLowerCase() as dayjs.ManipulateType;
+      return dayjs().subtract(parseInt(relative[1], 10), unit).toISOString();
+    }
+
+    // Absolute dates look like "Nov 1, 2026 06:07 PM" or "Nov 1, 2026".
+    const absolute = dateText.match(
+      /([A-Za-z]{3})[a-z]*\s+(\d{1,2}),\s+(\d{4})(?:\s+(\d{1,2}):(\d{2})\s*(AM|PM))?/i,
+    );
+    if (!absolute) return null;
+
+    const month = MONTHS.indexOf(absolute[1].toLowerCase());
+    if (month === -1) return null;
+
+    let hour = absolute[4] ? parseInt(absolute[4], 10) % 12 : 0;
+    if (absolute[6]?.toUpperCase() === 'PM') hour += 12;
+    const minute = absolute[5] ? parseInt(absolute[5], 10) : 0;
+
+    return new Date(
+      parseInt(absolute[3], 10),
+      month,
+      parseInt(absolute[2], 10),
+      hour,
+      minute,
+    ).toISOString();
+  }
 
   parseNovels(loadedCheerio: CheerioAPI) {
     const novels: Plugin.NovelItem[] = [];
@@ -75,7 +122,7 @@ class ScribbleHubPlugin implements Plugin.PluginBase {
       params.append('pg', page.toString());
       url += `series-finder/?sf=1&${params.toString()}`;
     } else {
-      url += `series-finder/?sf=1&sort=ratings&order=desc&pg=${page}`;
+      url += `series-finder/?sf=1&sort=pageviews&order=desc&pg=${page}`;
     }
 
     const body = await fetchApi(url).then(result => result.text());
@@ -84,11 +131,60 @@ class ScribbleHubPlugin implements Plugin.PluginBase {
     return this.parseNovels(loadedCheerio);
   }
 
+  parseTocChapters(loadedCheerio: CheerioAPI): Plugin.ChapterItem[] {
+    const chapters: Plugin.ChapterItem[] = [];
+    loadedCheerio('.toc_w').each((i, el) => {
+      const chapterLink = loadedCheerio(el).find('a.toc_a');
+      const chapterUrl = chapterLink.attr('href');
+      if (!chapterUrl) return;
+
+      const releaseDate = loadedCheerio(el).find('.fic_date_pub');
+      const chapterNumber = parseInt(loadedCheerio(el).attr('order') || '', 10);
+
+      chapters.push({
+        name: chapterLink.text().trim(),
+        path: chapterUrl.replace(this.site, ''),
+        releaseTime: this.parseReleaseTime(
+          releaseDate.attr('title') || releaseDate.text(),
+        ),
+        chapterNumber: isNaN(chapterNumber) ? undefined : chapterNumber,
+      });
+    });
+    return chapters;
+  }
+
+  async fetchAllChapters(
+    novelPath: string,
+    loadedCheerio: CheerioAPI,
+  ): Promise<Plugin.ChapterItem[]> {
+    const novelId = loadedCheerio('input#mypostid').attr('value');
+    if (!novelId) return [];
+
+    const result = await fetchApi(`${this.site}wp-admin/admin-ajax.php`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        'X-Requested-With': 'XMLHttpRequest',
+        Referer: this.site + novelPath,
+        Origin: this.site.slice(0, -1),
+      },
+      body: new URLSearchParams({
+        action: 'wi_getreleases_pagination',
+        pagenum: '-1',
+        mypostid: novelId,
+      }).toString(),
+    });
+
+    if (!result.ok) return [];
+
+    return this.parseTocChapters(parseHTML(await result.text()));
+  }
+
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
     const result = await fetchApi(this.site + novelPath);
     const body = await result.text();
 
-    let loadedCheerio = parseHTML(body);
+    const loadedCheerio = parseHTML(body);
 
     const novel: Plugin.SourceNovel = {
       path: novelPath,
@@ -96,7 +192,6 @@ class ScribbleHubPlugin implements Plugin.PluginBase {
       cover: loadedCheerio('.fic_image > img').attr('src'),
       summary: loadedCheerio('.wi_fic_desc').text(),
       author: loadedCheerio('.auth_name_fic').text(),
-      chapters: [],
     };
 
     novel.genres = loadedCheerio('.fic_genre')
@@ -104,64 +199,30 @@ class ScribbleHubPlugin implements Plugin.PluginBase {
       .toArray()
       .join(',');
 
-    novel.status = loadedCheerio('.rnd_stats').next().text().includes('Ongoing')
-      ? 'Ongoing'
-      : 'Completed';
+    const statusText = loadedCheerio('i.status').closest('li').text();
+    if (statusText.includes('Ongoing')) {
+      novel.status = NovelStatus.Ongoing;
+    } else if (statusText.includes('Hiatus')) {
+      novel.status = NovelStatus.OnHiatus;
+    } else if (statusText.includes('Completed')) {
+      novel.status = NovelStatus.Completed;
+    } else {
+      novel.status = NovelStatus.Unknown;
+    }
 
-    const formData = new FormData();
-    formData.append('action', 'wi_getreleases_pagination');
-    formData.append('pagenum', '-1');
-    formData.append('mypostid', novelPath.split('/')[1]);
+    // The novel page only lists the latest chapters; fall back to them if the
+    // full table of contents request fails.
+    const pageChapters = this.parseTocChapters(loadedCheerio);
+    const allChapters = await this.fetchAllChapters(
+      novelPath,
+      loadedCheerio,
+    ).catch((): Plugin.ChapterItem[] => []);
+    const chapters =
+      allChapters.length > pageChapters.length ? allChapters : pageChapters;
 
-    const data = await fetchApi(`${this.site}wp-admin/admin-ajax.php`, {
-      method: 'POST',
-      body: formData,
-    });
-    const text = await data.text();
-
-    loadedCheerio = parseHTML(text);
-
-    const chapter: Plugin.ChapterItem[] = [];
-
-    const parseISODate = (date: string) => {
-      if (date.includes('ago')) {
-        const dayJSDate = dayjs(new Date()); // today
-        const timeAgo = date.match(/\d+/)?.[0] || '';
-        const timeAgoInt = parseInt(timeAgo, 10);
-
-        if (!timeAgo) return null; // there is no number!
-
-        if (date.includes('hours ago') || date.includes('hour ago')) {
-          dayJSDate.subtract(timeAgoInt, 'hours'); // go back N hours
-        }
-
-        if (date.includes('days ago') || date.includes('day ago')) {
-          dayJSDate.subtract(timeAgoInt, 'days'); // go back N days
-        }
-
-        if (date.includes('months ago') || date.includes('month ago')) {
-          dayJSDate.subtract(timeAgoInt, 'months'); // go back N months
-        }
-
-        return dayJSDate.toISOString();
-      }
-      return null;
-    };
-
-    loadedCheerio('.toc_w').each((i, el) => {
-      const chapterName = loadedCheerio(el).find('.toc_a').text();
-      const releaseDate = loadedCheerio(el).find('.fic_date_pub').text();
-      const chapterUrl = loadedCheerio(el).find('a').attr('href');
-
-      if (!chapterUrl) return;
-      chapter.push({
-        name: chapterName,
-        releaseTime: parseISODate(releaseDate),
-        path: chapterUrl.replace(this.site, ''),
-      });
-    });
-
-    novel.chapters = chapter.reverse();
+    novel.chapters = chapters.sort(
+      (a, b) => (a.chapterNumber ?? 0) - (b.chapterNumber ?? 0),
+    );
 
     return novel;
   }
@@ -176,8 +237,11 @@ class ScribbleHubPlugin implements Plugin.PluginBase {
     return chapterText;
   }
 
-  async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
-    const url = `${this.site}?s=${encodeURIComponent(searchTerm)}&post_type=fictionposts`;
+  async searchNovels(
+    searchTerm: string,
+    pageNo: number,
+  ): Promise<Plugin.NovelItem[]> {
+    const url = `${this.site}series-finder/?sf=1&sh=${encodeURIComponent(searchTerm)}&pg=${pageNo}`;
     const result = await fetchApi(url);
     const body = await result.text();
 
@@ -188,13 +252,13 @@ class ScribbleHubPlugin implements Plugin.PluginBase {
   filters = {
     sort: {
       label: 'Sort Results By',
-      value: 'ratings',
+      value: 'pageviews',
       options: [
         { label: 'Chapters', value: 'chapters' },
         { label: 'Chapters per Week', value: 'frequency' },
         { label: 'Date Added', value: 'dateadded' },
         { label: 'Favorites', value: 'favorites' },
-        { label: 'Last Updated', value: 'lastchdate' },
+        { label: 'Last Updated', value: 'lastchpdate' },
         { label: 'Number of Ratings', value: 'numofrate' },
         { label: 'Pages', value: 'pages' },
         { label: 'Pageviews', value: 'pageviews' },
