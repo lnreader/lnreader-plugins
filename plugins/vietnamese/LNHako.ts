@@ -20,7 +20,7 @@ class HakoPlugin implements Plugin.PluginBase {
   name = 'Hako';
   icon = 'src/vi/hakolightnovel/icon.png';
   site = 'https://ln.hako.vn';
-  version = '1.2.0';
+  version = '1.2.1';
   parseNovels(url: string) {
     return fetchApi(url)
       .then(res => res.text())
@@ -141,37 +141,29 @@ class HakoPlugin implements Plugin.PluginBase {
       Status,
       Unknown,
     }
-    const getInfosHandler: HTMLParser2Util.Handler & { info: InfoItem } = {
+    // Rows are identified by their label: the site omits rows (e.g. author) on most series now.
+    const getInfosHandler: HTMLParser2Util.Handler & {
+      info: InfoItem;
+      label: string;
+      isReadingLabel: boolean;
+    } = {
       isStarted: false,
+      isDone: false,
       info: InfoItem.Unknown,
+      label: '',
+      isReadingLabel: false,
       onopentag(name, attribs) {
-        if (attribs['class'] === 'info-item') {
-          switch (this.info) {
-            case InfoItem.Unknown:
-              if (!novel.author) {
-                this.info = InfoItem.Author;
-              }
-              break;
-            case InfoItem.Author:
-              this.info = InfoItem.Artist;
-              break;
-            case InfoItem.Artist:
-              this.info = InfoItem.Status;
-              break;
-            // we dont need the other info (if exist)
-            case InfoItem.Status:
-              this.info = InfoItem.Unknown;
-              break;
-            default:
-              break;
-          }
-        }
-        if (name === 'a') {
+        if (attribs['class'] === 'info-name') {
+          this.isReadingLabel = true;
+          this.label = '';
+        } else if (name === 'a') {
           this.isStarted = true;
         }
       },
       ontext(data) {
-        if (this.isStarted) {
+        if (this.isReadingLabel) {
+          this.label += data;
+        } else if (this.isStarted) {
           switch (this.info) {
             case InfoItem.Author:
               novel.author += data;
@@ -188,10 +180,20 @@ class HakoPlugin implements Plugin.PluginBase {
         }
       },
       onclosetag(name) {
-        if (this.isStarted) {
+        if (this.isReadingLabel) {
+          this.isReadingLabel = false;
+          if (this.label.includes('Tác giả')) {
+            this.info = InfoItem.Author;
+          } else if (this.label.includes('Họa sĩ')) {
+            this.info = InfoItem.Artist;
+          } else if (this.label.includes('Tình trạng')) {
+            this.info = InfoItem.Status;
+          } else {
+            this.info = InfoItem.Unknown;
+          }
+        } else if (name === 'a') {
           this.isStarted = false;
-        }
-        if (name === 'a' && this.info === InfoItem.Status) {
+        } else if (name === 'div') {
           this.isDone = true;
         }
       },
@@ -211,7 +213,7 @@ class HakoPlugin implements Plugin.PluginBase {
       tempChapter: {} as Plugin.ChapterItem,
       onopentag(name, attribs) {
         if (this.isStarted) {
-          if (name === 'a' && attribs['title'] !== null) {
+          if (name === 'a' && attribs['title']) {
             const chapterName = attribs['title'];
             let chapterNumber = Number(
               chapterName.match(/Chương\s*(\d+)/i)?.[1],
@@ -234,19 +236,25 @@ class HakoPlugin implements Plugin.PluginBase {
               page: this.currentVolume,
               chapterNumber: chapterNumber,
             };
-          } else if (attribs['class'] === 'chapter-time') {
+          } else if (
+            attribs['class'] === 'chapter-time' &&
+            this.tempChapter.path
+          ) {
             this.readingTime = true;
           }
         }
       },
       ontext(data) {
         if (this.readingTime) {
-          const chapterTime = data.split('/').map(x => Number(x));
-          this.tempChapter.releaseTime = new Date(
-            chapterTime[2],
-            chapterTime[1],
-            chapterTime[0],
-          ).toISOString();
+          // DD/MM/YYYY -> YYYY-MM-DD: a date-only value has no timezone to shift it by a day.
+          const chapterTime = data.trim().split('/');
+          if (chapterTime.length === 3) {
+            this.tempChapter.releaseTime = [
+              chapterTime[2],
+              chapterTime[1],
+              chapterTime[0],
+            ].join('-');
+          }
           chapters.push(this.tempChapter);
           this.readingTime = false;
           this.tempChapter = {} as Plugin.ChapterItem;
@@ -312,7 +320,7 @@ class HakoPlugin implements Plugin.PluginBase {
           }
         } else if (attribs['class'] === 'summary-content') {
           this.action = ParseNovelAction.GetSummary;
-        } else if (attribs['class'] === 'series-gerne-item') {
+        } else if (attribs['class']?.includes('series-gerne-item')) {
           this.action = ParseNovelAction.GetGenres;
         } else if (attribs['class'] === 'info-item') {
           this.action = ParseNovelAction.GetInfos;
@@ -338,6 +346,7 @@ class HakoPlugin implements Plugin.PluginBase {
             break;
           case ParseNovelAction.GetInfos:
             if (this.handlers.GetInfos?.isDone) {
+              this.handlers.GetInfos.isDone = false;
               this.action = ParseNovelAction.Unknown;
             }
             break;
@@ -353,6 +362,11 @@ class HakoPlugin implements Plugin.PluginBase {
     };
     return fetchApi(this.site + novelPath)
       .then(res => res.text())
+      .then(html => {
+        // Original works listed under /truyen/<id> answer with a meta refresh to /sang-tac/<id>-<slug>.
+        const redirect = html.match(/http-equiv="refresh"[^>]*url='([^']+)'/i);
+        return redirect ? fetchApi(redirect[1]).then(res => res.text()) : html;
+      })
       .then(html => {
         const parser = new Parser({
           onopentag(name, attributes) {
@@ -392,13 +406,20 @@ class HakoPlugin implements Plugin.PluginBase {
           case 'Tạm ngưng':
             novel.status = NovelStatus.OnHiatus;
             break;
+          case 'Đã hoàn thành':
           case 'Completed':
             novel.status = NovelStatus.Completed;
             break;
           default:
             novel.status = NovelStatus.Unknown;
         }
-        novel.genres = novel.genres?.replace(/,*\s*$/, '');
+        novel.genres = novel.genres
+          ?.split(',')
+          .map(genre => genre.trim())
+          .filter(Boolean)
+          .join(',');
+        novel.author = novel.author?.trim();
+        novel.artist = novel.artist?.trim();
         novel.name = novel.name.trim();
         novel.summary = novel.summary?.trim();
         return novel;
