@@ -20,6 +20,7 @@
     "serve:dev": "npm run build:compile && npm run build:manifest:dev && serve",
     "lint": "npx eslint .",
     "lint:fix": "npx eslint . --fix",
+    "lint:file": "npx eslint",
     "format": "prettier --write \"./**/*.{js,ts}\"",
     "format:check": "prettier --check \"./**/*.{js,ts}\"",
     "check:sites": "node scripts/check-plugin-sites.js",
@@ -95,6 +96,9 @@
     "zustand": "^5.0.1"
   },
   "lint-staged": {
-    "**/*.{js,ts,jsx,tsx}": "prettier --write"
+    "**/*.{js,ts,jsx,tsx}": [
+      "prettier --write",
+      "eslint --fix"
+    ]
   }
 }

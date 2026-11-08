@@ -93,9 +93,12 @@ Read `README.md` for the project entry points, `docs/quickstart.md` before addin
 
 Choose checks proportionate to the files changed:
 
-- `npm run lint` — lint the repository.
+- `npm run lint:file -- <file-path>` (or `npx eslint <file-path>`) — lint the modified file(s).
+  Prefer targeted linting during development because repo-wide `npm run lint` scans all plugins,
+  including unmigrated sources with legacy warnings.
 - `npm run format:check` — check the repository's JavaScript and TypeScript formatting glob.
-- `npm run build:compile` — compile production plugin sources.
+- `npm run build:compile` (`npx tsc --project tsconfig.production.json`) — compile production plugin
+  sources without failing on generator stubs or local scratch files.
 - `npm run build:full` — regenerate multi-source plugins, compile them, and build the manifest.
 - `npm run dev:start` — regenerate multi-source plugins and launch the playground at
   `http://localhost:3000`.
@@ -103,10 +106,11 @@ Choose checks proportionate to the files changed:
   standalone plugins against their live sites.
 - `npm run check:sites` — inspect source-site availability when the task concerns broad outages.
 
-For a standalone plugin change, at minimum run the targeted `check:plugin` command and the relevant
-lint/format check. The live check calls `popularNovels`, `searchNovels`, `parseNovel`, and
-`parseChapter`. A `FAIL` requires investigation; an `INCONCLUSIVE` result usually means the remote
-site was unavailable or blocked the request and should be retried or checked manually.
+For a standalone plugin change, at minimum run targeted linting (`npm run lint:file -- <path>`),
+compilation (`npm run build:compile`), and `check:plugin`. The live check calls `popularNovels`,
+`searchNovels`, `parseNovel`, and `parseChapter`. A `FAIL` requires investigation; an `INCONCLUSIVE`
+result usually means the remote site was unavailable or blocked the request and should be retried or
+checked manually.
 
 For a multi-source change, regenerate the output, inspect the affected generated file, and test it
 in the playground or app. CI intentionally excludes generated multi-source files from the live
@@ -121,6 +125,8 @@ works because target-site markup and network defenses change independently of th
 
 ## Pull requests and change hygiene
 
+- Always check `git status` and start a clean branch from `upstream/master` before beginning work on
+  a new plugin or issue to prevent bundling unrelated in-progress changes.
 - Keep unrelated files and existing user changes untouched.
 - Do not commit generated multi-source plugins, `.js/`, `.dist/`, `broken-sites-report.json`, or
   local environment files.
