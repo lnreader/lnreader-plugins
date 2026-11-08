@@ -76,6 +76,12 @@ Read `README.md` for the project entry points, `docs/quickstart.md` before addin
   to that generator's conventions.
 - Run `npm run build:multisrc` after a generator change and inspect the generated plugin locally.
   Generated files are disposable and may be removed with `npm run clean:multisrc`.
+- When a multi-source site leaves its shared theme for a custom architecture, migrate it to a
+  standalone `plugins/<language>/<id>.ts`: remove its entry from
+  `plugins/multisrc/<generator>/sources.json` and any `plugins/multisrc/<generator>/custom/<id>/`
+  assets, move `public/static/multisrc/<generator>/<id>/icon.png` to
+  `public/static/src/<short-language-code>/<id>/icon.png`, preserve the existing `id` and
+  `resolveUrl`-compatible `novelPath`/`chapterPath` formats, and increment the major `version`.
 
 ## Coding style
 
@@ -104,9 +110,10 @@ Choose checks proportionate to the files changed:
 - `npm run check:sites` — inspect source-site availability when the task concerns broad outages.
 
 For a standalone plugin change, at minimum run the targeted `check:plugin` command and the relevant
-lint/format check. The live check calls `popularNovels`, `searchNovels`, `parseNovel`, and
-`parseChapter`. A `FAIL` requires investigation; an `INCONCLUSIVE` result usually means the remote
-site was unavailable or blocked the request and should be retried or checked manually.
+lint/format check (`npx eslint <changed-files>` and `npx prettier --check <changed-files>` match
+`.github/workflows/lint.yml`). The live check calls `popularNovels`, `searchNovels`, `parseNovel`,
+and `parseChapter`. A `FAIL` requires investigation; an `INCONCLUSIVE` result usually means the
+remote site was unavailable or blocked the request and should be retried or checked manually.
 
 For a multi-source change, regenerate the output, inspect the affected generated file, and test it
 in the playground or app. CI intentionally excludes generated multi-source files from the live
