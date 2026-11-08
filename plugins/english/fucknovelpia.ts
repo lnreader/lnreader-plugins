@@ -11,7 +11,7 @@ class FuckNovelpia implements Plugin.PluginBase {
   name = 'FuckNovelpia';
   icon = 'src/en/fucknovelpia/icon.png';
   site = 'https://fucknovelpia.com/';
-  version = '1.1.3';
+  version = '1.1.4';
 
   sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -27,7 +27,14 @@ class FuckNovelpia implements Plugin.PluginBase {
   // agent, the same one WebView uses when the reader solves Cloudflare.
   // A hardcoded desktop agent does not match that cf_clearance cookie, so the
   // site keeps answering 403 after the check succeeds (issue #2730).
-  async fetchHtml(url: string): Promise<string> {
+  //
+  // Cloudflare only challenges chapter.php; the homepage and novel pages load
+  // without a check. So "open the plugin in WebView" (which loads the homepage)
+  // never earns a cf_clearance cookie. Point readers at the WebView button on
+  // the chapter screen instead, which opens the challenged chapter URL. The
+  // app's fetch shares WebView's cookie store and user agent, so the retry
+  // then goes through until the clearance expires.
+  async fetchHtml(url: string, isChapter = false): Promise<string> {
     let response = await fetchApi(url);
     if (response.status === 429) {
       // Its 429s usually omit Retry-After, and Number(null) is 0, so parse it
@@ -44,7 +51,9 @@ class FuckNovelpia implements Plugin.PluginBase {
       const status = response.status;
       const message =
         status === 403 || status === 503
-          ? `Cloudflare protection detected (HTTP ${status}). Open the plugin in WebView, complete the check, then try again.`
+          ? isChapter
+            ? `Cloudflare check on this chapter (HTTP ${status}). Tap WebView on this screen, wait for the chapter to load, then go back and retry.`
+            : `Cloudflare protection detected (HTTP ${status}). Open the plugin in WebView, complete the check, then try again.`
           : `FuckNovelpia returned HTTP ${status}`;
       const error = new Error(message) as Error & { status?: number };
       error.status = status;
@@ -304,7 +313,7 @@ class FuckNovelpia implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const body = await this.fetchHtml(this.site + chapterPath);
+    const body = await this.fetchHtml(this.site + chapterPath, true);
     const $ = parseHTML(body);
 
     const chapter = $('.reader').first();

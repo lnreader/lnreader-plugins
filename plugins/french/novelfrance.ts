@@ -59,7 +59,7 @@ class NovelFrancePlugin implements Plugin.PluginBase {
   name = 'NovelFrance';
   icon = 'src/fr/novelfrance/icon.png';
   site = 'https://novelfrance.fr/';
-  version = '1.0.1';
+  version = '1.0.2';
 
   private async fetchJson<T>(url: string): Promise<T> {
     const r = await fetchApi(url);
@@ -192,7 +192,8 @@ class NovelFrancePlugin implements Plugin.PluginBase {
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+      .replace(/'/g, '&#39;')
+      .replace(/&lt;(\/?)(i|em|b|strong|u)&gt;/gi, '<$1$2>');
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
@@ -209,7 +210,11 @@ class NovelFrancePlugin implements Plugin.PluginBase {
       if (!content) continue;
 
       // Si le paragraphe d'index 0 est une répétition exacte du titre du chapitre, on l'ignore
-      if (title && p.index === 0 && content.toLowerCase() === title.trim().toLowerCase()) {
+      if (
+        title &&
+        p.index === 0 &&
+        content.toLowerCase() === title.trim().toLowerCase()
+      ) {
         continue;
       }
 
