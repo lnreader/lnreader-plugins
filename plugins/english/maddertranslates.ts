@@ -97,7 +97,8 @@ class MadderTranslates implements Plugin.PluginBase {
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
     const [$, entries] = await Promise.all([
       this.loadPage(novelPath),
-      this.novelList(),
+      // The catalogue only supplies the title and status, which have fallbacks.
+      this.novelList().catch((): NovelEntry[] => []),
     ]);
     const entry = entries.find(item => item.path === novelPath);
     const content = $('.td-page-content').first();
