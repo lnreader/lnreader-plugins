@@ -337,6 +337,13 @@ class MachineSlicedBread implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
+    return this.readChapter(chapterPath, true);
+  }
+
+  private async readChapter(
+    chapterPath: string,
+    followRedirect: boolean,
+  ): Promise<string> {
     const $ = loadCheerio(
       await (await this.request(this.resolveUrl(chapterPath))).text(),
     );
@@ -361,6 +368,20 @@ class MachineSlicedBread implements Plugin.PluginBase {
     });
 
     const chapter = content.html()?.trim() || '';
+    if (
+      followRedirect &&
+      this.cleanText(loadCheerio(chapter).text()).length < 100
+    ) {
+      // Some chapter entries are redirect pages that only link to the real
+      // chapter: follow that link once.
+      const selfKey = this.canonical(this.sitePath(chapterPath) || chapterPath);
+      const target = content
+        .find('a[href]')
+        .toArray()
+        .map(link => this.sitePath($(link).attr('href')))
+        .find(path => path && this.canonical(path) !== selfKey);
+      if (target) return this.readChapter(target, false);
+    }
     if (this.cleanText(loadCheerio(chapter).text()).length < 100) {
       throw new Error('Machine Sliced Bread: no readable chapter text found.');
     }
