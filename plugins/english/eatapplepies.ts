@@ -112,6 +112,11 @@ class EatApplePiesPlugin implements Plugin.PluginBase {
       }
     });
 
+    // An empty wrapper (or one holding only the removed widgets) is not a chapter.
+    if (content.text().trim() === '' && content.find('img').length === 0) {
+      throw new Error(`EatApplePies: no chapter text at ${path}`);
+    }
+
     return content.html() || '';
   }
 
