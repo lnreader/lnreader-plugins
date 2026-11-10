@@ -190,11 +190,13 @@ class NovelaLigera4FanPlugin implements Plugin.PluginBase {
     const novels: Plugin.NovelItem[] = [];
     // Novels may be spread over several result pages next to manhwa.
     for (let page = 1; page <= MAX_SEARCH_PAGES; page++) {
+      // Network and Cloudflare errors propagate so the app can offer WebView;
+      // a page past the last result redirects to the home page with no results.
       const searchCheerio = await this.getCheerio(
         `${this.site}/page/${page}/?s=${encodeURIComponent(searchTerm)}&post_type=wp-manga`,
-      ).catch(() => null);
-      const results = searchCheerio?.('.c-tabs-item__content');
-      if (!searchCheerio || !results?.length) break;
+      );
+      const results = searchCheerio('.c-tabs-item__content');
+      if (!results.length) break;
 
       results.each((_, el) => {
         const result = searchCheerio(el);
