@@ -35,6 +35,9 @@ type Catalog = {
 /** Posts per REST page; WordPress caps `per_page` at 100. */
 const PER_PAGE = 100;
 
+/** How long the novel catalogue is reused before it is fetched again. */
+const CATALOG_TTL_MS = 10 * 60 * 1000;
+
 /**
  * TaxingCorn117's Translations is a WordPress.com fan translation blog (the
  * old taxingcorn117stranslations.com address no longer resolves). Its theme
@@ -125,6 +128,7 @@ class TaxingCorn117sTranslationsPlugin implements Plugin.PluginBase {
   resolveUrl = (path: string) => this.site + this.toPath(path);
 
   private catalogCache: Promise<Catalog> | undefined;
+  private catalogLoadedAt = 0;
 
   /**
    * Novels are the pages that share their slug with a non-empty category.
@@ -132,11 +136,20 @@ class TaxingCorn117sTranslationsPlugin implements Plugin.PluginBase {
    * duplicated draft of a novel that has no chapters of its own.
    */
   private loadCatalog(): Promise<Catalog> {
-    if (!this.catalogCache) {
-      this.catalogCache = this.buildCatalog().catch(error => {
-        this.catalogCache = undefined;
+    // Reuse the catalogue for a few minutes so browsing, searching and opening
+    // a novel share one fetch, but pick up new novels and edited pages later.
+    if (
+      !this.catalogCache ||
+      Date.now() - this.catalogLoadedAt > CATALOG_TTL_MS
+    ) {
+      this.catalogLoadedAt = Date.now();
+      const pending = this.buildCatalog().catch(error => {
+        if (this.catalogCache === pending) {
+          this.catalogCache = undefined;
+        }
         throw error;
       });
+      this.catalogCache = pending;
     }
     return this.catalogCache;
   }
