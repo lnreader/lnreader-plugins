@@ -37,7 +37,7 @@ type Category = {
 };
 type PostSummary = {
   id: number;
-  date: string;
+  date_gmt: string;
   link: string;
   title: { rendered: string };
 };
@@ -58,6 +58,22 @@ class PinkMuffinTLPlugin implements Plugin.PluginBase {
       data: (await response.json()) as T,
       pages: Number(response.headers.get('x-wp-totalpages')) || 1,
     };
+  }
+
+  /**
+   * Reads every page of a list endpoint. A list longer than MAX_PAGES pages is
+   * refused instead of being returned truncated.
+   */
+  private async allPages<T>(query: string): Promise<T[]> {
+    const first = await this.api<T[]>(`${query}&page=1`);
+    if (first.pages > MAX_PAGES) {
+      throw new Error('Pink Muffin TL: the list is too long to load.');
+    }
+    const items = [...first.data];
+    for (let page = 2; page <= first.pages; page++) {
+      items.push(...(await this.api<T[]>(`${query}&page=${page}`)).data);
+    }
+    return items;
   }
 
   private decode(text: string): string {
@@ -81,14 +97,7 @@ class PinkMuffinTLPlugin implements Plugin.PluginBase {
       '/categories?orderby=count&order=desc&_fields=id,name,slug,count,description' +
       `&per_page=${PAGE_SIZE}` +
       (search ? `&search=${encodeURIComponent(search)}` : '');
-    const found: Category[] = [];
-    for (let page = 1; page <= MAX_PAGES; page++) {
-      const { data, pages } = await this.api<Category[]>(
-        `${query}&page=${page}`,
-      );
-      found.push(...data);
-      if (page >= pages) break;
-    }
+    const found = await this.allPages<Category>(query);
     return found.filter(
       category => category.count > 0 && !NOT_NOVEL.has(category.slug),
     );
@@ -102,15 +111,20 @@ class PinkMuffinTLPlugin implements Plugin.PluginBase {
     if (pageNo > 1) return [];
     const categories = await this.categories();
     if (showLatestNovels) {
-      // Novels ordered by their most recent chapter.
-      const { data } = await this.api<{ categories: number[] }[]>(
-        `/posts?per_page=${PAGE_SIZE}&orderby=date&order=desc&_fields=categories`,
-      );
+      // Novels ordered by their most recent chapter: walk the posts from the
+      // newest until every listed novel has been seen.
+      const listed = new Set(categories.map(category => category.id));
       const rank = new Map<number, number>();
-      for (const post of data) {
-        for (const id of post.categories) {
-          if (!rank.has(id)) rank.set(id, rank.size);
+      for (let page = 1; page <= MAX_PAGES && rank.size < listed.size; page++) {
+        const { data, pages } = await this.api<{ categories: number[] }[]>(
+          `/posts?per_page=${PAGE_SIZE}&orderby=date&order=desc&_fields=categories&page=${page}`,
+        );
+        for (const post of data) {
+          for (const id of post.categories) {
+            if (listed.has(id) && !rank.has(id)) rank.set(id, rank.size);
+          }
         }
+        if (page >= pages) break;
       }
       categories.sort(
         (a, b) =>
@@ -135,16 +149,8 @@ class PinkMuffinTLPlugin implements Plugin.PluginBase {
   private async allPosts(categoryId: number): Promise<PostSummary[]> {
     const query =
       `/posts?categories=${categoryId}&orderby=date&order=asc&per_page=${PAGE_SIZE}` +
-      '&_fields=id,date,link,title';
-    const posts: PostSummary[] = [];
-    for (let page = 1; page <= MAX_PAGES; page++) {
-      const { data, pages } = await this.api<PostSummary[]>(
-        `${query}&page=${page}`,
-      );
-      posts.push(...data);
-      if (page >= pages) break;
-    }
-    return posts;
+      '&_fields=id,date_gmt,link,title';
+    return this.allPages<PostSummary>(query);
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
@@ -183,7 +189,7 @@ class PinkMuffinTLPlugin implements Plugin.PluginBase {
           chapter: {
             name,
             path,
-            releaseTime: new Date(entry.post.date + 'Z').toISOString(),
+            releaseTime: new Date(entry.post.date_gmt + 'Z').toISOString(),
             chapterNumber: number ? Number(number) : undefined,
           } as Plugin.ChapterItem,
         };
