@@ -1010,6 +1010,13 @@ See the [Cheerio API docs](https://cheerio.js.org/docs/api) for the full set of 
 (`.find()`, `.first()`, `.eq()`, `.attr()`, `.text()`, `.html()`, etc.), and look at existing
 plugins under `plugins/**` for real examples.
 
+> [!TIP]
+> **Performance in high-volume loops**:
+> Avoid invoking `parseHTML(string)` repeatedly inside tight loops over chapter lists (e.g. mapping thousands of JSON chapter titles). Constructing a Cheerio DOM tree thousands of times introduces significant CPU and GC overhead. Instead, fast-path plain text strings and only invoke Cheerio when HTML tags or entities are actually present:
+> ```ts
+> const decoded = raw.includes('<') || raw.includes('&') ? parseHTML(raw).text() : raw;
+> ```
+
 ---
 
 ### Custom fetching functions
