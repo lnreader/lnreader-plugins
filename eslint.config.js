@@ -131,6 +131,8 @@ export default tseslint.config(
   {
     ignores: [
       '.js',
+      '.dist',
+      'dist',
       'docs',
       'proxy_server.js',
       'plugins/*/*\\[*\\]*.ts', // Files with square brackets in their names
