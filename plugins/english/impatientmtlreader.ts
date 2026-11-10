@@ -232,7 +232,9 @@ class ImpatientMTLReaderPlugin implements Plugin.PluginBase {
       }
     });
     const named = urls.filter(url => /\/cove/i.test(url));
-    return (named[0] || urls[0] || defaultCover).split('?')[0] || defaultCover;
+    const cover = named[0] || urls[0];
+    // Only site images carry a resize query; the placeholder must stay intact.
+    return cover ? cover.split('?')[0] : defaultCover;
   }
 
   /** Paragraphs after "Description:" up to the source / links block. */
