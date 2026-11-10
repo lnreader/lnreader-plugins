@@ -351,9 +351,10 @@ class IsogashiiNeetPlugin implements Plugin.PluginBase {
   }
 
   /**
-   * Posts of the series category that are newer than everything the ToC
-   * lists. The archive is newest first, so paging stops at the first page
-   * that holds no newer post.
+   * Posts of the series category that the ToC does not list and that are not
+   * older than its latest entry (same-day posts count, since the ToC only
+   * carries dates). The archive is newest first, so paging stops at the first
+   * page that holds no such post.
    */
   private async fetchNewerPosts(
     categorySlug: string,
@@ -394,7 +395,7 @@ class IsogashiiNeetPlugin implements Plugin.PluginBase {
         }
         const date = datetime.substring(0, 10);
         const path = this.toPath(href);
-        if (date > since && !knownPaths[path]) {
+        if (date >= since && !knownPaths[path]) {
           foundNewer = true;
           knownPaths[path] = true;
           newer.push({ path, title: this.normalizeText(link.text()), date });
@@ -404,9 +405,9 @@ class IsogashiiNeetPlugin implements Plugin.PluginBase {
         break;
       }
     }
-    return newer.sort((a, b) =>
-      a.date < b.date ? -1 : a.date > b.date ? 1 : 0,
-    );
+    // The archive lists posts newest first (same-day posts included), so
+    // reversing it yields publishing order without comparing bare dates.
+    return newer.reverse();
   }
 
   /** Clean entry content of one chapter page. */
