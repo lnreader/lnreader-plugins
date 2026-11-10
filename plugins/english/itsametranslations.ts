@@ -198,6 +198,9 @@ class ItsAMeTranslations implements Plugin.PluginBase {
       );
       loaded.push(...batch);
     }
+    // Every project failing to load is a fetch problem, not an empty source.
+    if (found.length && loaded.every(novel => !novel))
+      throw new Error('Its A Me Translations: could not load any novel.');
     // Dropped projects whose chapters only exist on the old blog have nothing
     // to read here.
     const novels = loaded.filter(
@@ -217,10 +220,13 @@ class ItsAMeTranslations implements Plugin.PluginBase {
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const novel = (await this.novelList()).find(
+    const listed = (await this.novelList()).find(
       item => item.path === novelPath,
     );
-    if (!novel) throw new Error('Its A Me Translations: novel not found.');
+    if (!listed) throw new Error('Its A Me Translations: novel not found.');
+    // The catalog is cached, but the chapter list must be current when a
+    // novel is opened or refreshed, so read its project page again.
+    const novel = await this.loadNovel(listed.path, listed.name, listed.status);
     return {
       path: novel.path,
       name: novel.name,
