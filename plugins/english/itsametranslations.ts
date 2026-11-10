@@ -21,6 +21,7 @@ const STATUS_BY_GROUP: Record<string, string> = {
 const NON_CHAPTER_ROOTS = new Set(['category', 'tag', 'author', 'wp-content']);
 const SUMMARY_LABEL = /^(summary|description|synopsis)\s*:?$/i;
 const SUMMARY_END = /^(chapters?|toc|table of contents?)\s*:?$/i;
+const FETCH_BATCH_SIZE = 4;
 const PAGE_SIZE = 20;
 
 class ItsAMeTranslations implements Plugin.PluginBase {
@@ -148,15 +149,22 @@ class ItsAMeTranslations implements Plugin.PluginBase {
   /** The novels are the project pages linked from the site's top menu. */
   private novelList(): Promise<NovelEntry[]> {
     if (!this.novels) {
-      this.novels = this.fetchNovelList().catch(error => {
-        this.novels = undefined;
-        throw error;
+      const pending = this.fetchNovelList().then(({ novels, complete }) => {
+        if (!complete && this.novels === pending) this.novels = undefined;
+        return novels;
+      });
+      this.novels = pending;
+      pending.catch(() => {
+        if (this.novels === pending) this.novels = undefined;
       });
     }
     return this.novels;
   }
 
-  private async fetchNovelList(): Promise<NovelEntry[]> {
+  private async fetchNovelList(): Promise<{
+    novels: NovelEntry[];
+    complete: boolean;
+  }> {
     const $ = await this.loadPage(this.site);
     const found: { name: string; path: string; status: string }[] = [];
     const seen = new Set<string>();
@@ -177,18 +185,25 @@ class ItsAMeTranslations implements Plugin.PluginBase {
       });
     });
 
-    const loaded = await Promise.all(
-      found.map(item =>
-        this.loadNovel(item.path, item.name, item.status).catch(
-          () => undefined,
+    const loaded: (NovelEntry | undefined)[] = [];
+    let complete = true;
+    for (let i = 0; i < found.length; i += FETCH_BATCH_SIZE) {
+      const batch = await Promise.all(
+        found.slice(i, i + FETCH_BATCH_SIZE).map(item =>
+          this.loadNovel(item.path, item.name, item.status).catch(() => {
+            complete = false;
+            return undefined;
+          }),
         ),
-      ),
-    );
+      );
+      loaded.push(...batch);
+    }
     // Dropped projects whose chapters only exist on the old blog have nothing
     // to read here.
-    return loaded.filter(
+    const novels = loaded.filter(
       (novel): novel is NovelEntry => !!novel && novel.chapters.length > 0,
     );
+    return { novels, complete };
   }
 
   private toItems(novels: NovelEntry[], pageNo: number): Plugin.NovelItem[] {
