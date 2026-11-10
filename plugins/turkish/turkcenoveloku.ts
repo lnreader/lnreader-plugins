@@ -124,6 +124,28 @@ class TurkceNovelOkuPlugin implements Plugin.PluginBase {
     return link ? this.toPath(link.href) : undefined;
   }
 
+  /** Fetches a URL, retrying once after HTTP 429 (Blogger rate limit). */
+  private async request(url: string) {
+    let response = await fetchApi(url);
+    if (response.status === 429) {
+      const retryAfter = parseInt(
+        response.headers.get('Retry-After') || '',
+        10,
+      );
+      const seconds = Math.min(isNaN(retryAfter) ? 2 : retryAfter, 10);
+      await new Promise(resolve => setTimeout(resolve, seconds * 1000));
+      response = await fetchApi(url);
+    }
+    if (!response.ok) {
+      const error = new Error(
+        `Türkçe Novel Oku: HTTP ${response.status}.`,
+      ) as Error & { status?: number };
+      error.status = response.status;
+      throw error;
+    }
+    return response;
+  }
+
   /**
    * Reads every entry of a Blogger label feed. A page can come back with fewer
    * entries than requested, so the next page starts after the entries that
@@ -138,11 +160,9 @@ class TurkceNovelOkuPlugin implements Plugin.PluginBase {
       const url =
         `${SITE}feeds/posts/default/-/${labelPath}?alt=json` +
         `&orderby=published&max-results=${PAGE_SIZE}&start-index=${startIndex}`;
-      const response = await fetchApi(url);
-      if (!response.ok) {
-        throw new Error(`Türkçe Novel Oku: HTTP ${response.status}.`);
-      }
+      const response = await this.request(url);
       const data = await response.json();
+      const total = Number(data.feed?.['openSearch$totalResults']?.$t);
       const batch: FeedEntry[] = (data.feed && data.feed.entry) || [];
       if (!batch.length) break;
       for (const entry of batch) {
@@ -153,6 +173,7 @@ class TurkceNovelOkuPlugin implements Plugin.PluginBase {
         }
       }
       startIndex += batch.length;
+      if (startIndex > total) break;
     }
     return entries;
   }
@@ -210,13 +231,10 @@ class TurkceNovelOkuPlugin implements Plugin.PluginBase {
 
   /** Series ordered by the publish time of their newest chapter. */
   private async latestSeries(all: Series[]): Promise<Series[]> {
-    const response = await fetchApi(
+    const response = await this.request(
       `${SITE}feeds/posts/default/-/${encodeURIComponent(CHAPTER_LABEL)}` +
         `?alt=json&orderby=published&max-results=${PAGE_SIZE}`,
     );
-    if (!response.ok) {
-      throw new Error(`Türkçe Novel Oku: HTTP ${response.status}.`);
-    }
     const data = await response.json();
     const recent: FeedEntry[] = (data.feed && data.feed.entry) || [];
     const ordered: Series[] = [];
@@ -306,10 +324,7 @@ class TurkceNovelOkuPlugin implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const response = await fetchApi(SITE + chapterPath);
-    if (!response.ok) {
-      throw new Error(`Türkçe Novel Oku: HTTP ${response.status}.`);
-    }
+    const response = await this.request(SITE + chapterPath);
     const $ = parseHTML(await response.text());
     const content = $('#ceviri').first();
     if (!content.length) {
