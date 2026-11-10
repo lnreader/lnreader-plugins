@@ -40,6 +40,14 @@ type NovelRule = {
   title: RegExp;
 };
 
+/** Abbreviations the blog uses for the novels, shared by matching and cleanup. */
+const ABBREVIATIONS = {
+  samePlace: 'sp[nsb]{3,4}',
+  nuptial: 'ncnd',
+  lovingYou: 'lyitd',
+  ifYouDont: 'ifydgth|ifygth|iydgth|iydth|iydgh',
+};
+
 const NOVELS: NovelRule[] = [
   {
     slug: 'rolling-love',
@@ -51,31 +59,41 @@ const NOVELS: NovelRule[] = [
     slug: 'same-place-not-same-bed',
     heading: /same\s*place/i,
     categories: ['Same bed'],
-    title: /same\s*place|sp[nsb]{3,4}\b/i,
+    title: new RegExp(
+      'same\\s*place|\\b(?:' + ABBREVIATIONS.samePlace + ')\\b',
+      'i',
+    ),
   },
   {
     slug: 'nuptial-chamber-next-door',
     heading: /nuptial/i,
     categories: ['Nuptial Chamber', 'NCND'],
-    title: /nuptial|ncnd/i,
+    title: new RegExp('nuptial|' + ABBREVIATIONS.nuptial, 'i'),
   },
   {
     slug: 'loving-you-is-too-difficult',
     heading: /loving\s*you/i,
     categories: ['Love you'],
-    title: /loving\s*you|lyitd/i,
+    title: new RegExp('loving\\s*you|' + ABBREVIATIONS.lovingYou, 'i'),
   },
   {
     slug: 'if-you-dont-go-to-hell-who-will',
     heading: /go\s*to\s*hell/i,
     categories: ['IYDGTH', 'If you'],
-    title: /go\s*to\s*hell|if?y?dg?th/i,
+    title: new RegExp('go\\s*to\\s*hell|' + ABBREVIATIONS.ifYouDont, 'i'),
   },
 ];
 
 /** Novel names and abbreviations repeated in front of / behind chapter titles. */
 const TAGS =
-  '(?:rolling\\s*love|nuptial\\s*chamber\\s*next\\s*door|ncnd|same\\s*place\\s*not\\s*same\\s*bed|sp[nsb]{3,4}|loving\\s*you\\s*is\\s*too\\s*difficult|lyitd|if\\s*you\\s*don.?t\\s*go\\s*to\\s*hell,?\\s*who\\s*will\\s*\\??|ifydgth|ifygth|iydgth|iydth|iydgh)';
+  '(?:rolling\\s*love|nuptial\\s*chamber\\s*next\\s*door|same\\s*place\\s*not\\s*same\\s*bed|loving\\s*you\\s*is\\s*too\\s*difficult|if\\s*you\\s*don.?t\\s*go\\s*to\\s*hell,?\\s*who\\s*will\\s*\\??|' +
+  [
+    ABBREVIATIONS.samePlace,
+    ABBREVIATIONS.nuptial,
+    ABBREVIATIONS.lovingYou,
+    ABBREVIATIONS.ifYouDont,
+  ].join('|') +
+  ')';
 const LEADING_TAG = new RegExp('^' + TAGS + '\\s*[–—:-]*\\s*', 'i');
 const TRAILING_TAG = new RegExp('\\s*[–—:-]+\\s*' + TAGS + '$', 'i');
 
