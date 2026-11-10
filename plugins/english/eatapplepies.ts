@@ -155,11 +155,19 @@ class EatApplePiesPlugin implements Plugin.PluginBase {
     });
 
     const pages: NovelPage[] = [];
+    let failures = 0;
     for (const path of paths) {
-      const novelPage = await this.loadPage(path);
-      if (this.tocLinks(novelPage).length > 0) {
-        pages.push(this.toNovelPage(path, novelPage));
+      try {
+        const novelPage = await this.loadPage(path);
+        if (this.tocLinks(novelPage).length > 0) {
+          pages.push(this.toNovelPage(path, novelPage));
+        }
+      } catch (error) {
+        failures += 1;
       }
+    }
+    if (pages.length === 0 && failures > 0) {
+      throw new Error('EatApplePies: could not load any novel page');
     }
     return pages;
   }
