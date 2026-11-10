@@ -126,7 +126,7 @@ class LupusSenseiPlugin implements Plugin.PluginBase {
           if (!href || !thumbnail) continue;
           covers.set(
             new URL(href, this.site).pathname,
-            thumbnail.replace('/s72-c/', '/s640/'),
+            thumbnail.replace(/\/s\d+(-w\d+-h\d+)?(-c)?\//, '/s640/'),
           );
         }
       }
