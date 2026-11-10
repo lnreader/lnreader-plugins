@@ -11,6 +11,8 @@ const NON_NOVEL_CATEGORIES = /^\/category\/news\/?$/;
 const MAX_ARCHIVE_PAGES = 50;
 // Upper bound on series pages fetched while looking for a novel's cover.
 const MAX_SERIES_PAGES = 12;
+// Longest the cover lookup may delay opening a novel.
+const COVER_TIMEOUT_MS = 5000;
 
 class RinkageTranslationPlugin implements Plugin.PluginBase {
   id = 'rinkagetranslation';
@@ -93,28 +95,46 @@ class RinkageTranslationPlugin implements Plugin.PluginBase {
     return Array.from(links);
   }
 
+  /** Cover of the series page that links to this category's chapters, if any. */
+  private async coverFromSeriesPage(
+    link: string,
+    chapterPaths: Set<string>,
+  ): Promise<string | undefined> {
+    try {
+      const $ = loadCheerio(await this.getHtml(link));
+      const content = $('.entry-content').first();
+      const linksToChapter = content
+        .find('a[href]')
+        .toArray()
+        .some(a => chapterPaths.has(this.pathOf($(a).attr('href') || '')));
+      if (!linksToChapter) return undefined;
+      const src = content.find('img').first().attr('src');
+      return src ? new URL(src, this.site).href.split('?')[0] : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
   /**
    * Categories carry no artwork, but the hand-written series page of the same
    * novel does. A series page is recognised by linking to the category's
-   * chapters. Failures only cost the cover, never the chapter list.
+   * chapters. The candidate pages are fetched in parallel and the lookup gives
+   * up after COVER_TIMEOUT_MS, so optional artwork never holds up the chapter
+   * list.
    */
   private async findCover(candidates: string[], chapterPaths: Set<string>) {
-    for (const link of candidates.slice(0, MAX_SERIES_PAGES)) {
-      try {
-        const $ = loadCheerio(await this.getHtml(link));
-        const content = $('.entry-content').first();
-        const linksToChapter = content
-          .find('a[href]')
-          .toArray()
-          .some(a => chapterPaths.has(this.pathOf($(a).attr('href') || '')));
-        if (!linksToChapter) continue;
-        const src = content.find('img').first().attr('src');
-        return src ? new URL(src, this.site).href.split('?')[0] : defaultCover;
-      } catch {
-        // Try the next candidate.
-      }
-    }
-    return defaultCover;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<undefined>(resolve => {
+      timer = setTimeout(() => resolve(undefined), COVER_TIMEOUT_MS);
+    });
+    const lookup = Promise.all(
+      candidates
+        .slice(0, MAX_SERIES_PAGES)
+        .map(link => this.coverFromSeriesPage(link, chapterPaths)),
+    ).then(covers => covers.find(Boolean));
+    const cover = await Promise.race([lookup, timeout]);
+    if (timer) clearTimeout(timer);
+    return cover || defaultCover;
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
