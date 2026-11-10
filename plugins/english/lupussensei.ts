@@ -15,6 +15,11 @@ const NOT_CHAPTER = /^(?:spoilers?\b|synopsis$|.*\bchapters$)/i;
 const KEEP_ATTRIBUTES = new Set(['src', 'href', 'alt', 'width', 'height']);
 const CHAPTER_GROUP = /^\s*(Chapter\s+\d+)\b/i;
 
+// Allows http(s) URLs and scheme-less (relative) ones; anything else, such as
+// `javascript:` or `data:`, is rejected.
+const isSafeUrl = (value: string): boolean =>
+  /^\s*https?:/i.test(value) || !value.split(/[/?#]/)[0].includes(':');
+
 type Novel = Plugin.NovelItem;
 
 class LupusSenseiPlugin implements Plugin.PluginBase {
@@ -196,7 +201,11 @@ class LupusSenseiPlugin implements Plugin.PluginBase {
   async parseChapter(chapterPath: string): Promise<string> {
     const $ = loadCheerio(await this.getHtml(this.resolveUrl(chapterPath)));
     const body = $('.post-body').first();
-    body.find('script, style, noscript, iframe, meta, .adsbygoogle').remove();
+    body
+      .find(
+        'script, style, noscript, iframe, object, embed, form, svg, base, meta, .adsbygoogle',
+      )
+      .remove();
     // Word-export leftovers (conditional comments) sit inside the post.
     body
       .find('*')
@@ -211,8 +220,15 @@ class LupusSenseiPlugin implements Plugin.PluginBase {
     });
     body.find('*').each((_, el) => {
       if (el.type !== 'tag') return;
-      for (const attr of Object.keys(el.attribs)) {
-        if (!KEEP_ATTRIBUTES.has(attr)) $(el).removeAttr(attr);
+      for (const [attr, value] of Object.entries(el.attribs)) {
+        // Links and images must stay http(s) or relative: the HTML is shown
+        // verbatim, so `javascript:` and similar schemes must not survive.
+        if (
+          !KEEP_ATTRIBUTES.has(attr) ||
+          ((attr === 'href' || attr === 'src') && !isSafeUrl(value))
+        ) {
+          $(el).removeAttr(attr);
+        }
       }
     });
     body.find('p, div').each((_, el) => {
