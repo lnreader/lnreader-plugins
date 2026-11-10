@@ -21,7 +21,7 @@ const defaultSelectors: FictioneerSelectors = {
   searchCard: '#search-result-list > li > div > div',
   cardTitle: 'h3 > a',
   cardCover: 'a.cell-img:has(img)',
-  novelTitle: 'h1.story__identity-title',
+  novelTitle: 'h1.story__identity-title, h1.story__title',
   novelAuthor: 'div.story__identity-meta',
   novelCover: 'figure.story__thumbnail > a',
   novelSummary: 'section.story__summary',
@@ -58,14 +58,35 @@ export class FictioneerPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/fictioneer/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `1.2.${0 + versionIncrements}`;
+    this.version = `1.3.${0 + versionIncrements}`;
     this.options = metadata.options;
     this.selectors = { ...defaultSelectors, ...metadata.options?.selectors };
   }
 
+  resolveUrl = (path: string): string => {
+    const [pathname, query] = path.split('?');
+    const cleanPath = pathname ? pathname.replace(/^\/+|\/+$/g, '') + '/' : '';
+    return (
+      this.site.replace(/\/+$/, '') +
+      '/' +
+      cleanPath +
+      (query ? '?' + query : '')
+    );
+  };
+
   private toPath(url: string): string {
-    const path = new URL(url, this.site).pathname.substring(1);
-    return this.options.trimTrailingSlash ? path.replace(/\/$/, '') : path;
+    let path = url;
+    if (path.startsWith(this.site)) {
+      path = path.slice(this.site.length);
+    } else {
+      try {
+        path = new URL(url, this.site).pathname;
+      } catch {
+        // fallback
+      }
+    }
+    path = path.replace(/^\/+|\/+$/g, '');
+    return this.options.trimTrailingSlash ? path : path + '/';
   }
 
   private parseNovels(
@@ -76,7 +97,7 @@ export class FictioneerPlugin implements Plugin.PluginBase {
       .map((i, el) => {
         const element = loadedCheerio(el);
         const title = element.find(this.selectors.cardTitle);
-        const novelName = title.text();
+        const novelName = title.text().trim();
         const cover = element.find(this.selectors.cardCover);
         const novelCover =
           cover.attr('data-src') || cover.attr('src') || cover.attr('href');
@@ -100,8 +121,9 @@ export class FictioneerPlugin implements Plugin.PluginBase {
     if (showLatestNovels) {
       // Latest updates come from a search results page, so use searchCard.
       const req = await fetchApi(
-        this.site +
-          `/${pageNo === 1 ? '' : 'page/' + pageNo + '/'}?s=&post_type=fcn_story&orderby=modified&order=desc`,
+        this.resolveUrl(
+          `${pageNo === 1 ? '' : 'page/' + pageNo + '/'}?s=&post_type=fcn_story&orderby=modified&order=desc`,
+        ),
       );
       const body = await req.text();
       const loadedCheerio = loadCheerio(body);
@@ -110,11 +132,9 @@ export class FictioneerPlugin implements Plugin.PluginBase {
     }
 
     const req = await fetchApi(
-      this.site +
-        '/' +
-        this.options.browsePage +
-        '/' +
-        (pageNo === 1 ? '' : 'page/' + pageNo + '/'),
+      this.resolveUrl(
+        `${this.options.browsePage}/${pageNo === 1 ? '' : 'page/' + pageNo + '/'}`,
+      ),
     );
     const body = await req.text();
     const loadedCheerio = loadCheerio(body);
@@ -123,27 +143,50 @@ export class FictioneerPlugin implements Plugin.PluginBase {
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const req = await fetchApi(this.site + '/' + novelPath + '/');
+    const req = await fetchApi(this.resolveUrl(novelPath));
     const body = await req.text();
     const loadedCheerio = loadCheerio(body);
 
     const novel: Plugin.SourceNovel = {
-      path: novelPath,
-      name: loadedCheerio(this.selectors.novelTitle).text(),
+      path: this.toPath(novelPath),
+      name: loadedCheerio(this.selectors.novelTitle).first().text().trim(),
     };
 
-    // novel.artist = '';
-    const author = loadedCheerio(this.selectors.novelAuthor).text();
-    // The default selector matches the "Author: X | ..." meta line, while an
-    // override is expected to match the author name itself.
-    novel.author = this.options.selectors?.novelAuthor
-      ? author.trim()
-      : author.split('|')[0].replace('Author: ', '').replace('by ', '').trim();
+    let author = loadedCheerio(this.selectors.novelAuthor).text().trim();
+    if (this.options.selectors?.novelAuthor) {
+      novel.author = author;
+    } else {
+      author = author
+        .split('|')[0]
+        .replace(/author:\s*/i, '')
+        .replace(/by\s+/i, '')
+        .trim();
+      if (!author) {
+        // Fallback for custom Fictioneer child themes embedding author in summary metadata
+        const authorStrong = loadedCheerio('strong, b').filter((_, el) =>
+          loadedCheerio(el).text().trim().toLowerCase().startsWith('author'),
+        );
+        if (authorStrong.length) {
+          const nextLink = authorStrong.first().next('a');
+          if (nextLink.length) {
+            author = nextLink.text().trim();
+          } else {
+            const parentText = authorStrong.first().parent().text();
+            const match = parentText.match(/author:\s*([^\n\r<]+)/i);
+            if (match) {
+              author = match[1].replace(/total chapters.*$/i, '').trim();
+            }
+          }
+        }
+      }
+      if (author) novel.author = author;
+    }
+
     const cover = loadedCheerio(this.selectors.novelCover);
     novel.cover =
       cover.attr('data-src') || cover.attr('src') || cover.attr('href');
     novel.genres = loadedCheerio('div.tag-group > a, section.tag-group > a')
-      .map((i, el) => loadedCheerio(el).text())
+      .map((i, el) => loadedCheerio(el).text().trim())
       .toArray()
       .join(',');
 
@@ -165,18 +208,40 @@ export class FictioneerPlugin implements Plugin.PluginBase {
           ),
       )
       .map((i, el) => {
-        const chapterName = loadedCheerio(el).find('a').text();
-        const chapterUrl = loadedCheerio(el).find('a').attr('href');
+        const link = loadedCheerio(el).find('a').first();
+        const chapterName = link.text().trim();
+        const chapterUrl = link.attr('href');
 
         if (!chapterUrl) return;
         const chapter: Plugin.ChapterItem = {
           name: chapterName,
           path: this.toPath(chapterUrl),
         };
+
+        // Chapter number regex supporting acronyms (e.g. "GRMFBS CH315", "Chapter 1")
         const chapterNumber = chapterName.match(
-          /^(?:cap[íi]tulo|chapter|ch\.?)\s*(\d+(?:\.\d+)?)/i,
+          /(?:^|\b)(?:cap[íi]tulo|chapter|ch\.?|ep\.?|episode)\s*(\d+(?:\.\d+)?)/i,
         );
         if (chapterNumber) chapter.chapterNumber = Number(chapterNumber[1]);
+
+        // Release time extraction from Fictioneer <time> tag
+        const timeEl = loadedCheerio(el)
+          .find('time.chapter-group__list-item-date, time')
+          .first();
+        const rawTime = timeEl.attr('datetime');
+        if (rawTime) {
+          const timestamp = Number(rawTime);
+          if (!isNaN(timestamp) && timestamp > 0) {
+            const dateMs = timestamp < 1e11 ? timestamp * 1000 : timestamp;
+            chapter.releaseTime = new Date(dateMs).toISOString();
+          } else {
+            chapter.releaseTime = rawTime;
+          }
+        } else {
+          const textTime = timeEl.text().trim();
+          if (textTime) chapter.releaseTime = textTime;
+        }
+
         return chapter;
       })
       .toArray();
@@ -184,40 +249,42 @@ export class FictioneerPlugin implements Plugin.PluginBase {
     // The status class ("_" + lowercase Fictioneer status) is
     // language-independent; the English text is a fallback.
     const statusElement = loadedCheerio('span.story__status');
-    const status = statusElement.text().trim();
-    if (statusElement.hasClass('_ongoing') || status === 'Ongoing')
+    const status = statusElement.text().trim().toLowerCase();
+    if (statusElement.hasClass('_ongoing') || status.includes('ongoing'))
       novel.status = NovelStatus.Ongoing;
-    if (
+    else if (
       statusElement.hasClass('_completed') ||
       statusElement.hasClass('_oneshot') ||
-      status === 'Completed'
+      status.includes('completed') ||
+      status.includes('complete')
     )
       novel.status = NovelStatus.Completed;
-    if (
-      statusElement.hasClass('_canceled') ||
-      status === 'Canceled' ||
-      status === 'Cancelled'
-    )
+    else if (statusElement.hasClass('_canceled') || status.includes('cancel'))
       novel.status = NovelStatus.Cancelled;
-    if (statusElement.hasClass('_hiatus') || status === 'Hiatus')
+    else if (statusElement.hasClass('_hiatus') || status.includes('hiatus'))
       novel.status = NovelStatus.OnHiatus;
 
     return novel;
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const req = await fetchApi(this.site + '/' + chapterPath + '/');
+    const req = await fetchApi(this.resolveUrl(chapterPath));
     const body = await req.text();
 
     const loadedCheerio = loadCheerio(body);
 
     // chapterTransformJs HERE
 
-    loadedCheerio('section#chapter-content')
-      .find('script, style, iframe')
+    const chapterSection = loadedCheerio(
+      'section#chapter-content, .chapter__content',
+    );
+    chapterSection
+      .find(
+        'script, style, iframe, .chapter__actions, .chapter__support, .chapter__footer, .chapter-index, .fictioneer-comments, .comment-section',
+      )
       .remove();
 
-    return loadedCheerio('section#chapter-content > div').html() || '';
+    return chapterSection.find('> div').html() || chapterSection.html() || '';
   }
 
   async searchNovels(
@@ -225,15 +292,13 @@ export class FictioneerPlugin implements Plugin.PluginBase {
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
     const req = await fetchApi(
-      this.site +
-        `/${pageNo === 1 ? '' : 'page/' + pageNo + '/'}?s=${encodeURIComponent(searchTerm)}&post_type=fcn_story`,
+      this.resolveUrl(
+        `${pageNo === 1 ? '' : 'page/' + pageNo + '/'}?s=${encodeURIComponent(searchTerm)}&post_type=fcn_story`,
+      ),
     );
     const body = await req.text();
     const loadedCheerio = loadCheerio(body);
 
     return this.parseNovels(loadedCheerio, this.selectors.searchCard);
   }
-
-  resolveUrl = (path: string) =>
-    this.site.replace(/\/+$/, '') + '/' + path.replace(/^\/+|\/+$/g, '') + '/';
 }
