@@ -22,7 +22,7 @@ const defaultSelectors: FictioneerSelectors = {
   cardTitle: 'h3 > a',
   cardCover: 'a.cell-img:has(img)',
   novelTitle: 'h1.story__identity-title, h1.story__title',
-  novelAuthor: 'div.story__identity-meta',
+  novelAuthor: 'div.story__identity-meta, .story__author, .chapter__author',
   novelCover: 'figure.story__thumbnail > a',
   novelSummary: 'section.story__summary',
 };
@@ -75,18 +75,11 @@ export class FictioneerPlugin implements Plugin.PluginBase {
   };
 
   private toPath(url: string): string {
-    let path = url;
-    if (path.startsWith(this.site)) {
-      path = path.slice(this.site.length);
-    } else {
-      try {
-        path = new URL(url, this.site).pathname;
-      } catch {
-        // fallback
-      }
-    }
-    path = path.replace(/^\/+|\/+$/g, '');
-    return this.options.trimTrailingSlash ? path : path + '/';
+    const path = url.startsWith(this.site)
+      ? url.slice(this.site.length)
+      : new URL(url, this.site).pathname;
+    const clean = path.replace(/^\/+|\/+$/g, '');
+    return this.options.trimTrailingSlash ? clean : clean + '/';
   }
 
   private parseNovels(
@@ -148,38 +141,22 @@ export class FictioneerPlugin implements Plugin.PluginBase {
     const loadedCheerio = loadCheerio(body);
 
     const novel: Plugin.SourceNovel = {
-      path: this.toPath(novelPath),
+      path: novelPath,
       name: loadedCheerio(this.selectors.novelTitle).first().text().trim(),
     };
 
-    let author = loadedCheerio(this.selectors.novelAuthor).text().trim();
+    const author = loadedCheerio(this.selectors.novelAuthor)
+      .first()
+      .text()
+      .trim();
     if (this.options.selectors?.novelAuthor) {
       novel.author = author;
-    } else {
-      author = author
+    } else if (author) {
+      novel.author = author
         .split('|')[0]
         .replace(/author:\s*/i, '')
         .replace(/by\s+/i, '')
         .trim();
-      if (!author) {
-        // Fallback for custom Fictioneer child themes embedding author in summary metadata
-        const authorStrong = loadedCheerio('strong, b').filter((_, el) =>
-          loadedCheerio(el).text().trim().toLowerCase().startsWith('author'),
-        );
-        if (authorStrong.length) {
-          const nextLink = authorStrong.first().next('a');
-          if (nextLink.length) {
-            author = nextLink.text().trim();
-          } else {
-            const parentText = authorStrong.first().parent().text();
-            const match = parentText.match(/author:\s*([^\n\r<]+)/i);
-            if (match) {
-              author = match[1].replace(/total chapters.*$/i, '').trim();
-            }
-          }
-        }
-      }
-      if (author) novel.author = author;
     }
 
     const cover = loadedCheerio(this.selectors.novelCover);
@@ -235,11 +212,11 @@ export class FictioneerPlugin implements Plugin.PluginBase {
             const dateMs = timestamp < 1e11 ? timestamp * 1000 : timestamp;
             chapter.releaseTime = new Date(dateMs).toISOString();
           } else {
-            chapter.releaseTime = rawTime;
+            const parsed = new Date(rawTime);
+            if (!isNaN(parsed.getTime())) {
+              chapter.releaseTime = parsed.toISOString();
+            }
           }
-        } else {
-          const textTime = timeEl.text().trim();
-          if (textTime) chapter.releaseTime = textTime;
         }
 
         return chapter;
@@ -250,18 +227,22 @@ export class FictioneerPlugin implements Plugin.PluginBase {
     // language-independent; the English text is a fallback.
     const statusElement = loadedCheerio('span.story__status');
     const status = statusElement.text().trim().toLowerCase();
-    if (statusElement.hasClass('_ongoing') || status.includes('ongoing'))
+    if (statusElement.hasClass('_ongoing') || status === 'ongoing')
       novel.status = NovelStatus.Ongoing;
     else if (
       statusElement.hasClass('_completed') ||
       statusElement.hasClass('_oneshot') ||
-      status.includes('completed') ||
-      status.includes('complete')
+      status === 'completed' ||
+      status === 'complete'
     )
       novel.status = NovelStatus.Completed;
-    else if (statusElement.hasClass('_canceled') || status.includes('cancel'))
+    else if (
+      statusElement.hasClass('_canceled') ||
+      status === 'canceled' ||
+      status === 'cancelled'
+    )
       novel.status = NovelStatus.Cancelled;
-    else if (statusElement.hasClass('_hiatus') || status.includes('hiatus'))
+    else if (statusElement.hasClass('_hiatus') || status === 'hiatus')
       novel.status = NovelStatus.OnHiatus;
 
     return novel;

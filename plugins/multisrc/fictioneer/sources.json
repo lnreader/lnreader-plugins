@@ -14,7 +14,10 @@
     "sourceName": "Peach Puff Translations",
     "options": {
       "browsePage": "stories",
-      "trimTrailingSlash": true
+      "trimTrailingSlash": true,
+      "selectors": {
+        "novelAuthor": "p.wp-block-paragraph a[href*='author']"
+      }
     }
   },
   {
