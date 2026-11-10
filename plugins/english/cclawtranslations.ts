@@ -192,17 +192,21 @@ class CClawTranslationsPlugin implements Plugin.PluginBase {
       });
     });
 
+    // Leave the status unset when the catalogue cannot be read, rather than
+    // reporting a finished novel as ongoing.
     const completed = await this.isCompleted(path);
-    novel.status = completed ? NovelStatus.Completed : NovelStatus.Ongoing;
+    if (completed !== undefined) {
+      novel.status = completed ? NovelStatus.Completed : NovelStatus.Ongoing;
+    }
     return novel;
   }
 
-  private async isCompleted(path: string): Promise<boolean> {
+  private async isCompleted(path: string): Promise<boolean | undefined> {
     try {
       const done = await this.listSection('completed', '/completed-projects/');
       return done.some(novel => novel.path === path);
     } catch {
-      return false;
+      return undefined;
     }
   }
 
