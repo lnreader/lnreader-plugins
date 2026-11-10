@@ -12,7 +12,6 @@ const SITE_HOST = /^(?:www\.)?lupus-sensei\.com$/i;
 const POST_PATH = /^\/\d{4}\/\d{2}\/[^/]+\.html$/;
 // Entries in a chapter list that are not chapters of the novel.
 const NOT_CHAPTER = /^(?:spoilers?\b|synopsis$|.*\bchapters$)/i;
-const COVER_BATCH = 3;
 const KEEP_ATTRIBUTES = new Set(['src', 'href', 'alt', 'width', 'height']);
 const CHAPTER_GROUP = /^\s*(Chapter\s+\d+)\b/i;
 
@@ -102,27 +101,37 @@ class LupusSenseiPlugin implements Plugin.PluginBase {
   }
 
   /**
-   * The menu has no images, so each series' cover is the first picture of its
-   * chapter-list page. They are fetched a few at a time to stay gentle.
+   * The menu has no images, so covers come from the blog's label feed: one
+   * request lists every chapter-list post with its thumbnail. Any failure
+   * leaves the default cover.
    */
   private async withCovers(novels: Novel[]): Promise<Novel[]> {
-    const result = novels.map(novel => ({ ...novel }));
-    for (let i = 0; i < result.length; i += COVER_BATCH) {
-      await Promise.all(
-        result.slice(i, i + COVER_BATCH).map(async novel => {
-          try {
-            const $ = loadCheerio(
-              await this.getHtml(this.resolveUrl(novel.path)),
-            );
-            novel.cover =
-              this.findCover($, $('.post-body').first()) || defaultCover;
-          } catch {
-            novel.cover = defaultCover;
-          }
-        }),
+    const covers = new Map<string, string>();
+    try {
+      const response = await fetchApi(
+        `${this.site}/feeds/posts/default/-/Chapterlist?alt=json&max-results=50`,
       );
+      if (response.ok) {
+        const json = await response.json();
+        for (const entry of json?.feed?.entry || []) {
+          const href = (entry.link || []).find(
+            (link: { rel?: string; href?: string }) => link.rel === 'alternate',
+          )?.href;
+          const thumbnail = entry['media$thumbnail']?.url;
+          if (!href || !thumbnail) continue;
+          covers.set(
+            new URL(href, this.site).pathname,
+            thumbnail.replace('/s72-c/', '/s640/'),
+          );
+        }
+      }
+    } catch {
+      // covers are optional
     }
-    return result;
+    return novels.map(novel => ({
+      ...novel,
+      cover: covers.get(novel.path) || defaultCover,
+    }));
   }
 
   async popularNovels(pageNo: number): Promise<Plugin.NovelItem[]> {
@@ -242,12 +251,10 @@ class LupusSenseiPlugin implements Plugin.PluginBase {
     // series are matched against the titles in the menu instead.
     const tokens = searchTerm.toLowerCase().split(/\s+/).filter(Boolean);
     if (!tokens.length || pageNo > 1) return [];
-    const novels = await this.catalogue();
-    return this.withCovers(
-      novels.filter(novel =>
-        tokens.every(token => novel.name.toLowerCase().includes(token)),
-      ),
+    const matches = (await this.catalogue()).filter(novel =>
+      tokens.every(token => novel.name.toLowerCase().includes(token)),
     );
+    return matches.length ? this.withCovers(matches) : [];
   }
 
   resolveUrl = (path: string) => new URL(path, this.site).href;
