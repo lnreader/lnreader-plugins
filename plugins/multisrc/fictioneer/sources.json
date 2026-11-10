@@ -9,6 +9,15 @@
     }
   },
   {
+    "id": "peachpuff",
+    "sourceSite": "https://peachpuff.in",
+    "sourceName": "Peach Puff Translations",
+    "options": {
+      "browsePage": "stories",
+      "trimTrailingSlash": true
+    }
+  },
+  {
     "id": "novelib",
     "sourceSite": "https://novelib.com",
     "sourceName": "NovelLib",
