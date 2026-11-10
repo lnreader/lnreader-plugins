@@ -276,11 +276,13 @@ class WwaraitaiPlugin implements Plugin.PluginBase {
     }
 
     // 2. Add posts the table of contents has not caught up with. Chapter
-    // posts are titled "<novel title> [Chapter N]".
+    // posts are titled "<novel title> [Chapter N]", some with further tags
+    // after it ("... [Chapter 1] [R-18]"), so every trailing bracketed tag
+    // is removed to leave the bare novel title.
     const first = links.length > 0 ? posts.get(links[0].path) : undefined;
-    const stem = first
-      ? this.decode(first.title.rendered).replace(/\s*\[[^\]]*\]\s*$/, '')
-      : novelName;
+    const stem = this.stripTags(
+      first ? this.decode(first.title.rendered) : novelName,
+    );
     const extras = new Map<string, WpPost>();
     for (let page = 1; page <= MAX_SEARCH_PAGES; page++) {
       const found = await this.fetchList<WpPost>(
@@ -324,6 +326,11 @@ class WwaraitaiPlugin implements Plugin.PluginBase {
       releaseTime: item.post.date,
       chapterNumber: index + 1,
     }));
+  }
+
+  /** Remove every trailing "[...]" tag: "Title [Chapter 1] [R-18]" -> "Title". */
+  private stripTags(title: string): string {
+    return title.replace(/(?:\s*\[[^\]]*\])+\s*$/, '');
   }
 
   /** "Novel title [Chapter Seven]" -> "Chapter Seven". */
