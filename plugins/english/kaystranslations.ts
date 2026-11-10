@@ -108,7 +108,12 @@ class KaysTranslationsPlugin implements Plugin.PluginBase {
     if (synopsis) novel.summary = synopsis;
 
     const toc = this.readToc(html);
-    novel.status = this.toStatus(toc?.statusKey);
+    if (!toc || !Array.isArray(toc.chapters)) {
+      throw new Error(
+        `Kay's Translations: no chapter list found at ${novelPath}.`,
+      );
+    }
+    novel.status = this.toStatus(toc.statusKey);
 
     // Early-access chapters are listed on the page but need a sign-in.
     const locked = new Set(
@@ -118,7 +123,7 @@ class KaysTranslationsPlugin implements Plugin.PluginBase {
         .filter(path => path),
     );
     const chapters: Plugin.ChapterItem[] = [];
-    (toc?.chapters || []).forEach(item => {
+    toc.chapters.forEach(item => {
       const path = this.toPath(item.href);
       if (!path || locked.has(path)) return;
       const numbered = item.title.match(/^Chapter\s*(\d+(?:\.\d+)?)/i);
