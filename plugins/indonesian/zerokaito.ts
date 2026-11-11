@@ -117,26 +117,29 @@ class ZerokaitoPlugin implements Plugin.PluginBase {
     const found = new Map<string, Plugin.NovelItem>();
     let lastCover: string | undefined;
 
+    const usable = (src: string | undefined) =>
+      src && /^https?:/.test(src) && !/blogger_logo|blank\.gif/.test(src)
+        ? src
+        : undefined;
+
     $('#post-body img, #post-body a').each((_, el) => {
       const node = $(el);
       if (el.tagName === 'img') {
-        const src = node.attr('src');
-        if (
-          src &&
-          /^https?:/.test(src) &&
-          !/blogger_logo|blank\.gif/.test(src)
-        ) {
-          lastCover = src;
-        }
+        lastCover = usable(node.attr('src')) || lastCover;
         return;
       }
       const path = this.sitePath(node.attr('href'));
       if (!path || INDEX_PAGE.test(path)) return;
       const name = this.clean(node.text());
+      // A cover may sit inside the link itself (the link is visited before its
+      // image) or just before it.
+      const cover = usable(node.find('img').first().attr('src')) || lastCover;
       let entry = found.get(path);
       if (!entry) {
-        entry = { name: '', path, cover: lastCover || defaultCover };
+        entry = { name: '', path, cover: cover || defaultCover };
         found.set(path, entry);
+      } else if (entry.cover === defaultCover && cover) {
+        entry.cover = cover;
       }
       // Some entries are linked twice, once on a blank cover/label.
       if (!entry.name && name) entry.name = name;
