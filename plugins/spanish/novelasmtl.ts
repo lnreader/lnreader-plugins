@@ -63,9 +63,23 @@ class NovelasMTLPlugin implements Plugin.PluginBase {
   }
 
   private async catalogue(): Promise<Plugin.NovelItem[]> {
-    const pages = await Promise.all(
-      INDEX_PAGES.map(page => this.getHtml(page).catch(() => '')),
+    // A missing extra index page is tolerated, but if none loads the site is
+    // unreachable and that must not look like an empty catalogue.
+    const results = await Promise.allSettled(
+      INDEX_PAGES.map(page => this.getHtml(page)),
     );
+    const pages = results.map(result =>
+      result.status === 'fulfilled' ? result.value : '',
+    );
+    if (!pages.some(Boolean)) {
+      const failure = results.find(
+        (result): result is PromiseRejectedResult =>
+          result.status === 'rejected',
+      );
+      throw failure?.reason instanceof Error
+        ? failure.reason
+        : new Error('Novelas MTL: no se pudo cargar el catálogo.');
+    }
     const novels = new Map<string, Plugin.NovelItem>();
     for (const html of pages) {
       if (!html) continue;
