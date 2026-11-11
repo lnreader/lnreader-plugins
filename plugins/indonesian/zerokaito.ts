@@ -23,6 +23,8 @@ const VOLUME_HEADING = /^(?:volume|vol\.?|jilid)\s*\d+(?:\.\d+)?[^[\]]*/i;
 const INDEX_PAGE =
   /^\/p\/(?:on-going|novel-tamat|oneshot|dropaxed|donasi)\.html$/;
 const SUMMARY_LIMIT = 2500;
+// Blogger throttles bursts, so catalogue pages are reused for a few minutes.
+const CACHE_MS = 5 * 60 * 1000;
 
 /**
  * Kaito Novel (zerokaito.blogspot.com) is an Indonesian light-novel translation
@@ -96,8 +98,20 @@ class ZerokaitoPlugin implements Plugin.PluginBase {
     return text.replace(/\s+/g, ' ').trim();
   }
 
+  private cache: Partial<
+    Record<ListKey, { at: number; novels: Plugin.NovelItem[] }>
+  > = {};
+
   /** Novels listed on one catalogue page, in the order the site shows them. */
   private async catalogue(list: ListKey): Promise<Plugin.NovelItem[]> {
+    const cached = this.cache[list];
+    if (cached && Date.now() - cached.at < CACHE_MS) return cached.novels;
+    const novels = await this.fetchCatalogue(list);
+    this.cache[list] = { at: Date.now(), novels };
+    return novels;
+  }
+
+  private async fetchCatalogue(list: ListKey): Promise<Plugin.NovelItem[]> {
     const response = await this.request(this.site + LISTS[list]);
     const $ = loadCheerio(await response.text());
     const found = new Map<string, Plugin.NovelItem>();
