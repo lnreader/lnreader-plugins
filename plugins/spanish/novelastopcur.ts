@@ -17,8 +17,11 @@ const CHAPTER_TEXT = /\d|pr[oó]logo|ep[ií]logo|extra|especial|prefacio/i;
 // "Anterior - Índice - Siguiente" and the author's donation/sharing lines.
 const NAVIGATION =
   /^[\s\-–—|]*(?:anterior|[ií]ndice|siguiente|volver)\b[\s\-–—|a-záéíóúñ]*$/i;
-const PROMOTION =
-  /patreon|esponsor|anslid|compart(?:an|ir)(?:lo)?\s+(?:la\s+)?(?:novela|p[aá]gina)\b|compart\w*\s+(?:lo\s+)?\S*\s*ayudar[ií]a mucho|m[aá]s cap[ií]tulos\s+(?:gratis|en|:|\()|muchas gracias por todo/i;
+const DONATION = /patreon|esponsor|anslid/i;
+const SHARING =
+  /compart(?:an|ir)(?:lo)?\s+(?:la\s+)?(?:novela|p[aá]gina)\b|compart\w*\s+(?:lo\s+)?\S*\s*ayudar[ií]a mucho|m[aá]s cap[ií]tulos\s+(?:gratis|en|:|\()|muchas gracias por todo/i;
+const isPromotion = (text: string): boolean =>
+  DONATION.test(text) || (text === text.toUpperCase() && SHARING.test(text));
 const SEPARATOR = /^[\s\-–—_=.·|~*]*$/;
 // Left over at the very end of a chapter once the links are gone.
 const TRAILING = /^[\s\-–—_=.·|~*]*(?:tambi[eé]n\s*:?)?[\s\-–—_=.·|~*]*$/i;
@@ -306,10 +309,7 @@ class NovelasTopcur implements Plugin.PluginBase {
     // the story text is never removed.
     body.find('div, p, span').each((_, el) => {
       const text = this.clean($(el).text());
-      if (
-        text.length < 250 &&
-        (NAVIGATION.test(text) || PROMOTION.test(text))
-      ) {
+      if (text.length < 250 && (NAVIGATION.test(text) || isPromotion(text))) {
         $(el).remove();
       }
     });
