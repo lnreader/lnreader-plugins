@@ -152,7 +152,11 @@ class NovelTranslations18Plugin implements Plugin.PluginBase {
       const response = await this.request(
         `${BASE}/feeds/posts/default/-/${encodeURIComponent(label)}?alt=json&start-index=${start}&max-results=${FEED_PAGE_SIZE}`,
       );
-      if (!response.ok) break;
+      if (!response.ok) {
+        throw new Error(
+          `No se pudieron cargar los capítulos (${response.status}).`,
+        );
+      }
       const entries: FeedEntry[] = (await response.json())?.feed?.entry || [];
       entries.forEach(entry => {
         const link = entry.link.find(item => item.rel === 'alternate');
