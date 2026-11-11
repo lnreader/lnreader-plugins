@@ -35,6 +35,19 @@ const labelSearchUrl = (labels: string[]) =>
     labels.map(label => `label:"${label}"`).join(' '),
   )}&max-results=150&by-date=true`;
 
+type FeedEntry = {
+  title?: { $t: string };
+  link?: { rel: string; href: string }[];
+  media$thumbnail?: { url: string };
+  published?: { $t: string };
+  category?: { term: string }[];
+};
+
+const feedUrl = (label: string, startIndex: number) =>
+  `${BASE}/feeds/posts/default/-/${encodeURIComponent(
+    label,
+  )}?alt=json&max-results=150&start-index=${startIndex}`;
+
 const toPath = (url: string) => url.replace(/^https?:\/\/[^/]+/i, '');
 
 const chapterNumberOf = (title: string) => {
@@ -132,6 +145,38 @@ class LnMakineCeviriPlugin implements Plugin.PluginBase {
     return response;
   }
 
+  /** Reads the posts of a label from Blogger's public JSON feed. */
+  private async readFeed(label: string) {
+    const cards: Card[] = [];
+    let total = Infinity;
+    for (let start = 1; start <= total; start += 150) {
+      const feed = JSON.parse(
+        await (await this.request(feedUrl(label, start))).text(),
+      ).feed;
+      total = Number(feed?.openSearch$totalResults?.$t) || 0;
+      const entries: FeedEntry[] = feed?.entry || [];
+      if (!entries.length) break;
+      entries.forEach(entry => {
+        const href = (entry.link || []).find(
+          link => link.rel === 'alternate',
+        )?.href;
+        const thumbnail: string | undefined = entry.media$thumbnail?.url;
+        if (!href || !entry.title?.$t) return;
+        cards.push({
+          name: entry.title.$t,
+          path: toPath(href),
+          cover:
+            thumbnail && thumbnail.indexOf('U2hvZWJveA') < 0
+              ? thumbnail.replace('/s72-c/', '/s1600/')
+              : undefined,
+          published: entry.published?.$t,
+          labels: (entry.category || []).map(c => c.term),
+        });
+      });
+    }
+    return cards;
+  }
+
   /** Reads the post cards of a Blogger listing or search page. */
   private readCards(body: string) {
     const $ = loadCheerio(body);
@@ -179,7 +224,9 @@ class LnMakineCeviriPlugin implements Plugin.PluginBase {
   // The introduction post of each series carries the Seri label.
   private getSeries() {
     if (!this.seriesCache) {
-      this.seriesCache = this.readAll(labelSearchUrl([SERIES_LABEL]))
+      // The feed is not throttled like the HTML search, so it goes first.
+      this.seriesCache = this.readFeed(SERIES_LABEL)
+        .catch(() => this.readAll(labelSearchUrl([SERIES_LABEL])))
         .then(cards =>
           cards.filter(card => card.labels.indexOf(SERIES_LABEL) >= 0),
         )
@@ -276,7 +323,14 @@ class LnMakineCeviriPlugin implements Plugin.PluginBase {
     }
 
     // Every chapter is a post with the series label.
-    const posts = await this.readAll(labelSearchUrl([seriesLabel]));
+    // If the search is throttled, the label feed is used instead. It can omit
+    // some chapters, so it is only a fallback.
+    const posts = await this.readAll(labelSearchUrl([seriesLabel])).catch(
+      error => {
+        if (error?.status !== 429 && error?.status !== 503) throw error;
+        return this.readFeed(seriesLabel);
+      },
+    );
     const chapters = posts
       .filter(
         post =>
