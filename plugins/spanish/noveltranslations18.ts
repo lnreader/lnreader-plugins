@@ -260,7 +260,18 @@ class NovelTranslations18Plugin implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const $ = await this.getHtml(BASE + chapterPath);
+    // Blogger throttles post pages but not the feed, which carries the same
+    // post body.
+    const response = await this.request(
+      `${BASE}/feeds/posts/default?alt=json&path=${encodeURIComponent(chapterPath)}`,
+    );
+    if (!response.ok) {
+      throw new Error(`No se pudo acceder al sitio (${response.status}).`);
+    }
+    const entry: FeedEntry | undefined = (await response.json())?.feed
+      ?.entry?.[0];
+    if (!entry?.content) throw new Error('Capítulo no encontrado.');
+    const $ = parseHTML(`<div class="check-box">${entry.content.$t}</div>`);
     const content = $('.check-box').first();
     content.find('script, style, ins, iframe').remove();
     // Text pasted from Google Docs carries inline styles and spacer breaks.
