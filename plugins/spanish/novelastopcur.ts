@@ -16,7 +16,7 @@ const CHAPTER_PATH = /^\/\d{4}\/\d{2}\/[^/]+\.html$/;
 const CHAPTER_TEXT = /\d|pr[oó]logo|ep[ií]logo|extra|especial|prefacio/i;
 // "Anterior - Índice - Siguiente" and the author's donation/sharing lines.
 const NAVIGATION =
-  /^[\s\-–—|]*(?:anterior|[ií]ndice|siguiente|volver)\b[\s\-–—|a-záéíóúñ]*$/i;
+  /^[\s\-–—|]*(?:anterior|[ií]ndice|siguiente)(?:[\s\-–—|]+(?:anterior|[ií]ndice|siguiente))*[\s\-–—|]*$/i;
 const DONATION = /patreon|esponsor|anslid/i;
 const SHARING =
   /compart(?:an|ir)(?:lo)?\s+(?:la\s+)?(?:novela|p[aá]gina)\b|compart\w*\s+(?:lo\s+)?\S*\s*ayudar[ií]a mucho|m[aá]s cap[ií]tulos\s+(?:gratis|en|:|\()|muchas gracias por todo/i;
