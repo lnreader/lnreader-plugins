@@ -16,6 +16,8 @@ const NOT_GENRE = [SERIES_LABEL, 'Novel', ONGOING_LABEL, COMPLETED_LABEL];
 // so a long series (about 2400 chapters) needs many pages.
 const MAX_PAGES = 120;
 const RETRIES = 2;
+// New series and status changes show up after the cached list expires.
+const SERIES_CACHE_MS = 10 * 60 * 1000;
 
 type Card = {
   name: string;
@@ -112,6 +114,7 @@ class LnMakineCeviriPlugin implements Plugin.PluginBase {
   } satisfies Filters;
 
   private seriesCache?: Promise<Card[]>;
+  private seriesCachedAt = 0;
 
   private async request(url: string) {
     let response = await fetchApi(url);
@@ -223,7 +226,11 @@ class LnMakineCeviriPlugin implements Plugin.PluginBase {
 
   // The introduction post of each series carries the Seri label.
   private getSeries() {
-    if (!this.seriesCache) {
+    if (
+      !this.seriesCache ||
+      Date.now() - this.seriesCachedAt > SERIES_CACHE_MS
+    ) {
+      this.seriesCachedAt = Date.now();
       // The feed is not throttled like the HTML search, so it goes first.
       this.seriesCache = this.readFeed(SERIES_LABEL)
         .catch(() => this.readAll(labelSearchUrl([SERIES_LABEL])))
@@ -371,10 +378,10 @@ class LnMakineCeviriPlugin implements Plugin.PluginBase {
       await this.request(this.resolveUrl(chapterPath))
     ).text();
     const $ = loadCheerio(body);
-    const content = $('#ceviri').first();
+    const primary = $('#ceviri').first();
+    const content = primary.length ? primary : $('.post-body').first();
     content.find('script, style, ins, iframe, a[name="more"]').remove();
-    let html = (content.length ? content : $('.post-body').first()).html();
-    html = (html || '').trim();
+    let html = (content.html() || '').trim();
     // The text opens with the chapter heading, which the site repeats twice.
     html = html.replace(
       /^([^<]{3,200}?)(?:\s*<br\s*\/?>){2}\s*\1(?=\s*<br)/,
