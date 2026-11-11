@@ -51,6 +51,36 @@ class NovelasTopcur implements Plugin.PluginBase {
     return response;
   }
 
+  /**
+   * Loads a page or post through Blogger's public JSON feed (far less likely to
+   * be rate limited than the HTML) and rebuilds the markup the parsers expect.
+   * Falls back once to the HTML page when the feed has no usable entry.
+   */
+  private async document(path: string) {
+    try {
+      const kind = path.startsWith('/p/') ? 'pages' : 'posts';
+      const response = await fetchApi(
+        `${this.site}/feeds/${kind}/default?alt=json&path=${encodeURIComponent(path)}`,
+      );
+      if (response.ok) {
+        const entry = (await response.json())?.feed?.entry?.[0];
+        const content: string | undefined = entry?.content?.$t;
+        if (content) {
+          const title = String(entry.title?.$t || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+          return loadCheerio(
+            `<h3 class="post-title">${title}</h3><div class="post-body">${content}</div>`,
+          );
+        }
+      }
+    } catch {
+      // Use the HTML page below.
+    }
+    return loadCheerio(await (await this.request(path)).text());
+  }
+
   private clean(text: string): string {
     return text.replace(/[\s\u00a0]+/g, ' ').trim();
   }
@@ -105,7 +135,7 @@ class NovelasTopcur implements Plugin.PluginBase {
    * cover image linked to the same novel page, in no fixed order.
    */
   private async catalogue(): Promise<Plugin.NovelItem[]> {
-    const $ = loadCheerio(await (await this.request(CATALOGUE_PATH)).text());
+    const $ = await this.document(CATALOGUE_PATH);
     const entries = new Map<
       string,
       { parts: string[]; cover: string | undefined }
@@ -159,7 +189,7 @@ class NovelasTopcur implements Plugin.PluginBase {
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const $ = loadCheerio(await (await this.request(novelPath)).text());
+    const $ = await this.document(novelPath);
     const body = $('.post-body').first();
     if (!body.length) {
       throw new Error('Novelas Topcur: the novel page has no content.');
@@ -299,7 +329,7 @@ class NovelasTopcur implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const $ = loadCheerio(await (await this.request(chapterPath)).text());
+    const $ = await this.document(chapterPath);
     const body = $('.post-body').first();
     body
       .find('script, style, noscript, iframe, ins, form, .adsbygoogle')
