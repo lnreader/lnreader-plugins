@@ -1,6 +1,6 @@
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
-import { load as loadCheerio } from 'cheerio';
+import { CheerioAPI, load as loadCheerio } from 'cheerio';
 import { defaultCover } from '@libs/defaultCover';
 
 const SITE = 'https://www.sinacortadores.com';
@@ -33,12 +33,47 @@ class NovelasMTLPlugin implements Plugin.PluginBase {
   site = SITE;
   version = '1.0.0';
 
-  private async getHtml(path: string): Promise<string> {
-    const response = await fetchApi(this.resolveUrl(path));
+  /**
+   * Reads a page (/p/...) or a post (/2024/10/...) through the blog's public
+   * JSON feed, which carries the full content in a single small request and
+   * is not throttled like the HTML pages. One retry after a pause when the
+   * site answers 429.
+   */
+  private async getEntry(
+    path: string,
+  ): Promise<{ title: string; html: string }> {
+    const kind = path.startsWith('/p/') ? 'pages' : 'posts';
+    const url = `${SITE}/feeds/${kind}/default?alt=json&path=${path}`;
+    let response = await fetchApi(url);
+    if (response.status === 429) {
+      const wait = Number(response.headers.get('retry-after'));
+      await new Promise(resolve =>
+        setTimeout(
+          resolve,
+          Math.min(Math.max(wait > 0 ? wait * 1000 : 0, 2000), 10000),
+        ),
+      );
+      response = await fetchApi(url);
+    }
     if (!response.ok) {
       throw new Error(`Novelas MTL: HTTP ${response.status}.`);
     }
-    return response.text();
+    const data: {
+      feed?: {
+        entry?: { title?: { $t?: string }; content?: { $t?: string } }[];
+      };
+    } = await response.json();
+    const entry = data.feed?.entry?.[0];
+    if (!entry?.content?.$t) {
+      throw new Error('Novelas MTL: la página no existe o está vacía.');
+    }
+    return { title: entry.title?.$t || '', html: entry.content.$t };
+  }
+
+  private async getBody(path: string) {
+    const { title, html } = await this.getEntry(path);
+    const $ = loadCheerio(`<div class="post-body">${html}</div>`);
+    return { $, title, body: $('.post-body').first() };
   }
 
   private cleanText(text: string): string {
@@ -65,25 +100,22 @@ class NovelasMTLPlugin implements Plugin.PluginBase {
   private async catalogue(): Promise<Plugin.NovelItem[]> {
     // A missing extra index page is tolerated, but if none loads the site is
     // unreachable and that must not look like an empty catalogue.
-    const results = await Promise.allSettled(
-      INDEX_PAGES.map(page => this.getHtml(page)),
-    );
-    const pages = results.map(result =>
-      result.status === 'fulfilled' ? result.value : '',
-    );
-    if (!pages.some(Boolean)) {
-      const failure = results.find(
-        (result): result is PromiseRejectedResult =>
-          result.status === 'rejected',
-      );
-      throw failure?.reason instanceof Error
-        ? failure.reason
+    const pages: CheerioAPI[] = [];
+    let failure: unknown;
+    for (const page of INDEX_PAGES) {
+      try {
+        pages.push((await this.getBody(page)).$);
+      } catch (error) {
+        failure = failure || error;
+      }
+    }
+    if (!pages.length) {
+      throw failure instanceof Error
+        ? failure
         : new Error('Novelas MTL: no se pudo cargar el catálogo.');
     }
     const novels = new Map<string, Plugin.NovelItem>();
-    for (const html of pages) {
-      if (!html) continue;
-      const $ = loadCheerio(html);
+    for (const $ of pages) {
       $('.post-body a[href]').each((_, el) => {
         const link = $(el);
         const path = this.sitePath(link.attr('href'));
@@ -130,15 +162,11 @@ class NovelasMTLPlugin implements Plugin.PluginBase {
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const $ = loadCheerio(await this.getHtml(novelPath));
-    const body = $('.post-body').first();
+    const { $, title, body } = await this.getBody(novelPath);
     body.find('script, style, ins, iframe, .adsbygoogle').remove();
 
     const name =
-      this.cleanText($('h3.post-title').first().text()).replace(
-        /\s+Espa[nñ]ol$/i,
-        '',
-      ) || 'Sin título';
+      this.cleanText(title).replace(/\s+Espa[nñ]ol$/i, '') || 'Sin título';
 
     const chapters: Plugin.ChapterItem[] = [];
     const seen = new Set<string>();
@@ -230,8 +258,7 @@ class NovelasMTLPlugin implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const $ = loadCheerio(await this.getHtml(chapterPath));
-    const body = $('.post-body').first();
+    const { $, body } = await this.getBody(chapterPath);
     body.find('script, style, ins, iframe, noscript, .adsbygoogle').remove();
     // Cover banner at the top of every post.
     body.find('img').each((_, img) => {
