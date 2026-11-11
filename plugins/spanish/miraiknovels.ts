@@ -306,9 +306,10 @@ class MiraiKNovelsPlugin implements Plugin.PluginBase {
         image.attr('src', src.replace(/-\d+x\d+(\.\w+)$/, '$1'));
       }
     });
-    // Footnote markers link to anchors that do not exist in the app.
+    // Footnote markers link to anchors that do not exist in the app: unwrap
+    // the links but keep their contents (text, formatting and linked images).
     root.find('a').each((_, link) => {
-      chapter(link).replaceWith(chapter(link).text());
+      chapter(link).replaceWith(chapter(link).contents());
     });
     root.find('*').each((_, el) => {
       const element = chapter(el);
