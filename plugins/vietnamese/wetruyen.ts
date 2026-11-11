@@ -174,9 +174,14 @@ class WeTruyenPlugin implements Plugin.PagePlugin {
       if (page > totalPages) totalPages = page;
     });
 
+    const name = $('.col-info-desc h1.title').first().text().trim();
+    if (!name) {
+      throw new Error(`WeTruyen: novel page not found for ${novelPath}`);
+    }
+
     const novel: Plugin.SourceNovel & { totalPages: number } = {
       path: novelPath,
-      name: $('.col-info-desc h1.title').first().text().trim(),
+      name,
       cover: $('.col-info-desc .book img').first().attr('src'),
       chapters: this.parseChapterList($),
       totalPages,
