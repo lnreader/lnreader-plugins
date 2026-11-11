@@ -181,9 +181,21 @@ class EightysixAR implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const url = this.resolveUrl(chapterPath);
-    const $ = loadCheerio(await (await this.request(url)).text());
-    const content = $('div.post-body').first();
+    const path = new URL(this.resolveUrl(chapterPath)).pathname;
+    if (!VOLUME_PATH.test(path))
+      throw new Error('EightysixAR: invalid page address.');
+    // Blogspot throttles post pages; the JSON feed serves the same body.
+    const data: FeedResponse = await (
+      await this.request(
+        `${this.site}/feeds/posts/default?alt=json&path=${encodeURIComponent(
+          path,
+        )}`,
+      )
+    ).json();
+    const html = data.feed?.entry?.[0]?.content?.$t;
+    if (!html) throw new Error('EightysixAR: chapter not found.');
+    const $ = loadCheerio(`<div>${html}</div>`);
+    const content = $('div').first();
     content.find('script,style,iframe,noscript,form').remove();
     const chapter = content.html()?.trim() || '';
     const hasImages = content.find('img').length > 0;
