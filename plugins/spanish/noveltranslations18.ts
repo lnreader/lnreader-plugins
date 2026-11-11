@@ -6,6 +6,7 @@ import { NovelStatus } from '@libs/novelStatus';
 
 const BASE = 'https://noveltranslations18.blogspot.com';
 const SERIES_URL = `${BASE}/search/label/Series?max-results=150`;
+const SERIES_FEED_URL = `${BASE}/feeds/posts/default/-/Series?alt=json&max-results=150`;
 const FEED_PAGE_SIZE = 150;
 const MAX_FEED_PAGES = 10;
 
@@ -48,6 +49,7 @@ type FeedEntry = {
   title: { $t: string };
   published: { $t: string };
   link: { rel: string; href: string }[];
+  media$thumbnail?: { url: string };
 };
 
 class NovelTranslations18Plugin implements Plugin.PluginBase {
@@ -60,30 +62,63 @@ class NovelTranslations18Plugin implements Plugin.PluginBase {
 
   private seriesCache?: Promise<Series[]>;
 
-  private async getHtml(url: string) {
+  // Blogger answers bursts with 429/503: wait once, then retry exactly once.
+  private async request(url: string) {
     const response = await fetchApi(url);
+    if (response.status !== 429 && response.status !== 503) return response;
+    const retryAfter = Number(response.headers.get('Retry-After'));
+    const seconds = retryAfter > 0 ? Math.min(retryAfter, 10) : 2;
+    await new Promise(resolve => setTimeout(resolve, seconds * 1000));
+    return fetchApi(url);
+  }
+
+  private async getHtml(url: string) {
+    const response = await this.request(url);
     if (!response.ok) {
       throw new Error(`No se pudo acceder al sitio (${response.status}).`);
     }
     return parseHTML(await response.text());
   }
 
-  // The whole catalogue is one Blogger label page ("Series").
+  private async getSeriesFromFeed() {
+    const response = await this.request(SERIES_FEED_URL);
+    if (!response.ok) throw new Error(`Feed (${response.status}).`);
+    const entries: FeedEntry[] = (await response.json())?.feed?.entry || [];
+    const series: Series[] = [];
+    entries.forEach(entry => {
+      const link = entry.link.find(item => item.rel === 'alternate');
+      const name = entry.title.$t.trim();
+      if (!link || !name) return;
+      series.push({
+        name,
+        path: toPath(link.href),
+        cover: entry.media$thumbnail?.url.replace('/s72-c/', '/s400/'),
+      });
+    });
+    if (series.length === 0) throw new Error('Feed vacío.');
+    return series;
+  }
+
+  private async getSeriesFromHtml() {
+    const $ = await this.getHtml(SERIES_URL);
+    const series: Series[] = [];
+    $('a.clamp').each((_, el) => {
+      const link = $(el);
+      const href = link.attr('href');
+      const name = link.text().trim();
+      if (!href || !name) return;
+      const cover = link.parent().find('img').first().attr('src');
+      series.push({ name, path: toPath(href), cover });
+    });
+    return series;
+  }
+
+  // The whole catalogue is the "Series" label: read its feed, falling back to
+  // the label page.
   private getSeries() {
     if (!this.seriesCache) {
-      this.seriesCache = this.getHtml(SERIES_URL)
-        .then($ => {
-          const series: Series[] = [];
-          $('a.clamp').each((_, el) => {
-            const link = $(el);
-            const href = link.attr('href');
-            const name = link.text().trim();
-            if (!href || !name) return;
-            const cover = link.parent().find('img').first().attr('src');
-            series.push({ name, path: toPath(href), cover });
-          });
-          return series;
-        })
+      this.seriesCache = this.getSeriesFromFeed()
+        .catch(() => this.getSeriesFromHtml())
         .catch(error => {
           // Let the next call retry instead of caching a failed request.
           this.seriesCache = undefined;
@@ -112,7 +147,7 @@ class NovelTranslations18Plugin implements Plugin.PluginBase {
     const chapters: Plugin.ChapterItem[] = [];
     for (let page = 0; page < MAX_FEED_PAGES; page++) {
       const start = page * FEED_PAGE_SIZE + 1;
-      const response = await fetchApi(
+      const response = await this.request(
         `${BASE}/feeds/posts/default/-/${encodeURIComponent(label)}?alt=json&start-index=${start}&max-results=${FEED_PAGE_SIZE}`,
       );
       if (!response.ok) break;
@@ -137,7 +172,7 @@ class NovelTranslations18Plugin implements Plugin.PluginBase {
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const response = await fetchApi(BASE + novelPath);
+    const response = await this.request(BASE + novelPath);
     if (!response.ok) {
       throw new Error(`No se pudo acceder a la novela (${response.status}).`);
     }
