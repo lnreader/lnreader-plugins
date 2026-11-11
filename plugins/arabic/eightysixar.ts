@@ -11,6 +11,7 @@ type FeedEntry = {
   link: FeedLink[];
   published?: { $t: string };
   category?: { term: string }[];
+  content?: { $t: string };
   media$thumbnail?: { url: string };
 };
 type FeedResponse = {
@@ -26,7 +27,7 @@ const RETRY_DELAY_MS = 2000;
 const CACHE_TTL_MS = 60000;
 const COVER_SIZE = 's400';
 const VOLUME_PATH = /^\/\d{4}\/\d{2}\/[^/]+\.html$/;
-const LABEL_PATTERN = /label_chapter\s*=\s*(['"])(.*?)\1/;
+const VOLUME_LABEL = /^Volume \d+$/;
 
 const postHref = (entry: FeedEntry): string | undefined =>
   entry.link?.find(link => link.rel === 'alternate')?.href;
@@ -38,7 +39,7 @@ class EightysixAR implements Plugin.PluginBase {
   site = 'https://eightysixar.blogspot.com';
   version = '1.0.0';
   filters: Filters | undefined = undefined;
-  private volumeCache?: { at: number; items: Plugin.NovelItem[] };
+  private volumeCache?: { at: number; entries: FeedEntry[] };
 
   private async request(url: string) {
     let response = await fetchApi(url);
@@ -56,7 +57,10 @@ class EightysixAR implements Plugin.PluginBase {
   }
 
   /** Every post of a label, newest first, with duplicates removed. */
-  private async labelPosts(label: string): Promise<FeedEntry[]> {
+  private async labelPosts(
+    label: string,
+    kind: 'summary' | 'default' = 'summary',
+  ): Promise<FeedEntry[]> {
     const posts: FeedEntry[] = [];
     const seen = new Set<string>();
     let start = 1;
@@ -69,7 +73,7 @@ class EightysixAR implements Plugin.PluginBase {
       }).toString();
       const data: FeedResponse = await (
         await this.request(
-          `${this.site}/feeds/posts/summary/-/${encodeURIComponent(
+          `${this.site}/feeds/posts/${kind}/-/${encodeURIComponent(
             label,
           )}?${query}`,
         )
@@ -99,14 +103,20 @@ class EightysixAR implements Plugin.PluginBase {
     return thumbnail.replace(/\/s\d+(-c)?\//, `/${COVER_SIZE}/`);
   }
 
+  /** Full entries of the Series label, newest first; shared via a short cache. */
+  private async seriesEntries(): Promise<FeedEntry[]> {
+    if (this.volumeCache && Date.now() - this.volumeCache.at < CACHE_TTL_MS)
+      return this.volumeCache.entries;
+    const entries = await this.labelPosts(SERIES_LABEL, 'default');
+    this.volumeCache = { at: Date.now(), entries };
+    return entries;
+  }
+
   /** Each volume of the novel is listed as a post carrying the Series label. */
   private async volumes(): Promise<Plugin.NovelItem[]> {
-    if (this.volumeCache && Date.now() - this.volumeCache.at < CACHE_TTL_MS)
-      return this.volumeCache.items;
-    const posts = await this.labelPosts(SERIES_LABEL);
     const volumes: Plugin.NovelItem[] = [];
     // Volumes are published in reading order; the feed lists newest first.
-    for (const entry of posts.slice().reverse()) {
+    for (const entry of (await this.seriesEntries()).slice().reverse()) {
       const href = postHref(entry);
       const name = entry.title?.$t?.trim();
       if (!href || !name) continue;
@@ -114,7 +124,6 @@ class EightysixAR implements Plugin.PluginBase {
       if (!VOLUME_PATH.test(path)) continue;
       volumes.push({ name, path, cover: this.coverFrom(entry) });
     }
-    this.volumeCache = { at: Date.now(), items: volumes };
     return volumes;
   }
 
@@ -125,27 +134,28 @@ class EightysixAR implements Plugin.PluginBase {
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const url = this.resolveUrl(novelPath, true);
-    const html = await (await this.request(url)).text();
-    const $ = loadCheerio(html);
-
-    const label = LABEL_PATTERN.exec(html)?.[2].trim();
+    const path = new URL(this.resolveUrl(novelPath, true)).pathname;
+    const entry = (await this.seriesEntries()).find(item => {
+      const href = postHref(item);
+      return !!href && new URL(href).pathname === path;
+    });
+    if (!entry) throw new Error('EightysixAR: volume was not found.');
+    const categories = entry.category?.map(category => category.term) || [];
+    const label = categories.find(term => VOLUME_LABEL.test(term));
     if (!label) throw new Error('EightysixAR: volume label was not found.');
 
     const novel: Plugin.SourceNovel = {
       path: novelPath,
-      name: $('h1.post-title').first().text().trim() || label,
-      cover:
-        $('.post-thumbnail1').first().attr('src') ||
-        $('meta[property="og:image"]').attr('content') ||
-        defaultCover,
+      name: entry.title?.$t?.trim() || label,
+      cover: this.coverFrom(entry),
     };
 
-    const author = $('#sinopsis .author-name').first().text().trim();
+    const $ = loadCheerio(entry.content?.$t || '');
+    const author = $('.author-name').first().text().trim();
     if (author) novel.author = author;
-    const artist = $('#sinopsis .artist-name').first().text().trim();
+    const artist = $('.artist-name').first().text().trim();
     if (artist) novel.artist = artist;
-    const summary = $('#sinopsis .descManga p')
+    const summary = $('.descManga p')
       .first()
       .html()
       ?.replace(/<br\s*\/?>/gi, '\n')
@@ -153,9 +163,8 @@ class EightysixAR implements Plugin.PluginBase {
       .trim();
     if (summary) novel.summary = summary;
 
-    const status = $('.bookmark-btn1').first().attr('data-status');
-    if (status === 'Completed') novel.status = NovelStatus.Completed;
-    else if (status === 'Ongoing') novel.status = NovelStatus.Ongoing;
+    if (categories.includes('Completed')) novel.status = NovelStatus.Completed;
+    else if (categories.includes('Ongoing')) novel.status = NovelStatus.Ongoing;
 
     const chapters: Plugin.ChapterItem[] = [];
     // The label feed also contains the volume's own page; skip it.
