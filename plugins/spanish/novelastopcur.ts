@@ -18,7 +18,7 @@ const CHAPTER_TEXT = /\d|pr[oó]logo|ep[ií]logo|extra|especial|prefacio/i;
 const NAVIGATION =
   /^[\s\-–—|]*(?:anterior|[ií]ndice|siguiente|volver)\b[\s\-–—|a-záéíóúñ]*$/i;
 const PROMOTION =
-  /patreon|esponsor|anslid|compart(?:an|ir)(?:lo)?\s+(?:la\s+)?(?:novela|p[aá]gina|esta)|ayudar[ií]a mucho|m[aá]s cap[ií]tulos\s+(?:gratis|en|:|\()|muchas gracias por todo/i;
+  /patreon|esponsor|anslid|compart(?:an|ir)(?:lo)?\s+(?:la\s+)?(?:novela|p[aá]gina)\b|compart\w*\s+(?:lo\s+)?\S*\s*ayudar[ií]a mucho|m[aá]s cap[ií]tulos\s+(?:gratis|en|:|\()|muchas gracias por todo/i;
 const SEPARATOR = /^[\s\-–—_=.·|~*]*$/;
 // Left over at the very end of a chapter once the links are gone.
 const TRAILING = /^[\s\-–—_=.·|~*]*(?:tambi[eé]n\s*:?)?[\s\-–—_=.·|~*]*$/i;
