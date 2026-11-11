@@ -44,9 +44,10 @@ const chapterNumberOf = (title: string) => {
   return match ? Number(match[1] || match[2]) : undefined;
 };
 
-type Series = { name: string; path: string; cover?: string };
+type Series = { name: string; path: string; cover?: string; body?: string };
 type FeedEntry = {
   title: { $t: string };
+  content?: { $t: string };
   published: { $t: string };
   link: { rel: string; href: string }[];
   media$thumbnail?: { url: string };
@@ -93,6 +94,7 @@ class NovelTranslations18Plugin implements Plugin.PluginBase {
         name,
         path: toPath(link.href),
         cover: entry.media$thumbnail?.url.replace('/s72-c/', '/s400/'),
+        body: entry.content?.$t,
       });
     });
     if (series.length === 0) throw new Error('Feed vacío.');
@@ -173,16 +175,31 @@ class NovelTranslations18Plugin implements Plugin.PluginBase {
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
     const response = await this.request(BASE + novelPath);
-    if (!response.ok) {
-      throw new Error(`No se pudo acceder a la novela (${response.status}).`);
+    let body: string;
+    let fallbackCover: string | undefined;
+    if (response.ok) {
+      body = await response.text();
+    } else {
+      // Blogger may throttle novel pages; the series feed carries the same
+      // post content (synopsis and chapter index).
+      const entry = (await this.getSeries().catch(() => [])).find(
+        item => item.path === novelPath && item.body,
+      );
+      if (!entry) {
+        throw new Error(`No se pudo acceder a la novela (${response.status}).`);
+      }
+      body = `<h1>${entry.name}</h1>${entry.body}`;
+      fallbackCover = entry.cover;
     }
-    const body = await response.text();
     const $ = parseHTML(body);
 
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: $('h1').first().text().trim() || 'Untitled',
-      cover: $('meta[property="og:image"]').attr('content') || defaultCover,
+      cover:
+        $('meta[property="og:image"]').attr('content') ||
+        fallbackCover ||
+        defaultCover,
     };
 
     const summary = $('#synopsis').text().trim();
