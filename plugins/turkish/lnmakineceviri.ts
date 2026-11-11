@@ -110,6 +110,19 @@ class LnMakineCeviriPlugin implements Plugin.PluginBase {
     ) {
       response = await fetchApi(url);
     }
+    // Rate limited: wait for Retry-After (default 1s, capped at 10s) and retry.
+    for (let i = 0; response.status === 429 && i < RETRIES; i++) {
+      const retryAfter = parseInt(
+        response.headers.get('Retry-After') || '',
+        10,
+      );
+      const waitMs = Math.min(
+        isNaN(retryAfter) ? 1000 : retryAfter * 1000,
+        10000,
+      );
+      await new Promise(resolve => setTimeout(resolve, waitMs));
+      response = await fetchApi(url);
+    }
     if (!response.ok) {
       throw Object.assign(
         new Error(`Türkçe Novel Makine Çeviri: HTTP ${response.status}.`),
