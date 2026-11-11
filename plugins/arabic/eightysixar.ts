@@ -22,6 +22,8 @@ type FeedResponse = {
 
 const SERIES_LABEL = 'Series';
 const FEED_PAGE_SIZE = 150;
+const RETRY_DELAY_MS = 2000;
+const CACHE_TTL_MS = 60000;
 const COVER_SIZE = 's400';
 const VOLUME_PATH = /^\/\d{4}\/\d{2}\/[^/]+\.html$/;
 const LABEL_PATTERN = /label_chapter\s*=\s*(['"])(.*?)\1/;
@@ -36,9 +38,15 @@ class EightysixAR implements Plugin.PluginBase {
   site = 'https://eightysixar.blogspot.com';
   version = '1.0.0';
   filters: Filters | undefined = undefined;
+  private volumeCache?: { at: number; items: Plugin.NovelItem[] };
 
   private async request(url: string) {
-    const response = await fetchApi(url);
+    let response = await fetchApi(url);
+    if (response.status === 429) {
+      // Blogger rate-limits bursts; wait briefly and retry once.
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+      response = await fetchApi(url);
+    }
     if (!response.ok) {
       throw Object.assign(new Error(`EightysixAR: HTTP ${response.status}.`), {
         status: response.status,
@@ -93,6 +101,8 @@ class EightysixAR implements Plugin.PluginBase {
 
   /** Each volume of the novel is listed as a post carrying the Series label. */
   private async volumes(): Promise<Plugin.NovelItem[]> {
+    if (this.volumeCache && Date.now() - this.volumeCache.at < CACHE_TTL_MS)
+      return this.volumeCache.items;
     const posts = await this.labelPosts(SERIES_LABEL);
     const volumes: Plugin.NovelItem[] = [];
     // Volumes are published in reading order; the feed lists newest first.
@@ -104,6 +114,7 @@ class EightysixAR implements Plugin.PluginBase {
       if (!VOLUME_PATH.test(path)) continue;
       volumes.push({ name, path, cover: this.coverFrom(entry) });
     }
+    this.volumeCache = { at: Date.now(), items: volumes };
     return volumes;
   }
 
