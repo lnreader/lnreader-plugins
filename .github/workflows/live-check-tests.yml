@@ -1,0 +1,40 @@
+name: Live Check Tests
+
+# The plugin live-check workflow only runs when plugin files change, so
+# changes to the checker itself would otherwise go untested.
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - scripts/live-check-plugin.js
+      - scripts/live-check-plugin.test.mjs
+      - .github/workflows/live-check-tests.yml
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Live Check Tests
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Live Check Tests
+        run: node --test scripts/live-check-plugin.test.mjs
