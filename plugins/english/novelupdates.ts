@@ -6,10 +6,39 @@ import { Plugin } from '@/types/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.9.10';
+  version = '0.9.11';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
+
+  private cloudflareError(label: string, status: number) {
+    return Object.assign(
+      new Error(
+        'Cloudflare protection detected ' +
+          label +
+          ' (HTTP ' +
+          status +
+          '). Please try opening the plugin in WebView first to solve the challenge, or sign in to your Novel Updates account there, then retry.',
+      ),
+      { status },
+    );
+  }
+
+  private assertNotBlocked(response: Response, body: string, label: string) {
+    // Blocked clients get HTTP 403/503, or occasionally HTTP 200 with a
+    // Cloudflare interstitial. Detection relies on window._cf_chl_opt, which
+    // only the interstitial defines: plain phrases ("just a moment") occur in
+    // novel titles/descriptions, and the challenge-platform beacon script that
+    // Cloudflare injects into pages served to already-solved sessions must not
+    // be treated as a block, otherwise valid browser-cookie fetches fail.
+    if (
+      response.status === 403 ||
+      response.status === 503 ||
+      /_cf_chl_opt/.test(body)
+    ) {
+      throw this.cloudflareError(label, response.status ?? 403);
+    }
+  }
 
   parseNovels(loadedCheerio: CheerioAPI) {
     const novels: Plugin.NovelItem[] = [];
@@ -74,6 +103,7 @@ class NovelUpdates implements Plugin.PluginBase {
 
     const response = await fetchApi(url);
     const body = await response.text();
+    this.assertNotBlocked(response, body, 'on the novel list');
     const loadedCheerio = parseHTML(body);
     return this.parseNovels(loadedCheerio);
   }
@@ -82,6 +112,16 @@ class NovelUpdates implements Plugin.PluginBase {
     const url = this.site + novelPath;
     const response = await fetchApi(url);
     const body = await response.text();
+
+    // Novel Updates answers non-browser clients with a Cloudflare managed
+    // challenge (HTTP 403/503 "Just a moment..."), whose page contains none
+    // of the series markup below. The app's fetch cannot solve the check;
+    // opening the novel in WebView does — signing in to a Novel Updates
+    // account passes it too — and the app's fetch then reuses those cookies
+    // for both this page and the chapter AJAX, so point readers at that
+    // path instead of failing with a parsing error on the challenge page.
+    this.assertNotBlocked(response, body, 'on this novel');
+
     const loadedCheerio = parseHTML(body);
 
     const novel: Plugin.SourceNovel = {
@@ -132,10 +172,29 @@ class NovelUpdates implements Plugin.PluginBase {
     formData.append('mygrr', '0');
     formData.append('mypostid', novelId);
 
-    const chaptersHtml = await fetchApi(`${this.site}wp-admin/admin-ajax.php`, {
-      method: 'POST',
-      body: formData,
-    }).then(data => data.text());
+    const chaptersResponse = await fetchApi(
+      `${this.site}wp-admin/admin-ajax.php`,
+      { method: 'POST', body: formData },
+    );
+    // The chapter AJAX endpoint is blocked separately from the series page:
+    // Cloudflare answers the POST with a 403 challenge (sometimes with HTTP
+    // 200), or WordPress replies "0" when the request never reaches the plugin
+    // hook. Report the same WebView guidance rather than parsing a blocked
+    // body into an empty chapter list.
+    const chaptersHtml = await chaptersResponse.text();
+    this.assertNotBlocked(
+      chaptersResponse,
+      chaptersHtml,
+      'on the chapter list',
+    );
+    if (chaptersHtml.trim() === '0') {
+      throw Object.assign(
+        new Error(
+          'Novel Updates refused the chapter list request. Please try opening the plugin in WebView first to solve the Cloudflare challenge, or sign in to your Novel Updates account there, then retry.',
+        ),
+        { status: chaptersResponse.status },
+      );
+    }
 
     const chaptersCheerio = parseHTML(chaptersHtml);
     const chapters: Plugin.ChapterItem[] = [];
@@ -1339,6 +1398,7 @@ class NovelUpdates implements Plugin.PluginBase {
     const url = `${this.site}series-finder/?sf=1&sh=${searchTerm}&sort=srank&order=asc&pg=${page}`;
     const response = await fetchApi(url);
     const body = await response.text();
+    this.assertNotBlocked(response, body, 'on the novel list');
 
     const loadedCheerio = parseHTML(body);
 
