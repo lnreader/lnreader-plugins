@@ -25,10 +25,16 @@ class NovelUpdates implements Plugin.PluginBase {
   }
 
   private assertNotBlocked(response: Response, body: string, label: string) {
+    // Blocked clients get HTTP 403/503, or occasionally HTTP 200 with a
+    // Cloudflare interstitial. Detection relies on window._cf_chl_opt, which
+    // only the interstitial defines: plain phrases ("just a moment") occur in
+    // novel titles/descriptions, and the challenge-platform beacon script that
+    // Cloudflare injects into pages served to already-solved sessions must not
+    // be treated as a block, otherwise valid browser-cookie fetches fail.
     if (
       response.status === 403 ||
       response.status === 503 ||
-      /just a moment|cf-chl|attention required/i.test(body)
+      /_cf_chl_opt/.test(body)
     ) {
       throw this.cloudflareError(label, response.status ?? 403);
     }
@@ -171,17 +177,16 @@ class NovelUpdates implements Plugin.PluginBase {
       { method: 'POST', body: formData },
     );
     // The chapter AJAX endpoint is blocked separately from the series page:
-    // Cloudflare answers the POST with a 403 challenge, or WordPress replies
-    // "0" when the request never reaches the plugin hook. Report the same
-    // WebView guidance rather than parsing a blocked body into an empty
-    // chapter list.
-    if (chaptersResponse.status === 403 || chaptersResponse.status === 503) {
-      throw this.cloudflareError(
-        'on the chapter list',
-        chaptersResponse.status,
-      );
-    }
+    // Cloudflare answers the POST with a 403 challenge (sometimes with HTTP
+    // 200), or WordPress replies "0" when the request never reaches the plugin
+    // hook. Report the same WebView guidance rather than parsing a blocked
+    // body into an empty chapter list.
     const chaptersHtml = await chaptersResponse.text();
+    this.assertNotBlocked(
+      chaptersResponse,
+      chaptersHtml,
+      'on the chapter list',
+    );
     if (chaptersHtml.trim() === '0') {
       throw Object.assign(
         new Error(
