@@ -21,9 +21,13 @@
 
 1. Pick the language folder your source belongs to under `plugins/<language>/` (full language name,
    e.g. `plugins/english/`), and create a `.ts` file there — e.g. `plugins/english/myNovelSite.ts`.
+   - **Coding conventions (`camelCase`)**: All code lines, properties, variables, methods, and parameters inside the plugin must adhere to standard TypeScript `camelCase` (e.g. `popularNovels`, `parseNovel`, `parseChapter`, `pageNo`, `showLatestNovels`, `novelPath`, `chapterPath`, `releaseTime`, `chapterNumber`).
+   - **Plugin ID**: The `id` property should use `camelCase` or lowercase alphanumeric characters (e.g. `'myNovelSite'`, `'nobleMTL'`), matching the file name without `.ts` and unique across the repo.
+   - **Class naming (`PascalCase`)**: The plugin class must use `PascalCase` (e.g. `TemplatePlugin`, `MyNovelSitePlugin`) implementing `Plugin.PluginBase`.
+   - **Default export**: The file MUST export an instantiated instance of the plugin as default export (`export default new MyNovelSitePlugin();`).
 2. Copy [`docs/plugin-template.ts`](./plugin-template.ts) into that file as a starting point. It
    already imports the pieces most plugins need (`fetchApi`/`fetchText`, `Plugin` namespace,
-   `Filters`, `cheerio`, `defaultCover`, `NovelStatus`) and stubs out the required methods.
+   `Filters`, `loadCheerio`, `defaultCover`, `NovelStatus`) and stubs out the required methods.
 3. Add a 96x96px icon at `public/static/src/<short-lang-code>/<plugin-id>/icon.png` (note: this
    folder uses the **short** language code, e.g. `en`, not the full folder name from step 1), then
    set `icon = 'src/<short-lang-code>/<plugin-id>/icon.png'` on your class — see
@@ -33,6 +37,7 @@
    site — the reference sections below cover the shape each one returns. [Using Cheerio](#using-cheerio)
    and [Custom fetching functions](#custom-fetching-functions) cover the two building blocks most
    plugins need for that.
+   - Remember that all methods, parameters (`pageNo`, `novelPath`, `chapterPath`, `searchTerm`), and object properties adhere to JavaScript/TypeScript **`camelCase`**.
 5. Test locally with `npm run dev:start`, which launches a browser playground at
    `http://localhost:3000` where you can run your plugin's functions against the real site. Before
    opening a PR, run `npm run check:plugin -- plugins/<lang>/yourPlugin.ts` (see
@@ -83,12 +88,15 @@ class ExamplePlugin implements Plugin.PluginBase {}
 
 #### PluginBase::id
 
-Unique ID of your plugin
+Unique ID of your plugin.
+
+- **Convention (`camelCase`)**: Must use `camelCase` or lowercase alphanumeric string (e.g. `'myNovelSite'`, `'nobleMTL'`). Do not use spaces, uppercase starting letters, or hyphens/underscores.
+- Must remain stable and unique across all plugins in the repository.
 
 ```ts
 class ExamplePlugin implements Plugin.PluginBase {
   ...
-  id = 'templateID';
+  id = 'myNovelSite';
   ...
 }
 ```
@@ -279,16 +287,16 @@ Function that is used to get the (filtered) list of novels from the front page o
 
 ```ts
 async popularNovels(
-        page: number,
-        options: Plugin.PopularNovelsOptions<typeof this.filters>
-    ): Promise<Plugin.NovelItem[]>
+  pageNo: number,
+  options: Plugin.PopularNovelsOptions<typeof this.filters>,
+): Promise<Plugin.NovelItem[]>
 ```
 
 See [Using cheerio](#using-cheerio) for more information on how to parse HTML documents
 
 ###### Parameters
 
-- `page` current page to fetch
+- `pageNo` current 1-based page number to fetch
 - `options` [PopularNovelsOptions](#pluginbasepopularnovelsoptions)
 
 ###### Returns
@@ -301,11 +309,14 @@ See [Using cheerio](#using-cheerio) for more information on how to parse HTML do
 class ExamplePlugin implements Plugin.PluginBase {
   ...
   async popularNovels(
-    page: number,
-    options: Plugin.PopularNovelsOptions<typeof this.filters>,
+    pageNo: number,
+    {
+      showLatestNovels,
+      filters,
+    }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
     const novels: Plugin.NovelItem[] = [];
-    if (options.filters.status.value === 'ongoing') {
+    if (filters?.status?.value === 'ongoing') {
       novels.push({
         name: 'Novel1',
         path: '/novel1',
@@ -464,54 +475,65 @@ class ExamplePlugin implements Plugin.PluginBase {
 
 ### NovelItem
 
-It is an object representing information on how to store/access the novel
+An object representing basic information to display and access a novel in search/popular listings:
 
 | Field                             | Type        | Required | Description                                             |
 | ---------------------------------- | ----------- | -------- | --------------------------------------------------------- |
-| <p id="novelitemid">id</p>         | `undefined` | yes      | Reserved for the app's internal use — always assign the literal value `undefined`, never a real id, from plugin code |
-| <p id="novelitempath">path</p>    | `string`    | yes      | The relative path to the novel                            |
 | <p id="novelitemname">name</p>    | `string`    | yes      | The name of the novel shown in the library                 |
-| <p id="novelitemcover">cover</p>  | `string`    | no       | URL to novel's cover                                        |
+| <p id="novelitempath">path</p>    | `string`    | yes      | The relative path to the novel (e.g. `/novel/example-slug`)|
+| <p id="novelitemcover">cover</p>  | `string`    | no       | URL to novel's cover image. Fallback to `defaultCover` if none |
 
 #### Default cover
 
-You can use the default `Cover not available` cover by importing
+When a novel lacks a cover image, fallback to `defaultCover`:
 
 ```ts
 import { defaultCover } from '@libs/defaultCover';
+
+novels.push({
+  name: 'Novel Title',
+  path: '/novel-path',
+  cover: defaultCover,
+});
 ```
 
 ---
 
 ### SourceNovel
 
-`SourceNovel` extends [NovelItem](#novelitem), so `id`, `path`, `name`, and `cover` behave the same
-way here as they do there.
+`SourceNovel` extends [NovelItem](#novelitem), containing the novel's full metadata and its chapter list.
 
 | Field    | Type                                | Required | Description                                                                |
 | -------- | ------------------------------------ | -------- | ----------------------------------------------------------------------------- |
-| <p id="sourcenovelpath">path</p> | `string`             | yes      | Must match the [NovelItem::path](#novelitempath) passed into `parseNovel`      |
+| <p id="sourcenovelpath">path</p> | `string`             | yes      | Must match the exact [NovelItem::path](#novelitempath) passed into `parseNovel` |
 | name     | `string`                             | yes      | The novel's title                                                             |
-| cover    | `string`                             | no       | URL to the novel's cover                                                       |
-| genres   | `string`                             | no       | Comma-separated genre list, e.g. `"Action,Fantasy,Romance"`                     |
+| cover    | `string`                             | no       | URL to the novel's cover (or `defaultCover`)                                   |
+| genres   | `string`                             | no       | Comma-separated genre list, e.g. `"Action, Fantasy, Romance"` (NOT an array)  |
 | summary  | `string`                             | no       | The novel's synopsis/description                                               |
-| author   | `string`                             | no       |                                                                                 |
-| artist   | `string`                             | no       |                                                                                 |
+| author   | `string`                             | no       | Author name                                                                    |
+| artist   | `string`                             | no       | Artist name                                                                    |
 | status   | [NovelStatus](#novelstatus)          | no       | See [NovelStatus](#novelstatus) for the standard values                        |
 | rating   | `number`                             | no       | Rating out of 5, as a float                                                    |
 | chapters | [ChapterItem](#chapteritem)`[]`      | yes      | The novel's chapter list. If the novel is paginated, return the first page's chapters here and see [Pagination](#pagination) |
 | totalPages | `number`                            | no       | Total number of chapter-list pages, for paginated novels — see [Pagination](#pagination) |
 
+> [!IMPORTANT]
+> - **`genres`**: Must be a single comma-separated `string` (e.g. `'Action, Fantasy'`), **NOT** an array (`string[]`).
+> - **`status`**: Always use the enum values from `NovelStatus` (`NovelStatus.Ongoing`, `NovelStatus.Completed`, `NovelStatus.Unknown`) imported from `@libs/novelStatus`.
+> - **`path`**: Must match the exact path received by `parseNovel(novelPath)`.
+
 ---
 
 ### ChapterItem
 
+Represents a chapter entry in the novel's chapter list:
+
 | Field         | Type                     | Required | Description                                                     |
 | ------------- | ------------------------ | -------- | ----------------------------------------------------------------- |
-| name          | `string`                 | yes      |                                                                     |
-| path          | `string`                 | yes      |                                                                     |
-| releaseTime   | `string`                 | no       | `"YYYY-MM-DD"` or an ISO date string                               |
-| chapterNumber | `number`                 | no       |                                                                     |
+| name          | `string`                 | yes      | The title/name of the chapter                                     |
+| path          | `string`                 | yes      | The relative path to the chapter (e.g. `/novel/slug/chapter-1`)    |
+| releaseTime   | `string`                 | no       | `"YYYY-MM-DD"` or an ISO date string (or parsed using `dayjs`)      |
+| chapterNumber | `number`                 | no       | Sequential chapter number (float or integer, e.g. `1`, `1.5`)      |
 | page          | `string`                 | no       | Only used for novels without pages (see [Pagination](#pagination)) |
 | scanlator     | `string` or `string[]`   | no       | Name(s) of the scanlation/translation group(s)                    |
 

@@ -4,6 +4,7 @@ import { defaultCover } from '@libs/defaultCover';
 import { fetchApi } from '@libs/fetch';
 import { NovelStatus } from '@libs/novelStatus';
 import dayjs from 'dayjs';
+import { load as parseHTML } from 'cheerio';
 
 const regex =
   /<script id="__NEXT_DATA__" type="application\/json">(\{.*?\})<\/script>/;
@@ -11,8 +12,9 @@ const regex =
 class RNRF implements Plugin.PluginBase {
   id = 'RNRF';
   name = 'РанобэРФ';
-  site = 'https://ранобэ.рф';
-  version = '1.0.1';
+  // ранобе.рф; the old ранобэ.рф domain no longer resolves
+  site = 'https://xn--80acm4afj.xn--p1ai';
+  version = '1.0.2';
   icon = 'src/ru/ranoberf/icon.png';
 
   async popularNovels(
@@ -58,7 +60,7 @@ class RNRF implements Plugin.PluginBase {
       const book: PagePropsBook = JSON.parse(jsonRaw[1]).props.pageProps.book;
 
       novel.name = book.title;
-      novel.summary = book.description;
+      novel.summary = htmlToText(book.description || '');
 
       novel.cover = book.verticalImage?.url
         ? this.site + book.verticalImage.url
@@ -142,6 +144,20 @@ class RNRF implements Plugin.PluginBase {
 }
 
 export default new RNRF();
+
+// the app shows summaries as plain text
+function htmlToText(html: string) {
+  const $ = parseHTML(html);
+  $('br').replaceWith('\n');
+  $('p, div, li, h1, h2, h3, h4, h5, h6, blockquote').after('\n\n');
+  return (
+    $.root()
+      .text()
+      .replace(/[ \t]*\n[ \t]*/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim() || undefined
+  );
+}
 
 type response = {
   props: Props;

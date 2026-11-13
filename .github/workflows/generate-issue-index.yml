@@ -1,0 +1,181 @@
+name: Generate Issue Index
+
+on:
+  issues:
+    types: [opened, closed, reopened, edited, labeled, unlabeled, deleted]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Issue number to update; leave empty to rebuild all open issues
+        required: false
+        default: ''
+        type: string
+  push:
+    branches: [master]
+    paths:
+      - .github/scripts/generate-issue-index.cjs
+      - .github/scripts/keys.json
+      - .github/workflows/generate-issue-index.yml
+  workflow_run:
+    workflows: ['Update Issue Template']
+    types: [completed]
+
+permissions: {}
+
+concurrency:
+  group: plugin-issue-index
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  generate-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: read
+    steps:
+      - name: Checkout default branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '24'
+
+      - name: Prepare issue index update
+        id: prepare
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          ISSUE_ACTION: ${{ github.event.action }}
+          EVENT_ISSUE_NUMBER: ${{ github.event.issue.number }}
+          DISPATCH_ISSUE_NUMBER: ${{ inputs.issue_number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mode=full
+          issue_number=''
+          if [ "$EVENT_NAME" = issues ]; then
+            issue_number=$EVENT_ISSUE_NUMBER
+            mode=update
+          elif [ "$EVENT_NAME" = workflow_dispatch ] && [ -n "$DISPATCH_ISSUE_NUMBER" ]; then
+            issue_number=$DISPATCH_ISSUE_NUMBER
+            mode=update
+          fi
+
+          if [ "$mode" = update ]; then
+            if [[ ! "$issue_number" =~ ^[1-9][0-9]*$ ]] || ! node -e 'const n = Number(process.argv[1]); if (!Number.isSafeInteger(n) || n <= 0) process.exit(1)' "$issue_number"; then
+              echo "Issue number must be a positive safe integer." >&2
+              exit 1
+            fi
+          fi
+
+          branch_exists=false
+          base_sha=''
+          set +e
+          git ls-remote --exit-code --heads origin refs/heads/issue-index >/dev/null
+          branch_status=$?
+          set -e
+          if [ "$branch_status" -eq 0 ]; then
+            git fetch origin refs/heads/issue-index
+            base_sha=$(git rev-parse FETCH_HEAD)
+            branch_exists=true
+            if git ls-tree --name-only "$base_sha" -- issue-index.min.json | grep -Fxq issue-index.min.json; then
+              git show "$base_sha:issue-index.min.json" > "$RUNNER_TEMP/previous-issue-index.min.json"
+            else
+              branch_exists=file-missing
+            fi
+          elif [ "$branch_status" -ne 2 ]; then
+            echo "Unable to determine whether refs/heads/issue-index exists (git ls-remote exited $branch_status)." >&2
+            exit "$branch_status"
+          fi
+
+          if [ "$mode" = update ] && [ "$branch_exists" != true ]; then
+            mode=full
+          fi
+          {
+            echo "mode=$mode"
+            echo "issue_number=$issue_number"
+            echo "base_sha=$base_sha"
+            echo "branch_exists=$branch_exists"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Generate issue index
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_API_URL: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          ISSUE_ACTION: ${{ github.event.action }}
+          MODE: ${{ steps.prepare.outputs.mode }}
+          ISSUE_NUMBER: ${{ steps.prepare.outputs.issue_number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$MODE" = full ]; then
+            gh api --paginate --slurp "repos/$REPOSITORY/issues?state=open&per_page=100" > "$RUNNER_TEMP/open-plugin-issues.json"
+            node .github/scripts/generate-issue-index.cjs full "$RUNNER_TEMP/open-plugin-issues.json" "$RUNNER_TEMP/issue-index.min.json"
+            exit 0
+          fi
+
+          export CURRENT_ISSUE_PATH="$RUNNER_TEMP/current-plugin-issue.json"
+          node <<'NODE'
+          const fs = require('node:fs');
+          const issueNumber = Number(process.env.ISSUE_NUMBER);
+          async function main() {
+            if (process.env.EVENT_NAME === 'issues' && process.env.ISSUE_ACTION === 'deleted') {
+              fs.writeFileSync(process.env.CURRENT_ISSUE_PATH, 'null');
+              return;
+            }
+            const url = `${process.env.GITHUB_API_URL}/repos/${process.env.REPOSITORY}/issues/${process.env.ISSUE_NUMBER}`;
+            const response = await fetch(url, {
+              redirect: 'manual',
+              headers: {
+                Authorization: `Bearer ${process.env.GH_TOKEN}`,
+                Accept: 'application/vnd.github+json',
+                'User-Agent': 'lnreader-issue-index',
+              },
+            });
+            if (response.status === 404 || response.status === 410) {
+              fs.writeFileSync(process.env.CURRENT_ISSUE_PATH, 'null');
+              return;
+            }
+            if (response.status !== 200) throw new Error(`Issue request failed with HTTP ${response.status}.`);
+            const issue = await response.json();
+            if (!issue || typeof issue !== 'object' || Array.isArray(issue) || issue.number !== issueNumber)
+              throw new Error('Fetched issue number does not match the requested issue.');
+            fs.writeFileSync(process.env.CURRENT_ISSUE_PATH, JSON.stringify(issue));
+          }
+          main().catch(error => {
+            process.stderr.write(`${error.message}\n`);
+            process.exitCode = 1;
+          });
+          NODE
+          node .github/scripts/generate-issue-index.cjs update "$RUNNER_TEMP/previous-issue-index.min.json" "$ISSUE_NUMBER" "$RUNNER_TEMP/current-plugin-issue.json" "$RUNNER_TEMP/issue-index.min.json"
+
+      - name: Publish issue index branch
+        env:
+          BASE_SHA: ${{ steps.prepare.outputs.base_sha }}
+          BRANCH_EXISTS: ${{ steps.prepare.outputs.branch_exists }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+
+          if [ "$BRANCH_EXISTS" = true ] || [ "$BRANCH_EXISTS" = file-missing ]; then
+            git checkout --force -B issue-index "$BASE_SHA"
+          else
+            git checkout --orphan issue-index
+            git rm -rf --ignore-unmatch .
+          fi
+
+          cp "$RUNNER_TEMP/issue-index.min.json" issue-index.min.json
+          git add -- issue-index.min.json
+          if git diff --cached --quiet; then
+            echo "Issue index is unchanged."
+            exit 0
+          fi
+          git commit -m "chore(issues): update plugin issue index"
+          git push origin HEAD:refs/heads/issue-index

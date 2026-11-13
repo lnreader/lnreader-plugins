@@ -46,8 +46,7 @@ Read `README.md` for the project entry points, `docs/quickstart.md` before addin
 - Before adding a plugin, check `plugins/multisrc/` for a matching site theme. Prefer adding a
   `sources.json` entry to an existing generator over duplicating its parser in a standalone file.
 - Put standalone plugins in the folder matching the novels' language, using a `.ts` extension.
-- Implement `Plugin.PluginBase` and export one instantiated plugin as the default export. Keep the
-  plugin `id` unique and stable.
+- Implement `Plugin.PluginBase` using a PascalCase class (e.g. `TemplatePlugin`, `NobleMTLPlugin`) and export one instantiated plugin as the default export (`export default new NobleMTLPlugin();`). Keep the plugin `id` unique, stable, and formatted in `camelCase` or lowercase alphanumeric characters.
 - Use imports from `@libs/*` for plugin runtime helpers. In particular, use `@libs/fetch`, not
   `@/lib/fetch`. Consult `docs/plugin-template.ts` and nearby plugins for supported helpers.
 - Plugins are compiled for an ES5/Hermes/React Native environment. Do not assume Node-only or
@@ -68,6 +67,7 @@ Read `README.md` for the project entry points, `docs/quickstart.md` before addin
 
 ## Multi-source plugins
 
+- Locate a multi-source plugin by domain or ID (e.g. from an issue label like `plugin: free web novel[fwn.com]` or target URL) by searching `plugins/multisrc/*/sources.json`, not `plugins/<language>/` (which contains only disposable generated outputs).
 - Treat files named like `plugins/<language>/<name>[<generator>].ts` as generated output. Do not
   edit or commit them; they are gitignored and ESLint intentionally excludes them.
 - Change the generator's `sources.json`, `template.ts`, filters, custom assets, or `generator.js`
@@ -76,11 +76,18 @@ Read `README.md` for the project entry points, `docs/quickstart.md` before addin
   to that generator's conventions.
 - Run `npm run build:multisrc` after a generator change and inspect the generated plugin locally.
   Generated files are disposable and may be removed with `npm run clean:multisrc`.
+- When a multi-source site leaves its shared theme for a custom architecture, migrate it to a
+  standalone `plugins/<language>/<id>.ts`: remove its entry from
+  `plugins/multisrc/<generator>/sources.json` and any `plugins/multisrc/<generator>/custom/<id>/`
+  assets, move `public/static/multisrc/<generator>/<id>/icon.png` to
+  `public/static/src/<short-language-code>/<id>/icon.png`, preserve the existing `id` and
+  `resolveUrl`-compatible `novelPath`/`chapterPath` formats, and increment the major `version`.
 
 ## Coding style
 
 - Follow the repository Prettier configuration: two spaces, single quotes, trailing commas, and no
   parentheses around a single arrow-function parameter.
+- Use `camelCase` across all plugin code lines for variables, properties, methods, and function parameters (e.g. `popularNovels`, `pageNo`, `showLatestNovels`, `novelPath`, `chapterPath`, `releaseTime`, `chapterNumber`).
 - Prefer `type` aliases over `interface`; ESLint enforces this convention.
 - Keep changes focused. Reuse existing parsing helpers and patterns from a nearby plugin or the
   relevant multi-source template instead of introducing repository-wide abstractions for one site.
@@ -103,9 +110,10 @@ Choose checks proportionate to the files changed:
 - `npm run check:sites` — inspect source-site availability when the task concerns broad outages.
 
 For a standalone plugin change, at minimum run the targeted `check:plugin` command and the relevant
-lint/format check. The live check calls `popularNovels`, `searchNovels`, `parseNovel`, and
-`parseChapter`. A `FAIL` requires investigation; an `INCONCLUSIVE` result usually means the remote
-site was unavailable or blocked the request and should be retried or checked manually.
+lint/format check (`npx eslint <changed-files>` and `npx prettier --check <changed-files>` match
+`.github/workflows/lint.yml`). The live check calls `popularNovels`, `searchNovels`, `parseNovel`,
+and `parseChapter`. A `FAIL` requires investigation; an `INCONCLUSIVE` result usually means the
+remote site was unavailable or blocked the request and should be retried or checked manually.
 
 For a multi-source change, regenerate the output, inspect the affected generated file, and test it
 in the playground or app. CI intentionally excludes generated multi-source files from the live
@@ -138,6 +146,7 @@ Use Conventional Commits: `type(scope): description`
 - Lowercase type, imperative mood ("add" not "added"/"adds")
 
 Examples:
+
 - feat(<generator>): add new source
 - fix(<language>/<plugin>): correct chapter list parsing
 

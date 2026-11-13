@@ -4,6 +4,211 @@ import { load as loadCheerio } from 'cheerio';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { storage } from '@libs/storage';
 import { defaultCover } from '@libs/defaultCover';
+import { gcm } from '@libs/aes';
+
+const CONTENT_SALT_V1 = 'fr-content-v1';
+const FRAG_SALT_V1 = 'fr-frag-v1';
+const CONTENT_SALT_V2 = 'fr-content-v2';
+const FRAG_SALT_V2 = 'fr-frag-v2';
+const AES_GCM_IV_LENGTH = 12;
+const AES_GCM_TAG_LENGTH = 16;
+
+const SHA256_K = new Uint32Array([
+  0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1,
+  0x923f82a4, 0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
+  0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786,
+  0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+  0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147,
+  0x06ca6351, 0x14292967, 0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13,
+  0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85, 0xa2bfe8a1, 0xa81a664b,
+  0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+  0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a,
+  0x5b9cca4f, 0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208,
+  0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
+]);
+
+function rotr32(x: number, n: number): number {
+  return (x >>> n) | (x << (32 - n));
+}
+
+function sha256Bytes(input: string): Uint8Array {
+  const bytes = new TextEncoder().encode(input);
+  const bitLen = bytes.length * 8;
+  const padLen = (((bytes.length + 8) >> 6) + 1) << 6;
+  const buf = new Uint8Array(padLen);
+  buf.set(bytes);
+  buf[bytes.length] = 0x80;
+  const view = new DataView(buf.buffer);
+  view.setUint32(padLen - 4, bitLen >>> 0, false);
+  view.setUint32(padLen - 8, Math.floor(bitLen / 0x100000000) >>> 0, false);
+
+  let h0 = 0x6a09e667;
+  let h1 = 0xbb67ae85;
+  let h2 = 0x3c6ef372;
+  let h3 = 0xa54ff53a;
+  let h4 = 0x510e527f;
+  let h5 = 0x9b05688c;
+  let h6 = 0x1f83d9ab;
+  let h7 = 0x5be0cd19;
+
+  const w = new Uint32Array(64);
+  for (let i = 0; i < padLen; i += 64) {
+    for (let j = 0; j < 16; j++) {
+      w[j] = view.getUint32(i + j * 4, false);
+    }
+    for (let j = 16; j < 64; j++) {
+      const s0 =
+        rotr32(w[j - 15], 7) ^ rotr32(w[j - 15], 18) ^ (w[j - 15] >>> 3);
+      const s1 =
+        rotr32(w[j - 2], 17) ^ rotr32(w[j - 2], 19) ^ (w[j - 2] >>> 10);
+      w[j] = (w[j - 16] + s0 + w[j - 7] + s1) >>> 0;
+    }
+
+    let a = h0;
+    let b = h1;
+    let c = h2;
+    let d = h3;
+    let e = h4;
+    let f = h5;
+    let g = h6;
+    let h = h7;
+
+    for (let j = 0; j < 64; j++) {
+      const S1 = rotr32(e, 6) ^ rotr32(e, 11) ^ rotr32(e, 25);
+      const ch = (e & f) ^ (~e & g);
+      const temp1 = (h + S1 + ch + SHA256_K[j] + w[j]) >>> 0;
+      const S0 = rotr32(a, 2) ^ rotr32(a, 13) ^ rotr32(a, 22);
+      const maj = (a & b) ^ (a & c) ^ (b & c);
+      const temp2 = (S0 + maj) >>> 0;
+
+      h = g;
+      g = f;
+      f = e;
+      e = (d + temp1) >>> 0;
+      d = c;
+      c = b;
+      b = a;
+      a = (temp1 + temp2) >>> 0;
+    }
+
+    h0 = (h0 + a) >>> 0;
+    h1 = (h1 + b) >>> 0;
+    h2 = (h2 + c) >>> 0;
+    h3 = (h3 + d) >>> 0;
+    h4 = (h4 + e) >>> 0;
+    h5 = (h5 + f) >>> 0;
+    h6 = (h6 + g) >>> 0;
+    h7 = (h7 + h) >>> 0;
+  }
+
+  const out = new Uint8Array(32);
+  const outView = new DataView(out.buffer);
+  outView.setUint32(0, h0, false);
+  outView.setUint32(4, h1, false);
+  outView.setUint32(8, h2, false);
+  outView.setUint32(12, h3, false);
+  outView.setUint32(16, h4, false);
+  outView.setUint32(20, h5, false);
+  outView.setUint32(24, h6, false);
+  outView.setUint32(28, h7, false);
+  return out;
+}
+
+function xorshift128Next(state: Uint32Array): number {
+  const t = state[0];
+  let r = (t ^ (t << 11)) >>> 0;
+  r = (r ^ (r >>> 8)) >>> 0;
+  const o = state[3];
+  state[0] = state[1];
+  state[1] = state[2];
+  state[2] = o;
+  const f = (o ^ (o >>> 19) ^ r) >>> 0;
+  state[3] = f;
+  return f;
+}
+
+function unshuffleFragments(fragments: string[], seedStr: string): string {
+  const count = fragments.length;
+  if (count < 2) return count === 1 ? fragments[0] : '';
+  const digest = sha256Bytes(seedStr);
+  const view = new DataView(
+    digest.buffer,
+    digest.byteOffset,
+    digest.byteLength,
+  );
+  const state = new Uint32Array([
+    view.getUint32(0, true),
+    view.getUint32(4, true),
+    view.getUint32(8, true),
+    view.getUint32(12, true),
+  ]);
+  const perm = new Array<number>(count);
+  for (let i = 0; i < count; i++) {
+    perm[i] = i;
+  }
+  for (let i = count - 1; i > 0; i--) {
+    const j = xorshift128Next(state) % (i + 1);
+    const tmp = perm[i];
+    perm[i] = perm[j];
+    perm[j] = tmp;
+  }
+  const restored = new Array<string>(count);
+  for (let i = 0; i < count; i++) {
+    restored[perm[i]] = fragments[i];
+  }
+  return restored.join('');
+}
+
+function decodeBase64Bytes(b64: string): Uint8Array {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+const INVISIBLE_CHARS_REGEX =
+  // eslint-disable-next-line no-misleading-character-class
+  /[\u200B-\u200D\uFEFF\u200E\u200F\u202A-\u202E\u{E0000}-\u{E007F}\u{E0100}-\u{E01EF}]/gu;
+
+function stripInvisibleChars(text: string): string {
+  return text.replace(INVISIBLE_CHARS_REGEX, '');
+}
+
+function normalizeSlugPath(path: string): string {
+  return path.replace(/^([^/]+)\/([^/]+)\/\2\//, '$1/$2/');
+}
+
+type ReadTokenPayload = {
+  vid: string;
+  cid: number | null;
+  exp: number | null;
+};
+
+function parseReadTokenPayload(token: string): ReadTokenPayload {
+  try {
+    const payloadPart = token.split('.')[0] ?? '';
+    if (!payloadPart) return { vid: '', cid: null, exp: null };
+    const b64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
+    const decoded = new TextDecoder().decode(decodeBase64Bytes(padded));
+    const parsed = JSON.parse(decoded);
+    return {
+      vid: typeof parsed?.vid === 'string' ? parsed.vid : '',
+      cid:
+        typeof parsed?.cid === 'number' && parsed.cid > 0 ? parsed.cid : null,
+      exp:
+        typeof parsed?.exp === 'number' && parsed.exp > 0 ? parsed.exp : null,
+    };
+  } catch {
+    return { vid: '', cid: null, exp: null };
+  }
+}
+
+function extractVidFromReadToken(token: string): string {
+  return parseReadTokenPayload(token).vid;
+}
 
 type APINovel = {
   title: string;
@@ -19,7 +224,8 @@ type APINovel = {
 };
 
 type APIChapter = {
-  id: number;
+  id?: number;
+  uuid?: string | null;
   locked: { price: number } | null;
   group: null | {
     index: number;
@@ -29,6 +235,36 @@ type APIChapter = {
   slug: string;
   number: number;
   created_at: string;
+};
+
+type APIChapterData = {
+  id?: number;
+  uuid?: string | null;
+  slug?: string;
+  name?: string;
+  content: string | string[];
+  content_format?: 'locked' | 'encrypted' | 'html' | 'text' | 'json' | null;
+  content_scheme?: 'fragmented-v2' | 'fragmented-v1' | string | null;
+  content_cid?: number | null;
+  remint_chapter_id?: number | null;
+  remint_chapter_uuid?: string | null;
+  locked?: {
+    price: number;
+    unlocked_at?: string | null;
+    is_read_only?: boolean;
+  } | null;
+  bought?: {
+    wallet_type?: string | null;
+    amount?: number;
+    bought_at?: string | null;
+  } | null;
+  bypass?: boolean;
+};
+
+type CachedReadToken = {
+  value: string;
+  expiresAt: number;
+  cid: number | null;
 };
 
 type ChapterInfo = {
@@ -75,8 +311,11 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   name = 'Fenrir Realm';
   icon = 'src/en/fenrirrealm/icon.png';
   site = 'https://fenrirealm.com';
-  version = '1.1.3';
+  version = '1.1.6';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
+
+  private cachedReadToken: CachedReadToken | null = null;
+  private lastMintRefusal: Response | null = null;
 
   hideLocked = storage.get('hideLocked');
   pluginSettings = {
@@ -89,6 +328,328 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
 
   //flag indicates whether access to LocalStorage, SesesionStorage is required.
   webStorageUtilized?: boolean;
+
+  private setCachedReadToken(
+    token: string,
+    expiresAt?: number | null,
+    cid?: number | null,
+  ): void {
+    if (!token) return;
+    const parsed = parseReadTokenPayload(token);
+    const resolvedExp =
+      typeof expiresAt === 'number' && expiresAt > 0
+        ? expiresAt
+        : parsed.exp !== null
+          ? parsed.exp
+          : Math.floor(Date.now() / 1000) + 300;
+    const resolvedCid =
+      parsed.cid !== null
+        ? parsed.cid
+        : typeof cid === 'number' && cid > 0
+          ? cid
+          : null;
+    this.cachedReadToken = {
+      value: token,
+      expiresAt: resolvedExp,
+      cid: resolvedCid,
+    };
+  }
+
+  private getActiveTokenValue(): string | null {
+    if (!this.cachedReadToken) return null;
+    if (this.cachedReadToken.expiresAt * 1000 - Date.now() < 5000) {
+      this.cachedReadToken = null;
+      return null;
+    }
+    return this.cachedReadToken.value;
+  }
+
+  private getCachedReadToken(chapterId?: number | null): string | null {
+    const value = this.getActiveTokenValue();
+    if (!value || !this.cachedReadToken) return null;
+    if (
+      chapterId != null &&
+      this.cachedReadToken.cid !== null &&
+      this.cachedReadToken.cid !== chapterId
+    ) {
+      return null;
+    }
+    return value;
+  }
+
+  private captureReadTokenHeader(res: Response, cid?: number | null): void {
+    const issued = res.headers?.get?.('x-read-token-issued');
+    if (!issued) return;
+    const expHeader = res.headers?.get?.('x-read-token-expires-at');
+    const parsedExp = expHeader ? parseInt(expHeader, 10) : NaN;
+    this.setCachedReadToken(
+      issued,
+      Number.isFinite(parsedExp) ? parsedExp : null,
+      cid,
+    );
+  }
+
+  private resolveRemintTarget(
+    data: APIChapterData,
+    fallbackId?: string,
+  ): string | number | null {
+    return (
+      data.remint_chapter_uuid ||
+      data.remint_chapter_id ||
+      data.uuid ||
+      data.id ||
+      fallbackId ||
+      null
+    );
+  }
+
+  private buildChapterHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Accept': 'application/json',
+      'X-Accepts-Encrypted-Content': '3',
+    };
+    const activeToken = this.getActiveTokenValue();
+    if (activeToken) {
+      headers['Cookie'] = `fr_read=${activeToken}`;
+    }
+    return headers;
+  }
+
+  private async mintReadToken(
+    chapterTarget?: string | number | null,
+    cid?: number | null,
+  ): Promise<boolean> {
+    this.lastMintRefusal = null;
+    try {
+      const payload: Record<string, string> = {};
+      if (
+        chapterTarget !== null &&
+        chapterTarget !== undefined &&
+        chapterTarget !== ''
+      ) {
+        payload.chapter_id = String(chapterTarget);
+      }
+      const requestMint = async (cookieToken: string | null) => {
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        };
+        if (cookieToken) {
+          headers['Cookie'] = `fr_read=${cookieToken}`;
+        }
+        const res = await fetchApi(`${this.site}/api/read-token`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          this.lastMintRefusal = res;
+          return null;
+        }
+        const data = await res.json();
+        return data?.active &&
+          typeof data.token === 'string' &&
+          data.token !== ''
+          ? data
+          : null;
+      };
+
+      const activeToken = this.getActiveTokenValue();
+      let data = await requestMint(activeToken);
+      if (!data && activeToken) {
+        this.cachedReadToken = null;
+        data = await requestMint(null);
+      }
+      if (data) {
+        this.lastMintRefusal = null;
+        const numericId =
+          typeof cid === 'number' && cid > 0
+            ? cid
+            : typeof chapterTarget === 'number'
+              ? chapterTarget
+              : null;
+        this.setCachedReadToken(data.token, data.expires_at, numericId);
+        return true;
+      }
+      this.cachedReadToken = null;
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
+  private verifyInWebViewError(refusal?: Response | null): Error {
+    const error: Error & { status?: number; response?: Response } = new Error(
+      'Chapter is protected by Cloudflare Turnstile. Please open this chapter in WebView to verify and try again.',
+    );
+    if (refusal && !refusal.ok) {
+      error.status = refusal.status;
+      error.response = refusal;
+    } else {
+      error.status = 403;
+    }
+    return error;
+  }
+
+  private async getReadToken(
+    chapterId?: number | null,
+  ): Promise<string | null> {
+    const cached = this.getCachedReadToken(chapterId);
+    if (cached !== null) return cached;
+    try {
+      const headers: Record<string, string> = {
+        'Accept': 'application/json',
+      };
+      const activeToken = this.getActiveTokenValue();
+      if (activeToken) {
+        headers['Cookie'] = `fr_read=${activeToken}`;
+      }
+      const res = await fetchApi(`${this.site}/api/read-token`, {
+        method: 'GET',
+        headers,
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (data?.active && typeof data.token === 'string' && data.token !== '') {
+        this.setCachedReadToken(
+          data.token,
+          typeof data.expires_at === 'number' ? data.expires_at : null,
+          chapterId ?? null,
+        );
+        return data.token;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  private getChapterCid(data: APIChapterData): number | null {
+    if (typeof data.content_cid === 'number' && data.content_cid > 0) {
+      return data.content_cid;
+    }
+    if (typeof data.id === 'number' && data.id > 0) {
+      return data.id;
+    }
+    return null;
+  }
+
+  private decryptWithToken(
+    chapterData: APIChapterData,
+    token: string,
+  ): string | null {
+    try {
+      const isV2 = chapterData.content_scheme === 'fragmented-v2';
+      const vid = isV2 ? extractVidFromReadToken(token) : '';
+      const cid = this.getChapterCid(chapterData);
+      const saltTarget =
+        cid !== null && cid !== undefined
+          ? cid
+          : chapterData.uuid || chapterData.id || '';
+      const b64Cipher = Array.isArray(chapterData.content)
+        ? unshuffleFragments(
+            chapterData.content,
+            isV2
+              ? `${token}:${vid}:${saltTarget}:${FRAG_SALT_V2}`
+              : `${token}:${saltTarget}:${FRAG_SALT_V1}`,
+          )
+        : typeof chapterData.content === 'string'
+          ? chapterData.content
+          : '';
+      if (!b64Cipher) return null;
+
+      const raw = decodeBase64Bytes(b64Cipher);
+      if (raw.length <= AES_GCM_IV_LENGTH + AES_GCM_TAG_LENGTH) return null;
+
+      const keySeed =
+        isV2 && vid !== ''
+          ? `${token}:${vid}:${saltTarget}:${CONTENT_SALT_V2}`
+          : `${token}:${saltTarget}:${CONTENT_SALT_V1}`;
+      const keyBytes = sha256Bytes(keySeed);
+      const iv = raw.slice(0, AES_GCM_IV_LENGTH);
+      const ciphertextWithTag = raw.slice(AES_GCM_IV_LENGTH);
+      const decrypted = gcm(keyBytes, iv).decrypt(ciphertextWithTag);
+      return new TextDecoder().decode(decrypted);
+    } catch {
+      return null;
+    }
+  }
+
+  private formatChapterContent(content: string): string {
+    try {
+      // Attempt 1: Handle legacy stringified TipTap JSON AST schema
+      const parsedContent: Chapter = JSON.parse(content);
+      if (
+        parsedContent.type === 'doc' ||
+        parsedContent.type === 'systemWindow'
+      ) {
+        const rendered = parsedContent.content
+          .map(node => {
+            if (node.type === 'paragraph') {
+              const innerHtml =
+                node.content
+                  ?.map(c => {
+                    if (c.type === 'text') {
+                      let text = c.text;
+                      if (c.marks) {
+                        for (const mark of c.marks) {
+                          if (mark.type === 'bold') text = `<b>${text}</b>`;
+                          if (mark.type === 'italic') text = `<i>${text}</i>`;
+                          if (mark.type === 'underline')
+                            text = `<u>${text}</u>`;
+                          if (mark.type === 'strike')
+                            text = `<strike>${text}</strike>`;
+                          if (mark.type === 'link')
+                            text = `<a href="${mark.attrs?.href}">${text}</a>`;
+                        }
+                      }
+                      return text;
+                    }
+                    if (c.type === 'hardBreak') return '<br>';
+                    return '';
+                  })
+                  .join('') || '';
+              return `<p>${innerHtml}</p>`;
+            }
+            if (node.type === 'heading') {
+              const level = node.attrs?.level || 1;
+              const innerHtml = node.content?.map(c => c.text).join('') || '';
+              return `<h${level}>${innerHtml}</h${level}>`;
+            }
+            return '';
+          })
+          .join('\n');
+        return stripInvisibleChars(rendered);
+      }
+    } catch {
+      // Fall through to HTML cleaner
+    }
+
+    /**
+     * HTML Response Cleaner:
+     * Fenrir Realm inserts anti-scraping & watermark elements:
+     * 1. Scramble hidden divs (`[aria-hidden="true"]`)
+     * 2. Inline `<style>` blocks
+     * 3. Reader attributions / Copy references (`.reader-attribution`, `[data-fr-attr]`)
+     * 4. Zero-width characters (`\u200B-\u200D\uFEFF`)
+     */
+    const $ = loadCheerio(content);
+
+    $('[aria-hidden="true"]').remove();
+    $('.reader-attribution').remove();
+    $('[data-fr-attr]').remove();
+    $('style, script').remove();
+
+    $('p, div, span, small').each((_, el) => {
+      const text = $(el).text().trim();
+      if (text.startsWith('Copy reference:') || text.startsWith('Bookmark:')) {
+        $(el).remove();
+      }
+    });
+
+    const cleanedHtml = $.html() || content;
+    return stripInvisibleChars(cleanedHtml);
+  }
 
   async popularNovels(
     pageNo: number,
@@ -109,13 +670,20 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
 
     const res = await fetchApi(
       `${this.site}/api/new/v2/series?${params.toString()}`,
-    ).then(r =>
-      r.json().catch(() => {
-        throw new Error(
-          'There was an error fetching the data from the server. Please try to open it in WebView',
-        );
-      }),
-    );
+    ).then(async r => {
+      const error: Error & { status?: number } = new Error(
+        'There was an error fetching the data from the server. Please try to open it in WebView',
+      );
+      // Keep the real HTTP status so a block page is distinguishable from a
+      // parsing failure.
+      if (!r.ok) {
+        error.status = r.status;
+        throw error;
+      }
+      return r.json().catch(() => {
+        throw error;
+      });
+    });
 
     return (res.data || []).map((r: APINovel) => this.parseNovelFromApi(r));
   }
@@ -189,25 +757,28 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
     }
 
     novel.chapters = chapters
-      .map((c: APIChapter) => ({
-        name:
-          (c.locked?.price ? '🔒 ' : '') +
-          (c.group?.index == null ? '' : 'Vol ' + c.group?.index + ' ') +
-          'Chapter ' +
-          c.number +
-          (c.title && c.title.trim() != 'Chapter ' + c.number
-            ? ' - ' + c.title.replace(/^chapter [0-9]+ . /i, '')
-            : ''),
-        path:
-          novelPath +
+      .map((c: APIChapter) => {
+        const rawPath =
+          cleanNovelPath +
           (c.group?.index == null ? '' : '/' + c.group?.slug) +
           '/' +
-          (c.slug || 'chapter-' + c.number) +
-          '~~' +
-          c.id,
-        releaseTime: c.created_at,
-        chapterNumber: c.number + (c.group?.index || 0) * 10000,
-      }))
+          (c.slug || 'chapter-' + c.number);
+        const resolvedPath = normalizeSlugPath(rawPath);
+        const chapterTarget = c.uuid || c.id;
+        return {
+          name:
+            (c.locked?.price ? '🔒 ' : '') +
+            (c.group?.index == null ? '' : 'Vol ' + c.group?.index + ' ') +
+            'Chapter ' +
+            c.number +
+            (c.title && c.title.trim() != 'Chapter ' + c.number
+              ? ' - ' + c.title.replace(/^chapter [0-9]+ . /i, '')
+              : ''),
+          path: resolvedPath + (chapterTarget ? `~~${chapterTarget}` : ''),
+          releaseTime: c.created_at,
+          chapterNumber: c.number + (c.group?.index || 0) * 10000,
+        };
+      })
       .sort(
         (a: ChapterInfo, b: ChapterInfo) => a.chapterNumber - b.chapterNumber,
       );
@@ -215,95 +786,179 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const chapterId = chapterPath.split('~~')[1];
-    if (chapterId) {
-      const url = `${this.site}/api/new/v2/chapters/${chapterId}`;
-      const res = await fetchApi(url);
-      const json = await res.json();
-      const content = json.content;
+    const [rawSlugPath, rawChapterId] = chapterPath.split('~~');
+    const slugPath = normalizeSlugPath(rawSlugPath);
+    const chapterId =
+      rawChapterId && rawChapterId !== 'undefined' ? rawChapterId : undefined;
+    this.lastMintRefusal = null;
+    let apiUrl = chapterId
+      ? `${this.site}/api/new/v2/chapters/${chapterId}`
+      : `${this.site}/api/new/v2/series/${slugPath}`;
+    const initialCid =
+      chapterId && /^\d+$/.test(chapterId) ? parseInt(chapterId, 10) : null;
 
-      if (content) {
-        try {
-          // Attempt 1: Handle legacy stringified TipTap JSON AST schema
-          const parsedContent: Chapter = JSON.parse(content);
-          if (
-            parsedContent.type === 'doc' ||
-            parsedContent.type === 'systemWindow'
-          ) {
-            return parsedContent.content
-              .map(node => {
-                if (node.type === 'paragraph') {
-                  const innerHtml =
-                    node.content
-                      ?.map(c => {
-                        if (c.type === 'text') {
-                          let text = c.text;
-                          if (c.marks) {
-                            for (const mark of c.marks) {
-                              if (mark.type === 'bold') text = `<b>${text}</b>`;
-                              if (mark.type === 'italic')
-                                text = `<i>${text}</i>`;
-                              if (mark.type === 'underline')
-                                text = `<u>${text}</u>`;
-                              if (mark.type === 'strike')
-                                text = `<strike>${text}</strike>`;
-                              if (mark.type === 'link')
-                                text = `<a href="${mark.attrs?.href}">${text}</a>`;
-                            }
-                          }
-                          return text;
-                        }
-                        if (c.type === 'hardBreak') return '<br>';
-                        return '';
-                      })
-                      .join('') || '';
-                  return `<p>${innerHtml}</p>`;
-                }
-                if (node.type === 'heading') {
-                  const level = node.attrs?.level || 1;
-                  const innerHtml =
-                    node.content?.map(c => c.text).join('') || '';
-                  return `<h${level}>${innerHtml}</h${level}>`;
-                }
-                return '';
-              })
-              .join('\n');
-          }
-        } catch {
-          /**
-           * HTML Response Cleaner:
-           * Fenrir Realm inserts anti-scraping & watermark elements:
-           * 1. Scramble hidden divs (`div[aria-hidden="true"]`)
-           * 2. Inline `<style>` blocks
-           * 3. Reader attributions / Copy references (`.reader-attribution`, `[data-fr-attr]`)
-           */
-          const $ = loadCheerio(content);
+    if (this.getCachedReadToken(initialCid) === null) {
+      await this.mintReadToken(chapterId || null, initialCid);
+    }
 
-          // Remove anti-scraping tags and inline CSS
-          $('div[aria-hidden="true"]').remove();
-          $('p[aria-hidden="true"]').remove();
-          $('.reader-attribution').remove();
-          $('[data-fr-attr]').remove();
-          $('style').remove();
+    let res = await fetchApi(apiUrl, { headers: this.buildChapterHeaders() });
 
-          // Target any remaining text elements containing copy references or bookmarks
-          $('p, div, span, small').each((_, el) => {
-            const text = $(el).text().trim();
-            if (
-              text.startsWith('Copy reference:') ||
-              text.startsWith('Bookmark:')
-            ) {
-              $(el).remove();
-            }
+    if (!res.ok && res.status === 404) {
+      const novelSlug = slugPath.split('/')[0];
+      try {
+        const chaptersRes = await fetchApi(
+          `${this.site}/api/new/v2/series/${novelSlug}/chapters`,
+        );
+        if (chaptersRes.ok) {
+          const list: APIChapter[] = await chaptersRes.json();
+          const targetSlug = slugPath.split('/').slice(1).join('/');
+          const matched = list.find(c => {
+            const chSlug = c.slug || `chapter-${c.number}`;
+            return (
+              (c.uuid && c.uuid === chapterId) ||
+              (c.id && String(c.id) === chapterId) ||
+              chSlug === targetSlug ||
+              (c.group?.slug ? `${c.group.slug}/${chSlug}` : chSlug) ===
+                targetSlug ||
+              chSlug === slugPath
+            );
           });
-
-          return $.html() || content;
+          const targetId = matched?.uuid || matched?.id;
+          if (targetId) {
+            apiUrl = `${this.site}/api/new/v2/chapters/${targetId}`;
+            res = await fetchApi(apiUrl, {
+              headers: this.buildChapterHeaders(),
+            });
+          }
         }
+      } catch {
+        // Fall back to original res
+      }
+    }
+
+    if (res.status === 429) {
+      throw new Error(
+        'Rate limited by Fenrir Realm (Too Many Attempts). Please wait a moment before loading more chapters.',
+      );
+    }
+
+    this.captureReadTokenHeader(res, initialCid);
+
+    if (res.status === 403) {
+      const minted = await this.mintReadToken(chapterId || null, initialCid);
+      if (minted) {
+        res = await fetchApi(apiUrl, { headers: this.buildChapterHeaders() });
+        if (res.status === 429) {
+          throw new Error(
+            'Rate limited by Fenrir Realm (Too Many Attempts). Please wait a moment before loading more chapters.',
+          );
+        }
+        this.captureReadTokenHeader(res, initialCid);
+      }
+      if (!res.ok && res.status === 403) {
+        throw this.verifyInWebViewError(
+          this.lastMintRefusal?.status === 403 ? this.lastMintRefusal : res,
+        );
+      }
+    }
+
+    if (res.status === 401 || res.status === 503) {
+      throw this.verifyInWebViewError(res);
+    }
+
+    if (res.ok) {
+      let json: APIChapterData = await res.json();
+      const chapterCid = this.getChapterCid(json);
+      this.captureReadTokenHeader(res, chapterCid);
+
+      if (json.content_format === 'locked') {
+        if (
+          json.locked?.price &&
+          json.locked.price > 0 &&
+          !json.bought?.bought_at &&
+          !json.bypass
+        ) {
+          throw new Error(
+            'This chapter is locked (paid). Please unlock it on Fenrir Realm first.',
+          );
+        }
+
+        const remintTarget = this.resolveRemintTarget(json, chapterId);
+        const remintCid =
+          this.getChapterCid(json) || json.remint_chapter_id || initialCid;
+
+        const minted = await this.mintReadToken(remintTarget, remintCid);
+        if (minted) {
+          const retryRes = await fetchApi(apiUrl, {
+            headers: this.buildChapterHeaders(),
+          });
+          if (retryRes.status === 429) {
+            throw new Error(
+              'Rate limited by Fenrir Realm (Too Many Attempts). Please wait a moment before loading more chapters.',
+            );
+          }
+          if (retryRes.ok) {
+            json = await retryRes.json();
+            const retryCid = this.getChapterCid(json);
+            this.captureReadTokenHeader(retryRes, retryCid);
+          }
+        }
+      }
+
+      if (json.content_format === 'encrypted') {
+        const tokenCid = this.getChapterCid(json);
+        const token = await this.getReadToken(tokenCid);
+        let decrypted = token ? this.decryptWithToken(json, token) : null;
+
+        if (!decrypted) {
+          const remintTarget = this.resolveRemintTarget(json, chapterId);
+          if (await this.mintReadToken(remintTarget, tokenCid)) {
+            const retryRes = await fetchApi(apiUrl, {
+              headers: this.buildChapterHeaders(),
+            });
+            if (retryRes.status === 429) {
+              throw new Error(
+                'Rate limited by Fenrir Realm (Too Many Attempts). Please wait a moment before loading more chapters.',
+              );
+            }
+            if (retryRes.ok) {
+              const retryJson: APIChapterData = await retryRes.json();
+              const retryCid = this.getChapterCid(retryJson);
+              this.captureReadTokenHeader(retryRes, retryCid);
+              if (retryJson.content_format === 'encrypted') {
+                const freshToken = await this.getReadToken(retryCid);
+                decrypted = freshToken
+                  ? this.decryptWithToken(retryJson, freshToken)
+                  : null;
+              } else if (
+                retryJson.content_format !== 'locked' &&
+                typeof retryJson.content === 'string' &&
+                retryJson.content
+              ) {
+                decrypted = retryJson.content;
+              }
+            }
+          }
+        }
+
+        if (decrypted) {
+          return this.formatChapterContent(decrypted);
+        }
+        json = { ...json, content: '', content_format: 'locked' };
+      }
+
+      if (json.content_format === 'locked') {
+        this.cachedReadToken = null;
+        throw this.verifyInWebViewError(this.lastMintRefusal);
+      }
+
+      if (typeof json.content === 'string' && json.content) {
+        return this.formatChapterContent(json.content);
       }
     }
 
     // Fallback or old method
-    const url = `${this.site}/series/${chapterPath.split('~~')[0]}`;
+    const url = this.resolveUrl(chapterPath);
     const result = await fetchApi(url);
     const body = await result.text();
 
@@ -314,7 +969,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
     loadedCheerio('.reader-attribution').remove();
     loadedCheerio('[data-fr-attr]').remove();
 
-    let chapterText = loadedCheerio(
+    const chapterText = loadedCheerio(
       '.reader-area p, div.content-area p, [id^="reader-area"] p',
     )
       .map((_, el) => {
@@ -326,12 +981,12 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       .join('\n');
 
     if (chapterText) {
-      return chapterText;
+      return stripInvisibleChars(chapterText);
     }
 
     // Fallback to SvelteKit JSON if HTML parsing fails or is empty
     try {
-      const jsonUrl = `${this.site}/series/${chapterPath.split('~~')[0]}/__data.json?x-sveltekit-invalidated=001`;
+      const jsonUrl = `${this.resolveUrl(chapterPath)}/__data.json?x-sveltekit-invalidated=001`;
       const jsonRes = await fetchApi(jsonUrl);
       const json: Nodes = await jsonRes.json();
 
@@ -343,41 +998,14 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
         );
 
         if (contentStr) {
-          const contentJson: Chapter = JSON.parse(contentStr);
-          if (contentJson.type === 'doc') {
-            chapterText = contentJson.content
-              .map(node => {
-                if (node.type === 'paragraph') {
-                  const innerHtml =
-                    node.content
-                      ?.map(c => {
-                        if (c.type === 'text') {
-                          let text = c.text;
-                          if (c.marks) {
-                            for (const mark of c.marks) {
-                              if (mark.type === 'bold') text = `<b>${text}</b>`;
-                              if (mark.type === 'italic')
-                                text = `<i>${text}</i>`;
-                            }
-                          }
-                          return text;
-                        }
-                        return '';
-                      })
-                      .join('') || '';
-                  return `<p>${innerHtml}</p>`;
-                }
-                return '';
-              })
-              .join('\n');
-          }
+          return this.formatChapterContent(contentStr);
         }
       }
-    } catch (e) {
+    } catch {
       // ignore
     }
 
-    return chapterText;
+    throw this.verifyInWebViewError(this.lastMintRefusal);
   }
 
   async searchNovels(
@@ -417,7 +1045,8 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   }
 
   resolveUrl(path: string): string {
-    return `${this.site}/series/${path.split('~~')[0]}`;
+    const chapterPath = normalizeSlugPath(path.split('~~')[0]);
+    return `${this.site}/series/${chapterPath}`;
   }
 
   filters = {

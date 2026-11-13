@@ -110,7 +110,7 @@ class Noveldex implements Plugin.PluginBase {
   name = 'NovelDex';
   icon = 'src/en/noveldex/icon.png';
   site = 'https://noveldex.io';
-  version = '1.0.0';
+  version = '1.0.1';
   // Filter do take a lot of space
   filters = {
     sort: {
@@ -427,10 +427,29 @@ class Noveldex implements Plugin.PluginBase {
   // For searching novels | Helpers for main function
   private findClientId(rscText: string, componentName: string): string | null {
     const escaped = componentName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const match = rscText.match(
-      new RegExp(`^([0-9a-fA-F]+):I\\[\\d+,\\[[^\\]]*\\],"${escaped}"\\]`, 'm'),
+
+    // 1) Inline form: <hex>:I[<mod>,[...],"ComponentName"]
+    //    Capture groups: [1] = row id, [2] = module id
+    const direct = rscText.match(
+      new RegExp(
+        `^([0-9a-fA-F]+):I\\[(\\d+),\\[[^\\]]*\\],"${escaped}"\\]`,
+        'm',
+      ),
     );
-    return match ? match[1] : null;
+    if (direct) return direct[1];
+
+    // 2) Dedupe form: <hex>:"ComponentName"  then  <hex>:I[<mod>,[...],"$<hex>"]
+    const def = rscText.match(new RegExp(`^([0-9a-fA-F]+):"${escaped}"$`, 'm'));
+    if (!def) return null;
+
+    const ref = def[1];
+    const indirect = rscText.match(
+      new RegExp(
+        `^([0-9a-fA-F]+):I\\[(\\d+),\\[[^\\]]*\\],"\\$${ref}"\\]`,
+        'm',
+      ),
+    );
+    return indirect ? indirect[1] : null; // or indirect[2]
   }
 
   private findSeriesClientId(rscText: string): string | null {

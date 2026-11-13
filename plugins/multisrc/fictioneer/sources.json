@@ -9,6 +9,18 @@
     }
   },
   {
+    "id": "peachpuff",
+    "sourceSite": "https://peachpuff.in",
+    "sourceName": "Peach Puff Translations",
+    "options": {
+      "browsePage": "stories",
+      "trimTrailingSlash": true,
+      "selectors": {
+        "novelAuthor": "p.wp-block-paragraph a[href*='author']"
+      }
+    }
+  },
+  {
     "id": "novelib",
     "sourceSite": "https://novelib.com",
     "sourceName": "NovelLib",
@@ -52,18 +64,6 @@
       "browsePage": "stories",
       "down": true,
       "downSince": 1768289212907
-    }
-  },
-  {
-    "id": "cherrymistcafe",
-    "sourceSite": "https://cherrymist.cafe/",
-    "sourceName": "Cherry Mist Cafe",
-    "options": {
-      "customJs": {
-        "chapterTransform": "custom/cherrymistcafe/chapterTransform.js"
-      },
-      "versionIncrements": 1,
-      "browsePage": "stories"
     }
   },
   {

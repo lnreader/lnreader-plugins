@@ -21,6 +21,39 @@ export type NovelFireMetadata = {
   filters?: Filters;
 };
 
+const CHAPTER_PREFIX_REGEX = /^(chapter|ch\.?)\s*\d+/i;
+const LEADING_PUNCT_REGEX = /^[–—\-\s:]+/;
+const INVISIBLE_CHARS_REGEX = /[\u200B-\u200D\uFEFF]/g;
+
+function formatChapterTitle(
+  rawTitle: string,
+  chapterPrefixOrNum: number | string,
+): string {
+  const cleanTitle = rawTitle.replace(LEADING_PUNCT_REGEX, '').trim();
+  const prefixStr = String(chapterPrefixOrNum).trim();
+  const numMatch = prefixStr.match(/\d+/);
+  const num = numMatch ? numMatch[0] : '';
+
+  const hasChapterPrefix =
+    CHAPTER_PREFIX_REGEX.test(cleanTitle) ||
+    (num.length > 0 &&
+      cleanTitle.startsWith(num) &&
+      (cleanTitle.length === num.length || !/\d/.test(cleanTitle[num.length])));
+
+  if (hasChapterPrefix) {
+    return cleanTitle;
+  }
+
+  const prefix =
+    typeof chapterPrefixOrNum === 'number'
+      ? `Chapter ${chapterPrefixOrNum}`
+      : prefixStr.startsWith('Ch') || prefixStr.startsWith('Chapter')
+        ? prefixStr
+        : `Chapter ${prefixStr}`;
+
+  return cleanTitle ? `${prefix} ${cleanTitle}` : prefix;
+}
+
 export class NovelFirePlugin implements Plugin.PagePlugin {
   id: string;
   name: string;
@@ -219,21 +252,22 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
     return (JSON.parse(body).data || [])
       .flatMap(
         (idx: { title?: string; slug: string; n_sort: string | number }) => {
-          const name = load(idx.title || idx.slug)
-            .text()
-            .replace(/[\u200B-\u200D\uFEFF]/g, '')
-            .trim();
           const num = Number(idx.n_sort);
+          if (isNaN(num)) return [];
 
-          return name && !isNaN(num)
-            ? [
-                {
-                  name,
-                  path: `${novelPath}/chapter-${num}`,
-                  chapterNumber: num,
-                },
-              ]
-            : [];
+          const raw = idx.title || idx.slug || '';
+          const decoded =
+            raw.includes('<') || raw.includes('&') ? load(raw).text() : raw;
+          const cleanRaw = decoded.replace(INVISIBLE_CHARS_REGEX, '').trim();
+          const name = formatChapterTitle(cleanRaw, num);
+
+          return [
+            {
+              name,
+              path: `${novelPath}/chapter-${num}`,
+              chapterNumber: num,
+            },
+          ];
         },
       )
       .sort(
@@ -420,11 +454,31 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
 
       const chapters = loadedCheerio('.chapter-list li')
         .map((_, ele) => {
-          const chapterName =
-            loadedCheerio(ele).find('a').attr('title') || 'No Title Found';
-          const chapterPath = loadedCheerio(ele).find('a').attr('href');
+          const $ele = loadedCheerio(ele);
+          const $a = $ele.find('a');
+          const chapterPath = $a.attr('href');
 
           if (!chapterPath) return null;
+
+          const chapterNo = $ele.find('.chapter-no').text().trim();
+          const chapterTitle = $ele.find('.chapter-title').text().trim();
+          const attrTitle = $a.attr('title')?.trim() || '';
+
+          let chapterName = '';
+          if (chapterNo && chapterTitle) {
+            chapterName = formatChapterTitle(chapterTitle, chapterNo);
+          } else if (chapterNo && attrTitle) {
+            chapterName = formatChapterTitle(attrTitle, chapterNo);
+          } else if (attrTitle) {
+            chapterName = attrTitle;
+          } else if (chapterNo) {
+            chapterName = chapterNo;
+          } else if (chapterTitle) {
+            chapterName = chapterTitle;
+          } else {
+            chapterName =
+              $a.text().replace(/\s+/g, ' ').trim() || 'No Title Found';
+          }
 
           return {
             name: chapterName,
@@ -446,7 +500,19 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
 
   async parseChapter(chapterPath: string): Promise<string> {
     const url = this.site + chapterPath;
-    const loadedCheerio = await this.getCheerio(url, false);
+    let loadedCheerio = await this.getCheerio(url, false);
+
+    // Chapters may redirect to a mirror (e.g. readnovel.site) that serves a
+    // "Loading..." page and forwards via JavaScript. Follow that redirect.
+    if (loadedCheerio('#content').length === 0) {
+      const redirect = loadedCheerio('script')
+        .text()
+        .match(/window\.location\.href\s*=\s*["']([^"']+)["']/);
+      if (redirect) {
+        const target = redirect[1].replace(/\\\//g, '/');
+        loadedCheerio = await this.getCheerio(target, false);
+      }
+    }
 
     const chapterText = loadedCheerio('#content');
 
@@ -461,7 +527,7 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
     );
     for (const ele of odds.toArray()) {
       const tag = ele.name.toString();
-      if (tag.length > 5 && tag.substring(0, 1) == 'nf') {
+      if (tag.length > 5 && tag.startsWith('nf')) {
         loadedCheerio(ele).remove();
       }
     }

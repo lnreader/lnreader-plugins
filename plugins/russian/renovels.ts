@@ -3,6 +3,7 @@ import { FilterTypes, Filters } from '@libs/filterInputs';
 import { fetchApi } from '@libs/fetch';
 import { NovelStatus } from '@libs/novelStatus';
 import dayjs from 'dayjs';
+import { load as parseHTML } from 'cheerio';
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
@@ -11,7 +12,7 @@ class ReN implements Plugin.PluginBase {
   name = 'Renovels';
   icon = 'src/ru/renovels/icon.png';
   site = 'https://renovels.org';
-  version = '1.0.4';
+  version = '1.0.5';
 
   async popularNovels(
     pageNo: number,
@@ -61,7 +62,7 @@ class ReN implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelID,
       name: content.main_name || content.secondary_name || content.another_name,
-      summary: content.description,
+      summary: htmlToText(content.description || ''),
       cover:
         this.site +
         '/media/' +
@@ -951,6 +952,20 @@ class ReN implements Plugin.PluginBase {
 }
 
 export default new ReN();
+
+// the app shows summaries as plain text
+function htmlToText(html: string) {
+  const $ = parseHTML(html);
+  $('br').replaceWith('\n');
+  $('p, div, li, h1, h2, h3, h4, h5, h6, blockquote').after('\n\n');
+  return (
+    $.root()
+      .text()
+      .replace(/[ \t]*\n[ \t]*/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim() || undefined
+  );
+}
 
 type responseNovels = {
   id: number;

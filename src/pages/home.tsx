@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 
 import { BookOpen, Search, Settings, Zap } from 'lucide-react';
 import PluginHeader from '../components/plugin-header';
@@ -13,9 +13,14 @@ import SearchNovelsSection from '@/components/search-novels';
 import ParseNovelSection from '@/components/parse-novel';
 import SettingsSection from '@/components/settings';
 import ParseChapterSection from '@/components/parse-chapter';
+import { Badge } from '@/components/ui/badge';
+import { getIssueGroups } from '@/lib/issue-index';
+import { PluginIssues } from '@/components/plugin-issues';
 
 function PluginSidebar() {
-  const { plugin, selectPlugin } = useAppStore(state => state);
+  const plugin = useAppStore(state => state.plugin);
+  const selectPlugin = useAppStore(state => state.selectPlugin);
+  const issueIndexState = useAppStore(state => state.issueIndexState);
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredPlugins = useMemo(
@@ -56,6 +61,13 @@ function PluginSidebar() {
             const isVisible = p.name
               .toLowerCase()
               .includes(searchQuery.toLowerCase());
+            const reportCount =
+              issueIndexState.status === 'ready'
+                ? getIssueGroups(issueIndexState.index, p.id).reduce(
+                    (total, group) => total + group.length - 1,
+                    0,
+                  )
+                : 0;
             return (
               <button
                 key={p.id}
@@ -76,7 +88,16 @@ function PluginSidebar() {
                     );
                   }}
                 />
-                <span className="truncate">{p.name}</span>
+                <span className="min-w-0 flex-1 truncate">{p.name}</span>
+                {reportCount > 0 && (
+                  <Badge
+                    variant="outline"
+                    aria-label={`${reportCount} indexed open ${reportCount === 1 ? 'report' : 'reports'}`}
+                    className="border-current bg-transparent text-current"
+                  >
+                    {reportCount}
+                  </Badge>
+                )}
               </button>
             );
           })}
@@ -87,9 +108,13 @@ function PluginSidebar() {
 }
 
 function Home() {
-  const { plugin } = useAppStore(state => state);
+  const plugin = useAppStore(state => state.plugin);
+  const loadIssueIndex = useAppStore(state => state.loadIssueIndex);
 
   const [activeTab, setActiveTab] = useState('popular');
+  useEffect(() => {
+    void loadIssueIndex();
+  }, [loadIssueIndex]);
 
   const handleNavigateToParseNovel = useCallback(() => {
     setActiveTab('parse-novel');
@@ -116,6 +141,7 @@ function Home() {
                 Explore and test {plugin?.name || 'plugin'} features
               </p>
             </div>
+            <PluginIssues pluginId={plugin?.id} />
 
             {/* Tabs */}
             <Tabs

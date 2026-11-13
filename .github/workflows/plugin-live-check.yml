@@ -37,6 +37,7 @@ jobs:
             plugins/**/*.ts
           files_ignore: |
             plugins/**/*\[*\]*.ts
+            plugins/**/*.broken.ts
             plugins/multisrc/**
 
       - name: Determine Targets
@@ -63,6 +64,9 @@ jobs:
       # Multisrc-generated files (plugins/**/*[...].ts) are excluded above.
       # They're produced from plugins/multisrc/*/template.ts + sources.json,
       # not hand-authored, so testing the generator is out of scope here.
+      # Parked broken sources (plugins/**/*.broken.ts) are excluded too: the
+      # `.broken.ts` suffix deliberately removes them from production
+      # compilation, so live-checking them can only fail by design.
       - name: Run Live Check
         id: live-check
         if: steps.targets.outputs.files != ''
@@ -71,7 +75,28 @@ jobs:
           node scripts/live-check-plugin.js ${{ steps.targets.outputs.files }} > live-check-output.txt 2>&1
           echo "exit_code=$?" >> "$GITHUB_OUTPUT"
           cat live-check-output.txt
-          cat live-check-output.txt >> "$GITHUB_STEP_SUMMARY"
+          if grep -q '^## Plugin Live Check$' live-check-output.txt; then
+            awk '/^## Plugin Live Check$/ { exit } { print }' live-check-output.txt > live-check-request-details.txt
+            if grep -q '[^[:space:]]' live-check-request-details.txt; then
+              {
+                echo '<details>'
+                echo '<summary>Request details</summary>'
+                echo
+                echo '```text'
+                cat live-check-request-details.txt
+                echo '```'
+                echo '</details>'
+                echo
+              } >> "$GITHUB_STEP_SUMMARY"
+            fi
+            sed -n '/^## Plugin Live Check$/,$p' live-check-output.txt >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo '## Plugin Live Check'
+              echo
+              echo 'The live check did not produce a report. See the step log for details.'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Fail On Real Errors
         if: steps.targets.outputs.files != '' && steps.live-check.outputs.exit_code != '0'
