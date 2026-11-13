@@ -139,7 +139,8 @@
     "options": {
       "useNewChapterEndpoint": true,
       "lang": "Arabic",
-      "customJs": "chapterText.find('span[style*=\"opacity: 0; position: fixed;\"],[role=\"presentation\"]').remove();"
+      "versionIncrements": 1,
+      "customJs": "chapterText.find('style,script,[inert],[data-nosnippet],[data-nhv-reader-promo]').remove();chapterText.find('span[style*=\"opacity: 0; position: fixed;\"],[role=\"presentation\"]').remove();"
     }
   },
   {

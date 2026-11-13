@@ -58,7 +58,7 @@ export class MadaraPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/madara/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `2.4.${versionIncrements}`;
+    this.version = `2.5.${versionIncrements}`;
     this.options = metadata.options;
     this.filters = metadata.filters;
 
@@ -304,10 +304,14 @@ export class MadaraPlugin implements Plugin.PluginBase {
         loadedCheerio('.post-title h1').text().trim() ||
         loadedCheerio('#manga-title h1').text().trim() ||
         loadedCheerio('.manga-title').text().trim() ||
+        loadedCheerio('h1.nhv-novel-title').text().trim() ||
         '',
     };
 
     novel.cover = this.extractCover(loadedCheerio('.summary_image > a > img'));
+    if (novel.cover === defaultCover) {
+      novel.cover = this.extractCover(loadedCheerio('.nhv-novel-cover img'));
+    }
 
     loadedCheerio('.post-content_item, .post-content').each(function () {
       const detailName = loadedCheerio(this).find('h5').text().trim();
@@ -367,11 +371,46 @@ export class MadaraPlugin implements Plugin.PluginBase {
       }
     });
 
+    // Fallback for the custom "NHV" theme (e.g. cenele.com), which renders
+    // novel pages without the classic Madara detail blocks. Every field is
+    // only filled when the selectors above left it empty, so sources on the
+    // classic theme keep their existing behaviour.
+    {
+      if (!novel.author)
+        novel.author =
+          loadedCheerio('.nhv-novel-meta a[href*="cont-author"]')
+            .first()
+            .text()
+            .trim() ||
+          loadedCheerio('a[href*="cont-author"]').first().text().trim();
+      if (!novel.genres)
+        novel.genres = loadedCheerio('.nhv-novel-genres a')
+          .map((i, el) => loadedCheerio(el).text())
+          .get()
+          .join(', ');
+      const nhvStatus = loadedCheerio('.nhv-novel-status').text().trim();
+      if (!novel.status && nhvStatus) {
+        // Only recognised labels are mapped; unknown values stay unset.
+        if (nhvStatus.includes('مستمرة')) novel.status = NovelStatus.Ongoing;
+        else if (nhvStatus.includes('متوقفة'))
+          novel.status = NovelStatus.OnHiatus;
+        else if (nhvStatus.includes('مكتملة'))
+          novel.status = NovelStatus.Completed;
+      }
+      if (!novel.rating) {
+        const nhvRating = parseFloat(
+          loadedCheerio('.nhv-simple-rating__avg').text().trim(),
+        );
+
+        if (!isNaN(nhvRating)) novel.rating = nhvRating;
+      }
+    }
     // Checks for "Madara NovelHub" version
     {
       if (!novel.genres)
         novel.genres = loadedCheerio('.genres-content').text().trim();
-      if (!novel.status)
+      // An NHV page that carries a status label was handled above.
+      if (!novel.status && !loadedCheerio('.nhv-novel-status').text().trim())
         novel.status = loadedCheerio('.manga-status')
           .text()
           .trim()
@@ -415,6 +454,11 @@ export class MadaraPlugin implements Plugin.PluginBase {
         .join('\n\n')
         .trim() ||
       loadedCheerio('.manga-excerpt p')
+        .map((i, el) => loadedCheerio(el).text())
+        .get()
+        .join('\n\n')
+        .trim() ||
+      loadedCheerio('.nhv-novel-synopsis p')
         .map((i, el) => loadedCheerio(el).text())
         .get()
         .join('\n\n')
@@ -570,11 +614,26 @@ export class MadaraPlugin implements Plugin.PluginBase {
       `${baseUrl}/${cleanPath}`,
       false,
     );
-    let chapterText = loadedCheerio('.text-left');
-    if (!chapterText.length) chapterText = loadedCheerio('.text-right');
-    if (!chapterText.length) chapterText = loadedCheerio('.entry-content');
-    if (!chapterText.length) {
-      chapterText = loadedCheerio('.c-blog-post > div > div:nth-child(2)');
+
+    // A cheerio selection is always truthy, so walk the candidates and keep
+    // the first one that actually holds text or images (illustration and comic
+    // chapters have no text but did render before).
+    let chapterText = loadedCheerio('.__no-chapter-content__');
+    for (const selector of [
+      '.text-left',
+      '.text-right',
+      '.text-content',
+      '.text-chapter-content',
+      'novel-chapter',
+      '.reading-content',
+      '.entry-content',
+      '.c-blog-post > div > div:nth-child(2)',
+    ]) {
+      const candidate = loadedCheerio(selector);
+      if (candidate.text().trim() || candidate.find('img').length) {
+        chapterText = candidate;
+        break;
+      }
     }
 
     if (this.options?.customJs) {
@@ -585,6 +644,11 @@ export class MadaraPlugin implements Plugin.PluginBase {
         throw error;
       }
     }
+
+    if (!chapterText.length)
+      throw new Error(
+        'Chapter text not found on the page, try to open in webview.',
+      );
 
     return this.translateDragontea(chapterText).html() || '';
   }
