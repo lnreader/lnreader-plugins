@@ -1,3 +1,4 @@
+import * as fetchLib from '@libs/fetch';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { load as loadCheerio } from 'cheerio';
@@ -306,12 +307,15 @@ type Nodes = {
   }[];
 };
 
+const READER_PARAGRAPH_SELECTOR =
+  '[id^="reader-area-"] p, .reader-area.touch-manipulation p, div.content-area p';
+
 class FenrirRealmPlugin implements Plugin.PluginBase {
   id = 'fenrir';
   name = 'Fenrir Realm';
   icon = 'src/en/fenrirrealm/icon.png';
   site = 'https://fenrirealm.com';
-  version = '1.1.6';
+  version = '1.1.7';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   private cachedReadToken: CachedReadToken | null = null;
@@ -785,6 +789,77 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
     return novel;
   }
 
+  private extractChapterHtml(body: string): string {
+    const loadedCheerio = loadCheerio(body);
+
+    // Clean up anti-scraping and watermark elements first
+    loadedCheerio('[aria-hidden="true"]').remove();
+    loadedCheerio('.reader-attribution').remove();
+    loadedCheerio('[data-fr-attr]').remove();
+
+    const chapterText = loadedCheerio(READER_PARAGRAPH_SELECTOR)
+      .map((_, el) => {
+        const html = loadedCheerio(el).html()?.trim();
+        return html ? `<p>${html}</p>` : '';
+      })
+      .get()
+      .filter(Boolean)
+      .join('\n');
+
+    if (
+      !chapterText ||
+      chapterText.includes("Confirm you're human to continue reading")
+    ) {
+      return '';
+    }
+    return stripInvisibleChars(chapterText);
+  }
+
+  private async fetchChapterViaWebview(
+    chapterPath: string,
+  ): Promise<string | null> {
+    const fetchViaWebview = (
+      fetchLib as {
+        fetchViaWebview?: (
+          url: string,
+          options?: {
+            waitForSelector?: string;
+            timeoutMs?: number;
+            settleMs?: number;
+          },
+        ) => Promise<{ ok: boolean; html: string }>;
+      }
+    ).fetchViaWebview;
+    if (typeof fetchViaWebview !== 'function') {
+      return null;
+    }
+    try {
+      const res = await fetchViaWebview(this.resolveUrl(chapterPath), {
+        waitForSelector: READER_PARAGRAPH_SELECTOR,
+        timeoutMs: 15000,
+        settleMs: 400,
+      });
+      if (!res?.ok || !res.html) {
+        return null;
+      }
+      const extracted = this.extractChapterHtml(res.html);
+      return extracted || null;
+    } catch {
+      return null;
+    }
+  }
+
+  private async fetchViaWebviewOrThrow(
+    chapterPath: string,
+    res: Response | null,
+  ): Promise<string> {
+    const webviewContent = await this.fetchChapterViaWebview(chapterPath);
+    if (webviewContent) {
+      return webviewContent;
+    }
+    throw this.verifyInWebViewError(res);
+  }
+
   async parseChapter(chapterPath: string): Promise<string> {
     const [rawSlugPath, rawChapterId] = chapterPath.split('~~');
     const slugPath = normalizeSlugPath(rawSlugPath);
@@ -856,14 +931,15 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
         this.captureReadTokenHeader(res, initialCid);
       }
       if (!res.ok && res.status === 403) {
-        throw this.verifyInWebViewError(
+        return this.fetchViaWebviewOrThrow(
+          chapterPath,
           this.lastMintRefusal?.status === 403 ? this.lastMintRefusal : res,
         );
       }
     }
 
     if (res.status === 401 || res.status === 503) {
-      throw this.verifyInWebViewError(res);
+      return this.fetchViaWebviewOrThrow(chapterPath, res);
     }
 
     if (res.ok) {
@@ -949,7 +1025,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
 
       if (json.content_format === 'locked') {
         this.cachedReadToken = null;
-        throw this.verifyInWebViewError(this.lastMintRefusal);
+        return this.fetchViaWebviewOrThrow(chapterPath, this.lastMintRefusal);
       }
 
       if (typeof json.content === 'string' && json.content) {
@@ -962,26 +1038,14 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
     const result = await fetchApi(url);
     const body = await result.text();
 
-    const loadedCheerio = loadCheerio(body);
-
-    // Clean up anti-scraping and watermark elements first
-    loadedCheerio('[aria-hidden="true"]').remove();
-    loadedCheerio('.reader-attribution').remove();
-    loadedCheerio('[data-fr-attr]').remove();
-
-    const chapterText = loadedCheerio(
-      '.reader-area p, div.content-area p, [id^="reader-area"] p',
-    )
-      .map((_, el) => {
-        const html = loadedCheerio(el).html()?.trim();
-        return html ? `<p>${html}</p>` : '';
-      })
-      .get()
-      .filter(Boolean)
-      .join('\n');
-
+    const chapterText = this.extractChapterHtml(body);
     if (chapterText) {
-      return stripInvisibleChars(chapterText);
+      return chapterText;
+    }
+
+    const webviewContent = await this.fetchChapterViaWebview(chapterPath);
+    if (webviewContent) {
+      return webviewContent;
     }
 
     // Fallback to SvelteKit JSON if HTML parsing fails or is empty
