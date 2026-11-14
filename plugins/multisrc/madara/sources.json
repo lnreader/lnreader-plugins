@@ -663,14 +663,6 @@
     }
   },
   {
-    "id": "bailiantales",
-    "sourceSite": "https://bailiantales.com/",
-    "sourceName": "BaiLianTales",
-    "options": {
-      "useNewChapterEndpoint": true
-    }
-  },
-  {
     "id": "anslid",
     "sourceSite": "https://anslid.com/",
     "sourceName": "Anslid",
