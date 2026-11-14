@@ -95,6 +95,9 @@
     "zustand": "^5.0.1"
   },
   "lint-staged": {
-    "**/*.{js,ts,jsx,tsx}": "prettier --write"
+    "**/*.{js,ts,jsx,tsx}": [
+      "prettier --write",
+      "eslint --max-warnings 0"
+    ]
   }
 }
