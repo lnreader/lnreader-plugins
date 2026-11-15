@@ -1,5 +1,5 @@
 import * as fetchLib from '@libs/fetch';
-import { fetchApi } from '@libs/fetch';
+const { fetchApi } = fetchLib;
 import { Plugin } from '@/types/plugin';
 import { load as loadCheerio } from 'cheerio';
 import { Filters, FilterTypes } from '@libs/filterInputs';
@@ -307,7 +307,7 @@ type Nodes = {
   }[];
 };
 
-const READER_PARAGRAPH_SELECTOR =
+const readerParagraphSelector =
   '[id^="reader-area-"] p, .reader-area.touch-manipulation p, div.content-area p';
 
 class FenrirRealmPlugin implements Plugin.PluginBase {
@@ -315,7 +315,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   name = 'Fenrir Realm';
   icon = 'src/en/fenrirrealm/icon.png';
   site = 'https://fenrirealm.com';
-  version = '1.1.7';
+  version = '1.2.0';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   private cachedReadToken: CachedReadToken | null = null;
@@ -790,6 +790,10 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   }
 
   private extractChapterHtml(body: string): string {
+    if (/confirm you['’]re human to continue reading/i.test(body)) {
+      return '';
+    }
+
     const loadedCheerio = loadCheerio(body);
 
     // Clean up anti-scraping and watermark elements first
@@ -797,7 +801,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
     loadedCheerio('.reader-attribution').remove();
     loadedCheerio('[data-fr-attr]').remove();
 
-    const chapterText = loadedCheerio(READER_PARAGRAPH_SELECTOR)
+    const chapterText = loadedCheerio(readerParagraphSelector)
       .map((_, el) => {
         const html = loadedCheerio(el).html()?.trim();
         return html ? `<p>${html}</p>` : '';
@@ -806,10 +810,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
       .filter(Boolean)
       .join('\n');
 
-    if (
-      !chapterText ||
-      chapterText.includes("Confirm you're human to continue reading")
-    ) {
+    if (!chapterText) {
       return '';
     }
     return stripInvisibleChars(chapterText);
@@ -835,7 +836,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
     }
     try {
       const res = await fetchViaWebview(this.resolveUrl(chapterPath), {
-        waitForSelector: READER_PARAGRAPH_SELECTOR,
+        waitForSelector: readerParagraphSelector,
         timeoutMs: 15000,
         settleMs: 400,
       });
