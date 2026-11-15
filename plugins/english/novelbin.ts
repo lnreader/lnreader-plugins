@@ -20,6 +20,11 @@ type SearchEntry = ListNovel & {
   alternative_titles?: string;
 };
 
+type IndexedNovel = {
+  item: Plugin.NovelItem;
+  searchText: string;
+};
+
 type NovelDetail = {
   id: number;
   title: string;
@@ -48,14 +53,17 @@ class NovelBinPlugin implements Plugin.PluginBase {
   name = 'Novel Bin';
   icon = 'src/en/novelbin/icon.png';
   site = 'https://novelbin.xyz/';
-  version = '3.0.0';
+  version = '3.0.1';
 
-  // The site's JSON lives on a CDN that refuses requests from other origins;
-  // the site's own /api/cdn/ route serves the same files.
-  apiBase = this.site + 'api/cdn/';
+  // The site's JSON lives on BunnyCDN, which requires the site's Origin header.
+  apiBase = 'https://boxnovela.b-cdn.net/';
 
-  private searchIndex: Promise<SearchEntry[]> | null = null;
-  private novelIds: Record<string, number> = {};
+  private readonly headers = {
+    Origin: this.site.slice(0, -1),
+  };
+
+  private searchIndex: Promise<IndexedNovel[]> | null = null;
+  private novelIds: Record<string, Promise<number>> = {};
 
   filters = {
     genre: {
@@ -125,7 +133,9 @@ class NovelBinPlugin implements Plugin.PluginBase {
   } satisfies Filters;
 
   async fetchJson<T>(file: string): Promise<T | null> {
-    const response = await fetchApi(this.apiBase + file);
+    const response = await fetchApi(this.apiBase + file, {
+      headers: this.headers,
+    });
     const contentType = response.headers.get('content-type') || '';
     if (
       response.headers.get('cf-mitigated') === 'challenge' ||
@@ -201,8 +211,19 @@ class NovelBinPlugin implements Plugin.PluginBase {
         'Novel not found, it may have been removed from this source.',
       );
     }
-    this.novelIds[slug] = novel.id;
+    this.novelIds[slug] = Promise.resolve(novel.id);
     return novel;
+  }
+
+  getNovelId(slug: string): Promise<number> {
+    if (!this.novelIds[slug]) {
+      const pending = this.getNovel(slug).then(novel => novel.id);
+      pending.catch(() => {
+        if (this.novelIds[slug] === pending) delete this.novelIds[slug];
+      });
+      this.novelIds[slug] = pending;
+    }
+    return this.novelIds[slug];
   }
 
   async getChapterList(novelId: number): Promise<ChapterEntry[]> {
@@ -278,7 +299,7 @@ class NovelBinPlugin implements Plugin.PluginBase {
   async parseChapter(chapterPath: string): Promise<string> {
     const slug = this.getSlug(chapterPath);
     const chapterSlug = chapterPath.split('/').pop() || '';
-    const novelId = this.novelIds[slug] ?? (await this.getNovel(slug)).id;
+    const novelId = await this.getNovelId(slug);
 
     const index = chapterPath.startsWith('read/')
       ? Number(chapterSlug.replace('chapter-', '')) - 1
@@ -299,12 +320,16 @@ class NovelBinPlugin implements Plugin.PluginBase {
     searchTerm: string,
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
-    // The site searches one ~7.5 MB index on the client; load it once, and
-    // share the pending download between overlapping searches.
+    // The site searches one ~7.5 MB index on the client; load it once,
+    // pre-normalize search text, and share the pending download.
     if (!this.searchIndex) {
       this.searchIndex = this.fetchList<SearchEntry[]>('search').then(index => {
         if (!index) throw new Error('Could not load the search index.');
-        return index;
+        return index.map(novel => ({
+          item: this.toNovelItem(novel),
+          searchText:
+            `${novel.title}\0${novel.alternative_titles || ''}`.toLowerCase(),
+        }));
       });
       // Let a later search retry after a failed download.
       this.searchIndex.catch(() => {
@@ -314,14 +339,25 @@ class NovelBinPlugin implements Plugin.PluginBase {
     const searchIndex = await this.searchIndex;
 
     const term = searchTerm.toLowerCase().trim();
-    return searchIndex
-      .filter(
-        novel =>
-          novel.title.toLowerCase().includes(term) ||
-          (novel.alternative_titles || '').toLowerCase().includes(term),
-      )
-      .slice((pageNo - 1) * searchPageSize, pageNo * searchPageSize)
-      .map(novel => this.toNovelItem(novel));
+    const start = (pageNo - 1) * searchPageSize;
+    if (!term) {
+      return searchIndex
+        .slice(start, start + searchPageSize)
+        .map(entry => entry.item);
+    }
+
+    const end = start + searchPageSize;
+    const results: Plugin.NovelItem[] = [];
+    let matched = 0;
+    for (const entry of searchIndex) {
+      if (!entry.searchText.includes(term)) continue;
+      if (matched >= start) {
+        results.push(entry.item);
+      }
+      matched++;
+      if (matched >= end) break;
+    }
+    return results;
   }
 
   resolveUrl = (path: string) => {
