@@ -14,7 +14,11 @@ type CdpTab = {
 };
 
 type CdpClient = {
-  send: (method: string, params?: Record<string, unknown>) => Promise<unknown>;
+  send: (
+    method: string,
+    params?: Record<string, unknown>,
+    timeoutMs?: number,
+  ) => Promise<unknown>;
   waitForEvent: (method: string, timeoutMs: number) => Promise<void>;
   close: () => void;
 };
@@ -207,14 +211,28 @@ const connectCdp = (wsUrl: string): Promise<CdpClient> =>
         handshakeDone = true;
         buffer = buffer.subarray(headerEnd + 4);
         resolve({
-          send: (method, params = {}) =>
+          send: (method, params = {}, commandTimeoutMs = 15000) =>
             new Promise((res, rej) => {
               if (socket.destroyed) {
                 rej(new Error('CDP WebSocket closed'));
                 return;
               }
               const id = nextId++;
-              pending.set(id, { resolve: res, reject: rej });
+              const timer = setTimeout(() => {
+                if (pending.delete(id)) {
+                  rej(new Error(`CDP command timeout: ${method}`));
+                }
+              }, commandTimeoutMs);
+              pending.set(id, {
+                resolve: v => {
+                  clearTimeout(timer);
+                  res(v);
+                },
+                reject: e => {
+                  clearTimeout(timer);
+                  rej(e);
+                },
+              });
               socket.write(
                 encodeWsFrame(
                   0x1,
@@ -286,31 +304,45 @@ const fetchViaCdp = async ({
     throw new Error(`CDP /json/new failed with status ${tabRes.status}`);
   }
   const tab = (await tabRes.json()) as CdpTab;
-  if (!tab.webSocketDebuggerUrl) {
-    throw new Error('CDP tab missing webSocketDebuggerUrl');
-  }
-
-  const cdp = await connectCdp(tab.webSocketDebuggerUrl);
+  let cdp: CdpClient | null = null;
   try {
-    await cdp.send('Page.enable');
-    await cdp.send('Runtime.enable');
+    if (!tab.webSocketDebuggerUrl) {
+      throw new Error('CDP tab missing webSocketDebuggerUrl');
+    }
 
     const deadline = Date.now() + timeoutMs;
+    const remainingMs = () => Math.max(1000, deadline - Date.now());
+
+    cdp = await connectCdp(tab.webSocketDebuggerUrl);
+    await cdp.send('Page.enable', {}, remainingMs());
+    await cdp.send('Runtime.enable', {}, remainingMs());
+
     const loadPromise = cdp
-      .waitForEvent('Page.loadEventFired', timeoutMs)
+      .waitForEvent('Page.loadEventFired', remainingMs())
       .catch(() => undefined);
 
-    await cdp.send('Page.navigate', { url });
+    const navRes = (await cdp.send(
+      'Page.navigate',
+      { url },
+      remainingMs(),
+    )) as { errorText?: string };
+    if (navRes?.errorText) {
+      throw new Error(`Page.navigate failed: ${navRes.errorText}`);
+    }
     await loadPromise;
 
     let selectorMatched = !waitForSelector;
     if (waitForSelector) {
       const expr = `Boolean(document.querySelector(${JSON.stringify(waitForSelector)}))`;
       while (Date.now() < deadline) {
-        const evalRes = (await cdp.send('Runtime.evaluate', {
-          expression: expr,
-          returnByValue: true,
-        })) as { result?: { value?: boolean } };
+        const evalRes = (await cdp.send(
+          'Runtime.evaluate',
+          {
+            expression: expr,
+            returnByValue: true,
+          },
+          remainingMs(),
+        )) as { result?: { value?: boolean } };
         if (evalRes?.result?.value) {
           selectorMatched = true;
           break;
@@ -323,15 +355,21 @@ const fetchViaCdp = async ({
       await sleep(settleMs);
     }
 
-    const htmlRes = (await cdp.send('Runtime.evaluate', {
-      expression: 'document.documentElement.outerHTML',
-      returnByValue: true,
-    })) as { result?: { value?: string } };
+    const htmlRes = (await cdp.send(
+      'Runtime.evaluate',
+      {
+        expression: 'document.documentElement.outerHTML',
+        returnByValue: true,
+      },
+      remainingMs(),
+    )) as { result?: { value?: string } };
 
     return htmlRes?.result?.value || '';
   } finally {
-    cdp.close();
-    await fetch(`${cdpBase}/json/close/${tab.id}`).catch(() => undefined);
+    cdp?.close();
+    if (tab.id) {
+      await fetch(`${cdpBase}/json/close/${tab.id}`).catch(() => undefined);
+    }
   }
 };
 
