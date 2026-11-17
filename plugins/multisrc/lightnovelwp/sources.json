@@ -21,12 +21,13 @@
   },
   {
     "id": "freekolnovel",
-    "sourceSite": "https://free.kolnovel.com/",
+    "sourceSite": "https://kolnovel.com/",
     "sourceName": "Free Kol Novel",
     "options": {
       "lang": "Arabic",
       "reverseChapters": true,
-      "customJs": "$('article > style').text().match(/\\.\\w+(?=\\s*[,{])/g)?.forEach(tag => $(`p${tag}`).remove());$('.epcontent .code-block').remove();"
+      "customJs": "$('article > style').text().match(/\\.\\w+(?=\\s*[,{])/g)?.forEach(tag => $(`p${tag}`).remove());$('.epcontent .code-block').remove();",
+      "versionIncrements": 1
     }
   },
   {
