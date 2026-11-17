@@ -6,7 +6,7 @@ import { NovelStatus } from '@libs/novelStatus';
 
 const SITE = 'https://novelid.org';
 
-class NovelIdPlugin implements Plugin.PluginBase {
+class NovelIdPlugin implements Plugin.PagePlugin {
   id = 'novelId';
   name = 'NovelID';
   icon = 'src/id/novelId/icon.png';
@@ -68,7 +68,7 @@ class NovelIdPlugin implements Plugin.PluginBase {
 
   async popularNovels(
     pageNo: number,
-    _options: Plugin.PopularNovelsOptions<typeof this.filters>,
+    _options: Plugin.PopularNovelsOptions,
   ): Promise<Plugin.NovelItem[]> {
     const page = Math.max(1, pageNo || 1);
     const url = page === 1 ? `${this.site}/` : `${this.site}/?page=${page}`;
@@ -118,7 +118,9 @@ class NovelIdPlugin implements Plugin.PluginBase {
     return chapters;
   }
 
-  async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
+  async parseNovel(
+  novelPath: string,
+): Promise<Plugin.SourceNovel & { totalPages: number }> {
     const path = this.absolutePath(novelPath) ?? novelPath;
     const response = await fetchApi(new URL(path, this.site).href);
     const $ = loadCheerio(await response.text());
