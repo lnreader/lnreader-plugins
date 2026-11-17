@@ -104,9 +104,12 @@ const fetchViaCdp = async ({
         }
         await sleep(150);
       }
+      if (!selectorMatched) {
+        throw new Error(`Timed out waiting for selector: ${waitForSelector}`);
+      }
     }
 
-    if (selectorMatched && settleMs > 0) {
+    if (settleMs > 0) {
       await sleep(settleMs);
     }
 
