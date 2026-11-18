@@ -96,6 +96,7 @@
     "zustand": "^5.0.1"
   },
   "lint-staged": {
-    "**/*.{js,ts,jsx,tsx}": "prettier --write"
+    "**/*.{js,ts,jsx,tsx}": "prettier --write",
+    "plugins/**/*.ts": "node scripts/typecheck-files.js"
   }
 }
