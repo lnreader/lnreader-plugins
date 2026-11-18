@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import tailwindcss from '@tailwindcss/vite';
 import { proxyHandlerMiddle, proxySettingMiddleware } from './proxy';
+import { webviewFetchMiddleware } from './webviewProxy';
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -18,6 +19,7 @@ export default defineConfig({
       name: 'proxy',
       configureServer: server => {
         server.middlewares.use('/settings', proxySettingMiddleware);
+        server.middlewares.use('/webview-fetch', webviewFetchMiddleware);
         server.middlewares.use('/https:', proxyHandlerMiddle);
         server.middlewares.use('/http:', proxyHandlerMiddle);
       },
