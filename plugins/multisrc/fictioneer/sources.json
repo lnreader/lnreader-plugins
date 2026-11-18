@@ -41,14 +41,6 @@
     }
   },
   {
-    "id": "penguinsquad",
-    "sourceSite": "https://penguin-squad.com",
-    "sourceName": "Penguin Squad",
-    "options": {
-      "browsePage": "novels"
-    }
-  },
-  {
     "id": "prizmatranslation",
     "sourceSite": "https://prizmatranslation.com",
     "sourceName": "Prizma",

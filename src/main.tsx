@@ -13,8 +13,15 @@ const { fetch: originalFetch } = window;
 
 window.fetch = async (...args) => {
   const [resource, config] = args;
-  if (resource.toString().includes('localhost'))
+  const resourceUrl =
+    resource instanceof Request ? resource.url : resource.toString();
+  if (
+    resourceUrl.includes('localhost') ||
+    resourceUrl.startsWith(window.location.origin) ||
+    (resourceUrl.startsWith('/') && !resourceUrl.startsWith('//'))
+  ) {
     return await originalFetch(resource, config);
+  }
   const _res = await originalFetch('http://localhost:3000/' + resource, {
     ...config,
     credentials: 'include',
