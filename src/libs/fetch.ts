@@ -7,5 +7,8 @@ export {
   fetchText,
   fetchProto,
   fetchFile,
+  fetchViaWebview,
   type FetchInit,
+  type WebviewFetchOptions,
+  type WebviewFetchResult,
 } from '../lib/fetch';

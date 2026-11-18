@@ -1100,6 +1100,21 @@ This is an advanced/uncommon case — only reach for it if the site's API is pro
 can usually tell from binary (non-JSON) response bodies on an `application/x-protobuf`-style
 content type.
 
+#### fetchViaWebview
+
+```ts
+declare function fetchViaWebview(
+  url: string,
+  options?: {
+    waitForSelector?: string;
+    timeoutMs?: number;
+    settleMs?: number;
+  },
+): Promise<{ ok: boolean; html: string }>;
+```
+
+Renders `url` in a real WebView/browser session and returns its HTML (available in Plugin Playground via local Chromium CDP on `/webview-fetch`, and in LNReader app builds supporting `fetchViaWebview`). Older app versions do not inject this helper, so plugins should guard with `typeof fetchViaWebview === 'function'` before calling it.
+
 #### FetchInit
 
 The `init` object accepted by all three functions above:
@@ -1129,7 +1144,7 @@ is what's actually injected into a running plugin's `require(...)` calls — any
 | Package            | Exposes                                    | Typical use                                                   |
 | ------------------- | -------------------------------------------- | ---------------------------------------------------------------- |
 | `cheerio`           | `load`                                       | HTML parsing — see [Using Cheerio](#using-cheerio)               |
-| `@libs/fetch`       | `fetchApi`, `fetchText`, `fetchProto`        | Network requests — see [Custom fetching functions](#custom-fetching-functions) |
+| `@libs/fetch`       | `fetchApi`, `fetchText`, `fetchProto`, `fetchViaWebview` | Network requests — see [Custom fetching functions](#custom-fetching-functions) |
 | `dayjs`             | the `dayjs` default export                   | Parsing/formatting relative or oddly-formatted release dates     |
 | `urlencode`         | `encode`, `decode`                           | Percent-encoding for URLs/query params, with non-UTF-8 charset support |
 | `htmlparser2`       | `Parser`                                     | Low-level streaming HTML/XML parsing, for pages too large or malformed for Cheerio |
