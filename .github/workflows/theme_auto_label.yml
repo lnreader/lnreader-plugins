@@ -63,7 +63,7 @@ jobs:
 
       - name: Check Lightnovelwp Theme
         id: check_lighnovelwp
-        if: always() && steps.check_madara.outputs.madara != 'true'
+        if: always()
         env:
           BASE_URL: ${{ steps.get_base_url.outputs.BASE_URL }}
           USER_AGENT: ${{ steps.get_user_agent.outputs.USER_AGENT }}
@@ -80,7 +80,7 @@ jobs:
 
       - name: Check HotNovelPub Theme
         id: check_hotnovelpub
-        if: always() && steps.check_madara.outputs.madara != 'true' && steps.check_lighnovelwp.outputs.lighnovelwp != 'true'
+        if: always()
         env:
           BASE_URL: ${{ steps.get_base_url.outputs.BASE_URL }}
           USER_AGENT: ${{ steps.get_user_agent.outputs.USER_AGENT }}
@@ -97,7 +97,7 @@ jobs:
 
       - name: Check Fictioneer Theme
         id: check_fictioneer
-        if: always() && steps.check_madara.outputs.madara != 'true' && steps.check_lighnovelwp.outputs.lighnovelwp != 'true' && steps.check_hotnovelpub.outputs.hotnovelpub != 'true'
+        if: always()
         env:
           BASE_URL: ${{ steps.get_base_url.outputs.BASE_URL }}
           USER_AGENT: ${{ steps.get_user_agent.outputs.USER_AGENT }}
@@ -112,6 +112,23 @@ jobs:
             echo "❌ Fictioneer Theme Not Found" >> $GITHUB_STEP_SUMMARY
           fi
 
+      - name: Check Novel Fire Theme
+        id: check_novel_fire
+        if: always()
+        env:
+          BASE_URL: ${{ steps.get_base_url.outputs.BASE_URL }}
+          USER_AGENT: ${{ steps.get_user_agent.outputs.USER_AGENT }}
+        run: |
+          echo "🔍 Checking for Novel Fire theme..." >> $GITHUB_STEP_SUMMARY
+          if curl --location --output /dev/null --silent --head --fail --max-time 10 "https://$BASE_URL/frontend/js/appsettings.min.js" -H "User-Agent: $USER_AGENT" 2>/dev/null || \
+             curl --location --output /dev/null --silent --head --fail --max-time 10 "http://$BASE_URL/frontend/js/appsettings.min.js" -H "User-Agent: $USER_AGENT" 2>/dev/null; then
+            echo "novel_fire=true" >> $GITHUB_OUTPUT
+            echo "✅ Novel Fire Theme Detected" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "novel_fire=false" >> $GITHUB_OUTPUT
+            echo "❌ Novel Fire Theme Not Found" >> $GITHUB_STEP_SUMMARY
+          fi
+
       - name: Add Theme Label To Issue
         id: add_theme_label
         if: always()
@@ -120,21 +137,36 @@ jobs:
           LIGHNOVELWP: ${{ steps.check_lighnovelwp.outputs.lighnovelwp }}
           HOTNOVELPUB: ${{ steps.check_hotnovelpub.outputs.hotnovelpub }}
           FICTIONEER: ${{ steps.check_fictioneer.outputs.fictioneer }}
+          NOVEL_FIRE: ${{ steps.check_novel_fire.outputs.novel_fire }}
           GH_TOKEN: ${{ github.token }}
         run: |
+          MATCH_COUNT=0
+          [[ "$MADARA" == "true" ]] && ((MATCH_COUNT+=1))
+          [[ "$LIGHNOVELWP" == "true" ]] && ((MATCH_COUNT+=1))
+          [[ "$HOTNOVELPUB" == "true" ]] && ((MATCH_COUNT+=1))
+          [[ "$FICTIONEER" == "true" ]] && ((MATCH_COUNT+=1))
+          [[ "$NOVEL_FIRE" == "true" ]] && ((MATCH_COUNT+=1))
+
           echo "## Theme Detection Result" >> $GITHUB_STEP_SUMMARY
-          if [[ "$MADARA" == "true" ]]; then
-            echo "🏷️ Adding label: theme: madara" >> $GITHUB_STEP_SUMMARY
-            gh issue edit $ISSUE_NUMBER --add-label "theme: madara" -R $REPO
-          elif [[ "$LIGHNOVELWP" == "true" ]]; then
-            echo "🏷️ Adding label: theme: lighnovelwp" >> $GITHUB_STEP_SUMMARY
-            gh issue edit $ISSUE_NUMBER --add-label "theme: lighnovelwp" -R $REPO
-          elif [[ "$HOTNOVELPUB" == "true" ]]; then
-            echo "🏷️ Adding label: theme: hotnovelpub" >> $GITHUB_STEP_SUMMARY
-            gh issue edit $ISSUE_NUMBER --add-label "theme: hotnovelpub" -R $REPO
-          elif [[ "$FICTIONEER" == "true" ]]; then
-            echo "🏷️ Adding label: theme: fictioneer" >> $GITHUB_STEP_SUMMARY
-            gh issue edit $ISSUE_NUMBER --add-label "theme: fictioneer" -R $REPO
+          if (( MATCH_COUNT > 1 )); then
+            echo "⚠️ Multiple themes detected ($MATCH_COUNT)." >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ No Theme Detected" >> $GITHUB_STEP_SUMMARY
+            if [[ "$MADARA" == "true" ]]; then
+              echo "🏷️ Adding label: theme: madara" >> $GITHUB_STEP_SUMMARY
+              gh issue edit $ISSUE_NUMBER --add-label "theme: madara" -R $REPO
+            elif [[ "$LIGHNOVELWP" == "true" ]]; then
+              echo "🏷️ Adding label: theme: lighnovelwp" >> $GITHUB_STEP_SUMMARY
+              gh issue edit $ISSUE_NUMBER --add-label "theme: lighnovelwp" -R $REPO
+            elif [[ "$HOTNOVELPUB" == "true" ]]; then
+              echo "🏷️ Adding label: theme: hotnovelpub" >> $GITHUB_STEP_SUMMARY
+              gh issue edit $ISSUE_NUMBER --add-label "theme: hotnovelpub" -R $REPO
+            elif [[ "$FICTIONEER" == "true" ]]; then
+              echo "🏷️ Adding label: theme: fictioneer" >> $GITHUB_STEP_SUMMARY
+              gh issue edit $ISSUE_NUMBER --add-label "theme: fictioneer" -R $REPO
+            elif [[ "$NOVEL_FIRE" == "true" ]]; then
+              echo "🏷️ Adding label: theme: novel fire" >> $GITHUB_STEP_SUMMARY
+              gh issue edit $ISSUE_NUMBER --add-label "theme: novel fire" -R $REPO
+            else
+              echo "❌ No Theme Detected" >> $GITHUB_STEP_SUMMARY
+            fi
           fi
