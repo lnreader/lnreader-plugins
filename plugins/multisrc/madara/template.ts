@@ -388,14 +388,37 @@ export class MadaraPlugin implements Plugin.PluginBase {
           .map((i, el) => loadedCheerio(el).text())
           .get()
           .join(', ');
-      const nhvStatus = loadedCheerio('.nhv-novel-status').text().trim();
+      // The element holds an icon plus a "status:" caption (<span>) and the
+      // value (<strong>); only the value is the label to match.
+      const nhvStatus = loadedCheerio('.nhv-novel-status')
+        .clone()
+        .children('span')
+        .remove()
+        .end()
+        .text()
+        .normalize('NFKC')
+        .split('')
+        .filter(ch => {
+          // Drop tatweel and Arabic diacritics.
+          const code = ch.charCodeAt(0);
+          return (
+            code !== 0x640 &&
+            code !== 0x670 &&
+            !(code >= 0x64b && code <= 0x65f)
+          );
+        })
+        .join('')
+        .replace(/\s+/g, ' ')
+        .trim();
       if (!novel.status && nhvStatus) {
-        // Only recognised labels are mapped; unknown values stay unset.
-        if (nhvStatus.includes('مستمرة')) novel.status = NovelStatus.Ongoing;
-        else if (nhvStatus.includes('متوقفة'))
-          novel.status = NovelStatus.OnHiatus;
-        else if (nhvStatus.includes('مكتملة'))
-          novel.status = NovelStatus.Completed;
+        // Only exact labels are mapped (not substrings, so that "غير مكتملة",
+        // "not completed", is not read as "مكتملة"); anything else stays unset.
+        const nhvStatusMap: Record<string, NovelStatus> = {
+          مستمرة: NovelStatus.Ongoing,
+          متوقفة: NovelStatus.OnHiatus,
+          مكتملة: NovelStatus.Completed,
+        };
+        novel.status = nhvStatusMap[nhvStatus] ?? novel.status;
       }
       if (!novel.rating) {
         const nhvRating = parseFloat(
@@ -615,10 +638,36 @@ export class MadaraPlugin implements Plugin.PluginBase {
       false,
     );
 
+    // The source's customJs cleanup (e.g. removing promos) runs on the chosen
+    // chapter element. It receives the page and the element it should clean.
+    /* eslint-disable @typescript-eslint/no-unused-vars -- used by customJs */
+    const cleanChapter = (
+      loadedCheerio: CheerioAPI,
+      chapterText: Cheerio<AnyNode>,
+    ) => {
+      if (this.options?.customJs) {
+        try {
+          // CustomJS HERE
+        } catch (error) {
+          console.error('Error executing customJs:', error);
+          throw error;
+        }
+      }
+    };
+    /* eslint-enable @typescript-eslint/no-unused-vars */
+    const hasContent = (element: Cheerio<AnyNode>) =>
+      !!element.text().trim() || element.find('img').length > 0;
+
     // A cheerio selection is always truthy, so walk the candidates and keep
-    // the first one that actually holds text or images (illustration and comic
-    // chapters have no text but did render before).
-    let chapterText = loadedCheerio('.__no-chapter-content__');
+    // the first one that still holds text or images (illustration and comic
+    // chapters have no text but did render before) after the source's cleanup
+    // ran: a promo-only candidate must not win over the real chapter body.
+    // The cleanup is not idempotent for every source, so a rejected candidate
+    // is cleaned on a throwaway copy of the page and the next one starts from
+    // the pristine HTML.
+    const pristineHtml = this.options?.customJs ? loadedCheerio.html() : '';
+    let page = loadedCheerio;
+    let chapterText = page('.__no-chapter-content__');
     for (const selector of [
       '.text-left',
       '.text-right',
@@ -629,20 +678,17 @@ export class MadaraPlugin implements Plugin.PluginBase {
       '.entry-content',
       '.c-blog-post > div > div:nth-child(2)',
     ]) {
-      const candidate = loadedCheerio(selector);
-      if (candidate.text().trim() || candidate.find('img').length) {
-        chapterText = candidate;
-        break;
+      const candidate = page(selector);
+      if (!hasContent(candidate)) continue;
+      if (this.options?.customJs) {
+        cleanChapter(page, candidate);
+        if (!hasContent(candidate)) {
+          page = parseHTML(pristineHtml);
+          continue;
+        }
       }
-    }
-
-    if (this.options?.customJs) {
-      try {
-        // CustomJS HERE
-      } catch (error) {
-        console.error('Error executing customJs:', error);
-        throw error;
-      }
+      chapterText = candidate;
+      break;
     }
 
     if (!chapterText.length)

@@ -292,6 +292,10 @@ class GalaxyNovels implements Plugin.PluginBase {
     const url = `${this.baseUrl}${chapterPath}`;
     const html = await this.fetchHtml(url);
     const $ = loadCheerio(html);
+    // The page ships decoy and hidden elements that still carry text; drop
+    // them first so a candidate that only has hidden text does not count as
+    // the chapter body.
+    $('[data-wor-decoy], [hidden]').remove();
 
     // The body is server-rendered inside the article marked up as
     // https://schema.org/Chapter, as the element with itemprop="text". Pick
