@@ -22,12 +22,24 @@ const REPO_ROOT = path.join(__dirname, '..');
 const MIN_CHAPTER_LENGTH = 200;
 const STEP_TIMEOUT_MS = 30_000;
 const CLOUDFLARE_HEADER_HINTS = ['cf-ray', 'cf-cache-status', 'cf-request-id'];
+const RATE_LIMITED_REASON = 'HTTP 429 (rate limited)';
 
 /** @typedef {'PASS' | 'FAIL' | 'INCONCLUSIVE'} StepStatus */
 
 const stepContext = new AsyncLocalStorage();
-let activeRateLimitObservers = 0;
-let originalFetch = null;
+
+function hasCloudflareHeader(headers) {
+  if (!headers) return false;
+  if (typeof headers.has === 'function') {
+    return CLOUDFLARE_HEADER_HINTS.some(h => headers.has(h));
+  }
+  const headerKeys = (
+    typeof headers.entries === 'function'
+      ? Array.from(headers.entries(), ([k]) => k)
+      : Object.keys(headers)
+  ).map(k => k.toLowerCase());
+  return CLOUDFLARE_HEADER_HINTS.some(h => headerKeys.includes(h));
+}
 
 function getRequestUrl(input) {
   if (typeof input === 'string') return input;
@@ -36,43 +48,86 @@ function getRequestUrl(input) {
   return '';
 }
 
-async function withRateLimitObserver(fn) {
-  if (activeRateLimitObservers === 0) {
-    originalFetch = globalThis.fetch;
-    const baseFetch = originalFetch;
-    globalThis.fetch = async (input, init) => {
-      // Read step and URL before awaiting so late responses attribute to the
-      // step that started the request rather than a later step.
-      const step = stepContext.getStore();
-      const url = getRequestUrl(input);
-      const res = await baseFetch(input, init);
-      if (step) {
-        if (res.status === 429) {
-          step.rateLimitedUrls.add(url);
-        } else {
-          step.rateLimitedUrls.delete(url);
-        }
-      }
-      return res;
-    };
+function serializeRequestBody(body) {
+  if (body == null) return '';
+  if (typeof body === 'string') return body;
+  if (body instanceof URLSearchParams) return body.toString();
+  if (body instanceof FormData) {
+    return Array.from(
+      body.entries(),
+      ([k, v]) => `${k}=${typeof v === 'string' ? v : v.name || '[file]'}`,
+    ).join('&');
   }
-  activeRateLimitObservers += 1;
+  if (ArrayBuffer.isView(body)) {
+    return Buffer.from(body.buffer, body.byteOffset, body.byteLength).toString(
+      'base64',
+    );
+  }
+  if (body instanceof ArrayBuffer) {
+    return Buffer.from(body).toString('base64');
+  }
+  return null;
+}
+
+function getRequestKey(input, init) {
+  const url = getRequestUrl(input);
+  const method = String(
+    init?.method ??
+      (input && typeof input === 'object' && 'method' in input
+        ? input.method
+        : 'GET'),
+  ).toUpperCase();
+  if (method === 'GET' || method === 'HEAD') {
+    return `${method} ${url}`;
+  }
+  let serializedBody = '';
+  if (init && 'body' in init) {
+    serializedBody = serializeRequestBody(init.body);
+  } else if (
+    input &&
+    typeof input === 'object' &&
+    'body' in input &&
+    input.body != null
+  ) {
+    serializedBody = null;
+  }
+  if (serializedBody === null) {
+    // Opaque bodies cannot be compared safely; keep a unique key so another
+    // non-429 call to the same URL cannot clear this rate-limit mark.
+    return Symbol(url);
+  }
+  return `${method} ${url}\0${serializedBody}`;
+}
+
+async function withRateLimitObserver(fn) {
+  const prevFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    // Read step and request key before awaiting so late responses attribute
+    // to the step that started the request rather than a later step.
+    const step = stepContext.getStore();
+    const key = getRequestKey(input, init);
+    const res = await prevFetch(input, init);
+    if (step) {
+      if (res.status === 429) {
+        step.rateLimitedRequests.add(key);
+      } else {
+        step.rateLimitedRequests.delete(key);
+      }
+    }
+    return res;
+  };
   try {
     return await fn();
   } finally {
-    activeRateLimitObservers -= 1;
-    if (activeRateLimitObservers === 0 && originalFetch) {
-      globalThis.fetch = originalFetch;
-      originalFetch = null;
-    }
+    globalThis.fetch = prevFetch;
   }
 }
 
 function reclassifyRateLimitedSteps(steps) {
   for (const step of steps) {
-    if (step.status === 'FAIL' && step.rateLimitedUrls.size > 0) {
+    if (step.status === 'FAIL' && step.rateLimitedRequests.size > 0) {
       step.status = 'INCONCLUSIVE';
-      step.detail = `HTTP 429 (rate limited) (was: ${step.detail})`;
+      step.detail = `${RATE_LIMITED_REASON} (was: ${step.detail})`;
     }
   }
 }
@@ -91,20 +146,10 @@ function isNetworkOrBlockError(error) {
   // share of the web) and says nothing about whether we were blocked.
   const status = error?.response?.status ?? error?.status;
   if (status === 429) {
-    return { inconclusive: true, reason: 'HTTP 429 (rate limited)' };
+    return { inconclusive: true, reason: RATE_LIMITED_REASON };
   }
   if (status === 403 || status === 503) {
-    const headers = error?.response?.headers;
-    const headerKeys = headers
-      ? Object.keys(
-          typeof headers.entries === 'function'
-            ? Object.fromEntries(headers.entries())
-            : headers,
-        ).map(k => k.toLowerCase())
-      : [];
-    const isCloudflare = CLOUDFLARE_HEADER_HINTS.some(h =>
-      headerKeys.includes(h),
-    );
+    const isCloudflare = hasCloudflareHeader(error?.response?.headers);
     return {
       inconclusive: true,
       reason: `HTTP ${status}${isCloudflare ? ' (Cloudflare)' : ' (likely anti-bot block)'}`,
@@ -177,8 +222,12 @@ function makeStep(name) {
     name,
     status: /** @type {StepStatus} */ ('FAIL'),
     detail: '',
-    rateLimitedUrls: new Set(),
+    rateLimitedRequests: new Set(),
   };
+}
+
+function runStep(step, label, fn) {
+  return stepContext.run(step, () => withTimeout(fn(), STEP_TIMEOUT_MS, label));
 }
 
 /**
@@ -210,12 +259,8 @@ async function runChecks(plugin) {
   steps.push(popularStep);
   let popular;
   try {
-    popular = await stepContext.run(popularStep, () =>
-      withTimeout(
-        plugin.popularNovels(1, { filters }),
-        STEP_TIMEOUT_MS,
-        'popularNovels',
-      ),
+    popular = await runStep(popularStep, 'popularNovels', () =>
+      plugin.popularNovels(1, { filters }),
     );
     if (!Array.isArray(popular) || popular.length === 0) {
       popularStep.status = 'FAIL';
@@ -237,12 +282,8 @@ async function runChecks(plugin) {
   const searchStep = makeStep('searchNovels');
   steps.push(searchStep);
   try {
-    const results = await stepContext.run(searchStep, () =>
-      withTimeout(
-        plugin.searchNovels(firstNovel.name, 1),
-        STEP_TIMEOUT_MS,
-        'searchNovels',
-      ),
+    const results = await runStep(searchStep, 'searchNovels', () =>
+      plugin.searchNovels(firstNovel.name, 1),
     );
     if (!Array.isArray(results)) {
       searchStep.status = 'FAIL';
@@ -304,12 +345,8 @@ async function runChecks(plugin) {
   steps.push(parseChapterStep);
   try {
     const firstChapter = novel.chapters[0];
-    const content = await stepContext.run(parseChapterStep, () =>
-      withTimeout(
-        plugin.parseChapter(firstChapter.path),
-        STEP_TIMEOUT_MS,
-        'parseChapter',
-      ),
+    const content = await runStep(parseChapterStep, 'parseChapter', () =>
+      plugin.parseChapter(firstChapter.path),
     );
     const length = typeof content === 'string' ? content.trim().length : 0;
     if (length < MIN_CHAPTER_LENGTH) {
@@ -354,10 +391,10 @@ async function probeSiteReachability(site) {
       return { reachable: true };
     }
     if (res.status === 429) {
-      return { reachable: false, reason: 'HTTP 429 (rate limited)' };
+      return { reachable: false, reason: RATE_LIMITED_REASON };
     }
-    const isCloudflare = CLOUDFLARE_HEADER_HINTS.some(h => res.headers.has(h));
     if (res.status === 403 || res.status === 503) {
+      const isCloudflare = hasCloudflareHeader(res.headers);
       return {
         reachable: false,
         reason: `HTTP ${res.status}${isCloudflare ? ' (Cloudflare)' : ''}`,
