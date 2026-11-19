@@ -30,7 +30,7 @@ try {
     { stdio: 'inherit' },
   );
 } catch (err) {
-  process.exit(err.status ?? 1);
+  process.exitCode = err.status ?? 1;
 } finally {
   fs.rmSync(tmpConfig, { force: true });
 }
