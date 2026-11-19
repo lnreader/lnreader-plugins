@@ -40,7 +40,7 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          mapfile -t changed_plugins < <(git diff --name-only --diff-filter=ACMR "$BASE_SHA...$HEAD_SHA" -- 'plugins/**/*.ts')
+          mapfile -t changed_plugins < <(git -c core.quotePath=false diff --name-only --diff-filter=ACMR "$BASE_SHA...$HEAD_SHA" -- 'plugins/**/*.ts')
           if [ "${#changed_plugins[@]}" -gt 0 ]; then
             node scripts/typecheck-files.js "${changed_plugins[@]}"
           fi

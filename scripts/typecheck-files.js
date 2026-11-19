@@ -13,7 +13,10 @@ const files = process.argv
 
 if (files.length === 0) process.exit(0);
 
-const tmpConfig = path.join(os.tmpdir(), `tsconfig.staged.${process.pid}.json`);
+const tmpConfig = path.join(
+  os.tmpdir(),
+  `tsconfig.typecheck-files.${process.pid}.json`,
+);
 fs.writeFileSync(
   tmpConfig,
   JSON.stringify({
