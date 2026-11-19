@@ -7,6 +7,7 @@
 // actually talks to its site — see docs/testing.md.
 
 import * as esbuild from 'esbuild';
+import { AsyncLocalStorage } from 'async_hooks';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 import path, { dirname } from 'path';
@@ -24,6 +25,58 @@ const CLOUDFLARE_HEADER_HINTS = ['cf-ray', 'cf-cache-status', 'cf-request-id'];
 
 /** @typedef {'PASS' | 'FAIL' | 'INCONCLUSIVE'} StepStatus */
 
+const stepContext = new AsyncLocalStorage();
+let activeRateLimitObservers = 0;
+let originalFetch = null;
+
+function getRequestUrl(input) {
+  if (typeof input === 'string') return input;
+  if (input instanceof URL) return input.href;
+  if (input && typeof input.url === 'string') return input.url;
+  return '';
+}
+
+async function withRateLimitObserver(fn) {
+  if (activeRateLimitObservers === 0) {
+    originalFetch = globalThis.fetch;
+    const baseFetch = originalFetch;
+    globalThis.fetch = async (input, init) => {
+      // Read step and URL before awaiting so late responses attribute to the
+      // step that started the request rather than a later step.
+      const step = stepContext.getStore();
+      const url = getRequestUrl(input);
+      const res = await baseFetch(input, init);
+      if (step) {
+        if (res.status === 429) {
+          step.rateLimitedUrls.add(url);
+        } else {
+          step.rateLimitedUrls.delete(url);
+        }
+      }
+      return res;
+    };
+  }
+  activeRateLimitObservers += 1;
+  try {
+    return await fn();
+  } finally {
+    activeRateLimitObservers -= 1;
+    if (activeRateLimitObservers === 0 && originalFetch) {
+      globalThis.fetch = originalFetch;
+      originalFetch = null;
+    }
+  }
+}
+
+function reclassifyRateLimitedSteps(steps) {
+  for (const step of steps) {
+    if (step.status === 'FAIL' && step.rateLimitedUrls.size > 0) {
+      step.status = 'INCONCLUSIVE';
+      step.detail = `HTTP 429 (rate limited) (was: ${step.detail})`;
+    }
+  }
+}
+
 function isNetworkOrBlockError(error) {
   const code = error?.code || error?.cause?.code;
   const message = String(error?.message || '');
@@ -37,6 +90,9 @@ function isNetworkOrBlockError(error) {
   // just means the site is fronted by Cloudflare's CDN (true for a huge
   // share of the web) and says nothing about whether we were blocked.
   const status = error?.response?.status ?? error?.status;
+  if (status === 429) {
+    return { inconclusive: true, reason: 'HTTP 429 (rate limited)' };
+  }
   if (status === 403 || status === 503) {
     const headers = error?.response?.headers;
     const headerKeys = headers
@@ -117,7 +173,12 @@ async function loadPluginInstance(pluginPath) {
 }
 
 function makeStep(name) {
-  return { name, status: /** @type {StepStatus} */ ('FAIL'), detail: '' };
+  return {
+    name,
+    status: /** @type {StepStatus} */ ('FAIL'),
+    detail: '',
+    rateLimitedUrls: new Set(),
+  };
 }
 
 /**
@@ -149,10 +210,12 @@ async function runChecks(plugin) {
   steps.push(popularStep);
   let popular;
   try {
-    popular = await withTimeout(
-      plugin.popularNovels(1, { filters }),
-      STEP_TIMEOUT_MS,
-      'popularNovels',
+    popular = await stepContext.run(popularStep, () =>
+      withTimeout(
+        plugin.popularNovels(1, { filters }),
+        STEP_TIMEOUT_MS,
+        'popularNovels',
+      ),
     );
     if (!Array.isArray(popular) || popular.length === 0) {
       popularStep.status = 'FAIL';
@@ -174,10 +237,12 @@ async function runChecks(plugin) {
   const searchStep = makeStep('searchNovels');
   steps.push(searchStep);
   try {
-    const results = await withTimeout(
-      plugin.searchNovels(firstNovel.name, 1),
-      STEP_TIMEOUT_MS,
-      'searchNovels',
+    const results = await stepContext.run(searchStep, () =>
+      withTimeout(
+        plugin.searchNovels(firstNovel.name, 1),
+        STEP_TIMEOUT_MS,
+        'searchNovels',
+      ),
     );
     if (!Array.isArray(results)) {
       searchStep.status = 'FAIL';
@@ -197,31 +262,36 @@ async function runChecks(plugin) {
   steps.push(parseNovelStep);
   let novel;
   try {
-    novel = await withTimeout(
-      plugin.parseNovel(firstNovel.path),
-      STEP_TIMEOUT_MS,
-      'parseNovel',
-    );
-    const isPagePlugin = typeof plugin.parsePage === 'function';
-    let chapters = novel?.chapters;
-    if (isPagePlugin && (!chapters || chapters.length === 0)) {
-      const page = await withTimeout(
-        plugin.parsePage(firstNovel.path, '1'),
+    await stepContext.run(parseNovelStep, async () => {
+      novel = await withTimeout(
+        plugin.parseNovel(firstNovel.path),
         STEP_TIMEOUT_MS,
-        'parsePage',
+        'parseNovel',
       );
-      chapters = page?.chapters;
-    }
-    if (!novel?.name || !chapters || chapters.length === 0) {
-      parseNovelStep.status = 'FAIL';
-      parseNovelStep.detail = !novel?.name
-        ? 'Missing novel name'
-        : 'No chapters returned';
+      const isPagePlugin = typeof plugin.parsePage === 'function';
+      let chapters = novel?.chapters;
+      if (isPagePlugin && (!chapters || chapters.length === 0)) {
+        const page = await withTimeout(
+          plugin.parsePage(firstNovel.path, '1'),
+          STEP_TIMEOUT_MS,
+          'parsePage',
+        );
+        chapters = page?.chapters;
+      }
+      if (!novel?.name || !chapters || chapters.length === 0) {
+        parseNovelStep.status = 'FAIL';
+        parseNovelStep.detail = !novel?.name
+          ? 'Missing novel name'
+          : 'No chapters returned';
+        return;
+      }
+      parseNovelStep.status = 'PASS';
+      parseNovelStep.detail = `${chapters.length} chapters`;
+      novel = { ...novel, chapters };
+    });
+    if (parseNovelStep.status !== 'PASS') {
       return steps;
     }
-    parseNovelStep.status = 'PASS';
-    parseNovelStep.detail = `${chapters.length} chapters`;
-    novel = { ...novel, chapters };
   } catch (error) {
     const net = isNetworkOrBlockError(error);
     parseNovelStep.status = net.inconclusive ? 'INCONCLUSIVE' : 'FAIL';
@@ -234,10 +304,12 @@ async function runChecks(plugin) {
   steps.push(parseChapterStep);
   try {
     const firstChapter = novel.chapters[0];
-    const content = await withTimeout(
-      plugin.parseChapter(firstChapter.path),
-      STEP_TIMEOUT_MS,
-      'parseChapter',
+    const content = await stepContext.run(parseChapterStep, () =>
+      withTimeout(
+        plugin.parseChapter(firstChapter.path),
+        STEP_TIMEOUT_MS,
+        'parseChapter',
+      ),
     );
     const length = typeof content === 'string' ? content.trim().length : 0;
     if (length < MIN_CHAPTER_LENGTH) {
@@ -280,6 +352,9 @@ async function probeSiteReachability(site) {
       // by Cloudflare's CDN, which is true of a huge share of the web and
       // says nothing about whether we were blocked — only a 403/503 does.
       return { reachable: true };
+    }
+    if (res.status === 429) {
+      return { reachable: false, reason: 'HTTP 429 (rate limited)' };
     }
     const isCloudflare = CLOUDFLARE_HEADER_HINTS.some(h => res.headers.has(h));
     if (res.status === 403 || res.status === 503) {
@@ -325,7 +400,8 @@ async function checkPlugin(pluginPath) {
     return result;
   }
 
-  result.steps = await runChecks(plugin);
+  result.steps = await withRateLimitObserver(() => runChecks(plugin));
+  reclassifyRateLimitedSteps(result.steps);
   return result;
 }
 
