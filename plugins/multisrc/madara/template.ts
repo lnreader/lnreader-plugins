@@ -58,7 +58,7 @@ export class MadaraPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/madara/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `2.4.${versionIncrements}`;
+    this.version = `2.5.${versionIncrements}`;
     this.options = metadata.options;
     this.filters = metadata.filters;
 
@@ -304,10 +304,14 @@ export class MadaraPlugin implements Plugin.PluginBase {
         loadedCheerio('.post-title h1').text().trim() ||
         loadedCheerio('#manga-title h1').text().trim() ||
         loadedCheerio('.manga-title').text().trim() ||
+        loadedCheerio('h1.nhv-novel-title').text().trim() ||
         '',
     };
 
     novel.cover = this.extractCover(loadedCheerio('.summary_image > a > img'));
+    if (novel.cover === defaultCover) {
+      novel.cover = this.extractCover(loadedCheerio('.nhv-novel-cover img'));
+    }
 
     loadedCheerio('.post-content_item, .post-content').each(function () {
       const detailName = loadedCheerio(this).find('h5').text().trim();
@@ -367,11 +371,69 @@ export class MadaraPlugin implements Plugin.PluginBase {
       }
     });
 
+    // Fallback for the custom "NHV" theme (e.g. cenele.com), which renders
+    // novel pages without the classic Madara detail blocks. Every field is
+    // only filled when the selectors above left it empty, so sources on the
+    // classic theme keep their existing behaviour.
+    {
+      if (!novel.author)
+        novel.author =
+          loadedCheerio('.nhv-novel-meta a[href*="cont-author"]')
+            .first()
+            .text()
+            .trim() ||
+          loadedCheerio('a[href*="cont-author"]').first().text().trim();
+      if (!novel.genres)
+        novel.genres = loadedCheerio('.nhv-novel-genres a')
+          .map((i, el) => loadedCheerio(el).text())
+          .get()
+          .join(', ');
+      // The element holds an icon plus a "status:" caption (<span>) and the
+      // value (<strong>); only the value is the label to match.
+      const nhvStatus = loadedCheerio('.nhv-novel-status')
+        .clone()
+        .children('span')
+        .remove()
+        .end()
+        .text()
+        .normalize('NFKC')
+        .split('')
+        .filter(ch => {
+          // Drop tatweel and Arabic diacritics.
+          const code = ch.charCodeAt(0);
+          return (
+            code !== 0x640 &&
+            code !== 0x670 &&
+            !(code >= 0x64b && code <= 0x65f)
+          );
+        })
+        .join('')
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (!novel.status && nhvStatus) {
+        // Only exact labels are mapped (not substrings, so that "غير مكتملة",
+        // "not completed", is not read as "مكتملة"); anything else stays unset.
+        const nhvStatusMap: Record<string, NovelStatus> = {
+          مستمرة: NovelStatus.Ongoing,
+          متوقفة: NovelStatus.OnHiatus,
+          مكتملة: NovelStatus.Completed,
+        };
+        novel.status = nhvStatusMap[nhvStatus] ?? novel.status;
+      }
+      if (!novel.rating) {
+        const nhvRating = parseFloat(
+          loadedCheerio('.nhv-simple-rating__avg').text().trim(),
+        );
+
+        if (!isNaN(nhvRating)) novel.rating = nhvRating;
+      }
+    }
     // Checks for "Madara NovelHub" version
     {
       if (!novel.genres)
         novel.genres = loadedCheerio('.genres-content').text().trim();
-      if (!novel.status)
+      // An NHV page that carries a status label was handled above.
+      if (!novel.status && !loadedCheerio('.nhv-novel-status').text().trim())
         novel.status = loadedCheerio('.manga-status')
           .text()
           .trim()
@@ -415,6 +477,11 @@ export class MadaraPlugin implements Plugin.PluginBase {
         .join('\n\n')
         .trim() ||
       loadedCheerio('.manga-excerpt p')
+        .map((i, el) => loadedCheerio(el).text())
+        .get()
+        .join('\n\n')
+        .trim() ||
+      loadedCheerio('.nhv-novel-synopsis p')
         .map((i, el) => loadedCheerio(el).text())
         .get()
         .join('\n\n')
@@ -570,21 +637,64 @@ export class MadaraPlugin implements Plugin.PluginBase {
       `${baseUrl}/${cleanPath}`,
       false,
     );
-    let chapterText = loadedCheerio('.text-left');
-    if (!chapterText.length) chapterText = loadedCheerio('.text-right');
-    if (!chapterText.length) chapterText = loadedCheerio('.entry-content');
-    if (!chapterText.length) {
-      chapterText = loadedCheerio('.c-blog-post > div > div:nth-child(2)');
+
+    // The source's customJs cleanup (e.g. removing promos) runs on the chosen
+    // chapter element. It receives the page and the element it should clean.
+    /* eslint-disable @typescript-eslint/no-unused-vars -- used by customJs */
+    const cleanChapter = (
+      loadedCheerio: CheerioAPI,
+      chapterText: Cheerio<AnyNode>,
+    ) => {
+      if (this.options?.customJs) {
+        try {
+          // CustomJS HERE
+        } catch (error) {
+          console.error('Error executing customJs:', error);
+          throw error;
+        }
+      }
+    };
+    /* eslint-enable @typescript-eslint/no-unused-vars */
+    const hasContent = (element: Cheerio<AnyNode>) =>
+      !!element.text().trim() || element.find('img').length > 0;
+
+    // A cheerio selection is always truthy, so walk the candidates and keep
+    // the first one that still holds text or images (illustration and comic
+    // chapters have no text but did render before) after the source's cleanup
+    // ran: a promo-only candidate must not win over the real chapter body.
+    // The cleanup is not idempotent for every source, so a rejected candidate
+    // is cleaned on a throwaway copy of the page and the next one starts from
+    // the pristine HTML.
+    const pristineHtml = this.options?.customJs ? loadedCheerio.html() : '';
+    let page = loadedCheerio;
+    let chapterText = page('.__no-chapter-content__');
+    for (const selector of [
+      '.text-left',
+      '.text-right',
+      '.text-content',
+      '.text-chapter-content',
+      'novel-chapter',
+      '.reading-content',
+      '.entry-content',
+      '.c-blog-post > div > div:nth-child(2)',
+    ]) {
+      const candidate = page(selector);
+      if (!hasContent(candidate)) continue;
+      if (this.options?.customJs) {
+        cleanChapter(page, candidate);
+        if (!hasContent(candidate)) {
+          page = parseHTML(pristineHtml);
+          continue;
+        }
+      }
+      chapterText = candidate;
+      break;
     }
 
-    if (this.options?.customJs) {
-      try {
-        // CustomJS HERE
-      } catch (error) {
-        console.error('Error executing customJs:', error);
-        throw error;
-      }
-    }
+    if (!chapterText.length)
+      throw new Error(
+        'Chapter text not found on the page, try to open in webview.',
+      );
 
     return this.translateDragontea(chapterText).html() || '';
   }

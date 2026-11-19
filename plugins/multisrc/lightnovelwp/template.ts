@@ -42,7 +42,7 @@ export class LightNovelWPPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/lightnovelwp/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `1.1.${12 + versionIncrements}`;
+    this.version = `1.2.${12 + versionIncrements}`;
     this.options = metadata.options ?? ({} as LightNovelWPOptions);
     this.filters = metadata.filters satisfies Filters;
 
@@ -220,7 +220,13 @@ export class LightNovelWPPlugin implements Plugin.PluginBase {
           isReadingChapter = true;
         } else if (isReadingChapter) {
           if (name === 'a' && tempChapter.path === undefined) {
-            tempChapter.path = attribs['href'].replace(baseURL, '').trim();
+            // Some installs link chapters with the absolute URL of the main
+            // site (free.kolnovel.com links kolnovel.com), and parseChapter
+            // re-prefixes this.site, so keep the path only.
+            tempChapter.path = attribs['href']
+              .replace(baseURL, '')
+              .replace(/^https?:\/\/[^/]+/, '')
+              .trim();
           } else if (attribs['class'] === 'epl-num') {
             isReadingChapterInfo = 1;
           } else if (attribs['class'] === 'epl-title') {
@@ -447,8 +453,11 @@ export class LightNovelWPPlugin implements Plugin.PluginBase {
 
     // No epcontent block means this was not a chapter page (a login wall or
     // an error page served with 200). Returning the whole document here would
-    // show that page's text as the chapter, so report nothing instead.
-    if (!content.length) return '';
+    // show that page's text as the chapter, so fail instead.
+    if (!content.length)
+      throw new Error(
+        'Chapter text not found on the page, try to open in webview.',
+      );
 
     content.find('script, style, noscript').remove();
     const pageUrl = this.site + chapterPath;
@@ -506,8 +515,13 @@ export class LightNovelWPPlugin implements Plugin.PluginBase {
       }
     });
 
+    if (!blocks.length)
+      throw new Error(
+        'Chapter text not found on the page, try to open in webview.',
+      );
     return blocks.join('\n');
   }
+
   async searchNovels(
     searchTerm: string,
     page: number,
