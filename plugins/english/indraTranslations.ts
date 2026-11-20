@@ -3,7 +3,6 @@ import { fetchApi } from '@libs/fetch';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
-import { defaultCover } from '@libs/defaultCover';
 
 type IndraChapter = {
   num?: number | string;
@@ -17,7 +16,7 @@ class IndraTranslations implements Plugin.PluginBase {
   id = 'indratranslations';
   name = 'Indra Translations';
   site = 'https://indratranslations.com';
-  version = '1.3.0';
+  version = '1.3.1';
   icon = 'src/en/indratranslations/icon.png';
 
   // Browser-like headers (important for Cloudflare-y sites)
@@ -93,7 +92,7 @@ class IndraTranslations implements Plugin.PluginBase {
       novels.push({
         name,
         path: this.relative(href),
-        cover: cover || defaultCover,
+        cover,
       });
     });
 
@@ -155,10 +154,9 @@ class IndraTranslations implements Plugin.PluginBase {
       'Untitled';
 
     const img = $('.story-cover-card img').first();
-    const cover =
-      this.absolute(
-        img.attr('data-src') || img.attr('data-lazy-src') || img.attr('src'),
-      ) || defaultCover;
+    const cover = this.absolute(
+      img.attr('data-src') || img.attr('data-lazy-src') || img.attr('src'),
+    );
 
     const summary = $('#story-synopsis p')
       .map((_, el) => this.clean($(el).text()))

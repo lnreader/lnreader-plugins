@@ -1,7 +1,6 @@
 import { CheerioAPI, load } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 import dayjs from 'dayjs';
 
@@ -37,7 +36,7 @@ class HarkenEliwoodPlugin implements Plugin.PluginBase {
   name = 'HarkenEliwood';
   icon = 'src/fr/harkeneliwood/icon.png';
   site = 'https://harkeneliwood.wordpress.com';
-  version = '1.0.3';
+  version = '1.0.4';
 
   async getCheerio(url: string): Promise<CheerioAPI> {
     return load(
@@ -63,7 +62,6 @@ class HarkenEliwoodPlugin implements Plugin.PluginBase {
         if (novelUrl && novelName) {
           novel = {
             name: novelName,
-            cover: defaultCover,
             path: novelUrl.replace(this.site, ''),
           };
           novels.push(novel);
@@ -72,9 +70,9 @@ class HarkenEliwoodPlugin implements Plugin.PluginBase {
     await Promise.all(
       novels.map(async item => {
         const detail = await this.getCheerio(this.site + item.path);
-        item.cover =
-          detail('#content .entry-content p img').first().attr('src') ||
-          defaultCover;
+        item.cover = detail('#content .entry-content p img')
+          .first()
+          .attr('src');
       }),
     );
     return novels;
@@ -88,8 +86,7 @@ class HarkenEliwoodPlugin implements Plugin.PluginBase {
 
     const $ = await this.getCheerio(this.site + novelPath);
     novel.name = $('#content h1.entry-title').text().trim();
-    novel.cover =
-      $('#content .entry-content p img').first().attr('src') || defaultCover;
+    novel.cover = $('#content .entry-content p img').first().attr('src');
     novel.summary = this.getSummary($('#content .entry-content').text());
     novel.author = this.getAuthor($('#content .entry-content').text());
     novel.status = NovelStatus.Unknown;

@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-// import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 // import { isUrlAbsolute } from '@libs/isAbsoluteUrl';
 // import { storage, localStorage, sessionStorage } from '@libs/storage';
@@ -15,7 +14,7 @@ class LNTPlugin implements Plugin.PluginBase {
   name = 'Light Novel Translations';
   icon = 'src/en/lightnoveltranslations/icon.png';
   site = 'https://lightnovelstranslations.com/';
-  version = '1.0.2';
+  version = '1.0.3';
   filters: Filters | undefined = undefined;
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 

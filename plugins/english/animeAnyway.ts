@@ -1,6 +1,5 @@
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 type PortableSpan = {
@@ -72,7 +71,7 @@ class AnimeAnyway implements Plugin.PluginBase {
   name = 'Anime Anyway';
   icon = 'src/en/animeanyway/icon.png';
   site = 'https://animeanyway.com/';
-  version = '1.0.0';
+  version = '1.0.1';
 
   /**
    * The site's own volume titles ("Year 3 Vol. 4") don't name the franchise,
@@ -146,7 +145,7 @@ class AnimeAnyway implements Plugin.PluginBase {
       return volumes.map(volume => ({
         path: this.getVolumePath(volume),
         name: this.displayName(volume.title, volume.displayTitle),
-        cover: volume.mainImage?.asset?.url ?? defaultCover,
+        cover: volume.mainImage?.asset?.url,
         releaseDate: volume.releaseDate ?? '',
       }));
     })();
@@ -291,7 +290,6 @@ class AnimeAnyway implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: novelPath,
-      cover: defaultCover,
       status: NovelStatus.Ongoing,
       chapters: [],
     };
@@ -304,7 +302,7 @@ class AnimeAnyway implements Plugin.PluginBase {
     }
 
     novel.name = this.displayName(vol.title, vol.displayTitle);
-    novel.cover = vol.mainImage?.asset?.url ?? defaultCover;
+    novel.cover = vol.mainImage?.asset?.url;
     novel.summary = this.plainTextFromPortableText(vol.synopsis);
     novel.chapters = (vol.chapters ?? []).map((chapter, index) => ({
       name: chapter.title,

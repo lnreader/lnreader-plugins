@@ -1,7 +1,6 @@
 import { CheerioAPI, load } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 const challengeTitles = new Set([
@@ -36,7 +35,7 @@ class NovhellPlugin implements Plugin.PluginBase {
   name = 'Novhell';
   icon = 'src/fr/novhell/icon.png';
   site = 'https://novhell.org';
-  version = '1.0.5';
+  version = '1.0.6';
 
   async getCheerio(url: string): Promise<CheerioAPI> {
     return load(
@@ -89,8 +88,7 @@ class NovhellPlugin implements Plugin.PluginBase {
       $('meta[property="og:title"]')
         .attr('content')
         ?.replace('- NovHell', '') || '';
-    novel.cover =
-      $('section div div div div div img').first().attr('src') || defaultCover;
+    novel.cover = $('section div div div div div img').first().attr('src');
     novel.status = NovelStatus.Unknown;
     novel.author = $("strong:contains('Ecrit par ')")
       .parent()

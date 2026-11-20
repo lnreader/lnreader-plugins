@@ -3,14 +3,13 @@ import { FilterTypes, Filters } from '@libs/filterInputs';
 import { fetchApi } from '@libs/fetch';
 import { NovelStatus } from '@libs/novelStatus';
 import { load as parseHTML } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import dayjs from 'dayjs';
 
 class ficbook implements Plugin.PluginBase {
   id = 'ficbook';
   name = 'ficbook';
   site = 'https://ficbook.net';
-  version = '1.0.2';
+  version = '1.0.3';
   icon = 'src/ru/ficbook/icon.png';
 
   async popularNovels(
@@ -42,7 +41,7 @@ class ficbook implements Plugin.PluginBase {
 
       cover = cover
         ? cover.replace(/covers\/m_|covers\/d_/g, 'covers/')
-        : defaultCover;
+        : undefined;
       if (!name || !url) return;
 
       novels.push({ name, cover, path: url.replace(/\?.*/g, '') });
@@ -85,11 +84,10 @@ class ficbook implements Plugin.PluginBase {
     if (!novel.cover || novel.cover?.includes('/design/')) {
       // the fic page no longer shows its own cover, only search results do
       novel.cover =
-        (novel.name &&
-          (await this.searchNovels(novel.name, 1).catch(() => [])).find(
-            item => item.path === novelPath,
-          )?.cover) ||
-        defaultCover;
+        novel.name &&
+        (await this.searchNovels(novel.name, 1).catch(() => [])).find(
+          item => item.path === novelPath,
+        )?.cover;
     } else {
       novel.cover = novel.cover.replace(/covers\/m_|covers\/d_/g, 'covers/');
     }

@@ -2,12 +2,11 @@ import { load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 
 class dilartube implements Plugin.PluginBase {
   id = 'dilartube';
   name = 'dilar tube';
-  version = '1.0.2';
+  version = '1.0.3';
   icon = 'src/ar/dilartube/icon.png';
   site = 'https://golden.rest/';
 
@@ -26,7 +25,7 @@ class dilartube implements Plugin.PluginBase {
               path: `mangas/${manga.id}`,
               cover: manga.cover
                 ? `${this.site}uploads/manga/cover/${manga.id}/${manga.cover}`
-                : defaultCover,
+                : undefined,
             });
           }
         });
@@ -43,7 +42,7 @@ class dilartube implements Plugin.PluginBase {
               path: `mangas/${manga.id}`,
               cover: manga.cover
                 ? `${this.site}uploads/manga/cover/${manga.id}/${manga.cover}`
-                : defaultCover,
+                : undefined,
             });
           }
         });

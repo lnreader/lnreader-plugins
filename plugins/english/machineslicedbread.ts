@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 const SITE_HOST = /^(?:www\.)?machineslicedbread\.xyz$/i;
@@ -51,7 +50,7 @@ class MachineSlicedBread implements Plugin.PluginBase {
   name = 'Machine Sliced Bread';
   site = 'https://machineslicedbread.xyz';
   icon = 'src/en/machineslicedbread/icon.png';
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters = {
     section: {
@@ -137,7 +136,6 @@ class MachineSlicedBread implements Plugin.PluginBase {
             novels.push({
               name,
               path,
-              cover: defaultCover,
               section,
               status: section ? SECTION_STATUS[section] : undefined,
             });
@@ -317,7 +315,7 @@ class MachineSlicedBread implements Plugin.PluginBase {
       .toArray()
       .map(img => $(img).attr('src')!)
       .find(src => !PLACEHOLDER_COVER.test(src) && !src.startsWith('data:'));
-    const cover = coverSrc ? new URL(coverSrc, this.site).href : defaultCover;
+    const cover = coverSrc ? new URL(coverSrc, this.site).href : undefined;
 
     const listed = await this.catalogue()
       .then(novels =>

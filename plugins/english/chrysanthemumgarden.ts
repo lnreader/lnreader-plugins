@@ -2,14 +2,13 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 class Chrysanthemumgarden implements Plugin.PluginBase {
   id = 'chrysanthemumgarden';
   name = 'Chrysanthemum Garden';
   icon = 'src/en/chrysanthemumgarden/icon.png';
   site = 'https://chrysanthemumgarden.com';
-  version = '1.0.3';
+  version = '1.0.4';
   filters: Filters | undefined = undefined;
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
@@ -45,10 +44,9 @@ class Chrysanthemumgarden implements Plugin.PluginBase {
             .replace(this.site, '')
             .replace(/^\//, '')
             .replace(/\/$/, ''),
-          cover:
-            loadedCheerio(el)
-              .find('div.novel-cover > img')
-              .attr('data-breeze') || defaultCover,
+          cover: loadedCheerio(el)
+            .find('div.novel-cover > img')
+            .attr('data-breeze'),
         };
       })
       .toArray()
@@ -125,7 +123,6 @@ class Chrysanthemumgarden implements Plugin.PluginBase {
           .replace(this.site, '')
           .replace(/\/$/, '')
           .replace(/^\//, ''),
-        cover: defaultCover,
       }),
     );
 

@@ -2,7 +2,6 @@ import { load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
-import { defaultCover } from '@libs/defaultCover';
 import { Filters } from '@libs/filterInputs';
 
 type MTLNovelOptions = {
@@ -33,7 +32,7 @@ export class MTLNovelPlugin implements Plugin.PluginBase {
     this.icon = 'multisrc/mtlnovel/mtlnovel/icon.png';
     this.site = metadata.sourceSite;
     this.mainUrl = 'https://www.mtlnovels.com/';
-    this.version = '1.1.3';
+    this.version = '1.1.4';
     this.options = metadata.options ?? ({} as MTLNovelOptions);
     this.filters = metadata.filters satisfies Filters;
   }
@@ -80,7 +79,7 @@ export class MTLNovelPlugin implements Plugin.PluginBase {
         !novelCover ||
         novelCover == 'https://www.mtlnovel.net/no-image.jpg.webp'
       )
-        novelCover = defaultCover;
+        novelCover = undefined;
       const novelUrl = loadedCheerio(el).find('a.list-title').attr('href');
 
       if (!novelUrl) return;
@@ -110,7 +109,7 @@ export class MTLNovelPlugin implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: loadedCheerio('h1.entry-title').text().trim() || 'Untitled',
-      cover: loadedCheerio('.nov-head > amp-img').attr('src') || defaultCover,
+      cover: loadedCheerio('.nov-head > amp-img').attr('src'),
       summary: loadedCheerio('div.desc > h2').next().text().trim(),
       chapters: [],
     };

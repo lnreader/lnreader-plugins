@@ -1,5 +1,4 @@
 import { load } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { fetchApi } from '@libs/fetch';
 import { NovelStatus } from '@libs/novelStatus';
 import { Plugin } from '@/types/plugin';
@@ -13,7 +12,7 @@ class TradIndexPlugin implements Plugin.PluginBase {
   name = 'Trad-Index';
   icon = 'src/fr/tradindex/icon.png';
   site = 'https://trad-index.com/';
-  version = '1.0.8';
+  version = '1.0.9';
 
   // The app injects its own device User-Agent; send a desktop one so the
   // server-rendered catalogue/chapter pages stay identical on mobile.
@@ -99,7 +98,7 @@ class TradIndexPlugin implements Plugin.PluginBase {
       novels.set(match[1], {
         name,
         path: match[1],
-        cover: cover ? new URL(cover, this.site).href : defaultCover,
+        cover: cover ? new URL(cover, this.site).href : undefined,
       });
     });
     return Array.from(novels.values());
@@ -233,7 +232,7 @@ class TradIndexPlugin implements Plugin.PluginBase {
             $('img[alt^="Couverture de"]').first().attr('src')!,
             this.site,
           ).href
-        : defaultCover,
+        : undefined,
       summary: synopsisHeading.nextAll('p').first().text().trim() || undefined,
       author: getDetail('Auteur'),
       artist: getDetail('Traducteur'),

@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { load as loadCheerio, CheerioAPI } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 // Hand-written WordPress.com blog. Every series is a post category and every
 // chapter is a post in that category. The site has no series catalogue of its
@@ -19,7 +18,7 @@ class RinkageTranslationPlugin implements Plugin.PluginBase {
   name = 'RinkageTranslation';
   icon = 'src/en/rinkagetranslation/icon.png';
   site = 'https://rinkagetranslation.com';
-  version = '1.0.0';
+  version = '1.0.1';
   filters: Filters | undefined = undefined;
 
   private async getHtml(url: string) {
@@ -50,7 +49,7 @@ class RinkageTranslationPlugin implements Plugin.PluginBase {
       const path = this.pathOf(href);
       if (NON_NOVEL_CATEGORIES.test(path) || seen.has(path)) return;
       seen.add(path);
-      novels.push({ name, path, cover: defaultCover });
+      novels.push({ name, path });
     });
     return novels;
   }
@@ -134,7 +133,7 @@ class RinkageTranslationPlugin implements Plugin.PluginBase {
     ).then(covers => covers.find(Boolean));
     const cover = await Promise.race([lookup, timeout]);
     if (timer) clearTimeout(timer);
-    return cover || defaultCover;
+    return cover;
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {

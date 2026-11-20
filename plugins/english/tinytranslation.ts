@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 const PLACEHOLDER_COVER = /404\.png|cover-404|noimagefound/i;
@@ -21,7 +20,7 @@ class TinyTranslation implements Plugin.PluginBase {
   name = 'TinyTranslation';
   site = 'https://www.tinytranslation.xyz';
   icon = 'src/en/tinytranslation/icon.png';
-  version = '1.0.0';
+  version = '1.0.1';
   filters: Filters | undefined = undefined;
 
   private async request(url: string) {
@@ -66,7 +65,7 @@ class TinyTranslation implements Plugin.PluginBase {
           const name = $(link).text().trim().replace(/\s+/g, ' ');
           if (!path || !name || seen.has(path)) return;
           seen.add(path);
-          novels.push({ name, path, cover: defaultCover, status });
+          novels.push({ name, path, status });
         });
     });
     return novels;
@@ -91,7 +90,7 @@ class TinyTranslation implements Plugin.PluginBase {
     const cover =
       coverSrc && !PLACEHOLDER_COVER.test(coverSrc)
         ? new URL(coverSrc, this.site).href
-        : defaultCover;
+        : undefined;
 
     // The details block is the parent of the "Details:" heading. Its layout
     // differs between novels, so the fields are read by their labels.

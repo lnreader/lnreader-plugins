@@ -2,7 +2,6 @@ import { CheerioAPI, load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { FilterTypes, Filters } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 class TuNovelaLigera implements Plugin.PagePlugin {
@@ -10,7 +9,7 @@ class TuNovelaLigera implements Plugin.PagePlugin {
   name = 'TuNovelaLigera';
   icon = 'src/es/tunovelaligera/icon.png';
   site = 'https://tunovelaligera.com';
-  version = '1.2.1';
+  version = '1.2.2';
 
   async sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -138,8 +137,7 @@ class TuNovelaLigera implements Plugin.PagePlugin {
     novel.cover = (
       novelCover.attr('data-src') ||
       novelCover.attr('src') ||
-      novelCover.attr('data-cfsrc') ||
-      defaultCover
+      novelCover.attr('data-cfsrc')
     ).trim();
 
     loadedCheerio('.post-content_item').each(function () {

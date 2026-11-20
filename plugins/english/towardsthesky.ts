@@ -3,7 +3,6 @@ import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { NovelStatus } from '@libs/novelStatus';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 type NovelEntry = { name: string; path: string; cover: string };
 
@@ -22,7 +21,7 @@ class TowardsTheSkyPlugin implements Plugin.PluginBase {
   name = 'Towards the Sky';
   icon = 'src/en/towardsthesky/icon.png';
   site = `https://${SITE_HOST}`;
-  version = '1.0.0';
+  version = '1.0.1';
   filters: Filters | undefined = undefined;
 
   private async loadPage(path: string) {
@@ -65,7 +64,7 @@ class TowardsTheSkyPlugin implements Plugin.PluginBase {
       novels.push({
         name,
         path,
-        cover: src.startsWith('http') ? src : defaultCover,
+        cover: src.startsWith('http') ? src : undefined,
       });
     });
     return novels;
@@ -116,8 +115,7 @@ class TowardsTheSkyPlugin implements Plugin.PluginBase {
           .replace(/\s*[–-]\s*Towards the Sky\s*$/, '')
           .replace(/\s+/g, ' ')
           .trim(),
-      cover:
-        entry?.cover || content.find('img').first().attr('src') || defaultCover,
+      cover: entry?.cover || content.find('img').first().attr('src'),
       status: droppedEntry ? NovelStatus.Cancelled : NovelStatus.Ongoing,
       chapters: [],
     };

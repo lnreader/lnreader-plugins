@@ -1,14 +1,13 @@
 import { CheerioAPI, load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
-import { defaultCover } from '@libs/defaultCover';
 import dayjs from 'dayjs';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 
 class TsundokuPlugin implements Plugin.PluginBase {
   id = 'tsundoku';
   name = 'Tsundoku Traduções';
-  version = '1.0.2';
+  version = '1.0.3';
   icon = 'src/pt-br/tsundoku/icon.png';
   site = 'https://tsundoku.com.br';
 
@@ -38,7 +37,7 @@ class TsundokuPlugin implements Plugin.PluginBase {
 
       const novel = {
         name: novelName,
-        cover: coverUrl || defaultCover,
+        cover: coverUrl,
         path: novelUrl.replace(this.site, ''),
       };
 

@@ -1,7 +1,6 @@
 import { load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 const makeAbsolute = (
@@ -29,7 +28,7 @@ class ixdzs8Plugin implements Plugin.PluginBase {
   id = 'ixdzs8';
   name = '爱下电子书';
   site = 'https://ixdzs8.com/';
-  version = '2.2.9';
+  version = '2.2.10';
   icon = 'src/cn/ixdzs8/favicon.png';
 
   imageRequestInit = {
@@ -66,7 +65,7 @@ class ixdzs8Plugin implements Plugin.PluginBase {
         novels.push({
           name: novelName,
           path: novelPath,
-          cover: makeAbsolute(novelCover, this.site) || defaultCover,
+          cover: makeAbsolute(novelCover, this.site),
         });
         processedPaths.add(novelPath);
       }
@@ -117,9 +116,7 @@ class ixdzs8Plugin implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: $novel.find('.n-text h1').text().trim() || 'Untitled',
-      cover:
-        makeAbsolute($novel.find('.n-img img').attr('src'), this.site) ||
-        defaultCover,
+      cover: makeAbsolute($novel.find('.n-img img').attr('src'), this.site),
       summary: summary,
       author: $novel.find('.n-text p a.bauthor').text().trim() || undefined,
       genres: $tagsDiv
@@ -292,7 +289,7 @@ class ixdzs8Plugin implements Plugin.PluginBase {
         novels.push({
           name: novelName,
           path: novelPath,
-          cover: makeAbsolute(novelCover, this.site) || defaultCover,
+          cover: makeAbsolute(novelCover, this.site),
         });
       }
     });

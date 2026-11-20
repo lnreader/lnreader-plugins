@@ -1,7 +1,6 @@
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 async function fetchJson<T = any>(url: string, context: string): Promise<T> {
@@ -27,7 +26,7 @@ class ChikariPlugin implements Plugin.PluginBase {
   name = 'Chikari';
   icon = 'src/en/chikari/icon.png';
   site = 'https://chikari.moe';
-  version = '1.0.2';
+  version = '1.0.3';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   // Define the filters for the app's filter menu
@@ -150,7 +149,7 @@ class ChikariPlugin implements Plugin.PluginBase {
     const novels: Plugin.NovelItem[] = (json.items || []).map((item: any) => ({
       name: item.title,
       path: item.slug,
-      cover: item.cover_url || defaultCover,
+      cover: item.cover_url,
     }));
 
     return novels;
@@ -169,7 +168,7 @@ class ChikariPlugin implements Plugin.PluginBase {
     const novels: Plugin.NovelItem[] = (json.items || []).map((item: any) => ({
       name: item.title,
       path: item.slug,
-      cover: item.cover_url || defaultCover,
+      cover: item.cover_url,
     }));
 
     return novels;
@@ -193,7 +192,7 @@ class ChikariPlugin implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: detailJson.title || 'Untitled',
-      cover: detailJson.cover_url || defaultCover,
+      cover: detailJson.cover_url,
       author: authorName,
       summary: detailJson.description || '',
       genres: genres, // Handled here!

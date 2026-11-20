@@ -3,14 +3,13 @@ import { FilterTypes, Filters } from '@libs/filterInputs';
 import { fetchApi } from '@libs/fetch';
 import { NovelStatus } from '@libs/novelStatus';
 import { load as parseHTML } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import dayjs from 'dayjs';
 
 class Zelluloza implements Plugin.PluginBase {
   id = 'zelluloza';
   name = 'Целлюлоза';
   site = 'https://zelluloza.ru';
-  version = '1.0.4';
+  version = '1.0.5';
   nonce = '';
   icon = 'src/ru/zelluloza/icon.png';
 
@@ -156,7 +155,7 @@ class Zelluloza implements Plugin.PluginBase {
       if (path && !novels.some(novel => novel.path === path)) {
         novels.push({
           name: link.text().trim() || link.attr('title') || '',
-          cover: cover?.includes('/pics/') ? this.site + cover : defaultCover,
+          cover: cover?.includes('/pics/') ? this.site + cover : undefined,
           path,
         });
       }

@@ -1,7 +1,6 @@
 import { Plugin } from '@/types/plugin';
 import { FilterTypes, Filters } from '@libs/filterInputs';
 import { fetchApi } from '@libs/fetch';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 import dayjs from 'dayjs';
 
@@ -17,7 +16,7 @@ const statusKey: Record<number, string> = {
 class RNBH implements Plugin.PluginBase {
   id = 'RNBH.org';
   name = 'RanobeHub';
-  version = '2.0.0';
+  version = '2.0.1';
   site = 'https://ranobehub.org';
   icon = 'src/ru/ranobehub/icon.png';
 
@@ -73,7 +72,7 @@ class RNBH implements Plugin.PluginBase {
     )?.[1];
     const cover = coverPath
       ? this.resolveUrl(decodeURIComponent(coverPath))
-      : defaultCover;
+      : undefined;
     const author = /book-author-byline[\s\S]*?<strong[^>]*>([\s\S]*?)<\/strong>/
       .exec(page)?.[1]
       .replace(/<[^>]+>/g, '')

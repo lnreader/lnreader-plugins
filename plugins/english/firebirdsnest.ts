@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 import { isUrlAbsolute } from '@libs/isAbsoluteUrl';
 
@@ -65,7 +64,7 @@ class FirebirdsNestPlugin implements Plugin.PluginBase {
   name = "Firebird's Nest";
   icon = 'src/en/firebirdsnest/icon.png';
   site = 'https://firebirdsnest.org';
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters: Filters | undefined = undefined;
 
@@ -96,7 +95,6 @@ class FirebirdsNestPlugin implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path,
       name,
-      cover: defaultCover,
     };
 
     this.applyMetadata(content, $, novel);
@@ -236,7 +234,6 @@ class FirebirdsNestPlugin implements Plugin.PluginBase {
       results.push({
         name: slugByName[slug],
         path: `/${slug}/`,
-        cover: defaultCover,
       });
     });
     return results;
@@ -267,7 +264,7 @@ class FirebirdsNestPlugin implements Plugin.PluginBase {
         return;
       }
       seen[path] = true;
-      novels.push({ name, path, cover: defaultCover });
+      novels.push({ name, path });
     });
     if (novels.length === 0) {
       throw new Error("Firebird's Nest: no novels found in the site menu");

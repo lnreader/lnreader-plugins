@@ -1,7 +1,6 @@
 import { fetchApi } from '@libs/fetch';
 import { Filters } from '@libs/filterInputs';
 import { NovelStatus } from '@libs/novelStatus';
-import { defaultCover } from '@libs/defaultCover';
 import { storage } from '@libs/storage';
 import { Plugin } from '@/types/plugin';
 import { load as parseHTML } from 'cheerio';
@@ -70,7 +69,7 @@ class KonkonPlugin implements Plugin.PluginBase {
   name = 'Konkon';
   icon = 'src/en/konkon/icon.png';
   site = 'https://konkon.ink';
-  version = '1.0.0';
+  version = '1.0.1';
   filters: Filters | undefined = undefined;
   pluginSettings = {
     hideLocked: {
@@ -135,7 +134,7 @@ class KonkonPlugin implements Plugin.PluginBase {
       novel.featured_image_thumb_small_key ||
       novel.featured_image;
 
-    if (!key) return defaultCover;
+    if (!key) return undefined;
     return `${this.api}/api/media/k/${this.encodeBase64(key)}`;
   }
 

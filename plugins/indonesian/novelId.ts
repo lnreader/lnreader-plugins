@@ -1,7 +1,6 @@
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 const SITE = 'https://novelid.org';
@@ -11,7 +10,7 @@ class NovelIdPlugin implements Plugin.PagePlugin {
   name = 'NovelID';
   icon = 'src/id/novelId/icon.png';
   site = SITE;
-  version = '1.0.0';
+  version = '1.0.1';
 
   private absolutePath(href: string | undefined): string | undefined {
     if (!href) return undefined;
@@ -26,7 +25,9 @@ class NovelIdPlugin implements Plugin.PagePlugin {
     }
   }
 
-  private parseNovelCards($: ReturnType<typeof loadCheerio>): Plugin.NovelItem[] {
+  private parseNovelCards(
+    $: ReturnType<typeof loadCheerio>,
+  ): Plugin.NovelItem[] {
     const novels: Plugin.NovelItem[] = [];
     const seen = new Set<string>();
 
@@ -51,7 +52,11 @@ class NovelIdPlugin implements Plugin.PagePlugin {
 
       const name =
         anchor.attr('title')?.trim() ||
-        scope.find('.novel-title, .book-title, .title, h3, h4').first().text().trim() ||
+        scope
+          .find('.novel-title, .book-title, .title, h3, h4')
+          .first()
+          .text()
+          .trim() ||
         anchor.text().trim();
 
       if (!name) return;
@@ -59,7 +64,7 @@ class NovelIdPlugin implements Plugin.PagePlugin {
       novels.push({
         name,
         path,
-        cover: coverRaw ? new URL(coverRaw, this.site).href : defaultCover,
+        cover: coverRaw ? new URL(coverRaw, this.site).href : undefined,
       });
     });
 
@@ -110,7 +115,9 @@ class NovelIdPlugin implements Plugin.PagePlugin {
       chapters.push({
         name: title,
         path: href,
-        chapterNumber: Number.isFinite(chapterNumber) ? chapterNumber : undefined,
+        chapterNumber: Number.isFinite(chapterNumber)
+          ? chapterNumber
+          : undefined,
         releaseTime: '',
       });
     });
@@ -119,34 +126,45 @@ class NovelIdPlugin implements Plugin.PagePlugin {
   }
 
   async parseNovel(
-  novelPath: string,
-): Promise<Plugin.SourceNovel & { totalPages: number }> {
+    novelPath: string,
+  ): Promise<Plugin.SourceNovel & { totalPages: number }> {
     const path = this.absolutePath(novelPath) ?? novelPath;
     const response = await fetchApi(new URL(path, this.site).href);
     const $ = loadCheerio(await response.text());
 
     const name = $('.detail-title').first().text().trim() || 'Untitled';
     const coverStyle = $('.detail-top').attr('style') ?? '';
-    const coverMatch = coverStyle.match(/background-image\s*:\s*url\((['"]?)(.*?)\1\)/i);
+    const coverMatch = coverStyle.match(
+      /background-image\s*:\s*url\((['"]?)(.*?)\1\)/i,
+    );
     const coverFromImage =
       $('.detail-top img').first().attr('data-src') ||
       $('.detail-top img').first().attr('src');
     const coverRaw = coverMatch?.[2] || coverFromImage;
 
     const author =
-      $('.detail-author.web-author').first().text().replace(/^Nama Author\s*[:：]\s*/i, '').trim() ||
-      $('.detail-author.app-author').first().text().replace(/^Author\s*:\s*/i, '').trim();
+      $('.detail-author.web-author')
+        .first()
+        .text()
+        .replace(/^Nama Author\s*[:：]\s*/i, '')
+        .trim() ||
+      $('.detail-author.app-author')
+        .first()
+        .text()
+        .replace(/^Author\s*:\s*/i, '')
+        .trim();
 
     const tags = $('.detail-tag-item')
       .map((_, element) => $(element).text().trim())
       .get()
       .filter(Boolean);
     const statusText = tags.join(' ').toLowerCase();
-    const status = statusText.includes('tamat') || statusText.includes('completed')
-      ? NovelStatus.Completed
-      : statusText.includes('ongoing') || statusText.includes('berjalan')
-        ? NovelStatus.Ongoing
-        : NovelStatus.Unknown;
+    const status =
+      statusText.includes('tamat') || statusText.includes('completed')
+        ? NovelStatus.Completed
+        : statusText.includes('ongoing') || statusText.includes('berjalan')
+          ? NovelStatus.Ongoing
+          : NovelStatus.Unknown;
     const genres = tags
       .filter(tag => !/^(tamat|ongoing|berjalan|completed)$/i.test(tag))
       .join(', ');
@@ -166,7 +184,7 @@ class NovelIdPlugin implements Plugin.PagePlugin {
     return {
       path,
       name,
-      cover: coverRaw ? new URL(coverRaw, this.site).href : defaultCover,
+      cover: coverRaw ? new URL(coverRaw, this.site).href : undefined,
       author,
       genres,
       summary,
@@ -177,10 +195,7 @@ class NovelIdPlugin implements Plugin.PagePlugin {
     };
   }
 
-  async parsePage(
-    novelPath: string,
-    page: string,
-  ): Promise<Plugin.SourcePage> {
+  async parsePage(novelPath: string, page: string): Promise<Plugin.SourcePage> {
     return {
       chapters: await this.parseChapterListPage(novelPath, page),
     };
@@ -193,7 +208,9 @@ class NovelIdPlugin implements Plugin.PagePlugin {
     const content = $('.watch-chapter-detail').first();
 
     if (!content.length) {
-      throw new Error('NovelID: isi chapter tidak ditemukan (.watch-chapter-detail).');
+      throw new Error(
+        'NovelID: isi chapter tidak ditemukan (.watch-chapter-detail).',
+      );
     }
 
     content.find('script, style, iframe, .adsbygoogle, ins').remove();

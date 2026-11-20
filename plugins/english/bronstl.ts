@@ -1,7 +1,6 @@
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { load as parseHTML } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 type Paginated<T> = {
@@ -34,7 +33,7 @@ class BronsTLPlugin implements Plugin.PluginBase {
   name = 'BronsTL';
   icon = 'src/en/bronstl/icon.png';
   site = 'https://bronstl.com';
-  version = '1.0.0';
+  version = '1.0.1';
 
   private headers = {
     'Accept': 'application/json',
@@ -69,7 +68,7 @@ class BronsTLPlugin implements Plugin.PluginBase {
     return {
       name: book.title,
       path: 'books/' + book.slug,
-      cover: book.cover_image || defaultCover,
+      cover: book.cover_image,
     };
   }
 
@@ -126,7 +125,7 @@ class BronsTLPlugin implements Plugin.PluginBase {
     return {
       path: novelPath,
       name: book.title,
-      cover: book.cover_image || defaultCover,
+      cover: book.cover_image,
       author: book.author || undefined,
       artist: book.illustrator || undefined,
       summary: book.description || undefined,

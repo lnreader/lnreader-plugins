@@ -3,7 +3,6 @@ import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { NovelStatus } from '@libs/novelStatus';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 type NovelEntry = { name: string; path: string; status: string };
 
@@ -26,7 +25,7 @@ class Taekan implements Plugin.PluginBase {
   name = 'Taekan';
   icon = 'src/en/taekan/icon.png';
   site = 'https://taekan.wordpress.com';
-  version = '1.0.0';
+  version = '1.0.1';
   filters: Filters | undefined = undefined;
 
   private async loadPage(url: string) {
@@ -87,7 +86,7 @@ class Taekan implements Plugin.PluginBase {
 
   private coverOf($: ReturnType<typeof loadCheerio>): string {
     const src = $('.entry-content img').first().attr('src') || '';
-    return src.startsWith('http') ? src : defaultCover;
+    return src.startsWith('http') ? src : undefined;
   }
 
   private async toNovelItems(
@@ -101,7 +100,7 @@ class Taekan implements Plugin.PluginBase {
         return {
           name: novel.name,
           path: novel.path,
-          cover: $ ? this.coverOf($) : defaultCover,
+          cover: $ ? this.coverOf($) : undefined,
         };
       }),
     );

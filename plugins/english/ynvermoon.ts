@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 type NovelEntry = { name: string; path: string };
 
@@ -15,7 +14,7 @@ class YnverMoonPlugin implements Plugin.PluginBase {
   name = 'Ynver Moon';
   icon = 'src/en/ynvermoon/icon.png';
   site = `https://${HOST}`;
-  version = '1.0.0';
+  version = '1.0.1';
   filters: Filters | undefined = undefined;
 
   private async loadPage(url: string) {
@@ -58,7 +57,7 @@ class YnverMoonPlugin implements Plugin.PluginBase {
 
   private coverOf(content: ReturnType<ReturnType<typeof loadCheerio>>) {
     const src = content.find('img').first().attr('src') || '';
-    return src.startsWith('http') ? src.replace(/\?.*$/, '') : defaultCover;
+    return src.startsWith('http') ? src.replace(/\?.*$/, '') : undefined;
   }
 
   private async toNovelItems(
@@ -72,7 +71,7 @@ class YnverMoonPlugin implements Plugin.PluginBase {
         return {
           name: novel.name,
           path: novel.path,
-          cover: $ ? this.coverOf($('.entry-content').first()) : defaultCover,
+          cover: $ ? this.coverOf($('.entry-content').first()) : undefined,
         };
       }),
     );

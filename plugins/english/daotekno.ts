@@ -1,7 +1,6 @@
 import { load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
-import { defaultCover } from '@libs/defaultCover';
 
 /**
  * DaoTekno (daotekno.com) LNReader plugin
@@ -32,7 +31,7 @@ import { defaultCover } from '@libs/defaultCover';
 class DaoTekno implements Plugin.PluginBase {
   id = 'daotekno';
   name = 'DaoTekno';
-  version = '1.0.3';
+  version = '1.0.4';
   icon = 'src/en/daotekno/icon.png';
   site = 'https://daotekno.com/';
 
@@ -106,7 +105,6 @@ class DaoTekno implements Plugin.PluginBase {
         name,
         path: href.replace(/^\//, ''),
         // The listing exposes no covers at all.
-        cover: defaultCover,
       });
     });
     return novels;
@@ -155,7 +153,6 @@ class DaoTekno implements Plugin.PluginBase {
       path: novelPath,
       name: $first('h1').first().text().trim() || 'Untitled',
       // The novel page carries no cover, summary, author or status.
-      cover: defaultCover,
       chapters: [],
     };
 

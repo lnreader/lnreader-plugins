@@ -1,7 +1,6 @@
 import { load as loadCheerio } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 import { storage } from '@libs/storage';
 
@@ -59,7 +58,7 @@ class TensurafanPlugin implements Plugin.PluginBase {
   name = 'Tensurafan';
   icon = 'src/en/tensurafan/icon.png';
   site = 'https://tensurafan.github.io';
-  version = '1.0.0';
+  version = '1.0.1';
 
   pluginSettings = {
     termSet: {
@@ -181,7 +180,7 @@ class TensurafanPlugin implements Plugin.PluginBase {
     return {
       name: NOVEL_NAME,
       path: '/',
-      cover: first ? await this.getCover(first) : defaultCover,
+      cover: first ? await this.getCover(first) : undefined,
     };
   }
 
@@ -190,7 +189,7 @@ class TensurafanPlugin implements Plugin.PluginBase {
       Range: TOC_RANGE,
     }).then(r => r.text());
     const src = /<img[^>]*\ssrc="([^"{]+)"/.exec(head);
-    return src ? this.site + encodeURI(unescapeAttr(src[1])) : defaultCover;
+    return src ? this.site + encodeURI(unescapeAttr(src[1])) : undefined;
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
@@ -207,7 +206,6 @@ class TensurafanPlugin implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: NOVEL_NAME,
-      cover: defaultCover,
       status: listed.some(volume => (volume.progress ?? 100) < 100)
         ? NovelStatus.Ongoing
         : NovelStatus.Completed,

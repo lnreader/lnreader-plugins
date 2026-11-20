@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { NovelStatus } from '@libs/novelStatus';
-import { defaultCover } from '@libs/defaultCover';
 import { load as loadCheerio, CheerioAPI } from 'cheerio';
 
 type WpPage = {
@@ -68,7 +67,7 @@ class WwaraitaiPlugin implements Plugin.PluginBase {
   name = 'Nani Mo Wakaranai Kedo';
   icon = 'src/en/wwaraitai/icon.png';
   site = 'https://wwaraitai.co';
-  version = '1.0.0';
+  version = '1.0.1';
 
   private api = this.site + '/wp-json/wp/v2';
 
@@ -127,7 +126,7 @@ class WwaraitaiPlugin implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: this.toPath(page.link),
       name,
-      cover: this.coverOf($) || defaultCover,
+      cover: this.coverOf($),
       chapters: [],
     };
 
@@ -202,7 +201,7 @@ class WwaraitaiPlugin implements Plugin.PluginBase {
         slug: page.slug,
         name: this.decode(page.title.rendered),
         path,
-        cover: this.coverOf($) || defaultCover,
+        cover: this.coverOf($),
         status: statuses[path] || NovelStatus.Unknown,
       });
     }

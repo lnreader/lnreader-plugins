@@ -3,7 +3,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { storage } from '@libs/storage';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 /**
@@ -40,7 +39,7 @@ type BeastBook = {
 class BeastNovels implements Plugin.PluginBase {
   id = 'beastnovels';
   name = 'Beast Novels';
-  version = '1.1.0';
+  version = '1.1.1';
   icon = 'src/en/beastnovels/icon.png';
   site = 'https://beastnovels.com/';
 
@@ -95,7 +94,7 @@ class BeastNovels implements Plugin.PluginBase {
     return {
       name: book.bookname,
       path: 'series/' + book.bookslug,
-      cover: book.image_url || defaultCover,
+      cover: book.image_url,
     };
   }
 
@@ -141,7 +140,7 @@ class BeastNovels implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: $('h1').first().text().trim() || 'Untitled',
-      cover: $('#heroImg').attr('src') || defaultCover,
+      cover: $('#heroImg').attr('src'),
       author: $('h1').first().next('p').find('span').text().trim(),
       summary: $('h2:contains("Synopsis")').next().find('p').text().trim(),
       genres: $('a[href*="/novels?genre="]')

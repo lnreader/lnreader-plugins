@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 const SERIES_PREFIX = '/series/';
@@ -17,7 +16,7 @@ class ReadingPiaPlugin implements Plugin.PluginBase {
   name = 'ReadingPia';
   icon = 'src/en/readingpia/icon.png';
   site = 'https://www.readingpia.me';
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters = {
     sort: {
@@ -114,7 +113,7 @@ class ReadingPiaPlugin implements Plugin.PluginBase {
   }
 
   private absolute(src: string | undefined) {
-    return src ? new URL(src, this.site).href : defaultCover;
+    return src ? new URL(src, this.site).href : undefined;
   }
 
   private async listNovels(

@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 const PAGE_SIZE = 20;
@@ -34,7 +33,7 @@ class MiraiKNovelsPlugin implements Plugin.PluginBase {
   name = 'MiraiK Novels';
   icon = 'src/es/miraiknovels/icon.png';
   site = 'https://miraik.nextnovels.com';
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters = {
     type: {
@@ -120,9 +119,7 @@ class MiraiKNovelsPlugin implements Plugin.PluginBase {
         name: this.cleanTitle(post.title.rendered),
         path: this.toPath(post.link),
         cover:
-          media?.media_details?.sizes?.medium?.source_url ||
-          media?.source_url ||
-          defaultCover,
+          media?.media_details?.sizes?.medium?.source_url || media?.source_url,
       };
     });
   }
@@ -174,8 +171,7 @@ class MiraiKNovelsPlugin implements Plugin.PluginBase {
 
     const cover =
       $('meta[property="og:image"]').attr('content') ||
-      content.find('.et_pb_image_0 img').first().attr('data-src') ||
-      defaultCover;
+      content.find('.et_pb_image_0 img').first().attr('data-src');
 
     // The text module that follows a label ("Estado:", "Géneros:", "Sinópsis").
     const modules = content.find('.et_pb_text_inner').toArray();

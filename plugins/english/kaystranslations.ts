@@ -3,7 +3,6 @@ import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { NovelStatus } from '@libs/novelStatus';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 type TocChapter = {
   href: string;
@@ -43,7 +42,7 @@ class KaysTranslationsPlugin implements Plugin.PluginBase {
   name = "Kay's Translations";
   icon = 'src/en/kaystranslations/icon.png';
   site = 'https://kaystls.site/';
-  version = '1.0.0';
+  version = '1.0.1';
 
   private ajaxUrl = 'https://kaystls.site/wp-admin/admin-ajax.php';
   private nonce: string | undefined;
@@ -338,7 +337,7 @@ class KaysTranslationsPlugin implements Plugin.PluginBase {
 
   private imageOrDefault(src: string | undefined): string {
     // The site fills missing covers with a shared "no-image" placeholder.
-    if (!src || /no-image/i.test(src)) return defaultCover;
+    if (!src || /no-image/i.test(src)) return undefined;
     return src;
   }
 

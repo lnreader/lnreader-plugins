@@ -2,12 +2,11 @@ import { load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 
 class RewayatClub implements Plugin.PagePlugin {
   id = 'rewayatclub';
   name = 'Rewayat Club';
-  version = '1.0.3';
+  version = '1.0.4';
   icon = 'src/ar/rewayatclub/icon.png';
   site = 'https://rewayat.club/';
 
@@ -26,7 +25,7 @@ class RewayatClub implements Plugin.PagePlugin {
           ? `https://api.rewayat.club/${item.poster_url.slice(1)}`
           : item.novel
             ? `https://api.rewayat.club/${item.novel.poster_url.slice(1)}`
-            : defaultCover,
+            : undefined,
       });
     });
     return novels;
@@ -110,7 +109,7 @@ class RewayatClub implements Plugin.PagePlugin {
     const imageUrlMatch = imageRaw?.match(imageUrlRegex);
     const ImageUrlShort = imageUrlMatch
       ? imageUrlMatch[1].replace(/\\u002F/g, '/').replace(/^\/*/, '')
-      : defaultCover;
+      : undefined;
     const imageUrl = `https://api.rewayat.club/${ImageUrlShort}`;
     novel.cover = imageUrl;
     const chapterNumberStr = loadedCheerio('div.v-tab--active span.mr-1')

@@ -3,7 +3,6 @@ import { Parser } from 'htmlparser2';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
-import { defaultCover } from '@libs/defaultCover';
 import { Filters } from '@libs/filterInputs';
 import { storage } from '@libs/storage';
 
@@ -42,7 +41,7 @@ export class LightNovelWPPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/lightnovelwp/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `1.1.${12 + versionIncrements}`;
+    this.version = `1.1.${13 + versionIncrements}`;
     this.options = metadata.options ?? ({} as LightNovelWPOptions);
     this.filters = metadata.filters satisfies Filters;
 
@@ -121,7 +120,7 @@ export class LightNovelWPPlugin implements Plugin.PluginBase {
 
         novels.push({
           name: novelName,
-          cover: novelCover[2] || novelCover[1] || defaultCover,
+          cover: novelCover[2] || novelCover[1],
           path: novelPath,
         });
       }
@@ -187,7 +186,7 @@ export class LightNovelWPPlugin implements Plugin.PluginBase {
         // name and cover
         if (!novel.cover && attribs['class']?.includes('ts-post-image')) {
           novel.name = attribs['title'];
-          novel.cover = attribs['data-src'] || attribs['src'] || defaultCover;
+          novel.cover = attribs['data-src'] || attribs['src'];
         } // genres
         else if (
           attribs['class'] === 'genxed' ||

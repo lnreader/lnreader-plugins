@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { FilterTypes, Filters } from '@libs/filterInputs';
 import { CheerioAPI, load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 function parseSpanishTextToISO(text: string) {
@@ -99,7 +98,7 @@ class Novelyra implements Plugin.PluginBase {
   name = 'Novelyra';
   icon = 'src/es/novelyra/icon.png';
   site = 'https://novelyra.com/';
-  version = '1.0.1';
+  version = '1.0.2';
   filters: Filters = {
     genres: {
       type: FilterTypes.Picker,
@@ -158,7 +157,7 @@ class Novelyra implements Plugin.PluginBase {
       novels.push({
         name: novel.find('h3').text(),
         path: novel.find('a').attr('href')?.replace(this.site, '') || '',
-        cover: novel.find('img').attr('src') || defaultCover,
+        cover: novel.find('img').attr('src'),
       });
     });
 
@@ -208,7 +207,7 @@ class Novelyra implements Plugin.PluginBase {
       name: loadedCheerio('h1').text(),
     };
 
-    novel.cover = loadedCheerio('img').attr('src') || defaultCover;
+    novel.cover = loadedCheerio('img').attr('src');
     novel.genres = loadedCheerio('.novel-meta .novel-genres')
       .text()
       .trim()

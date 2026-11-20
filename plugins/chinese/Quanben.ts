@@ -3,7 +3,6 @@ import { FilterTypes, Filters } from '@libs/filterInputs';
 import { fetchApi } from '@libs/fetch';
 import { NovelStatus } from '@libs/novelStatus';
 import { load as parseHTML } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 const parseUrl = (url?: string): URL | undefined => {
   if (!url) return undefined;
@@ -47,9 +46,8 @@ class QuanbenPlugin implements Plugin.PluginBase {
   id = 'quanben';
   name = 'Quanben';
   site = 'https://www.quanben.io/';
-  version = '1.1.1';
+  version = '1.1.2';
   icon = 'src/cn/quanben/icon.png';
-  defaultCover = defaultCover;
 
   // filters
   filters = {
@@ -106,7 +104,7 @@ class QuanbenPlugin implements Plugin.PluginBase {
       const rawCover =
         $list2.find('img').attr('src')?.trim() ||
         $list2.find('img').attr('data-src')?.trim();
-      const cover = makeAbsolute(rawCover, this.site) || this.defaultCover;
+      const cover = makeAbsolute(rawCover, this.site);
 
       if (href && name) {
         const path = getStandardNovelPath(href);
@@ -121,11 +119,10 @@ class QuanbenPlugin implements Plugin.PluginBase {
       const href = $a.attr('href')?.trim();
       const name =
         $a.text().trim() || $firstLi.find('span.author').text().trim();
-      const cover = this.defaultCover;
 
       if (href && name) {
         const path = getStandardNovelPath(href);
-        if (path) novels.push({ name, path, cover });
+        if (path) novels.push({ name, path });
       }
     });
 
@@ -163,8 +160,7 @@ class QuanbenPlugin implements Plugin.PluginBase {
         'Unknown Novel',
       cover:
         getMeta('og:image') ||
-        makeAbsolute($info.find('img').attr('src'), this.site) ||
-        this.defaultCover,
+        makeAbsolute($info.find('img').attr('src'), this.site),
       summary:
         getMeta('og:description') ||
         $desc.find('p').text().trim() ||
@@ -270,7 +266,7 @@ class QuanbenPlugin implements Plugin.PluginBase {
           novels.push({
             name,
             path,
-            cover: cover || this.defaultCover,
+            cover,
           });
       }
     });

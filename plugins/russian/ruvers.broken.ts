@@ -1,6 +1,5 @@
 import { Plugin } from '@/types/plugin';
 import { FilterTypes, Filters } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 import { fetchApi } from '@libs/fetch';
 import { NovelStatus } from '@libs/novelStatus';
 import { load as parseHTML } from 'cheerio';
@@ -10,7 +9,7 @@ class RV implements Plugin.PluginBase {
   id = 'RV';
   name = 'Ruvers';
   site = 'https://ruvers.ru/';
-  version = '1.0.0';
+  version = '1.0.1';
   icon = 'src/ru/ruvers/icon.png';
 
   async fetchNovels(
@@ -31,7 +30,7 @@ class RV implements Plugin.PluginBase {
     data.forEach(novel =>
       novels.push({
         name: novel.name,
-        cover: novel.images[0] ? this.site + novel.images[0] : defaultCover,
+        cover: novel.images[0] ? this.site + novel.images[0] : undefined,
         path: novel.slug,
       }),
     );

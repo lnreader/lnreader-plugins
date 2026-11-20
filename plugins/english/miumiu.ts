@@ -3,7 +3,6 @@ import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { NovelStatus } from '@libs/novelStatus';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 /** One novel on the blog's `/index/` page. */
 type NovelEntry = {
@@ -121,7 +120,7 @@ class MiumiuPlugin implements Plugin.PluginBase {
   name = "Miumiu's musings";
   icon = 'src/en/miumiu/icon.png';
   site = 'https://miumiu596.wordpress.com';
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters: Filters | undefined = undefined;
 
@@ -245,7 +244,6 @@ class MiumiuPlugin implements Plugin.PluginBase {
           current = {
             slug: rule.slug,
             name: this.headingName(text),
-            cover: defaultCover,
             summary: '',
             status: this.headingStatus(text),
           };
@@ -257,7 +255,7 @@ class MiumiuPlugin implements Plugin.PluginBase {
 
         const image = element.find('img[src]').first().attr('src');
         if (image) {
-          if (current.cover === defaultCover) {
+          if (!current.cover) {
             current.cover = image;
           }
           return;

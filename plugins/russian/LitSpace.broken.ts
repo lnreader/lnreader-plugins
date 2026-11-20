@@ -1,6 +1,5 @@
 import { Plugin } from '@/types/plugin';
 import { FilterTypes, Filters } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 import { fetchApi } from '@libs/fetch';
 
 const headers: Record<string, string> = {
@@ -13,7 +12,7 @@ class freedlit implements Plugin.PluginBase {
   id = 'freedlit.space';
   name = 'LitSpace';
   site = 'https://freedlit.space';
-  version = '1.1.0';
+  version = '1.1.1';
   icon = 'src/ru/freedlit/icon.png';
 
   async popularNovels(
@@ -40,9 +39,7 @@ class freedlit implements Plugin.PluginBase {
     books.data.forEach(novel =>
       novels.push({
         name: novel.title,
-        cover: novel.cover
-          ? this.site + '/storage/' + novel.cover
-          : defaultCover,
+        cover: novel.cover ? this.site + '/storage/' + novel.cover : undefined,
         path: novel.item_id.toString(),
       }),
     );
@@ -67,7 +64,7 @@ class freedlit implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: book.title,
-      cover: book.cover ? this.site + '/storage/' + book.cover : defaultCover,
+      cover: book.cover ? this.site + '/storage/' + book.cover : undefined,
       summary: book.annotation,
       author: book.authors_names?.[0]?.name || '',
       genres: book.tags?.map?.(tags => tags.name)?.join?.(', ') || '',
@@ -143,7 +140,7 @@ class freedlit implements Plugin.PluginBase {
             name: novel.title,
             cover: novel.cover
               ? this.site + '/storage/' + novel.cover
-              : defaultCover,
+              : undefined,
             path: novel.id.toString(),
           });
         }

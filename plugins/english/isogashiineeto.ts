@@ -4,7 +4,6 @@ import { Filters } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
 import type { Cheerio as CheerioSelection, CheerioAPI } from 'cheerio';
 import type { AnyNode } from 'domhandler';
-import { defaultCover } from '@libs/defaultCover';
 import { isUrlAbsolute } from '@libs/isAbsoluteUrl';
 
 type Selection = CheerioSelection<AnyNode>;
@@ -68,7 +67,7 @@ class IsogashiiNeetPlugin implements Plugin.PluginBase {
   name = 'Working NEET Translation';
   icon = 'src/en/isogashiineeto/icon.png';
   site = 'https://isogashiineeto.com';
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters: Filters | undefined = undefined;
 
@@ -96,7 +95,7 @@ class IsogashiiNeetPlugin implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path,
       name,
-      cover: this.firstImage(content) || defaultCover,
+      cover: this.firstImage(content),
     };
     this.applyMetadata(content, $, novel);
 
@@ -228,7 +227,7 @@ class IsogashiiNeetPlugin implements Plugin.PluginBase {
 
     return Promise.all(
       entries.map(async entry => {
-        let cover = defaultCover;
+        let cover: string | undefined;
         try {
           const page = loadCheerio(
             await this.fetchHtml(this.site + entry.path),

@@ -3,14 +3,13 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { Filters, FilterTypes } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 import dayjs from 'dayjs';
 import { storage } from '@libs/storage';
 
 class Novelight implements Plugin.PagePlugin {
   id = 'novelight';
   name = 'Novelight';
-  version = '1.1.5';
+  version = '1.1.6';
   icon = 'src/en/novelight/icon.png';
   site = 'https://novelight.net/';
 
@@ -69,12 +68,12 @@ class Novelight implements Plugin.PagePlugin {
       const bareNovelCover = loadedCheerio(ele).find('img').attr('src');
       const novelCover = bareNovelCover
         ? this.site + bareNovelCover
-        : defaultCover;
+        : undefined;
       if (!novelUrl) return;
 
       const novel = {
         name: novelName,
-        cover: novelCover ?? defaultCover,
+        cover: novelCover,
         path: novelUrl.replace('/', ''),
       };
 
@@ -258,12 +257,12 @@ class Novelight implements Plugin.PagePlugin {
       const bareNovelCover = loadedCheerio(ele).find('img').attr('src');
       const novelCover = bareNovelCover
         ? this.site + bareNovelCover
-        : defaultCover;
+        : undefined;
       if (!novelUrl) return;
 
       const novel = {
         name: novelName,
-        cover: novelCover ?? defaultCover,
+        cover: novelCover,
         path: novelUrl.replace('/', ''),
       };
 

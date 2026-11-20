@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 const SITE_HOST = /^(?:www\.)?asianhobbyist\.com$/i;
 // The theme's own image for series that have no cover.
@@ -16,7 +15,7 @@ class AsianHobbyist implements Plugin.PluginBase {
   name = 'Asian Hobbyist';
   site = 'https://www.asianhobbyist.com';
   icon = 'src/en/asianhobbyist/icon.png';
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters = {
     sort: {
@@ -68,7 +67,7 @@ class AsianHobbyist implements Plugin.PluginBase {
    */
   private coverUrl(src: string | undefined): string {
     if (!src || src.startsWith('data:') || PLACEHOLDER_COVER.test(src)) {
-      return defaultCover;
+      return undefined;
     }
     try {
       const url = new URL(src, this.site);
@@ -78,7 +77,7 @@ class AsianHobbyist implements Plugin.PluginBase {
       }
       return url.href;
     } catch {
-      return defaultCover;
+      return undefined;
     }
   }
 
@@ -122,7 +121,7 @@ class AsianHobbyist implements Plugin.PluginBase {
         return;
       }
       seen.add(path);
-      novels.push({ name, path, cover: cover || defaultCover });
+      novels.push({ name, path, cover });
     };
 
     if (sort === 'latest') {

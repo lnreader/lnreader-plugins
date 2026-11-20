@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { Filters, FilterTypes } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 
 const PAGE_SIZE = 24;
 
@@ -59,7 +58,7 @@ class NovelFrancePlugin implements Plugin.PluginBase {
   name = 'NovelFrance';
   icon = 'src/fr/novelfrance/icon.png';
   site = 'https://novelfrance.fr/';
-  version = '1.0.2';
+  version = '1.0.3';
 
   private async fetchJson<T>(url: string): Promise<T> {
     const r = await fetchApi(url);
@@ -68,7 +67,7 @@ class NovelFrancePlugin implements Plugin.PluginBase {
   }
 
   private buildCoverUrl(coverImage?: string | null): string {
-    if (!coverImage) return defaultCover;
+    if (!coverImage) return undefined;
     return new URL(coverImage, this.site).href;
   }
 

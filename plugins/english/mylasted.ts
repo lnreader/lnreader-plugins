@@ -1,6 +1,5 @@
 import { Plugin } from '@/types/plugin';
 import { fetchApi } from '@libs/fetch';
-import { defaultCover } from '@libs/defaultCover';
 import { load } from 'cheerio';
 
 function sanitizeChapter(html: string, base: string): string {
@@ -53,7 +52,7 @@ class MachineEditing implements Plugin.PluginBase {
   name = 'Machine Editing (MyLasted)';
   site = 'https://mylasted.blogspot.com';
   icon = 'src/en/mylasted/icon.png';
-  version = '1.0.1';
+  version = '1.0.2';
 
   private async request(url: string) {
     const response = await fetchApi(url);
@@ -83,7 +82,7 @@ class MachineEditing implements Plugin.PluginBase {
     return {
       name: entry.title.$t,
       path: new URL(this.resolveUrl(href)).pathname,
-      cover: $('img').first().attr('src') || defaultCover,
+      cover: $('img').first().attr('src'),
     };
   }
 
@@ -170,7 +169,7 @@ class MachineEditing implements Plugin.PluginBase {
     return {
       name,
       path,
-      cover: $('article img').first().attr('src') || defaultCover,
+      cover: $('article img').first().attr('src'),
       summary: $('#synopsis').text().trim(),
       author: field('Author'),
       genres: field('Tags'),

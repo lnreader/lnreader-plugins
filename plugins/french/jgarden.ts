@@ -1,5 +1,4 @@
 import { load } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { fetchApi } from '@libs/fetch';
 import { NovelStatus } from '@libs/novelStatus';
 import { Plugin } from '@/types/plugin';
@@ -19,7 +18,7 @@ class JGardenPlugin implements Plugin.PluginBase {
   name = 'J-Garden';
   icon = 'src/fr/jgarden/icon.png';
   site = 'https://j-garden.fr/';
-  version = '1.0.5';
+  version = '1.0.6';
 
   resolveUrl(path: string): string {
     const url = new URL(path, this.site);
@@ -67,7 +66,7 @@ class JGardenPlugin implements Plugin.PluginBase {
       const isBanner =
         Number.isFinite(width) && Number.isFinite(height) && width > height;
       const cover =
-        coverSrc && !isBanner ? this.resolveUrl(coverSrc) : defaultCover;
+        coverSrc && !isBanner ? this.resolveUrl(coverSrc) : undefined;
       if (path && name) novels.set(path, { name, path, cover });
     });
     return Array.from(novels.values());
@@ -82,7 +81,7 @@ class JGardenPlugin implements Plugin.PluginBase {
         `/wp-json/wp/v2/pages?slug=${encodeURIComponent(slug)}&_fields=content`,
       );
       const content = pages[0]?.content?.rendered;
-      if (!content) return defaultCover;
+      if (!content) return undefined;
       const $ = load(content);
       let cover = '';
       $('img').each((_, element) => {
@@ -97,9 +96,9 @@ class JGardenPlugin implements Plugin.PluginBase {
           height >= width;
         if (portrait) cover = this.resolveUrl(src);
       });
-      return cover || defaultCover;
+      return cover;
     } catch {
-      return defaultCover;
+      return undefined;
     }
   }
 
@@ -179,9 +178,7 @@ class JGardenPlugin implements Plugin.PluginBase {
     return list.map((novel, index) => ({
       ...novel,
       cover:
-        covers[index]?.status === 'fulfilled'
-          ? covers[index].value
-          : defaultCover,
+        covers[index]?.status === 'fulfilled' ? covers[index].value : undefined,
     }));
   }
 
@@ -237,7 +234,7 @@ class JGardenPlugin implements Plugin.PluginBase {
       name: load(page.title.rendered).text().trim(),
       cover: $('img').first().attr('src')
         ? this.resolveUrl($('img').first().attr('src')!)
-        : defaultCover,
+        : undefined,
       summary: firstChapter.prevAll().text().trim(),
       status,
       chapters: (() => {

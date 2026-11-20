@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 type Page = ReturnType<typeof loadCheerio>;
 
@@ -41,7 +40,7 @@ class MizupanPlugin implements Plugin.PluginBase {
   name = "Mizupan's Archives";
   icon = 'src/en/mizupanshoko/icon.png';
   site = 'https://mizupanshoko.wordpress.com';
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters: Filters | undefined = undefined;
 
@@ -196,9 +195,7 @@ class MizupanPlugin implements Plugin.PluginBase {
     // Novels without artwork fall back to WordPress's blank placeholder image.
     const ogImage = $('meta[property="og:image"]').attr('content') || '';
     const cover =
-      ogImage && ogImage.indexOf('/i/blank.jpg') === -1
-        ? ogImage
-        : defaultCover;
+      ogImage && ogImage.indexOf('/i/blank.jpg') === -1 ? ogImage : undefined;
     return { path, name, cover };
   }
 

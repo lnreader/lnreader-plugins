@@ -2,12 +2,11 @@ import { CheerioAPI, load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 
 class Sunovels implements Plugin.PagePlugin {
   id = 'sunovels';
   name = 'Sunovels';
-  version = '1.0.1';
+  version = '1.0.2';
   icon = 'src/ar/sunovels/icon.png';
   site = 'https://sunovels.com/';
 
@@ -30,7 +29,7 @@ class Sunovels implements Plugin.PagePlugin {
           const novelName = loadedCheerio(ele).find('h4').text().trim();
           const novelUrl =
             loadedCheerio(ele).attr('href')?.trim().replace(/^\/*/, '') || '';
-          let novelCover = defaultCover;
+          let novelCover: string | undefined;
           if (imageUrlList.length > 0) {
             novelCover = this.site + imageUrlList[counter].slice(1);
           } else {

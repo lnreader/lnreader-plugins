@@ -3,7 +3,6 @@ import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { NovelStatus } from '@libs/novelStatus';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 const SITE_HOST = /^(?:www\.)?decodednovels\.ca$/i;
 const NOVEL_PATH = /^\/novels\/[^/]+\/?$/i;
@@ -16,7 +15,7 @@ class DecodedNovels implements Plugin.PluginBase {
   name = 'Decoded Novels';
   icon = 'src/en/decodednovels/icon.png';
   site = 'https://decodednovels.ca';
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters = {
     status: {
@@ -86,7 +85,7 @@ class DecodedNovels implements Plugin.PluginBase {
       novels.push({
         name,
         path,
-        cover: link.find('img').first().attr('src') || defaultCover,
+        cover: link.find('img').first().attr('src'),
         status,
       });
     });
@@ -130,7 +129,7 @@ class DecodedNovels implements Plugin.PluginBase {
             .text()
             .replace(/\s+[–-]\s+[^–-]*$/, ''),
         ),
-      cover: content.find('figure img').first().attr('src') || defaultCover,
+      cover: content.find('figure img').first().attr('src'),
       status: entry?.status || NovelStatus.Unknown,
     };
 

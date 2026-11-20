@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 type Page = ReturnType<typeof loadCheerio>;
 
@@ -26,7 +25,7 @@ class BloodcoreTLPlugin implements Plugin.PluginBase {
   name = 'BloodcoreTL';
   icon = 'src/en/bloodcoretl/icon.png';
   site = 'https://bloodcoretl.com';
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters: Filters | undefined = undefined;
 
@@ -108,7 +107,7 @@ class BloodcoreTLPlugin implements Plugin.PluginBase {
     if (original) {
       return this.site + decodeURIComponent(original[1]);
     }
-    return src ? this.site + this.toPath(src) : defaultCover;
+    return src ? this.site + this.toPath(src) : undefined;
   }
 
   /** Value of the "Author:" line next to the cover. */

@@ -2,13 +2,12 @@ import { CheerioAPI, load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 class AsianFanfics implements Plugin.PluginBase {
   id = 'asianfanfics';
   name = 'Asianfanfics';
-  version = '1.0.0';
+  version = '1.0.1';
   icon = 'src/en/asianfanfics/icon.png';
   site = 'https://www.asianfanfics.com/';
 
@@ -40,7 +39,7 @@ class AsianFanfics implements Plugin.PluginBase {
       novels.push({
         name: link.text().trim(),
         path: href.replace(/^\//, ''),
-        cover: $(ele).find('img').first().attr('src') || defaultCover,
+        cover: $(ele).find('img').first().attr('src'),
       });
     });
 
@@ -75,7 +74,7 @@ class AsianFanfics implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: header.find('h1').text().trim() || 'Untitled',
-      cover: header.find('img').first().attr('src') || defaultCover,
+      cover: header.find('img').first().attr('src'),
       author: header.find('a[href^="/profile/"]').first().text().trim(),
       genres: header
         .find('a[href^="/browse/tag/"]')

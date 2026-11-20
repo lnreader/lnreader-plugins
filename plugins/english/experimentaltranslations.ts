@@ -3,7 +3,6 @@ import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { NovelStatus } from '@libs/novelStatus';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 type WpEntry = {
   id: number;
@@ -43,7 +42,7 @@ class ExperimentalTranslationsPlugin implements Plugin.PluginBase {
   name = 'Experimental Translations';
   icon = 'src/en/experimentaltranslations/icon.png';
   site = 'https://experimentaltranslations.com';
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters: Filters | undefined = undefined;
 
@@ -79,7 +78,6 @@ class ExperimentalTranslationsPlugin implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path,
       name,
-      cover: defaultCover,
       chapters: [],
     };
 
@@ -195,7 +193,7 @@ class ExperimentalTranslationsPlugin implements Plugin.PluginBase {
     const add = (name: string, path: string) => {
       if (name && !seen.has(path)) {
         seen.add(path);
-        novels.push({ name, path, cover: defaultCover });
+        novels.push({ name, path });
       }
     };
 

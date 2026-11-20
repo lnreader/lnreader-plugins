@@ -1,7 +1,6 @@
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 type ApiNovel = {
@@ -64,7 +63,7 @@ class ReadAllDay implements Plugin.PluginBase {
   // The official อ่านทั้งวัน.com redirects to this punycode host.
   site = 'https://www.xn--72c5afc3e6a4acd3tpa.net';
   icon = 'src/th/readallday/icon.png';
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters = {
     sort: {
@@ -145,7 +144,7 @@ class ReadAllDay implements Plugin.PluginBase {
   }
 
   private cover(coverUrl?: string | null): string {
-    if (!coverUrl) return defaultCover;
+    if (!coverUrl) return undefined;
     return coverUrl.startsWith('http') ? coverUrl : this.site + coverUrl;
   }
 

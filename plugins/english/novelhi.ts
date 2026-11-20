@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { load as parseHTML } from 'cheerio';
 import { NovelStatus } from '@libs/novelStatus';
-import { defaultCover } from '@libs/defaultCover';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 
 class NovelHi implements Plugin.PluginBase {
@@ -10,7 +9,7 @@ class NovelHi implements Plugin.PluginBase {
   name = 'NovelHi';
   icon = 'src/en/novelhi/icon.png';
   site = 'https://novelhi.com/';
-  version = '1.1.2';
+  version = '1.1.3';
 
   // Cover requests need browser headers: img.novelhi.com answers plain
   // app requests with 403, while a browser loads the same URL fine.
@@ -53,7 +52,7 @@ class NovelHi implements Plugin.PluginBase {
     const novels: CachedNovel[] = json.data.list.map(item => ({
       name: item.bookName,
       path: `s/${item.simpleName}`,
-      cover: item.picUrl || defaultCover,
+      cover: item.picUrl,
       summary: item.bookDesc,
       author: item.authorName,
       status: item.bookStatus,
@@ -103,7 +102,7 @@ class NovelHi implements Plugin.PluginBase {
         loadedCheerio('b.layui-icon').text().trim() ||
         loadedCheerio('.tit h1').text().trim() ||
         'Untitled',
-      cover: pageCover || defaultCover,
+      cover: pageCover,
     };
 
     let moreNovelInfo = this.loadedNovelCache.find(n => n.path === novelPath);

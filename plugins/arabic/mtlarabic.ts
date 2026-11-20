@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { FilterTypes, Filters } from '@libs/filterInputs';
 import { NovelStatus } from '@libs/novelStatus';
-import { defaultCover } from '@libs/defaultCover';
 import { isUrlAbsolute } from '@libs/isAbsoluteUrl';
 
 type ListingItem = {
@@ -64,7 +63,7 @@ const escapeHtml = (text: string) =>
 
 /** `image` is a bare filename; the file itself lives under /images/novels/. */
 const coverUrl = (image?: string | null) =>
-  image ? `${BASE_URL}/images/novels/${image}` : defaultCover;
+  image ? `${BASE_URL}/images/novels/${image}` : undefined;
 
 const statusFrom = (status: string): Plugin.SourceNovel['status'] => {
   if (status.includes('مستمرة')) return NovelStatus.Ongoing;
@@ -75,7 +74,7 @@ const statusFrom = (status: string): Plugin.SourceNovel['status'] => {
 class MtlaArabic implements Plugin.PluginBase {
   id = 'mtlarabic';
   name = 'مكتبة الخيال';
-  version = '1.0.0';
+  version = '1.0.1';
   icon = 'src/ar/mtlarabic/icon.png';
   site = 'https://mtlarabic.com';
 

@@ -1,6 +1,5 @@
 import { Plugin } from '@/types/plugin';
 import { FilterTypes, Filters } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 import { fetchApi } from '@libs/fetch';
 import { NovelStatus } from '@libs/novelStatus';
 import { storage, localStorage } from '@libs/storage';
@@ -30,7 +29,7 @@ class RLIB implements Plugin.PluginBase {
   name = 'RanobeLib';
   site = 'https://ranobelib.me';
   apiSite = 'https://api.cdnlibs.org/api/manga/';
-  version = '2.2.8';
+  version = '2.2.9';
   icon = 'src/ru/ranobelib/icon.png';
   webStorageUtilized = true;
   imageRequestInit = {
@@ -103,7 +102,7 @@ class RLIB implements Plugin.PluginBase {
       result.data.forEach(novel =>
         novels.push({
           name: novel.rus_name || novel.eng_name || novel.name,
-          cover: novel.cover?.default || defaultCover,
+          cover: novel.cover?.default,
           path: novel.slug_url || novel.id + '--' + novel.slug,
         }),
       );
@@ -120,7 +119,7 @@ class RLIB implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: data.rus_name || data.name,
-      cover: data.cover?.default || defaultCover,
+      cover: data.cover?.default,
       summary: htmlToText(
         typeof data.summary === 'string'
           ? data.summary
@@ -228,7 +227,7 @@ class RLIB implements Plugin.PluginBase {
       result.data.forEach(novel =>
         novels.push({
           name: novel.rus_name || novel.eng_name || novel.name,
-          cover: novel.cover?.default || defaultCover,
+          cover: novel.cover?.default,
           path: novel.slug_url || novel.id + '--' + novel.slug,
         }),
       );

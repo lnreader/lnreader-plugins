@@ -3,7 +3,6 @@ import { Filters, FilterTypes } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { storage } from '@libs/storage';
-import { defaultCover } from '@libs/defaultCover';
 
 class Genesis implements Plugin.PluginBase {
   id = 'genesistudio';
@@ -12,7 +11,7 @@ class Genesis implements Plugin.PluginBase {
   customCSS = 'src/en/genesis/customCSS.css';
   site = 'https://genesistudio.com';
   api = 'https://api.genesistudio.com';
-  version = '2.0.3';
+  version = '2.0.4';
 
   hideLocked = storage.get('hideLocked');
   pluginSettings = {
@@ -81,7 +80,7 @@ class Genesis implements Plugin.PluginBase {
       path: novelPath,
       summary: json.synopsis,
       author: json.author,
-      cover: json.cover ? await this.getCoverUrl(json.cover) : defaultCover,
+      cover: json.cover ? await this.getCoverUrl(json.cover) : undefined,
       genres: json.genres
         ?.map(g => g.genres_id?.label)
         .filter(l => l)

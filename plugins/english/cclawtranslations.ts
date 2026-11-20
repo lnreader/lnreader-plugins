@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 type Section = 'ongoing' | 'completed';
@@ -27,7 +26,7 @@ class CClawTranslationsPlugin implements Plugin.PluginBase {
   name = 'CClaw Translations';
   icon = 'src/en/cclawtranslations/icon.png';
   site = 'https://cclawtranslations.home.blog';
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters = {
     section: {
@@ -77,7 +76,7 @@ class CClawTranslationsPlugin implements Plugin.PluginBase {
 
   private coverOf(img: ReturnType<ReturnType<typeof loadCheerio>>): string {
     const src = img.attr('data-orig-file') || img.attr('src');
-    return src ? src.split('?')[0] : defaultCover;
+    return src ? src.split('?')[0] : undefined;
   }
 
   private async listSection(
@@ -98,7 +97,7 @@ class CClawTranslationsPlugin implements Plugin.PluginBase {
       novels.push({
         name,
         path: novelPath,
-        cover: img.length ? this.coverOf(img) : defaultCover,
+        cover: img.length ? this.coverOf(img) : undefined,
         section,
       });
     });
@@ -149,7 +148,6 @@ class CClawTranslationsPlugin implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path,
       name: title.replace(/\s*\(?\bToC\b\)?\s*$/i, '') || title,
-      cover: defaultCover,
       chapters: [],
     };
 

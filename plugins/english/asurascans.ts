@@ -3,7 +3,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { storage } from '@libs/storage';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 type SeriesJSON = {
@@ -45,7 +44,7 @@ class AsuraScansPlugin implements Plugin.PluginBase {
   icon = 'src/en/asurascans/icon.png';
   site = 'https://asurascans.com';
   apiUrl = 'https://api.asurascans.com/api';
-  version = '1.0.0';
+  version = '1.0.1';
 
   pluginSettings = {
     hideLocked: {
@@ -74,7 +73,7 @@ class AsuraScansPlugin implements Plugin.PluginBase {
     );
     return (data.data || []).map(series => ({
       name: series.title,
-      cover: series.cover_url || defaultCover,
+      cover: series.cover_url,
       path: `novels/${series.slug}`,
     }));
   }
@@ -120,7 +119,7 @@ class AsuraScansPlugin implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: series.title || 'Untitled',
-      cover: series.cover_url || defaultCover,
+      cover: series.cover_url,
       author: series.author || undefined,
       genres: (series.genres || []).join(','),
       status:

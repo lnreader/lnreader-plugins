@@ -1,7 +1,6 @@
 import { CheerioAPI, load } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 const SITE_URL = /^https?:\/\/(?:www\.)?rezeroturkce\.com\//i;
@@ -55,7 +54,7 @@ class ReZeroTurkce implements Plugin.PluginBase {
   name = 'Re:Zero Türkçe';
   icon = 'src/tr/rezeroturkce/icon.png';
   site = 'https://www.rezeroturkce.com/';
-  version = '1.0.0';
+  version = '1.0.1';
 
   async getCheerio(path: string): Promise<CheerioAPI> {
     const res = await fetchApi(this.site + path);
@@ -127,9 +126,7 @@ class ReZeroTurkce implements Plugin.PluginBase {
     novels.push({
       name: cleanText(sideStories('main h1').first().text()) || 'Yan Hikâyeler',
       path: 'yan-hikayeler/',
-      cover:
-        sideStories('meta[property="og:image"]').attr('content') ||
-        defaultCover,
+      cover: sideStories('meta[property="og:image"]').attr('content'),
     });
     return novels;
   }
@@ -155,7 +152,7 @@ class ReZeroTurkce implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: cleanText($('main h1').first().text()) || 'Untitled',
-      cover: $('meta[property="og:image"]').attr('content') || defaultCover,
+      cover: $('meta[property="og:image"]').attr('content'),
       status: NovelStatus.Unknown,
     };
 

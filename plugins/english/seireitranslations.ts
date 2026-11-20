@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 type FeedLink = { rel: string; href: string };
 type FeedEntry = {
@@ -46,7 +45,7 @@ class SeireiTranslations implements Plugin.PluginBase {
   name = 'Seirei Translations';
   icon = 'src/en/seireitranslations/icon.png';
   site = 'https://seireitranslations.blogspot.com';
-  version = '1.0.0';
+  version = '1.0.1';
   filters: Filters | undefined = undefined;
 
   private async request(url: string) {
@@ -94,8 +93,7 @@ class SeireiTranslations implements Plugin.PluginBase {
 
   private coverFrom(entry?: FeedEntry): string {
     const thumbnail = entry?.media$thumbnail?.url;
-    if (!thumbnail || thumbnail.includes(PLACEHOLDER_COVER))
-      return defaultCover;
+    if (!thumbnail || thumbnail.includes(PLACEHOLDER_COVER)) return undefined;
     return thumbnail.replace(/\/s\d+(-c)?\//, `/${COVER_SIZE}/`);
   }
 

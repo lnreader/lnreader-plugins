@@ -1,6 +1,5 @@
 import { Plugin } from '@/types/plugin';
 import { fetchApi } from '@libs/fetch';
-import { defaultCover } from '@libs/defaultCover';
 import { load } from 'cheerio';
 
 function sanitizeChapter(html: string, base: string): string {
@@ -45,7 +44,7 @@ class HenNovelTranslations implements Plugin.PluginBase {
   name = 'Hen Novel Translations';
   site = 'https://hennoveltranslations.org';
   icon = 'src/en/hennoveltranslations/icon.png';
-  version = '1.0.1';
+  version = '1.0.2';
 
   private async html(path: string) {
     const response = await fetchApi(this.resolveUrl(path));
@@ -76,7 +75,7 @@ class HenNovelTranslations implements Plugin.PluginBase {
       novels.push({
         name: title.text().trim(),
         path: new URL(this.resolveUrl(href)).pathname,
-        cover: image.attr('data-src') || image.attr('src') || defaultCover,
+        cover: image.attr('data-src') || image.attr('src'),
       });
     });
     if (!novels.length)
@@ -173,7 +172,7 @@ class HenNovelTranslations implements Plugin.PluginBase {
     return {
       name,
       path,
-      cover: $('.novel-content img').first().attr('src') || defaultCover,
+      cover: $('.novel-content img').first().attr('src'),
       summary: summary.text().trim(),
       author: field('Author:'),
       genres: field('Genre:'),

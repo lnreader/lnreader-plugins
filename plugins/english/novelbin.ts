@@ -1,7 +1,6 @@
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 type ListNovel = {
@@ -53,7 +52,7 @@ class NovelBinPlugin implements Plugin.PluginBase {
   name = 'Novel Bin';
   icon = 'src/en/novelbin/icon.png';
   site = 'https://novelbin.xyz/';
-  version = '3.0.1';
+  version = '3.0.2';
 
   // The site's JSON lives on BunnyCDN, which requires the site's Origin header.
   apiBase = 'https://boxnovela.b-cdn.net/';
@@ -167,7 +166,7 @@ class NovelBinPlugin implements Plugin.PluginBase {
     return {
       name: novel.title,
       path: 'novel/' + novel.slug,
-      cover: novel.cover || defaultCover,
+      cover: novel.cover,
     };
   }
 
@@ -240,7 +239,7 @@ class NovelBinPlugin implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: detail.title,
-      cover: detail.cover || defaultCover,
+      cover: detail.cover,
       author: detail.author,
       summary: detail.description,
       genres: (detail.genres || []).join(', '),
@@ -361,7 +360,7 @@ class NovelBinPlugin implements Plugin.PluginBase {
   }
 
   resolveUrl = (path: string) => {
-    // Covers (and defaultCover) are already absolute.
+    // Covers are already absolute.
     if (/^https?:\/\//i.test(path)) return path;
     // Old novelbin.com paths have no page on this site; open the novel instead.
     if (path.startsWith('b/')) {

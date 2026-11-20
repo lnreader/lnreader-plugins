@@ -1,6 +1,5 @@
 import { Plugin } from '@/types/plugin';
 import { FilterTypes, Filters } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 import { fetchApi } from '@libs/fetch';
 import { NovelStatus } from '@libs/novelStatus';
 import { Parser } from 'htmlparser2';
@@ -11,7 +10,7 @@ class AuthorToday implements Plugin.PluginBase {
   name = 'Автор Тудей';
   icon = 'src/ru/authortoday/icon.png';
   site = 'https://author.today';
-  version = '1.2.3';
+  version = '1.2.4';
 
   private userAgent =
     'Mozilla/5.0 (Android 15; Mobile; rv:138.0) Gecko/138.0 Firefox/138.0';
@@ -59,9 +58,6 @@ class AuthorToday implements Plugin.PluginBase {
               isParsingName = false;
             }
             if (name === 'a' && isParsingNovel) {
-              if (!tempNovel.cover) {
-                tempNovel.cover = defaultCover;
-              }
               novels.push(tempNovel);
               tempNovel = {} as Plugin.NovelItem;
               isParsingNovel = false;
@@ -231,9 +227,6 @@ class AuthorToday implements Plugin.PluginBase {
       .replace(/\n{3,}/g, '\n\n')
       .trim();
 
-    if (!novel.cover) {
-      novel.cover = defaultCover;
-    }
     if (!chapters.length) {
       chapters.push({
         name: 'Рассказ',

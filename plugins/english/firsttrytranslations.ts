@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 type Page = ReturnType<typeof loadCheerio>;
 
@@ -39,7 +38,7 @@ class FirstTryTranslationsPlugin implements Plugin.PluginBase {
   name = 'First Try Translations';
   icon = 'src/en/firsttrytranslations/icon.png';
   site = 'https://firsttrytranslations.wordpress.com';
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters: Filters | undefined = undefined;
 
@@ -170,7 +169,7 @@ class FirstTryTranslationsPlugin implements Plugin.PluginBase {
     // The cover is the artwork inside the page; og:image falls back to the
     // blog logo for novels without any.
     const image = this.entryContent($).find('img[src]').first().attr('src');
-    return { path, name, cover: image || defaultCover };
+    return { path, name, cover: image };
   }
 
   /** Chapter links in page order, labelled with their "Volume ..." heading. */

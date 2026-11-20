@@ -1,7 +1,6 @@
 import { Plugin } from '@/types/plugin';
 import { FilterTypes, Filters } from '@libs/filterInputs';
 import { fetchApi } from '@libs/fetch';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 const PAGE_SIZE = 40;
@@ -11,7 +10,7 @@ class WebFandom implements Plugin.PluginBase {
   name = 'WebFandom';
   site = 'https://webfandom.ru';
   api = this.site + '/api/v1';
-  version = '1.0.0';
+  version = '1.0.1';
   icon = 'src/ru/webfandom/icon.png';
 
   async popularNovels(
@@ -55,7 +54,7 @@ class WebFandom implements Plugin.PluginBase {
     return data.results.map(novel => ({
       name: novel.name,
       path: '/publications/' + novel.slug,
-      cover: novel.image ? this.absolute(novel.image) : defaultCover,
+      cover: novel.image ? this.absolute(novel.image) : undefined,
     }));
   }
 
@@ -68,7 +67,7 @@ class WebFandom implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: data.name,
-      cover: data.image ? this.absolute(data.image) : defaultCover,
+      cover: data.image ? this.absolute(data.image) : undefined,
       summary: data.description?.trim() || undefined,
       author: data.authors?.map(author => author.name).join(', ') || undefined,
       genres:

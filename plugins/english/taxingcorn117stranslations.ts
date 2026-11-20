@@ -3,7 +3,6 @@ import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { Filters } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 type WpPage = {
   slug: string;
@@ -56,7 +55,7 @@ class TaxingCorn117sTranslationsPlugin implements Plugin.PluginBase {
   name = "TaxingCorn117's Translations";
   icon = 'src/en/taxingcorn117stranslations/icon.png';
   site = 'https://taxingcorn117stranslations.wordpress.com';
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters: Filters | undefined = undefined;
 
@@ -234,7 +233,7 @@ class TaxingCorn117sTranslationsPlugin implements Plugin.PluginBase {
   /** First image on the novel page is its cover. */
   private pickCover(html: string): string {
     const src = loadCheerio(`<div>${html}</div>`)('img').first().attr('src');
-    return src ? src.split('?')[0] : defaultCover;
+    return src ? src.split('?')[0] : undefined;
   }
 
   /** Synopsis: the paragraphs between "Description" and the chapter index. */

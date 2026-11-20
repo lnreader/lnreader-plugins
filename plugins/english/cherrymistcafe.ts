@@ -3,7 +3,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { NovelStatus } from '@libs/novelStatus';
-import { defaultCover } from '@libs/defaultCover';
 
 type ApiTranslator = {
   name?: string;
@@ -355,7 +354,7 @@ function normalizePath(path: string): string {
 }
 
 function resolveCover(series: ApiSeries): string {
-  return series.cover_image_url || series.cover_thumb_url || defaultCover;
+  return series.cover_image_url || series.cover_thumb_url;
 }
 
 class CherryMistCafePlugin implements Plugin.PluginBase {
@@ -363,7 +362,7 @@ class CherryMistCafePlugin implements Plugin.PluginBase {
   name = 'Cherry Mist Cafe';
   icon = 'src/en/cherrymistcafe/icon.png';
   site = 'https://cherrymist.cafe/';
-  version = '2.0.0';
+  version = '2.0.1';
 
   private apiBase = 'https://cherrymist.cafe/api';
   private chapterIds: Record<string, string> = {};

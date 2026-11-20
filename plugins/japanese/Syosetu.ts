@@ -1,7 +1,6 @@
 import { CheerioAPI, load as loadCheerio } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
-import { defaultCover } from '@libs/defaultCover';
 import { FilterTypes, Filters } from '@libs/filterInputs';
 import { NovelStatus } from '@libs/novelStatus';
 // const novelStatus = require('@/types/constants');
@@ -14,7 +13,7 @@ class Syosetu implements Plugin.PluginBase {
   icon = 'src/jp/syosetu/icon.png';
   site = 'https://yomou.syosetu.com/';
   novelPrefix = 'https://ncode.syosetu.com';
-  version = '1.1.4';
+  version = '1.1.5';
   headers = {
     'User-Agent':
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -59,7 +58,6 @@ class Syosetu implements Plugin.PluginBase {
         const novel: Plugin.NovelItem = {
           path: url.replace(this.novelPrefix, ''),
           name,
-          cover: defaultCover,
         };
         novels.push(novel);
       });
@@ -128,7 +126,6 @@ class Syosetu implements Plugin.PluginBase {
         .trim(),
       status: status,
       artist: '',
-      cover: defaultCover,
       chapters: [],
       genres: loadedCheerio('meta[property="og:description"]')
         .attr('content')
@@ -254,7 +251,6 @@ class Syosetu implements Plugin.PluginBase {
           pageNovels.push({
             name: novelDIV.text(), // get the name
             path: novelPath, // get last part of the link
-            cover: defaultCover,
           });
         }
       });

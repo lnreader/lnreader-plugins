@@ -1,6 +1,5 @@
 import { Plugin } from '@/types/plugin';
 import { fetchApi } from '@libs/fetch';
-import { defaultCover } from '@libs/defaultCover';
 import { load } from 'cheerio';
 
 function sanitizeChapter(html: string, base: string): string {
@@ -48,7 +47,7 @@ class Maehwasup implements Plugin.PluginBase {
   name = 'Maehwasup';
   site = 'https://maehwasup.com';
   icon = 'src/en/maehwasup/icon.png';
-  version = '1.0.1';
+  version = '1.0.2';
 
   private async request(url: string) {
     const response = await fetchApi(url);
@@ -64,7 +63,7 @@ class Maehwasup implements Plugin.PluginBase {
     const $ = load(await (await this.request(this.site)).text());
     const name = $('.wp-block-site-title').first().text().trim();
     if (!name) throw new Error('Maehwasup: the novel title could not be read.');
-    return [{ name, path: '/', cover: defaultCover }];
+    return [{ name, path: '/' }];
   }
 
   private async index(page: number): Promise<Index> {

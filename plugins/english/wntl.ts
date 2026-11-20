@@ -1,7 +1,6 @@
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
-import { defaultCover } from '@libs/defaultCover';
 
 const SITE = 'https://wntl.net';
 const API = `${SITE}/api`;
@@ -47,7 +46,7 @@ type APIChapter = {
 };
 
 const absolute = (url?: string) => {
-  if (!url) return defaultCover;
+  if (!url) return undefined;
   return url.startsWith('http') ? url : `${SITE}/${url.replace(/^\/+/, '')}`;
 };
 
@@ -116,7 +115,7 @@ class WNTLPlugin implements Plugin.PluginBase {
   name = 'Web Novel Translation';
   icon = 'src/en/webnoveltraslation/icon.png';
   site = 'https://wntl.net/';
-  version = '2.3.0';
+  version = '2.3.1';
 
   private static readonly PAGE_SIZE = 20;
   private cache: { time: number; novels: APINovel[] } | null = null;

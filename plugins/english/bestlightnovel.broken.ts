@@ -1,6 +1,5 @@
 import { CheerioAPI, load as parseHTML } from 'cheerio';
 import { Plugin } from '@/types/plugin';
-import { defaultCover } from '@libs/defaultCover';
 import { fetchApi } from '@libs/fetch';
 import { NovelStatus } from '@libs/novelStatus';
 import { FilterTypes, Filters } from '@libs/filterInputs';
@@ -10,7 +9,7 @@ class BLN implements Plugin.PluginBase {
   name = 'BestLightNovel';
   icon = 'src/en/bestlightnovel/icon.png';
   site = 'https://bestlightnovel.com/';
-  version = '1.0.1';
+  version = '1.0.2';
 
   parseNovels(loadedCheerio: CheerioAPI) {
     const novels: Plugin.NovelItem[] = [];
@@ -69,7 +68,7 @@ class BLN implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: loadedCheerio('.truyen_info_right  h1').text().trim() || '',
-      cover: loadedCheerio('.info_image img').attr('src') || defaultCover,
+      cover: loadedCheerio('.info_image img').attr('src'),
       summary: loadedCheerio('#noidungm').text()?.trim() || '',
       chapters: [],
     };

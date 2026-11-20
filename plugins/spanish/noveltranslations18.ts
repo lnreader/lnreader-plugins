@@ -1,7 +1,6 @@
 import { load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 const BASE = 'https://noveltranslations18.blogspot.com';
@@ -58,7 +57,7 @@ class NovelTranslations18Plugin implements Plugin.PluginBase {
   name = 'Novel Translations';
   icon = 'src/es/noveltranslations18/icon.png';
   site = `${BASE}/`;
-  version = '1.0.0';
+  version = '1.0.1';
   filters = undefined;
 
   private seriesCache?: Promise<Series[]>;
@@ -134,7 +133,7 @@ class NovelTranslations18Plugin implements Plugin.PluginBase {
     return series.map(item => ({
       name: item.name,
       path: item.path,
-      cover: item.cover || defaultCover,
+      cover: item.cover,
     }));
   }
 
@@ -200,10 +199,7 @@ class NovelTranslations18Plugin implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: $('h1').first().text().trim() || 'Untitled',
-      cover:
-        $('meta[property="og:image"]').attr('content') ||
-        fallbackCover ||
-        defaultCover,
+      cover: $('meta[property="og:image"]').attr('content') || fallbackCover,
     };
 
     const summary = $('#synopsis').text().trim();

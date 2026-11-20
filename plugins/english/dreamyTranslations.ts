@@ -1,7 +1,6 @@
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 import { storage } from '@libs/storage';
 
@@ -50,7 +49,7 @@ class DreamyTranslationsPlugin implements Plugin.PluginBase {
   name = 'Dreamy Translations';
   icon = 'src/en/dreamyTranslations/icon.png';
   site = 'https://dreamy-translations.com';
-  version = '1.1.1';
+  version = '1.1.2';
 
   filters: Filters | undefined = undefined;
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
@@ -364,7 +363,7 @@ class DreamyTranslationsPlugin implements Plugin.PluginBase {
     return data.projects.map(project => ({
       name: project.title,
       path: `/novel/${project.slug}`,
-      cover: data.squareImageUrls[String(project.id)] || defaultCover,
+      cover: data.squareImageUrls[String(project.id)],
     }));
   }
 
@@ -387,7 +386,7 @@ class DreamyTranslationsPlugin implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: data.project.title || 'Untitled',
-      cover: data.coverUrl || defaultCover,
+      cover: data.coverUrl,
       author: data.project.author,
       genres: (data.project.genres || []).join(', '),
       summary: data.project.synopsis || data.project.short_synopsis,

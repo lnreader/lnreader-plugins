@@ -2,7 +2,6 @@ import { fetchText } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 class KakuyomuPlugin implements Plugin.PluginBase {
@@ -10,7 +9,7 @@ class KakuyomuPlugin implements Plugin.PluginBase {
   name = 'kakuyomu';
   icon = 'src/jp/kakuyomu/icon.png';
   site = 'https://kakuyomu.jp';
-  version = '1.0.0';
+  version = '1.0.1';
   filters = {
     genre: {
       type: FilterTypes.Picker,
@@ -73,7 +72,6 @@ class KakuyomuPlugin implements Plugin.PluginBase {
       novels.push({
         name,
         path,
-        cover: defaultCover,
       });
     });
 
@@ -161,7 +159,7 @@ class KakuyomuPlugin implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: work.title,
-      cover: work.adminCoverImageUrl ?? defaultCover,
+      cover: work.adminCoverImageUrl,
       genres: (work?.tagLabels ?? []).join(','),
       author: author?.activityName,
       status:
@@ -231,7 +229,7 @@ class KakuyomuPlugin implements Plugin.PluginBase {
     const novels: Plugin.NovelItem[] = works.map(v => ({
       name: v.title ?? '',
       path: `/works/${v.id}`,
-      cover: v.adminCoverImageUrl ?? defaultCover,
+      cover: v.adminCoverImageUrl,
     }));
 
     return novels;

@@ -1,6 +1,5 @@
 import { Plugin } from '@/types/plugin';
 import { FilterTypes, Filters } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 import { fetchApi } from '@libs/fetch';
 import { NovelStatus } from '@libs/novelStatus';
 import { load as parseHTML } from 'cheerio';
@@ -10,7 +9,7 @@ class VyNovel implements Plugin.PluginBase {
   id = 'vynovel';
   name = 'VyNovel';
   site = 'https://vynovel.com';
-  version = '1.0.1';
+  version = '1.0.2';
   icon = 'src/en/vynovel/icon.png';
 
   async fetchNovels(
@@ -36,10 +35,9 @@ class VyNovel implements Plugin.PluginBase {
         .find('div[class="comic-title"]')
         .text()
         ?.trim();
-      const cover =
-        loadedCheerio(element)
-          .find('div[class="comic-image lozad "]')
-          .attr('data-background-image') || defaultCover;
+      const cover = loadedCheerio(element)
+        .find('div[class="comic-image lozad "]')
+        .attr('data-background-image');
       const url = loadedCheerio(element).attr('href');
 
       if (!name || !url) return;
@@ -73,9 +71,7 @@ class VyNovel implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: loadedCheerio('h1[class="title"]').text().trim(),
-      cover:
-        loadedCheerio('div[class="img-manga"] > img').attr('src') ||
-        defaultCover,
+      cover: loadedCheerio('div[class="img-manga"] > img').attr('src'),
       summary: loadedCheerio('div[class="summary"] > p[class="content"]')
         .text()
         .trim(),

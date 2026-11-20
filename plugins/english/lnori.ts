@@ -2,14 +2,13 @@ import { fetchText } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { load as parseHTML } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 class LnorisPlugin implements Plugin.PluginBase {
   id = 'lnori';
   name = 'LNORI';
   icon = 'src/en/lnori/icon.png';
   site = 'https://lnori.com/';
-  version = '1.0.1';
+  version = '1.0.2';
 
   private async getLibraryNovels(): Promise<
     {
@@ -51,7 +50,7 @@ class LnorisPlugin implements Plugin.PluginBase {
           novel: {
             name,
             path,
-            cover: cover || defaultCover,
+            cover,
           },
           author,
           tags,
@@ -105,8 +104,6 @@ class LnorisPlugin implements Plugin.PluginBase {
       novel.cover = coverUrl.startsWith('/')
         ? this.site + coverUrl.substring(1)
         : coverUrl;
-    } else {
-      novel.cover = defaultCover;
     }
 
     const dataTagsAttr = $('nav.tags-box.desktop').attr('data-tags');

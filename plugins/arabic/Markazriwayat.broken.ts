@@ -12,14 +12,13 @@
 import { load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 import { FilterTypes, Filters } from '@libs/filterInputs';
 
 class Markazriwayat implements Plugin.PluginBase {
   id = 'markazriwayat';
   name = 'مركز الروايات';
-  version = '1.0.0';
+  version = '1.0.1';
   icon = 'src/ar/markazriwayat/icon.png';
   site = 'https://markazriwayat.com/';
 
@@ -54,8 +53,7 @@ class Markazriwayat implements Plugin.PluginBase {
       const name = $el.find('.lib-card__title').text().trim();
       const cover =
         $el.find('img').attr('data-src') ||
-        $el.find('img').attr('data-defer-src') ||
-        defaultCover;
+        $el.find('img').attr('data-defer-src');
 
       if (name && path && !seen.has(path)) {
         seen.add(path);
@@ -99,7 +97,7 @@ class Markazriwayat implements Plugin.PluginBase {
         (item: { title: string; link: string; cover?: string }) => ({
           name: item.title,
           path: item.link.replace(this.site, ''),
-          cover: item.cover || defaultCover,
+          cover: item.cover,
         }),
       );
     } catch {
@@ -121,7 +119,6 @@ class Markazriwayat implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: $('h1').first().text().trim() || 'Untitled',
-      cover: defaultCover,
       summary: '',
       author: '',
       status: NovelStatus.Unknown,
@@ -136,10 +133,7 @@ class Markazriwayat implements Plugin.PluginBase {
         return src.includes('wp-content/uploads') && !src.includes('cropped-');
       })
       .first();
-    novel.cover =
-      coverImg.attr('data-src') ||
-      coverImg.attr('data-defer-src') ||
-      defaultCover;
+    novel.cover = coverImg.attr('data-src') || coverImg.attr('data-defer-src');
 
     // Status
     const statusEl = $('.status-pill').first();

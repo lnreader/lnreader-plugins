@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { Filters, FilterTypes } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 
 // Novelito -- https://noveli.to
 // A public library front-end with a plain JSON API behind the SPA. No
@@ -261,7 +260,7 @@ function toNovelItem(record: unknown): Plugin.NovelItem {
   return {
     name: asString(record['title'], 'novel title'),
     path: novelPath(id),
-    cover: coverUrl(record['cover_image']) || defaultCover,
+    cover: coverUrl(record['cover_image']),
   };
 }
 
@@ -405,7 +404,7 @@ class Novelito implements Plugin.PluginBase {
   name = 'Novelito';
   icon = 'src/en/novelito/icon.png';
   site = SITE;
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters = {
     sort: {
@@ -498,7 +497,7 @@ class Novelito implements Plugin.PluginBase {
       novel.author = info['author'];
     }
     const cover = coverUrl(info['cover_image']);
-    novel.cover = cover || defaultCover;
+    novel.cover = cover;
     if (typeof info['description'] === 'string') {
       const summary = plainText(info['description']);
       if (summary !== '') novel.summary = summary;

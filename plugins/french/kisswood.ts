@@ -1,7 +1,6 @@
 import { CheerioAPI, load } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 const challengeTitles = new Set([
@@ -36,7 +35,7 @@ class KissWoodPlugin implements Plugin.PluginBase {
   name = 'KissWood';
   icon = 'src/fr/kisswood/icon.png';
   site = 'https://kisswood.eu';
-  version = '1.0.3';
+  version = '1.0.4';
 
   private async findMovedChapter(chapterPath: string): Promise<string | null> {
     const slug = chapterPath.split('/').filter(Boolean).pop() || '';
@@ -118,8 +117,7 @@ class KissWoodPlugin implements Plugin.PluginBase {
     return (
       $('div p img').first().attr('src') ||
       $('figure a img').first().attr('src') ||
-      $('figure img').first().attr('src') ||
-      defaultCover
+      $('figure img').first().attr('src')
     );
   }
 
@@ -160,7 +158,6 @@ class KissWoodPlugin implements Plugin.PluginBase {
           const novel = {
             name: novelName,
             path: novelUrl.replace(this.site, ''),
-            cover: defaultCover,
           };
           novels.push(novel);
         }

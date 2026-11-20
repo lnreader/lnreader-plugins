@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 type WpPage = {
   id: number;
@@ -72,7 +71,7 @@ class ImpatientMTLReaderPlugin implements Plugin.PluginBase {
   name = 'Impatient MTL Reader';
   icon = 'src/en/impatientmtlreader/icon.png';
   site = 'https://impatientmtlreader533234643.wordpress.com';
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters: Filters | undefined = undefined;
 
@@ -234,7 +233,7 @@ class ImpatientMTLReaderPlugin implements Plugin.PluginBase {
     const named = urls.filter(url => /\/cove/i.test(url));
     const cover = named[0] || urls[0];
     // Only site images carry a resize query; the placeholder must stay intact.
-    return cover ? cover.split('?')[0] : defaultCover;
+    return cover ? cover.split('?')[0] : undefined;
   }
 
   /** Paragraphs after "Description:" up to the source / links block. */

@@ -1,7 +1,6 @@
 import { load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
-import { defaultCover } from '@libs/defaultCover';
 import { Filters } from '@libs/filterInputs';
 
 type BloggerEntry = {
@@ -15,7 +14,7 @@ type BloggerEntry = {
 class BlogDoAnonNovelsPlugin implements Plugin.PluginBase {
   id = 'blogdoamonnovels';
   name = 'Blog do Amon Novels';
-  version = '1.0.1';
+  version = '1.0.2';
   icon = 'src/pt-br/blogdoamonnovels/icon.png';
   site = 'https://www.blogdoamonnovels.com';
 
@@ -40,7 +39,7 @@ class BlogDoAnonNovelsPlugin implements Plugin.PluginBase {
 
       const novel = {
         name: novelName,
-        cover: coverUrl || defaultCover,
+        cover: coverUrl,
         path: novelUrl.replace(this.site, ''),
       };
 
@@ -75,7 +74,7 @@ class BlogDoAnonNovelsPlugin implements Plugin.PluginBase {
 
       const novel = {
         name: novelName,
-        cover: coverUrl || defaultCover,
+        cover: coverUrl,
         path: novelUrl.replace(this.site, ''),
       };
 

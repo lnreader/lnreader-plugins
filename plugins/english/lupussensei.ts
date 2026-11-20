@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { load as loadCheerio } from 'cheerio';
 import type { AnyNode } from 'domhandler';
-import { defaultCover } from '@libs/defaultCover';
 
 // Chapters of the oldest series live on the translator's earlier blog.
 const CHAPTER_HOST =
@@ -27,7 +26,7 @@ class LupusSenseiPlugin implements Plugin.PluginBase {
   name = 'Lupus-sensei Translations';
   site = 'https://www.lupus-sensei.com';
   icon = 'src/en/lupussensei/icon.png';
-  version = '1.0.0';
+  version = '1.0.1';
 
   private async getHtml(url: string): Promise<string> {
     const response = await fetchApi(url);
@@ -87,7 +86,7 @@ class LupusSenseiPlugin implements Plugin.PluginBase {
         // ignore malformed menu links
       }
       if (path && !novels.some(novel => novel.path === path)) {
-        novels.push({ name: title, path, cover: defaultCover });
+        novels.push({ name: title, path });
       }
       title = undefined;
     });
@@ -135,7 +134,7 @@ class LupusSenseiPlugin implements Plugin.PluginBase {
     }
     return novels.map(novel => ({
       ...novel,
-      cover: covers.get(novel.path) || defaultCover,
+      cover: covers.get(novel.path),
     }));
   }
 
@@ -193,7 +192,7 @@ class LupusSenseiPlugin implements Plugin.PluginBase {
     return {
       path: novelPath,
       name: listed?.name || pageTitle || 'Untitled',
-      cover: cover || defaultCover,
+      cover,
       chapters,
     };
   }

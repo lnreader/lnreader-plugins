@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 type Page = ReturnType<typeof loadCheerio>;
@@ -40,7 +39,7 @@ class KakushiTranslationsPlugin implements Plugin.PluginBase {
   name = 'Kakushi Translations';
   icon = 'src/en/kakushitranslations/icon.png';
   site = 'https://kakushitranslations.wordpress.com';
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters: Filters | undefined = undefined;
 
@@ -169,7 +168,7 @@ class KakushiTranslationsPlugin implements Plugin.PluginBase {
     const name = this.normalizeText($('h1.entry-title').first().text());
     // The first image inside the page is the volume cover.
     const image = this.entryContent($).find('img[src]').first().attr('src');
-    return { path, name, cover: image || defaultCover };
+    return { path, name, cover: image };
   }
 
   /** Chapter links in page order, labelled with their "Volume NN" heading. */

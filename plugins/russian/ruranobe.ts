@@ -1,6 +1,5 @@
 import { Plugin } from '@/types/plugin';
 import { FilterTypes, Filters } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 import { fetchApi } from '@libs/fetch';
 import { NovelStatus } from '@libs/novelStatus';
 import { load as parseHTML } from 'cheerio';
@@ -20,7 +19,7 @@ class RuRanobe implements Plugin.PluginBase {
   // Cloudflare, which drops requests to ruranobe.ru on some networks
   imageHost = 'https://znovel.space';
   apiUrl = 'https://znovel.space/api/site/v2/graphql';
-  version = '1.0.0';
+  version = '1.0.1';
   icon = 'src/ru/ruranobe/icon.png';
 
   async fetchNovels(
@@ -195,7 +194,7 @@ class RuRanobe implements Plugin.PluginBase {
   private getCover(covers?: Cover[]): string {
     const cover = covers?.[0]?.thumbnail || covers?.[0]?.url;
     // thumbnails come percent-encoded, original urls may contain raw cyrillic
-    return cover ? this.imageHost + encodeURI(decodeURI(cover)) : defaultCover;
+    return cover ? this.imageHost + encodeURI(decodeURI(cover)) : undefined;
   }
 
   private parseSummary(html?: string): string | undefined {
