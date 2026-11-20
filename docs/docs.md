@@ -66,25 +66,25 @@ PluginBase is a base class for all plugins.
 class ExamplePlugin implements Plugin.PluginBase {}
 ```
 
-| Field                                                     | Required | Description                                                                                                                           |
-| --------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| [id](#pluginbaseid)                                       | yes      | Plugin ID                                                                                                                             |
-| [name](#pluginbasename)                                   | yes      | Plugin Name                                                                                                                           |
-| [icon](#pluginbaseicon)                                   | yes      | Path to the plugin's icon, converted to `iconUrl` at publish time — see [Repository manifest](#repository-manifest--install-metadata) |
-| [site](#pluginbasesite)                                   | yes      | Plugin site link                                                                                                                      |
-| [version](#pluginbaseversion)                             | yes      | Plugin version                                                                                                                        |
-| [imageRequestInit](#pluginbaseimagerequestinit)           | no       | Plugin Image Request Init                                                                                                             |
-| [filters](#pluginbasefilters)                             | no       | [Filter definition](#filter-definition-object) object                                                                                 |
-| [pluginSettings](#pluginbasepluginsettings)               | no       | [Plugin settings](#pluginsettings) object                                                                                             |
-| [webStorageUtilized](#pluginbasewebstorageutilized)       | no       | Flag for plugins that need `localStorage`/`sessionStorage`                                                                            |
-| [customJS](#pluginbasecustomjs)                           | no       | Path to a custom JS file, converted to a manifest URL — see [Repository manifest](#repository-manifest--install-metadata)             |
-| [customCSS](#pluginbasecustomcss)                         | no       | Path to a custom CSS file, converted to a manifest URL — see [Repository manifest](#repository-manifest--install-metadata)            |
-| [popularNovels(page, options)](#pluginbasepopularnovels)  | yes      | Novel list getter                                                                                                                     |
-| [parseNovel(path)](#pluginbaseparsenovel)                 | yes      | Novel info and chapter list getter                                                                                                    |
-| [parseChapter(path)](#pluginbaseparsechapter)             | yes      | Chapter text getter                                                                                                                   |
-| [searchNovels(searchTerm, page)](#pluginbasesearchnovels) | yes      | Novel searching getter                                                                                                                |
-| [resolveUrl(path, isNovel)](#pluginbaseresolveurl)        | no       | Helper that turns a novel/chapter path into a full URL                                                                                |
-| [parsePage(novelPath, page)](#pagination)                 | no       | Chapter-list-by-page getter, for novels too large to list in one `parseNovel` call — see [Pagination](#pagination)                    |
+| Field                                                        | Required | Description                                                 |
+| ------------------------------------------------------------- | -------- | ------------------------------------------------------------- |
+| [id](#pluginbaseid)                                            | yes      | Plugin ID                                                     |
+| [name](#pluginbasename)                                        | yes      | Plugin Name                                                   |
+| [icon](#pluginbaseicon)                                        | yes      | Path to the plugin's icon, converted to `iconUrl` at publish time — see [Repository manifest](#repository-manifest--install-metadata) |
+| [site](#pluginbasesite)                                        | yes      | Plugin site link                                              |
+| [version](#pluginbaseversion)                                  | yes      | Plugin version                                                |
+| [imageRequestInit](#pluginbaseimagerequestinit)                | no       | Plugin Image Request Init                                     |
+| [filters](#pluginbasefilters)                                  | no       | [Filter definition](#filter-definition-object) object          |
+| [pluginSettings](#pluginbasepluginsettings)                    | no       | [Plugin settings](#pluginsettings) object                      |
+| [webStorageUtilized](#pluginbasewebstorageutilized)            | no       | Flag for plugins that need `localStorage`/`sessionStorage`     |
+| [customJS](#pluginbasecustomjs)                                | no       | Path to a custom JS file, converted to a manifest URL — see [Repository manifest](#repository-manifest--install-metadata) |
+| [customCSS](#pluginbasecustomcss)                              | no       | Path to a custom CSS file, converted to a manifest URL — see [Repository manifest](#repository-manifest--install-metadata) |
+| [popularNovels(page, options)](#pluginbasepopularnovels)       | yes      | Novel list getter                                              |
+| [parseNovel(path)](#pluginbaseparsenovel)                      | yes      | Novel info and chapter list getter                             |
+| [parseChapter(path)](#pluginbaseparsechapter)                  | yes      | Chapter text getter                                            |
+| [searchNovels(searchTerm, page)](#pluginbasesearchnovels)      | yes      | Novel searching getter                                         |
+| [resolveUrl(path, isNovel)](#pluginbaseresolveurl)             | no       | Helper that turns a novel/chapter path into a full URL          |
+| [parsePage(novelPath, page)](#pagination)                      | no       | Chapter-list-by-page getter, for novels too large to list in one `parseNovel` call — see [Pagination](#pagination) |
 
 #### PluginBase::id
 
@@ -354,7 +354,8 @@ See [Using cheerio](#using-cheerio) for more information on how to parse HTML do
 
 `SourceNovel` Novel information and chapter list as [SourceNovel](#sourcenovel) object
 
-> [!CAUTION] > [SourceNovel::path](#sourcenovelpath) should be the same value as [NovelItem::path](#novelitempath) provided as parameter!
+> [!CAUTION]
+> [SourceNovel::path](#sourcenovelpath) should be the same value as [NovelItem::path](#novelitempath) provided as parameter!
 
 ###### Example
 
@@ -476,11 +477,11 @@ class ExamplePlugin implements Plugin.PluginBase {
 
 An object representing basic information to display and access a novel in search/popular listings:
 
-| Field                            | Type     | Required | Description                                                 |
-| -------------------------------- | -------- | -------- | ----------------------------------------------------------- |
-| <p id="novelitemname">name</p>   | `string` | yes      | The name of the novel shown in the library                  |
-| <p id="novelitempath">path</p>   | `string` | yes      | The relative path to the novel (e.g. `/novel/example-slug`) |
-| <p id="novelitemcover">cover</p> | `string` | no       | URL to novel's cover image. Omit it if the source has none  |
+| Field                             | Type        | Required | Description                                             |
+| ---------------------------------- | ----------- | -------- | --------------------------------------------------------- |
+| <p id="novelitemname">name</p>    | `string`    | yes      | The name of the novel shown in the library                 |
+| <p id="novelitempath">path</p>    | `string`    | yes      | The relative path to the novel (e.g. `/novel/example-slug`)|
+| <p id="novelitemcover">cover</p>  | `string`    | no       | URL to novel's cover image. Omit it if the source has none     |
 
 #### Missing covers
 
@@ -504,22 +505,21 @@ novels.push({
 
 `SourceNovel` extends [NovelItem](#novelitem), containing the novel's full metadata and its chapter list.
 
-| Field                            | Type                            | Required | Description                                                                                                                  |
-| -------------------------------- | ------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| <p id="sourcenovelpath">path</p> | `string`                        | yes      | Must match the exact [NovelItem::path](#novelitempath) passed into `parseNovel`                                              |
-| name                             | `string`                        | yes      | The novel's title                                                                                                            |
-| cover                            | `string`                        | no       | URL to the novel's cover; omit it if there is none                                                                           |
-| genres                           | `string`                        | no       | Comma-separated genre list, e.g. `"Action, Fantasy, Romance"` (NOT an array)                                                 |
-| summary                          | `string`                        | no       | The novel's synopsis/description                                                                                             |
-| author                           | `string`                        | no       | Author name                                                                                                                  |
-| artist                           | `string`                        | no       | Artist name                                                                                                                  |
-| status                           | [NovelStatus](#novelstatus)     | no       | See [NovelStatus](#novelstatus) for the standard values                                                                      |
-| rating                           | `number`                        | no       | Rating out of 5, as a float                                                                                                  |
-| chapters                         | [ChapterItem](#chapteritem)`[]` | yes      | The novel's chapter list. If the novel is paginated, return the first page's chapters here and see [Pagination](#pagination) |
-| totalPages                       | `number`                        | no       | Total number of chapter-list pages, for paginated novels — see [Pagination](#pagination)                                     |
+| Field    | Type                                | Required | Description                                                                |
+| -------- | ------------------------------------ | -------- | ----------------------------------------------------------------------------- |
+| <p id="sourcenovelpath">path</p> | `string`             | yes      | Must match the exact [NovelItem::path](#novelitempath) passed into `parseNovel` |
+| name     | `string`                             | yes      | The novel's title                                                             |
+| cover    | `string`                             | no       | URL to the novel's cover; omit it if there is none                             |
+| genres   | `string`                             | no       | Comma-separated genre list, e.g. `"Action, Fantasy, Romance"` (NOT an array)  |
+| summary  | `string`                             | no       | The novel's synopsis/description                                               |
+| author   | `string`                             | no       | Author name                                                                    |
+| artist   | `string`                             | no       | Artist name                                                                    |
+| status   | [NovelStatus](#novelstatus)          | no       | See [NovelStatus](#novelstatus) for the standard values                        |
+| rating   | `number`                             | no       | Rating out of 5, as a float                                                    |
+| chapters | [ChapterItem](#chapteritem)`[]`      | yes      | The novel's chapter list. If the novel is paginated, return the first page's chapters here and see [Pagination](#pagination) |
+| totalPages | `number`                            | no       | Total number of chapter-list pages, for paginated novels — see [Pagination](#pagination) |
 
 > [!IMPORTANT]
->
 > - **`genres`**: Must be a single comma-separated `string` (e.g. `'Action, Fantasy'`), **NOT** an array (`string[]`).
 > - **`status`**: Always use the enum values from `NovelStatus` (`NovelStatus.Ongoing`, `NovelStatus.Completed`, `NovelStatus.Unknown`) imported from `@libs/novelStatus`.
 > - **`path`**: Must match the exact path received by `parseNovel(novelPath)`.
@@ -530,14 +530,14 @@ novels.push({
 
 Represents a chapter entry in the novel's chapter list:
 
-| Field         | Type                   | Required | Description                                                        |
-| ------------- | ---------------------- | -------- | ------------------------------------------------------------------ |
-| name          | `string`               | yes      | The title/name of the chapter                                      |
-| path          | `string`               | yes      | The relative path to the chapter (e.g. `/novel/slug/chapter-1`)    |
-| releaseTime   | `string`               | no       | `"YYYY-MM-DD"` or an ISO date string (or parsed using `dayjs`)     |
-| chapterNumber | `number`               | no       | Sequential chapter number (float or integer, e.g. `1`, `1.5`)      |
-| page          | `string`               | no       | Only used for novels without pages (see [Pagination](#pagination)) |
-| scanlator     | `string` or `string[]` | no       | Name(s) of the scanlation/translation group(s)                     |
+| Field         | Type                     | Required | Description                                                     |
+| ------------- | ------------------------ | -------- | ----------------------------------------------------------------- |
+| name          | `string`                 | yes      | The title/name of the chapter                                     |
+| path          | `string`                 | yes      | The relative path to the chapter (e.g. `/novel/slug/chapter-1`)    |
+| releaseTime   | `string`                 | no       | `"YYYY-MM-DD"` or an ISO date string (or parsed using `dayjs`)      |
+| chapterNumber | `number`                 | no       | Sequential chapter number (float or integer, e.g. `1`, `1.5`)      |
+| page          | `string`                 | no       | Only used for novels without pages (see [Pagination](#pagination)) |
+| scanlator     | `string` or `string[]`   | no       | Name(s) of the scanlation/translation group(s)                    |
 
 ### Filters
 
@@ -598,13 +598,13 @@ filters = {
 Types of filters supported. The `FilterTypes` enum values shown below are also the strings used to
 serialize each filter's `type` (e.g. `FilterTypes.CheckboxGroup === 'Checkbox'`).
 
-| FilterType                | Serialized as | Description                                                                                                                                | `value`                                                                     | `options`                                       |
-| ------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- | ----------------------------------------------- |
-| `Picker`                  | `'Picker'`    | A spinner for choosing one of the choices provided in `options`                                                                            | `string` the picked value                                                   | [Picker](#picker-options) options               |
-| `TextInput`               | `'Text'`      | A filter allowing a free text input                                                                                                        | `string` written value                                                      | N/A                                             |
-| `Switch`                  | `'Switch'`    | A boolean switch                                                                                                                           | `boolean` state of the switch                                               | N/A                                             |
-| `CheckboxGroup`           | `'Checkbox'`  | A grouping of checkboxes                                                                                                                   | `string[]` array containing selected values                                 | [CheckboxGroup](#checkboxgroup-options) options |
-| `ExcludableCheckboxGroup` | `'XCheckbox'` | A grouping of checkboxes where each one can be marked as included or excluded (e.g. "must have this genre" vs. "must not have this genre") | [ExcludableCheckboxGroupValue](#excludablecheckboxgroupvalue-object) object | [CheckboxGroup](#checkboxgroup-options) options |
+| FilterType                | Serialized as | Description                                                        | `value`                                                                      | `options`                                       |
+| -------------------------- | -------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------- | ----------------------------------------------- |
+| `Picker`                  | `'Picker'`     | A spinner for choosing one of the choices provided in `options`    | `string` the picked value                                                    | [Picker](#picker-options) options               |
+| `TextInput`               | `'Text'`       | A filter allowing a free text input                                | `string` written value                                                       | N/A                                             |
+| `Switch`                  | `'Switch'`     | A boolean switch                                                   | `boolean` state of the switch                                                | N/A                                             |
+| `CheckboxGroup`           | `'Checkbox'`   | A grouping of checkboxes                                           | `string[]` array containing selected values                                  | [CheckboxGroup](#checkboxgroup-options) options |
+| `ExcludableCheckboxGroup` | `'XCheckbox'`  | A grouping of checkboxes where each one can be marked as included or excluded (e.g. "must have this genre" vs. "must not have this genre") | [ExcludableCheckboxGroupValue](#excludablecheckboxgroupvalue-object) object | [CheckboxGroup](#checkboxgroup-options) options |
 
 ###### Picker options
 
@@ -696,23 +696,23 @@ pluginSettings = {
 The shape of a setting depends on its `type` — see [Setting Types](#setting-types) below for the
 `value`/`options` each one requires.
 
-| Name    | Type                                                | Required                     | Description                                  |
-| ------- | --------------------------------------------------- | ---------------------------- | -------------------------------------------- |
-| value   | depends on `type`, see below                        | yes                          | Default value for this setting               |
-| label   | `string`                                            | yes                          | Display label shown in the app's settings UI |
-| type    | `'Text' \| 'Switch' \| 'Select' \| 'CheckboxGroup'` | no                           | Type of the setting UI component (see below) |
-| options | `{ label: string; value: string }[]`                | for `Select`/`CheckboxGroup` | The choices shown for that setting           |
+| Name    | Type                              | Required      | Description                                    |
+| ------- | ---------------------------------- | -------- | ---------------------------------------------- |
+| value   | depends on `type`, see below       | yes      | Default value for this setting                 |
+| label   | `string`                           | yes      | Display label shown in the app's settings UI    |
+| type    | `'Text' \| 'Switch' \| 'Select' \| 'CheckboxGroup'` | no | Type of the setting UI component (see below) |
+| options | `{ label: string; value: string }[]` | for `Select`/`CheckboxGroup` | The choices shown for that setting |
 
 ##### Setting Types
 
 Four setting types are supported:
 
-| Type            | Description                                     | UI Component  | `value` type                               |
-| --------------- | ----------------------------------------------- | ------------- | ------------------------------------------ |
-| `Text`          | A text input field (default if type is omitted) | TextInput     | `string`                                   |
-| `Switch`        | A boolean toggle switch                         | SwitchItem    | `boolean`                                  |
-| `Select`        | A single choice from a dropdown menu            | Menu          | `string` — must match one option's `value` |
-| `CheckboxGroup` | Multiple choices toggled independently          | Checkbox list | `string[]` — the selected option values    |
+| Type            | Description                                       | UI Component | `value` type                            |
+| ---------------- | -------------------------------------------------- | ------------- | ---------------------------------------- |
+| `Text`           | A text input field (default if type is omitted)     | TextInput     | `string`                                 |
+| `Switch`         | A boolean toggle switch                             | SwitchItem    | `boolean`                                |
+| `Select`         | A single choice from a dropdown menu                | Menu          | `string` — must match one option's `value` |
+| `CheckboxGroup`  | Multiple choices toggled independently              | Checkbox list | `string[]` — the selected option values    |
 
 `Select` and `CheckboxGroup` also require an `options: { label: string; value: string }[]` array,
 the same shape as [Picker options](#picker-options)/[CheckboxGroup options](#checkboxgroup-options)
@@ -851,17 +851,17 @@ across plugins.
 import { NovelStatus } from '@libs/novelStatus';
 ```
 
-| Member               | Value                   |
-| -------------------- | ----------------------- |
-| `Unknown`            | `'Unknown'`             |
-| `Ongoing`            | `'Ongoing'`             |
-| `Completed`          | `'Completed'`           |
-| `Licensed`           | `'Licensed'`            |
-| `PublishingFinished` | `'Publishing Finished'` |
-| `Cancelled`          | `'Cancelled'`           |
-| `OnHiatus`           | `'On Hiatus'`           |
-| `STUB`               | `'STUB'`                |
-| `Inactive`           | `'Inactive'`            |
+| Member               | Value                 |
+| --------------------- | ---------------------- |
+| `Unknown`              | `'Unknown'`             |
+| `Ongoing`              | `'Ongoing'`             |
+| `Completed`            | `'Completed'`           |
+| `Licensed`             | `'Licensed'`            |
+| `PublishingFinished`   | `'Publishing Finished'` |
+| `Cancelled`            | `'Cancelled'`           |
+| `OnHiatus`             | `'On Hiatus'`           |
+| `STUB`                 | `'STUB'`                |
+| `Inactive`             | `'Inactive'`            |
 
 `status` is typed as `NovelStatus`, not a free-form string — always assign one of the members
 above (there's no fallback for other strings; pick `Unknown` if the source's status doesn't map
@@ -1064,7 +1064,8 @@ declare function fetchText(
 A shortcut for `fetchApi(...).then(res => res.text())`, with an optional `encoding` for sites that
 don't serve UTF-8 (e.g. `fetchText(url, undefined, 'gbk')` for some Chinese-language sites).
 
-> [!WARNING] > `fetchText` never throws. If the request fails (network error) or the response isn't `ok` (e.g.
+> [!WARNING]
+> `fetchText` never throws. If the request fails (network error) or the response isn't `ok` (e.g.
 > a 404/500), it silently returns an **empty string** `''` instead of rejecting. Check for an
 > empty result before parsing it if the site's availability can't be assumed:
 >
@@ -1125,12 +1126,7 @@ type FetchInit = {
   headers?: Record<string, string> | Headers;
   method?: string;
   body?: FormData | string;
-  [key: string]:
-    | string
-    | Record<string, string>
-    | FormData
-    | Headers
-    | undefined;
+  [key: string]: string | Record<string, string> | FormData | Headers | undefined;
 };
 ```
 
@@ -1147,19 +1143,19 @@ generally won't need most of these unless your target site requires them. Everyt
 is what's actually injected into a running plugin's `require(...)` calls — anything else you
 `import` won't resolve at runtime even if it type-checks locally.
 
-| Package               | Exposes                                                  | Typical use                                                                               |
-| --------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `cheerio`             | `load`                                                   | HTML parsing — see [Using Cheerio](#using-cheerio)                                        |
-| `@libs/fetch`         | `fetchApi`, `fetchText`, `fetchProto`, `fetchViaWebview` | Network requests — see [Custom fetching functions](#custom-fetching-functions)            |
-| `dayjs`               | the `dayjs` default export                               | Parsing/formatting relative or oddly-formatted release dates                              |
-| `urlencode`           | `encode`, `decode`                                       | Percent-encoding for URLs/query params, with non-UTF-8 charset support                    |
-| `htmlparser2`         | `Parser`                                                 | Low-level streaming HTML/XML parsing, for pages too large or malformed for Cheerio        |
-| `@libs/storage`       | `storage`, `localStorage`, `sessionStorage`              | Persistent key-value storage — see [storage](#storage-localstorage--sessionstorage) below |
-| `@libs/isAbsoluteUrl` | `isUrlAbsolute`                                          | See below                                                                                 |
-| `@libs/filterInputs`  | `FilterTypes`, `Filters`, ...                            | See [Filters](#filters)                                                                   |
-| `@libs/novelStatus`   | `NovelStatus`                                            | See [NovelStatus](#novelstatus)                                                           |
-| `@libs/aes`           | `gcm`                                                    | See [AES decryption](#aes-decryption) below                                               |
-| `@libs/utils`         | `utf8ToBytes`, `bytesToUtf8`                             | See [AES decryption](#aes-decryption) below                                               |
+| Package            | Exposes                                    | Typical use                                                   |
+| ------------------- | -------------------------------------------- | ---------------------------------------------------------------- |
+| `cheerio`           | `load`                                       | HTML parsing — see [Using Cheerio](#using-cheerio)               |
+| `@libs/fetch`       | `fetchApi`, `fetchText`, `fetchProto`, `fetchViaWebview` | Network requests — see [Custom fetching functions](#custom-fetching-functions) |
+| `dayjs`             | the `dayjs` default export                   | Parsing/formatting relative or oddly-formatted release dates     |
+| `urlencode`         | `encode`, `decode`                           | Percent-encoding for URLs/query params, with non-UTF-8 charset support |
+| `htmlparser2`       | `Parser`                                     | Low-level streaming HTML/XML parsing, for pages too large or malformed for Cheerio |
+| `@libs/storage`     | `storage`, `localStorage`, `sessionStorage`  | Persistent key-value storage — see [storage](#storage-localstorage--sessionstorage) below |
+| `@libs/isAbsoluteUrl` | `isUrlAbsolute`                             | See below                                                          |
+| `@libs/filterInputs`  | `FilterTypes`, `Filters`, ...               | See [Filters](#filters)                                            |
+| `@libs/novelStatus`   | `NovelStatus`                               | See [NovelStatus](#novelstatus)                                    |
+| `@libs/aes`           | `gcm`                                       | See [AES decryption](#aes-decryption) below                        |
+| `@libs/utils`         | `utf8ToBytes`, `bytesToUtf8`                | See [AES decryption](#aes-decryption) below                        |
 
 #### isUrlAbsolute
 
@@ -1183,13 +1179,13 @@ import { storage, localStorage, sessionStorage } from '@libs/storage';
 you can also use it directly for things like caching a session cookie or an auth token between
 requests. It supports more than a plain get/set pair:
 
-| Method                              | Description                                                                                                                                     |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `storage.set(key, value, expires?)` | Stores `value` under `key`; `expires` is an optional `Date` or epoch-millisecond timestamp after which the entry is treated as gone             |
+| Method                              | Description                                                                 |
+| ------------------------------------ | ----------------------------------------------------------------------------- |
+| `storage.set(key, value, expires?)` | Stores `value` under `key`; `expires` is an optional `Date` or epoch-millisecond timestamp after which the entry is treated as gone |
 | `storage.get(key, raw?)`            | Returns the stored value, or `undefined` if missing/expired. Pass `raw: true` to get back `{ created, value, expires }` instead of just `value` |
-| `storage.delete(key)`               | Removes a single key                                                                                                                            |
-| `storage.clearAll()`                | Removes every key this plugin has stored                                                                                                        |
-| `storage.getAllKeys()`              | Returns all keys currently set by this plugin                                                                                                   |
+| `storage.delete(key)`               | Removes a single key                                                          |
+| `storage.clearAll()`                | Removes every key this plugin has stored                                      |
+| `storage.getAllKeys()`              | Returns all keys currently set by this plugin                                 |
 
 `localStorage`/`sessionStorage` are separate, lower-level stores for plugins that need that exact
 browser-style API (for example, reusing scraping code shared with a web target) — but unlike
