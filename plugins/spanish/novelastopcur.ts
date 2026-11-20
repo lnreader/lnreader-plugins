@@ -96,7 +96,7 @@ class NovelasTopcur implements Plugin.PluginBase {
   }
 
   /** Blogger serves covers at any size: ask for a sharper one than the grid's. */
-  private cover(src: string | undefined): string {
+  private cover(src: string | undefined): string | undefined {
     if (!src || src.startsWith('data:') || /notavailable/i.test(src)) {
       return undefined;
     }

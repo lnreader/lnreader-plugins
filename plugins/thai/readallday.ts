@@ -143,7 +143,7 @@ class ReadAllDay implements Plugin.PluginBase {
     return (await response.json()) as T;
   }
 
-  private cover(coverUrl?: string | null): string {
+  private cover(coverUrl?: string | null): string | undefined {
     if (!coverUrl) return undefined;
     return coverUrl.startsWith('http') ? coverUrl : this.site + coverUrl;
   }

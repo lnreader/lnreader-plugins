@@ -40,7 +40,7 @@ function toPath(url: string): string {
 }
 
 /** Parse the cover image URL out of a WP category description field. */
-function coverFromDesc(description: string): string {
+function coverFromDesc(description: string): string | undefined {
   const m = description.match(/src=["']([^"'>]+)/);
   return m ? m[1] : undefined;
 }

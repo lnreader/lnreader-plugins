@@ -66,7 +66,7 @@ class NovelFrancePlugin implements Plugin.PluginBase {
     return (await r.json()) as T;
   }
 
-  private buildCoverUrl(coverImage?: string | null): string {
+  private buildCoverUrl(coverImage?: string | null): string | undefined {
     if (!coverImage) return undefined;
     return new URL(coverImage, this.site).href;
   }

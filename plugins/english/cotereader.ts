@@ -77,7 +77,7 @@ class CoteReader implements Plugin.PluginBase {
     '200298': '2958',
   };
 
-  private formatCover(cover?: string): string {
+  private formatCover(cover?: string): string | undefined {
     if (!cover) return undefined;
     if (cover.startsWith('http://') || cover.startsWith('https://'))
       return cover;

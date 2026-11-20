@@ -62,7 +62,7 @@ type ChapterPageProps = {
 type CatalogueEntry = {
   path: string;
   name: string;
-  cover: string;
+  cover?: string;
   releaseDate: string;
 };
 

@@ -8,7 +8,7 @@ import { load as loadCheerio } from 'cheerio';
 type NovelEntry = {
   slug: string;
   name: string;
-  cover: string;
+  cover?: string;
   summary: string;
   status: string;
 };

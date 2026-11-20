@@ -231,7 +231,7 @@ class TaxingCorn117sTranslationsPlugin implements Plugin.PluginBase {
   }
 
   /** First image on the novel page is its cover. */
-  private pickCover(html: string): string {
+  private pickCover(html: string): string | undefined {
     const src = loadCheerio(`<div>${html}</div>`)('img').first().attr('src');
     return src ? src.split('?')[0] : undefined;
   }

@@ -113,7 +113,7 @@ class NyxTranslationPlugin implements Plugin.PluginBase {
     return novels;
   }
 
-  private coverOf($: ReturnType<typeof loadCheerio>): string {
+  private coverOf($: ReturnType<typeof loadCheerio>): string | undefined {
     const src = $('.entry-content img').first().attr('src') || '';
     return src.startsWith('http') ? src : undefined;
   }

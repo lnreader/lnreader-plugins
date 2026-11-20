@@ -180,7 +180,9 @@ class AnimeCenterBR implements Plugin.PluginBase {
     return body;
   }
 
-  private async coverIfReachable(src: string | undefined): Promise<string> {
+  private async coverIfReachable(
+    src: string | undefined,
+  ): Promise<string | undefined> {
     // Most of the older uploads of the site were deleted: only use the
     // picture when it can still be loaded.
     if (!src || src.startsWith('data:')) return undefined;

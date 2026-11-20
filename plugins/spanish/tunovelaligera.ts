@@ -138,7 +138,7 @@ class TuNovelaLigera implements Plugin.PagePlugin {
       novelCover.attr('data-src') ||
       novelCover.attr('src') ||
       novelCover.attr('data-cfsrc')
-    ).trim();
+    )?.trim();
 
     loadedCheerio('.post-content_item').each(function () {
       const detailName = loadedCheerio(this)

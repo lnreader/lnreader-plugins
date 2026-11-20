@@ -198,7 +198,7 @@ class TL implements Plugin.PluginBase {
       .replace(/(src|srcset|href)="\/(?!\/)/g, '$1="' + this.site + '/');
   }
 
-  private getCover(covers?: Cover[]): string {
+  private getCover(covers?: Cover[]): string | undefined {
     const cover = covers?.[0]?.thumbnail || covers?.[0]?.url;
     // thumbnails come percent-encoded, original urls may contain raw cyrillic
     return cover ? this.imageHost + encodeURI(decodeURI(cover)) : undefined;

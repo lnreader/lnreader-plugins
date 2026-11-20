@@ -39,7 +39,7 @@ class ChireadsPlugin implements Plugin.PluginBase {
     return load(body);
   }
 
-  private absoluteUrl(url?: string): string {
+  private absoluteUrl(url?: string): string | undefined {
     if (!url) return undefined;
     try {
       const absolute = new URL(url, this.site);

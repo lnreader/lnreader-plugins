@@ -7,7 +7,7 @@ import { NovelStatus } from '@libs/novelStatus';
 type CatalogueEntry = {
   name: string;
   path: string;
-  cover: string;
+  cover?: string;
   status: string;
   added: number;
   updated: number;

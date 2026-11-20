@@ -96,7 +96,7 @@ class EightysixAR implements Plugin.PluginBase {
     return !!entry.category?.some(category => category.term === SERIES_LABEL);
   }
 
-  private coverFrom(entry?: FeedEntry): string {
+  private coverFrom(entry?: FeedEntry): string | undefined {
     const thumbnail = entry?.media$thumbnail?.url;
     if (!thumbnail) return undefined;
     return thumbnail.replace(/\/s\d+(-c)?\//, `/${COVER_SIZE}/`);

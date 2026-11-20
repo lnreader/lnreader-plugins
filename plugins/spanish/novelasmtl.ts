@@ -91,7 +91,7 @@ class NovelasMTLPlugin implements Plugin.PluginBase {
   }
 
   /** Blogger serves thumbnails; ask for a size that suits a cover. */
-  private bigCover(src: string | undefined): string {
+  private bigCover(src: string | undefined): string | undefined {
     if (!src) return undefined;
     return src.replace(/\/(?:w\d+-h\d+[^/]*|s\d+[^/]*)\/([^/]+)$/, '/s400/$1');
   }

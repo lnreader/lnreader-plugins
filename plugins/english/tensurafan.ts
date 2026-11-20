@@ -184,7 +184,7 @@ class TensurafanPlugin implements Plugin.PluginBase {
     };
   }
 
-  private async getCover(volume: Volume): Promise<string> {
+  private async getCover(volume: Volume): Promise<string | undefined> {
     const head = await this.fetchOk(this.site + volume.path, {
       Range: TOC_RANGE,
     }).then(r => r.text());

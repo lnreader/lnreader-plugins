@@ -8,7 +8,7 @@ type Page = ReturnType<typeof loadCheerio>;
 type NovelPage = {
   path: string;
   name: string;
-  cover: string;
+  cover?: string;
 };
 
 /** Dated permalink every chapter post uses, e.g. `/2022/02/25/<slug>/`. */

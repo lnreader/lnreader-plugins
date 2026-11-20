@@ -151,5 +151,5 @@ type ChrysanthemumGardenNovel = {
 type ChrysanthemumGardenNovelItem = {
   name: string;
   path: string;
-  cover: string;
+  cover?: string;
 };

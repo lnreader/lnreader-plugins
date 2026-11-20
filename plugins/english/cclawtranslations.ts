@@ -74,7 +74,9 @@ class CClawTranslationsPlugin implements Plugin.PluginBase {
     return path.charAt(path.length - 1) === '/' ? path : path + '/';
   }
 
-  private coverOf(img: ReturnType<ReturnType<typeof loadCheerio>>): string {
+  private coverOf(
+    img: ReturnType<ReturnType<typeof loadCheerio>>,
+  ): string | undefined {
     const src = img.attr('data-orig-file') || img.attr('src');
     return src ? src.split('?')[0] : undefined;
   }

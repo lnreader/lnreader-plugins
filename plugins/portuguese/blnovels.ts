@@ -74,7 +74,7 @@ class BlNovels implements Plugin.PluginBase {
   // WordPress stores covers as `name-WxH.ext` thumbnails; strip the size
   // suffix to use the full-size original (all suffix-stripped URLs checked
   // live returned HTTP 200).
-  private coverUrl(src?: string): string {
+  private coverUrl(src?: string): string | undefined {
     if (!src) return undefined;
     if (!/^https?:\/\//.test(src)) return src;
     if (src === SITE) return undefined;

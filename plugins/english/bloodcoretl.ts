@@ -101,7 +101,7 @@ class BloodcoreTLPlugin implements Plugin.PluginBase {
   }
 
   /** The cover is served through `/_next/image?url=<encoded original>`. */
-  private novelCover($: Page): string {
+  private novelCover($: Page): string | undefined {
     const src = $('img[alt="Cover Image"]').first().attr('src') || '';
     const original = src.match(/[?&]url=([^&]+)/);
     if (original) {

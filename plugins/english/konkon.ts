@@ -127,7 +127,7 @@ class KonkonPlugin implements Plugin.PluginBase {
     return output;
   }
 
-  private coverUrl(novel: ImageKeys): string {
+  private coverUrl(novel: ImageKeys): string | undefined {
     const key =
       novel.featured_image_thumb_medium_key ||
       novel.featured_image_key ||

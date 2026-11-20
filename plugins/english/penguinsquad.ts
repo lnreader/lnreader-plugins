@@ -70,7 +70,7 @@ class PenguinSquad implements Plugin.PluginBase {
     return parseHTML(html.replace(scriptStylePattern, ''));
   }
 
-  private resolveCoverUrl(src: string | undefined): string {
+  private resolveCoverUrl(src: string | undefined): string | undefined {
     const trimmed = src?.trim();
     if (!trimmed) return undefined;
     try {

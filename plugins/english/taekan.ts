@@ -84,7 +84,7 @@ class Taekan implements Plugin.PluginBase {
     return ongoing.concat(novels.filter(n => n.status !== NovelStatus.Ongoing));
   }
 
-  private coverOf($: ReturnType<typeof loadCheerio>): string {
+  private coverOf($: ReturnType<typeof loadCheerio>): string | undefined {
     const src = $('.entry-content img').first().attr('src') || '';
     return src.startsWith('http') ? src : undefined;
   }

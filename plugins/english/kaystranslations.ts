@@ -335,7 +335,7 @@ class KaysTranslationsPlugin implements Plugin.PluginBase {
     );
   }
 
-  private imageOrDefault(src: string | undefined): string {
+  private imageOrDefault(src: string | undefined): string | undefined {
     // The site fills missing covers with a shared "no-image" placeholder.
     if (!src || /no-image/i.test(src)) return undefined;
     return src;

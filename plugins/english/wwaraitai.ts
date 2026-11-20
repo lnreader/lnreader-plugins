@@ -25,7 +25,7 @@ type CatalogueEntry = {
   slug: string;
   name: string;
   path: string;
-  cover: string;
+  cover?: string;
   status: string;
 };
 

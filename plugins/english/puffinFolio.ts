@@ -19,7 +19,7 @@ class PuffinFolioPlugin implements Plugin.PluginBase {
   }
 
   // Covers are served through next/image, so the real file sits in a url= param.
-  private resolveCover(raw?: string): string {
+  private resolveCover(raw?: string): string | undefined {
     if (!raw) return undefined;
     const candidate = raw.trim().split(/\s+/)[0];
     const embedded = candidate.match(/url=([^&]+)/);

@@ -148,7 +148,7 @@ export class MadaraPlugin implements Plugin.PluginBase {
     return parseHTML(text);
   }
 
-  extractCover(image: Cheerio<AnyNode>): string {
+  extractCover(image: Cheerio<AnyNode>): string | undefined {
     const candidates = [
       image.attr('data-lazy-src'),
       image.attr('data-src'),

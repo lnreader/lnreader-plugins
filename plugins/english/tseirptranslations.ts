@@ -77,7 +77,7 @@ class TseirpTranslations implements Plugin.PluginBase {
     return novels;
   }
 
-  private coverOf($: ReturnType<typeof loadCheerio>): string {
+  private coverOf($: ReturnType<typeof loadCheerio>): string | undefined {
     const img = $('.post-content img').first();
     const src = img.attr('data-src') || img.attr('src') || '';
     return src.startsWith('http') ? src : undefined;

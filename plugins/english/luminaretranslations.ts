@@ -154,7 +154,8 @@ class LuminareTranslationsPlugin implements Plugin.PluginBase {
   private toItem(s: SeriesListItem | SearchHit): Plugin.NovelItem {
     const cover =
       ('cover_image' in s && s.cover_image) ||
-      ('cover_url' in s && s.cover_url);
+      ('cover_url' in s && s.cover_url) ||
+      undefined;
     return {
       name: this.decodeEntities(s.title),
       path: 'series/' + s.slug,

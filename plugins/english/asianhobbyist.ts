@@ -65,7 +65,7 @@ class AsianHobbyist implements Plugin.PluginBase {
    * Some covers still point at the old http://asianhobbyist.com host, and
    * series without a cover show the theme's own placeholder image.
    */
-  private coverUrl(src: string | undefined): string {
+  private coverUrl(src: string | undefined): string | undefined {
     if (!src || src.startsWith('data:') || PLACEHOLDER_COVER.test(src)) {
       return undefined;
     }

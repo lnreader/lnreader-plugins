@@ -9,7 +9,7 @@ type Page = ReturnType<typeof loadCheerio>;
 type NovelPage = {
   path: string;
   name: string;
-  cover: string;
+  cover?: string;
 };
 
 /** A project page: `/ongoing-projects/<slug>/` or `/dropped-projects/<slug>/`. */

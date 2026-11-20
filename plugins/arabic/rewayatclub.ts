@@ -110,8 +110,9 @@ class RewayatClub implements Plugin.PagePlugin {
     const ImageUrlShort = imageUrlMatch
       ? imageUrlMatch[1].replace(/\\u002F/g, '/').replace(/^\/*/, '')
       : undefined;
-    const imageUrl = `https://api.rewayat.club/${ImageUrlShort}`;
-    novel.cover = imageUrl;
+    novel.cover = ImageUrlShort
+      ? `https://api.rewayat.club/${ImageUrlShort}`
+      : undefined;
     const chapterNumberStr = loadedCheerio('div.v-tab--active span.mr-1')
       .text()
       .replace(/[^\d]/g, '');

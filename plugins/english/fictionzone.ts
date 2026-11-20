@@ -3,7 +3,7 @@ import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { NovelStatus } from '@libs/novelStatus';
 
-function decodeCover(image?: string): string {
+function decodeCover(image?: string): string | undefined {
   if (!image) return undefined;
   if (image.startsWith('http://') || image.startsWith('https://')) return image;
   try {

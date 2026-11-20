@@ -84,7 +84,7 @@ class GolperCity implements Plugin.PluginBase {
     return decodeURIComponent(match[1]);
   }
 
-  private coverFrom(entry?: FeedEntry): string {
+  private coverFrom(entry?: FeedEntry): string | undefined {
     const thumbnail = entry?.media$thumbnail?.url;
     if (!thumbnail) return undefined;
     return thumbnail.replace(/\/s\d+(-c)?\//, `/${COVER_SIZE}/`);

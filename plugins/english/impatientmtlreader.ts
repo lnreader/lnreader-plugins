@@ -221,7 +221,7 @@ class ImpatientMTLReaderPlugin implements Plugin.PluginBase {
    * site's donation and Discord badges, and one page only has a placeholder.
    * When a page lists several covers, an image named like "cover" wins.
    */
-  private pageCover(page: WpPage): string {
+  private pageCover(page: WpPage): string | undefined {
     const $ = loadCheerio(`<div>${page.content?.rendered || ''}</div>`);
     const urls: string[] = [];
     $('img').each((_, el) => {

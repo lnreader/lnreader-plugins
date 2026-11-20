@@ -75,7 +75,7 @@ class JGardenPlugin implements Plugin.PluginBase {
   // The catalogue only carries wide series banners; the actual portrait book
   // cover lives on each novel's own page. Fetch it there so the list shows a
   // real cover instead of a zoomed banner or the fallback placeholder.
-  private async fetchCover(slug: string): Promise<string> {
+  private async fetchCover(slug: string): Promise<string | undefined> {
     try {
       const pages = await this.getJson<{ content: { rendered: string } }[]>(
         `/wp-json/wp/v2/pages?slug=${encodeURIComponent(slug)}&_fields=content`,

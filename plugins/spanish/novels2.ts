@@ -23,7 +23,7 @@ class Novels2 implements Plugin.PluginBase {
    * placeholder, so those fall back to the default cover. Other paths can be
    * relative, so they are resolved against the site.
    */
-  private toCover(src?: string): string {
+  private toCover(src?: string): string | undefined {
     if (!src || /_failed\.png$/.test(src)) {
       return undefined;
     }

@@ -8,7 +8,7 @@ type Page = ReturnType<typeof loadCheerio>;
 type NovelPage = {
   path: string;
   name: string;
-  cover: string;
+  cover?: string;
 };
 
 /** Chapters live directly under the site root, e.g. `/tcf-chapter-12/`. */
