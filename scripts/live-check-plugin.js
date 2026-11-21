@@ -28,6 +28,15 @@ const INCONCLUSIVE_PLUGIN_ERRORS = {
   'Too many requests (429). Please try again later.': 'HTTP 429 (rate limited)',
 };
 
+const FAIL_PLUGIN_ERRORS = new Set([
+  'Content not found (404), it may have been removed from this source.',
+  'Novel not found (404), it may have been removed from this source.',
+  'Chapter not found (404), it may have been removed from this source.',
+  'Authentication required. Please log in via WebView.',
+  'No readable content was found.',
+  'Invalid response from source.',
+]);
+
 /** @typedef {'PASS' | 'FAIL' | 'INCONCLUSIVE'} StepStatus */
 
 export function isNetworkOrBlockError(error) {
@@ -38,6 +47,14 @@ export function isNetworkOrBlockError(error) {
   }
   if (/timed? ?out/i.test(message)) {
     return { inconclusive: true, reason: 'Timeout' };
+  }
+  const pluginErrorReason =
+    INCONCLUSIVE_PLUGIN_ERRORS[code] ?? INCONCLUSIVE_PLUGIN_ERRORS[message];
+  if (pluginErrorReason) {
+    return { inconclusive: true, reason: pluginErrorReason };
+  }
+  if (FAIL_PLUGIN_ERRORS.has(code) || FAIL_PLUGIN_ERRORS.has(message)) {
+    return { inconclusive: false };
   }
   // Only 403/503 indicate a block — a cf-ray/cf-cache-status header alone
   // just means the site is fronted by Cloudflare's CDN (true for a huge
@@ -62,11 +79,6 @@ export function isNetworkOrBlockError(error) {
       inconclusive: true,
       reason: `HTTP ${status}${isCloudflare ? ' (Cloudflare)' : ' (likely anti-bot block)'}`,
     };
-  }
-  const pluginErrorReason =
-    INCONCLUSIVE_PLUGIN_ERRORS[code] ?? INCONCLUSIVE_PLUGIN_ERRORS[message];
-  if (pluginErrorReason) {
-    return { inconclusive: true, reason: pluginErrorReason };
   }
   return { inconclusive: false };
 }

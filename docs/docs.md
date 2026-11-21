@@ -900,7 +900,8 @@ import {
 
 - **`checkResponse(res, options?)`**: Checks `res.ok` and throws `httpError(res.status)` (or
   `createPluginError(options.notFoundCode, { status: 404 })` when `404` and `notFoundCode` is set).
-  Pass `{ search: true }` when a search endpoint returns `404` for empty results.
+  Pass `{ search: true }` when a search endpoint returns `404` for empty results (only `404` is
+  skipped; other non-OK statuses still throw).
 - **`assertNoChallenge(html, requestUrl?, responseUrl?)`**: Throws `PluginError.Captcha` with
   `status: 403` when challenge titles (`Just a moment...`, `Bot Verification`, Cloudflare) or
   off-domain redirects are detected.
@@ -1205,7 +1206,7 @@ is what's actually injected into a running plugin's `require(...)` calls — any
 | `@libs/isAbsoluteUrl` | `isUrlAbsolute`                             | See below                                                          |
 | `@libs/filterInputs`  | `FilterTypes`, `Filters`, ...               | See [Filters](#filters)                                            |
 | `@libs/novelStatus`   | `NovelStatus`                               | See [NovelStatus](#novelstatus)                                    |
-| `@libs/pluginError`   | `PluginError`, `checkResponse`, `createPluginError`, `httpError`, `assertNoChallenge` | Standardized plugin errors — see [PluginError](#pluginerror) |
+| `@libs/pluginError`   | `PluginError`, `checkResponse`, `createPluginError`, `httpError`, `isChallengeHtml`, `assertNoChallenge`, `isPluginError` | Standardized plugin errors — see [PluginError](#pluginerror) |
 | `@libs/aes`           | `gcm`                                       | See [AES decryption](#aes-decryption) below                        |
 | `@libs/utils`         | `utf8ToBytes`, `bytesToUtf8`                | See [AES decryption](#aes-decryption) below                        |
 

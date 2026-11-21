@@ -25,7 +25,7 @@
 ## Key gotchas
 
 - **Hermes runtime**: Plugins compile for ES5/Hermes/React Native — use `@libs/fetch` (not `@/lib/fetch`) and avoid Node/browser-only globals.
-- **Host `@libs/*` whitelist**: `tsconfig.production.json` compiles with `"noResolve": true` (`"noCheck": true`), leaving `require("@libs/*")` calls unbundled for the Android host's `pluginManager.ts` whitelist; any new `@libs/*` module must either exist in the app's `packages` map or be inlined in `scripts/terser.js`.
+- **Host `@libs/*` whitelist**: `tsconfig.production.json` compiles with `"noResolve": true` (`"noCheck": true`), leaving `require("@libs/*")` calls unbundled for the Android host's `pluginManager.ts` whitelist; any new `@libs/*` module (such as `@libs/pluginError`) must either exist in the app's `packages` map or be inlined in `scripts/terser.js`.
 - **Finding multisrc plugins**: Search `plugins/multisrc/*/sources.json` by domain or ID; `plugins/<language>/` only holds generated `[generator]` files after `build:multisrc`.
 - **Trailing slashes on migrated paths**: Multisrc generators such as Fictioneer produce `novelPath` values with trailing slashes (`novels/<slug>/`). Normalize leading and trailing slashes in `parseNovel` when migrating to standalone so existing library entries resolve cleanly.
 - **Validation**: Choose checks from `package.json` proportionate to the change. For standalone plugins, run `eslint`, `prettier --check`, `build:compile`, and `check:plugin -- plugins/<language>/<plugin>.ts`. In `check:plugin`, `FAIL` requires investigation while `INCONCLUSIVE` usually indicates remote site blocking or downtime.

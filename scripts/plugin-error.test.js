@@ -103,6 +103,24 @@ describe('@libs/pluginError', () => {
     const searchRes = { ok: false, status: 404, url: 'https://example.com' };
     assert.equal(checkResponse(searchRes, { search: true }), searchRes);
 
+    for (const [status, expectedCode] of [
+      [429, PluginError.RateLimited],
+      [403, PluginError.Cloudflare],
+      [500, PluginError.NetworkError],
+    ]) {
+      assert.throws(
+        () =>
+          checkResponse(
+            { ok: false, status, url: 'https://example.com/search' },
+            { search: true },
+          ),
+        err =>
+          isPluginError(err) &&
+          err.code === expectedCode &&
+          err.status === status,
+      );
+    }
+
     assert.throws(
       () =>
         checkResponse(
@@ -182,6 +200,7 @@ describe('live-check-plugin error classification', () => {
       createPluginError(PluginError.EmptyContent),
       createPluginError(PluginError.InvalidResponse),
       createPluginError(PluginError.AuthRequired, { status: 401 }),
+      createPluginError(PluginError.AuthRequired, { status: 403 }),
     ]) {
       assert.equal(
         isNetworkOrBlockError(error).inconclusive,
