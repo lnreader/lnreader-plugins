@@ -11,6 +11,20 @@ export const MAX_SUGGESTIONS_HEIGHT = 240;
 export const getEstimatedSuggestionsHeight = (count: number) =>
   Math.min(count * SUGGESTION_ITEM_HEIGHT + 2, MAX_SUGGESTIONS_HEIGHT);
 
+export const addMultiTextValues = (
+  current: readonly string[],
+  rawValues: readonly string[],
+): string[] => {
+  const next = [...current];
+  rawValues.forEach(rawValue => {
+    const value = rawValue.trim();
+    if (value && !next.includes(value)) {
+      next.push(value);
+    }
+  });
+  return next;
+};
+
 export type SuggestionAnchor = {
   height: number;
   left: number;

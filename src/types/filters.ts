@@ -15,6 +15,7 @@ export enum FilterTypes {
   CheckboxGroup = 'Checkbox',
   Switch = 'Switch',
   ExcludableCheckboxGroup = 'XCheckbox',
+  MultiText = 'MultiText',
 }
 
 type FilterValueMap = {
@@ -28,6 +29,7 @@ type FilterValueMap = {
     /** Checkboxes marked as excluded */
     exclude?: string[];
   };
+  [FilterTypes.MultiText]: string[];
 };
 
 type WithOptions =
@@ -44,7 +46,7 @@ type OptionsOf<T extends FilterTypes> = T extends WithOptions
  * Kept as a capability instead of a separate `FilterTypes` member so it can
  * extend to other input shapes later.
  */
-type AutocompleteFilterTypes = FilterTypes.TextInput;
+type AutocompleteFilterTypes = FilterTypes.TextInput | FilterTypes.MultiText;
 
 type AutocompleteOf<T extends FilterTypes> = T extends AutocompleteFilterTypes
   ? { autocomplete?: boolean }

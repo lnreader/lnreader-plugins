@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,7 @@ import type { FilterSuggestionSource } from '@/hooks/useFilterSuggestions';
 import type { Plugin } from '@/types/plugin';
 import { CheckboxFilter } from './checkbox-filter';
 import { ExcludableCheckboxFilter } from './excludable-checkbox-filter';
+import { MultiTextFilter } from './multi-text-filter';
 import { PickerFilter } from './picker-filter';
 import { SwitchFilter } from './switch-filter';
 import { TextFilter } from './text-filter';
@@ -119,6 +120,26 @@ const renderFilters = ({
               />
             );
           }
+          case FilterTypes.MultiText: {
+            const value = values[key].value;
+            if (!isValueCorrectType(value, filter.value)) {
+              console.error(
+                `FilterValue for filter [${key}] has a wrong type!`,
+              );
+              return null;
+            }
+            return (
+              <MultiTextFilter
+                filter={{ key, filter }}
+                set={newValue => set(key, newValue)}
+                value={value}
+                key={`multi_text_filter_${key}`}
+                pluginId={pluginId}
+                fetchSuggestions={fetchSuggestions}
+                registerDismiss={dismissers}
+              />
+            );
+          }
           case FilterTypes.CheckboxGroup: {
             const value = values[key].value;
             if (!isValueCorrectType(value, filter.value)) {
@@ -180,6 +201,10 @@ export function FiltersSheet({
   plugin,
   refetch,
 }: FiltersSheetProps) {
+  // Reset remounts the filters so fields with local drafts (e.g. MultiText)
+  // clear along with the committed values.
+  const [resetVersion, setResetVersion] = useState(0);
+
   // Suggestions are portaled above the sheet, so they must close whenever the
   // sheet scrolls or the field that anchors them moves.
   const dismissers = useRef(new Set<() => void>());
@@ -222,6 +247,7 @@ export function FiltersSheet({
         };
       }
       setValues(resetValues);
+      setResetVersion(version => version + 1);
     }
   };
 
@@ -252,7 +278,7 @@ export function FiltersSheet({
             Customize your search with these filter options
           </SheetDescription>
         </SheetHeader>
-        <div className="space-y-4 py-6">
+        <div className="space-y-4 py-6" key={resetVersion}>
           {filterElements || (
             <p className="text-sm text-muted-foreground text-center py-8">
               No filters available
