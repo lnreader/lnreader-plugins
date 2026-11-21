@@ -2,6 +2,7 @@ import { fetchApi } from '@libs/fetch';
 import { Filters, FilterToValues } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
+import { PluginError, checkResponse } from '@libs/pluginError';
 import { Parser } from 'htmlparser2';
 import dayjs from 'dayjs';
 
@@ -25,13 +26,13 @@ export class IfreedomPlugin implements Plugin.PluginBase {
     this.name = metadata.sourceName;
     this.icon = `multisrc/ifreedom/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
-    this.version = '1.1.1';
+    this.version = '1.1.2';
     this.filters = metadata.filters;
   }
 
   parseNovels(url: string) {
     return fetchApi(url)
-      .then((res: Response) => res.text())
+      .then((res: Response) => checkResponse(res).text())
       .then((html: string) => {
         const novels: Plugin.NovelItem[] = [];
         let tempNovel = {} as Plugin.NovelItem;
@@ -96,7 +97,7 @@ export class IfreedomPlugin implements Plugin.PluginBase {
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
     const html = await fetchApi(this.site + novelPath).then((res: Response) =>
-      res.text(),
+      checkResponse(res, { notFoundCode: PluginError.NovelNotFound }).text(),
     );
     const novel: Plugin.SourceNovel = {
       path: novelPath,
@@ -292,7 +293,7 @@ export class IfreedomPlugin implements Plugin.PluginBase {
 
   async parseChapter(chapterPath: string): Promise<string> {
     const body = await fetchApi(this.site + chapterPath).then((res: Response) =>
-      res.text(),
+      checkResponse(res, { notFoundCode: PluginError.ChapterNotFound }).text(),
     );
 
     const startTag =

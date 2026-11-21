@@ -22,9 +22,15 @@ const MIN_CHAPTER_LENGTH = 200;
 const STEP_TIMEOUT_MS = 30_000;
 const CLOUDFLARE_HEADER_HINTS = ['cf-ray', 'cf-cache-status', 'cf-request-id'];
 
+const INCONCLUSIVE_PLUGIN_ERRORS = {
+  'Captcha error, please open in webview': 'Captcha challenge',
+  'Cloudflare is blocking requests. Try again later.': 'Cloudflare block',
+  'Too many requests (429). Please try again later.': 'HTTP 429 (rate limited)',
+};
+
 /** @typedef {'PASS' | 'FAIL' | 'INCONCLUSIVE'} StepStatus */
 
-function isNetworkOrBlockError(error) {
+export function isNetworkOrBlockError(error) {
   const code = error?.code || error?.cause?.code;
   const message = String(error?.message || '');
   if (['ENOTFOUND', 'ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT'].includes(code)) {
@@ -37,6 +43,9 @@ function isNetworkOrBlockError(error) {
   // just means the site is fronted by Cloudflare's CDN (true for a huge
   // share of the web) and says nothing about whether we were blocked.
   const status = error?.response?.status ?? error?.status;
+  if (status === 429) {
+    return { inconclusive: true, reason: 'HTTP 429 (rate limited)' };
+  }
   if (status === 403 || status === 503) {
     const headers = error?.response?.headers;
     const headerKeys = headers
@@ -53,6 +62,11 @@ function isNetworkOrBlockError(error) {
       inconclusive: true,
       reason: `HTTP ${status}${isCloudflare ? ' (Cloudflare)' : ' (likely anti-bot block)'}`,
     };
+  }
+  const pluginErrorReason =
+    INCONCLUSIVE_PLUGIN_ERRORS[code] ?? INCONCLUSIVE_PLUGIN_ERRORS[message];
+  if (pluginErrorReason) {
+    return { inconclusive: true, reason: pluginErrorReason };
   }
   return { inconclusive: false };
 }
@@ -405,7 +419,9 @@ async function main() {
   process.exitCode = hasFail ? 1 : 0;
 }
 
-main().catch(error => {
-  console.error('Fatal error:', error);
-  process.exitCode = 1;
-});
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+  main().catch(error => {
+    console.error('Fatal error:', error);
+    process.exitCode = 1;
+  });
+}

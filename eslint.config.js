@@ -156,6 +156,10 @@ export default tseslint.config(
               group: ['@/lib/fetch*'],
               message: 'Use @libs/fetch instead of @/lib/fetch',
             },
+            {
+              group: ['@/lib/pluginError*'],
+              message: 'Use @libs/pluginError instead of @/lib/pluginError',
+            },
           ],
         },
       ],
@@ -185,6 +189,10 @@ export default tseslint.config(
             {
               group: ['@/lib/fetch*'],
               message: 'Use @libs/fetch instead of @/lib/fetch',
+            },
+            {
+              group: ['@/lib/pluginError*'],
+              message: 'Use @libs/pluginError instead of @/lib/pluginError',
             },
           ],
         },

@@ -27,6 +27,7 @@ const PopularNovelsSection = React.memo(function PopularNovelsSection({
   const [maxIndex, setMaxIndex] = useState(0);
   const [isLatest, setIsLatest] = useState(true);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [fetchError, setFetchError] = useState('');
   const [filterValues, setFilterValues] = useState<
     FilterToValues<Filters> | undefined
   >();
@@ -37,6 +38,7 @@ const PopularNovelsSection = React.memo(function PopularNovelsSection({
     setCurrentIndex(0);
     setMaxIndex(0);
     setNovels([]);
+    setFetchError('');
 
     if (plugin?.filters) {
       const filters: FilterToValues<typeof plugin.filters> = {};
@@ -58,6 +60,7 @@ const PopularNovelsSection = React.memo(function PopularNovelsSection({
   ) => {
     if (plugin && index) {
       setLoading(true);
+      setFetchError('');
       try {
         const fetchedNovels = await plugin.popularNovels(index, {
           filters: filterValues || {},
@@ -71,6 +74,9 @@ const PopularNovelsSection = React.memo(function PopularNovelsSection({
           setNovels(fetchedNovels);
         }
       } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : 'Failed to fetch novels';
+        setFetchError(errorMessage);
         console.error('Error fetching novels:', error);
       } finally {
         setLoading(false);
@@ -84,6 +90,7 @@ const PopularNovelsSection = React.memo(function PopularNovelsSection({
     setCurrentIndex(0);
     setMaxIndex(0);
     setNovels([]);
+    setFetchError('');
   };
 
   const handleParseNovel = (path: string) => {
@@ -170,6 +177,12 @@ const PopularNovelsSection = React.memo(function PopularNovelsSection({
             </div>
           )}
         </div>
+
+        {fetchError && (
+          <div className="p-4 mb-6 border border-destructive/50 bg-destructive/10 rounded-lg">
+            <p className="text-sm text-destructive">{fetchError}</p>
+          </div>
+        )}
 
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 lg:gap-6">
