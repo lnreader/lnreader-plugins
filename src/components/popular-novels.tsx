@@ -217,6 +217,7 @@ const PopularNovelsSection = React.memo(function PopularNovelsSection({
         onOpenChange={setFiltersOpen}
         values={filterValues}
         filters={plugin?.filters}
+        plugin={plugin}
         setValues={setFilterValues}
         refetch={() => fetchNovelsByIndex(1)}
       />

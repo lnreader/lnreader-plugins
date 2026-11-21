@@ -40,6 +40,17 @@ type OptionsOf<T extends FilterTypes> = T extends WithOptions
   : object;
 
 /**
+ * Filter types whose free-text field can request suggestions from the plugin.
+ * Kept as a capability instead of a separate `FilterTypes` member so it can
+ * extend to other input shapes later.
+ */
+type AutocompleteFilterTypes = FilterTypes.TextInput;
+
+type AutocompleteOf<T extends FilterTypes> = T extends AutocompleteFilterTypes
+  ? { autocomplete?: boolean }
+  : object;
+
+/**
  * key - filter pairs
  */
 export type Filters = Record<string, Filter<FilterTypes>>;
@@ -52,7 +63,8 @@ export type Filter<T extends FilterTypes = FilterTypes> = T extends FilterTypes
       label: string;
       type: T;
       value: FilterValueMap[T];
-    } & OptionsOf<T>
+    } & OptionsOf<T> &
+      AutocompleteOf<T>
   : never;
 
 /**

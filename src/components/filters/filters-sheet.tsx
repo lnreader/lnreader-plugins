@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useCallback, useRef } from 'react';
+import { RotateCcw } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -14,18 +16,33 @@ import {
   FilterToValues,
   FilterTypes,
 } from '@libs/filterInputs';
+import type { FilterSuggestionSource } from '@/hooks/useFilterSuggestions';
+import type { Plugin } from '@/types/plugin';
+import { CheckboxFilter } from './checkbox-filter';
+import { ExcludableCheckboxFilter } from './excludable-checkbox-filter';
 import { PickerFilter } from './picker-filter';
 import { SwitchFilter } from './switch-filter';
 import { TextFilter } from './text-filter';
-import { CheckboxFilter } from './checkbox-filter';
-import { ExcludableCheckboxFilter } from './excludable-checkbox-filter';
-import { RotateCcw } from 'lucide-react';
 
-const renderFilters = (
-  filters: Filters | undefined,
-  values: FilterToValues<Filters> | undefined,
-  set: (key: string, v: AnyFilterValue) => void,
-): React.ReactNode => {
+type RegisterDismiss = (dismiss: () => void) => () => void;
+
+type RenderFiltersOptions = {
+  dismissers: RegisterDismiss;
+  fetchSuggestions: FilterSuggestionSource;
+  filters: Filters | undefined;
+  pluginId: string;
+  set: (key: string, v: AnyFilterValue) => void;
+  values: FilterToValues<Filters> | undefined;
+};
+
+const renderFilters = ({
+  dismissers,
+  fetchSuggestions,
+  filters,
+  pluginId,
+  set,
+  values,
+}: RenderFiltersOptions): React.ReactNode => {
   const isValueCorrectType = <T extends AnyFilterValue>(
     o: AnyFilterValue,
     f: T,
@@ -96,6 +113,9 @@ const renderFilters = (
                 set={newValue => set(key, newValue)}
                 value={value}
                 key={`text_filter_${key}`}
+                pluginId={pluginId}
+                fetchSuggestions={fetchSuggestions}
+                registerDismiss={dismissers}
               />
             );
           }
@@ -140,14 +160,15 @@ const renderFilters = (
 };
 
 type FiltersSheetProps = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  values: FilterToValues<Filters> | undefined;
   filters: Filters | undefined;
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+  plugin: Plugin.PluginBase | undefined;
+  refetch: () => void;
   setValues: React.Dispatch<
     React.SetStateAction<FilterToValues<Filters> | undefined>
   >;
-  refetch: () => void;
+  values: FilterToValues<Filters> | undefined;
 };
 
 export function FiltersSheet({
@@ -156,8 +177,28 @@ export function FiltersSheet({
   values,
   setValues,
   filters,
+  plugin,
   refetch,
 }: FiltersSheetProps) {
+  // Suggestions are portaled above the sheet, so they must close whenever the
+  // sheet scrolls or the field that anchors them moves.
+  const dismissers = useRef(new Set<() => void>());
+  const registerDismiss = useCallback<RegisterDismiss>(dismiss => {
+    dismissers.current.add(dismiss);
+    return () => {
+      dismissers.current.delete(dismiss);
+    };
+  }, []);
+  const dismissSuggestions = useCallback(() => {
+    dismissers.current.forEach(dismiss => dismiss());
+  }, []);
+
+  const fetchSuggestions = useCallback<FilterSuggestionSource>(
+    (filterKey, query) =>
+      plugin?.getFilterSuggestions?.(filterKey, query) ?? Promise.resolve([]),
+    [plugin],
+  );
+
   const setFilterWithKey = (key: string, newValue: AnyFilterValue) =>
     setValues(fValues =>
       !fValues
@@ -189,18 +230,29 @@ export function FiltersSheet({
     onOpenChange(false);
   };
 
-  const filterElements = renderFilters(filters, values, setFilterWithKey);
+  const filterElements = renderFilters({
+    dismissers: registerDismiss,
+    fetchSuggestions,
+    filters,
+    pluginId: plugin?.id ?? '',
+    set: setFilterWithKey,
+    values,
+  });
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+      <SheetContent
+        side="right"
+        className="w-full overflow-y-auto sm:max-w-md"
+        onScroll={dismissSuggestions}
+      >
         <SheetHeader>
           <SheetTitle>Filters</SheetTitle>
           <SheetDescription>
             Customize your search with these filter options
           </SheetDescription>
         </SheetHeader>
-        <div className="py-6 space-y-4">
+        <div className="space-y-4 py-6">
           {filterElements || (
             <p className="text-sm text-muted-foreground text-center py-8">
               No filters available
