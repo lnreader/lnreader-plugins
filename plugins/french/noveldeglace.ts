@@ -3,7 +3,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { Filters, FilterTypes } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 
 const challengeTitles = new Set([
   'bot verification',
@@ -37,7 +36,7 @@ class NovelDeGlacePlugin implements Plugin.PluginBase {
   name = 'NovelDeGlace';
   icon = 'src/fr/noveldeglace/icon.png';
   site = 'https://noveldeglace.com/';
-  version = '1.0.8';
+  version = '1.0.9';
 
   async getCheerio(url: string): Promise<CheerioAPI> {
     return load(
@@ -110,7 +109,7 @@ class NovelDeGlacePlugin implements Plugin.PluginBase {
 
     novel.name = $('span.current').text().trim();
 
-    novel.cover = $('.su-row > div > div > img').attr('src') || defaultCover;
+    novel.cover = $('.su-row > div > div > img').attr('src');
 
     const novelInfos = $('div[data-title=Tomes] >').toArray();
     novelInfos.pop();

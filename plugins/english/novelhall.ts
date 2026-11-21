@@ -1,12 +1,11 @@
 import { load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
-import { defaultCover } from '@libs/defaultCover';
 
 class NovelHall implements Plugin.PluginBase {
   id = 'novelhall';
   name = 'Novel Hall';
-  version = '1.0.3';
+  version = '1.0.4';
   icon = 'src/en/novelhall/icon.png';
   site = 'https://novelhall.com/';
 
@@ -26,7 +25,6 @@ class NovelHall implements Plugin.PluginBase {
 
       const novel = {
         name: novelName,
-        cover: defaultCover,
         path: novelUrl,
       };
 
@@ -109,7 +107,6 @@ class NovelHall implements Plugin.PluginBase {
 
       const novel = {
         name: novelName,
-        cover: defaultCover,
         path: novelUrl,
       };
 

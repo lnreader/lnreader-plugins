@@ -2,14 +2,13 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 type Page = ReturnType<typeof loadCheerio>;
 
 type NovelPage = {
   path: string;
   name: string;
-  cover: string;
+  cover?: string;
 };
 
 /** Chapters live directly under the site root, e.g. `/tcf-chapter-12/`. */
@@ -45,7 +44,7 @@ class EatApplePiesPlugin implements Plugin.PluginBase {
   name = 'EatApplePies';
   icon = 'src/en/eatapplepies/icon.png';
   site = 'https://eatapplepies.com';
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters: Filters | undefined = undefined;
 
@@ -190,7 +189,7 @@ class EatApplePiesPlugin implements Plugin.PluginBase {
     return {
       path,
       name,
-      cover: image && image.indexOf(this.site) === 0 ? image : defaultCover,
+      cover: image && image.indexOf(this.site) === 0 ? image : undefined,
     };
   }
 

@@ -1,7 +1,6 @@
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 const SITE_HOST = /^(?:www\.)?animecenterbr\.com$/i;
@@ -35,7 +34,7 @@ class AnimeCenterBR implements Plugin.PluginBase {
   name = 'Anime Center BR';
   site = 'https://animecenterbr.com';
   icon = 'src/pt-br/animecenterbr/icon.png';
-  version = '1.0.0';
+  version = '1.0.1';
 
   private async request(url: string) {
     const response = await fetchApi(url);
@@ -98,7 +97,6 @@ class AnimeCenterBR implements Plugin.PluginBase {
         novels.push({
           name,
           path,
-          cover: defaultCover,
           finished: FINISHED.test($(item).text()),
         });
       });
@@ -135,8 +133,7 @@ class AnimeCenterBR implements Plugin.PluginBase {
       novels.push({
         name,
         path,
-        cover:
-          post._embedded?.['wp:featuredmedia']?.[0]?.source_url || defaultCover,
+        cover: post._embedded?.['wp:featuredmedia']?.[0]?.source_url,
       });
     }
     return novels;
@@ -183,16 +180,18 @@ class AnimeCenterBR implements Plugin.PluginBase {
     return body;
   }
 
-  private async coverIfReachable(src: string | undefined): Promise<string> {
+  private async coverIfReachable(
+    src: string | undefined,
+  ): Promise<string | undefined> {
     // Most of the older uploads of the site were deleted: only use the
     // picture when it can still be loaded.
-    if (!src || src.startsWith('data:')) return defaultCover;
+    if (!src || src.startsWith('data:')) return undefined;
     try {
       const url = new URL(src, this.site).href;
       const response = await fetchApi(url, { method: 'HEAD' });
-      return response.ok ? url : defaultCover;
+      return response.ok ? url : undefined;
     } catch {
-      return defaultCover;
+      return undefined;
     }
   }
 

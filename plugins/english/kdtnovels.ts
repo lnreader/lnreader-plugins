@@ -2,7 +2,6 @@ import { CheerioAPI, load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 type ChapterGroup = {
@@ -30,7 +29,7 @@ type ChapterGroup = {
 class KDTNovels implements Plugin.PluginBase {
   id = 'kdtnovels';
   name = 'KDT Novels';
-  version = '2.0.0';
+  version = '2.0.1';
   icon = 'src/en/kdtnovels/icon.png';
   site = 'https://kdtnovels.net/';
 
@@ -63,7 +62,7 @@ class KDTNovels implements Plugin.PluginBase {
       novels.push({
         name: title.attr('title') || title.text().trim(),
         path: card.attr('href')!.slice(1),
-        cover: this.absolute(card.find('img').attr('src')) || defaultCover,
+        cover: this.absolute(card.find('img').attr('src')),
       });
     });
     return novels;
@@ -116,9 +115,7 @@ class KDTNovels implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: title.text().trim() || 'Untitled',
-      cover:
-        this.absolute($('meta[property="og:image"]').attr('content')) ||
-        defaultCover,
+      cover: this.absolute($('meta[property="og:image"]').attr('content')),
       genres: $('main a[href^="/search/?genre="]')
         .map((_, el) => $(el).text().trim())
         .get()

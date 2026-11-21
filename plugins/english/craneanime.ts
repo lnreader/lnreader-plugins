@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 // Hand-built WordPress site. Every novel is a WordPress page holding the
 // synopsis and a table of contents of plain links; every chapter is a post.
@@ -16,7 +15,7 @@ class CraneAnimePlugin implements Plugin.PluginBase {
   name = 'CraneAnime Translation';
   icon = 'src/en/craneanime/icon.png';
   site = 'https://translation.craneanime.xyz';
-  version = '1.0.0';
+  version = '1.0.1';
   filters: Filters | undefined = undefined;
 
   private async getText(url: string) {
@@ -93,22 +92,20 @@ class CraneAnimePlugin implements Plugin.PluginBase {
         const slug = path.replace(/^\/|\/$/g, '').replace(/-toc$/, '');
         if (withChapters && !withChapters.has(slug)) return;
         seen.add(path);
-        novels.push({ name, path, cover: covers.get(path) || defaultCover });
+        novels.push({ name, path, cover: covers.get(path) });
       },
     );
     // Novels missing from the Library page take the cover from their own page.
     await Promise.all(
       novels
-        .filter(novel => novel.cover === defaultCover)
+        .filter(novel => !novel.cover)
         .map(async novel => {
           try {
             const $page = loadCheerio(
               await this.getText(this.resolveUrl(novel.path)),
             );
             const img = $page('article .entry-content img').first();
-            novel.cover =
-              this.imageSrc(img.attr('src'), img.attr('data-src')) ||
-              defaultCover;
+            novel.cover = this.imageSrc(img.attr('src'), img.attr('data-src'));
           } catch {
             // Covers are optional.
           }
@@ -150,8 +147,7 @@ class CraneAnimePlugin implements Plugin.PluginBase {
     };
 
     const img = content.find('img').first();
-    novel.cover =
-      this.imageSrc(img.attr('src'), img.attr('data-src')) || defaultCover;
+    novel.cover = this.imageSrc(img.attr('src'), img.attr('data-src'));
 
     // Credits and synopsis are plain paragraphs above the links block.
     const summary: string[] = [];

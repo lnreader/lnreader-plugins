@@ -3,7 +3,6 @@ import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { NovelStatus } from '@libs/novelStatus';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 type NovelEntry = Plugin.NovelItem & {
   status: string;
@@ -29,7 +28,7 @@ class ItsAMeTranslations implements Plugin.PluginBase {
   name = 'Its A Me Translations';
   icon = 'src/en/itsametranslations/icon.png';
   site = 'https://itsame-translations.com';
-  version = '1.0.0';
+  version = '1.0.1';
   filters: Filters | undefined = undefined;
 
   private novels?: Promise<NovelEntry[]>;
@@ -69,8 +68,7 @@ class ItsAMeTranslations implements Plugin.PluginBase {
 
     const cover =
       this.imageOf($('article img.wp-post-image').first()) ||
-      this.imageOf(content.find('img').first()) ||
-      defaultCover;
+      this.imageOf(content.find('img').first());
 
     // Chapters are posts at /<category>/<slug>. Anything else (other project
     // pages, the old wordpress.com blog, Syosetu raws) is not a chapter.

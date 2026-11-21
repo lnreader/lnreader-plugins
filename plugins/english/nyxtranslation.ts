@@ -3,7 +3,6 @@ import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { NovelStatus } from '@libs/novelStatus';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 type Section = 'active' | 'completed' | 'on-hold' | 'dropped';
 type NovelEntry = { name: string; path: string; section?: Section };
@@ -51,7 +50,7 @@ class NyxTranslationPlugin implements Plugin.PluginBase {
   name = 'NyX Translation';
   icon = 'src/en/nyxtranslation/icon.png';
   site = 'https://nyx-translation.com';
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters = {
     section: {
@@ -114,9 +113,9 @@ class NyxTranslationPlugin implements Plugin.PluginBase {
     return novels;
   }
 
-  private coverOf($: ReturnType<typeof loadCheerio>): string {
+  private coverOf($: ReturnType<typeof loadCheerio>): string | undefined {
     const src = $('.entry-content img').first().attr('src') || '';
-    return src.startsWith('http') ? src : defaultCover;
+    return src.startsWith('http') ? src : undefined;
   }
 
   private async toNovelItems(
@@ -130,7 +129,7 @@ class NyxTranslationPlugin implements Plugin.PluginBase {
         return {
           name: novel.name,
           path: novel.path,
-          cover: $ ? this.coverOf($) : defaultCover,
+          cover: $ ? this.coverOf($) : undefined,
         };
       }),
     );

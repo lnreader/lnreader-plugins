@@ -1,7 +1,6 @@
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 // The blog is hosted on WordPress.com: every novel is a category and every
@@ -47,7 +46,7 @@ class PinkMuffinTLPlugin implements Plugin.PluginBase {
   name = 'Pink Muffin TL';
   icon = 'src/en/pinkmuffintl/icon.png';
   site = 'https://pinkmuffinyum.wordpress.com';
-  version = '1.0.0';
+  version = '1.0.1';
 
   private async api<T>(path: string): Promise<{ data: T; pages: number }> {
     const response = await fetchApi(`${API}${path}`);
@@ -88,7 +87,6 @@ class PinkMuffinTLPlugin implements Plugin.PluginBase {
     return {
       name: this.decode(category.name),
       path: `/category/${category.slug}/`,
-      cover: defaultCover,
     };
   }
 
@@ -201,7 +199,7 @@ class PinkMuffinTLPlugin implements Plugin.PluginBase {
 
     // The introduction page carries the cover and the synopsis.
     const intro = entries.find(entry => !CHAPTER_TITLE.test(entry.title));
-    let cover = defaultCover;
+    let cover: string | undefined;
     let summary = category.description.trim() || undefined;
     let status: string | undefined;
     if (intro) {

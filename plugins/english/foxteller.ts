@@ -1,7 +1,6 @@
 import { Plugin } from '@/types/plugin';
 import { Parser } from 'htmlparser2';
 import { FilterTypes, Filters } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 import { fetchApi, FetchInit } from '@libs/fetch';
 import { NovelStatus } from '@libs/novelStatus';
 
@@ -9,7 +8,7 @@ class Foxteller implements Plugin.PluginBase {
   id = 'foxteller';
   name = 'Foxteller';
   site = 'https://www.foxteller.com';
-  version = '1.0.3';
+  version = '1.0.4';
   icon = 'src/en/foxteller/icon.png';
 
   async safeFecth(url: string, init?: FetchInit): Promise<string> {
@@ -56,7 +55,7 @@ class Foxteller implements Plugin.PluginBase {
 
         novels.push({
           name: novelName,
-          cover: novelCover?.[1] || defaultCover,
+          cover: novelCover?.[1],
           path: novelUrl.split('/')[4],
         });
       }
@@ -91,7 +90,7 @@ class Foxteller implements Plugin.PluginBase {
         // name and cover
         if (!novel.cover && attribs['class'] === 'img-fluid') {
           novel.name = attribs['alt'];
-          novel.cover = attribs['src'] || defaultCover;
+          novel.cover = attribs['src'];
         } // genres
         else if (name === 'div' && attribs['class'] === 'novel-genres') {
           isParsingGenres = true;
@@ -274,8 +273,7 @@ class Foxteller implements Plugin.PluginBase {
       )?.[1];
 
       if (name && path) {
-        const cover =
-          elements.match(/<img src="(.*?)".*>/)?.[1] || defaultCover;
+        const cover = elements.match(/<img src="(.*?)".*>/)?.[1];
         novels.push({ name, cover, path });
       }
     });

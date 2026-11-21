@@ -3,7 +3,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { storage } from '@libs/storage';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 type FlightChapter = {
@@ -41,7 +40,7 @@ const unlockHeadingPattern = /unlock this chapter/i;
 class PenguinSquad implements Plugin.PluginBase {
   id = 'penguinsquad';
   name = 'Penguin Squad';
-  version = '2.0.0';
+  version = '2.0.1';
   icon = 'src/en/penguinsquad/icon.png';
   site = 'https://penguin-squad.com/';
 
@@ -71,13 +70,13 @@ class PenguinSquad implements Plugin.PluginBase {
     return parseHTML(html.replace(scriptStylePattern, ''));
   }
 
-  private resolveCoverUrl(src: string | undefined): string {
+  private resolveCoverUrl(src: string | undefined): string | undefined {
     const trimmed = src?.trim();
-    if (!trimmed) return defaultCover;
+    if (!trimmed) return undefined;
     try {
       return new URL(trimmed, this.site).toString();
     } catch {
-      return defaultCover;
+      return undefined;
     }
   }
 

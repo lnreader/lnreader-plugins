@@ -3,7 +3,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { Filters } from '@libs/filterInputs';
-import { defaultCover } from '@/types/constants';
 import { storage } from '@libs/storage';
 
 type NovelFireOptions = {
@@ -89,7 +88,7 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
     this.site = metadata.sourceSite;
     const majorVer = metadata.options?.majorVer || 1;
     const minorVer = metadata.options?.minorVer || 0;
-    const versionIncrement = metadata.options?.versionIncrement || 0;
+    const versionIncrement = (metadata.options?.versionIncrement || 0) + 1;
     this.version = `${majorVer}.${minorVer}.${versionIncrement}`;
     this.options = metadata.options;
     this.filters = metadata.filters satisfies Filters;
@@ -139,9 +138,7 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
 
       const imgElement = $el.find('.novel-cover > img');
       const rawSrc = imgElement.attr('data-src') ?? imgElement.attr('src');
-      const novelCover = rawSrc
-        ? new URL(rawSrc, this.site).href
-        : defaultCover;
+      const novelCover = rawSrc ? new URL(rawSrc, this.site).href : undefined;
 
       novels.push({
         name: novelName,
@@ -365,8 +362,6 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
 
     if (coverUrl) {
       novel.cover = new URL(coverUrl, baseUrl).href;
-    } else {
-      novel.cover = defaultCover;
     }
 
     novel.genres = $('.categories .property-item')

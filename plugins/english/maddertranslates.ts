@@ -3,7 +3,6 @@ import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { NovelStatus } from '@libs/novelStatus';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 type NovelEntry = { name: string; path: string; status: string };
 
@@ -19,7 +18,7 @@ class MadderTranslates implements Plugin.PluginBase {
   name = 'Madder Translates';
   icon = 'src/en/maddertranslates/icon.png';
   site = `https://www.${HOST}`;
-  version = '1.0.0';
+  version = '1.0.1';
   filters: Filters | undefined = undefined;
 
   private async loadPage(path: string) {
@@ -84,7 +83,6 @@ class MadderTranslates implements Plugin.PluginBase {
     return novels.map(novel => ({
       name: novel.name,
       path: novel.path,
-      cover: defaultCover,
     }));
   }
 
@@ -121,7 +119,6 @@ class MadderTranslates implements Plugin.PluginBase {
       name:
         entry?.name ||
         $('h1.entry-title').first().text().replace(/\s+/g, ' ').trim(),
-      cover: defaultCover,
       chapters,
       status: entry?.status || NovelStatus.Unknown,
     };

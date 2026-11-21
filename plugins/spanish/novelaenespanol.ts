@@ -2,7 +2,6 @@ import { load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { FilterTypes, Filters } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 const PAGE_SIZE = 20;
@@ -55,7 +54,7 @@ class NovelaEnEspanolPlugin implements Plugin.PluginBase {
   name = 'NovelaenEspanol';
   icon = 'src/es/novelaenespanol/icon.png';
   site = 'https://novelaenespanol.com';
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters = {
     order: {
@@ -110,7 +109,7 @@ class NovelaEnEspanolPlugin implements Plugin.PluginBase {
     return entries.map(entry => ({
       name: decodeText(entry.cat_title),
       path: toNovelPath(entry.cat_link),
-      cover: entry.cat_img || defaultCover,
+      cover: entry.cat_img,
     }));
   }
 
@@ -166,7 +165,7 @@ class NovelaEnEspanolPlugin implements Plugin.PluginBase {
       path: novelPath,
       name:
         loadedCheerio('.category-title').first().text().trim() || 'Untitled',
-      cover: loadedCheerio('img.category-img').attr('src') || defaultCover,
+      cover: loadedCheerio('img.category-img').attr('src'),
     };
 
     const author = loadedCheerio('.cat-author [itemprop=creator]')

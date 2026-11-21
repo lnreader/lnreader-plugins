@@ -3,7 +3,6 @@ import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { NovelStatus } from '@libs/novelStatus';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 type WpPost = {
   id: number;
@@ -82,7 +81,7 @@ class SadsTranslatesPlugin implements Plugin.PluginBase {
   name = 'Sads Translates';
   icon = 'src/en/sadstranslates/icon.png';
   site = 'https://sadstranslates.page';
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters: Filters | undefined = undefined;
 
@@ -120,7 +119,7 @@ class SadsTranslatesPlugin implements Plugin.PluginBase {
     return {
       path: this.toCategoryPath(category.slug),
       name: this.decode(category.name),
-      cover: details.cover || defaultCover,
+      cover: details.cover,
       author: details.author,
       summary: details.summary,
       status,
@@ -180,7 +179,7 @@ class SadsTranslatesPlugin implements Plugin.PluginBase {
       .map(category => ({
         name: this.decode(category.name),
         path: this.toCategoryPath(category.slug),
-        cover: covers[category.slug] || defaultCover,
+        cover: covers[category.slug],
       }))
       .filter(novel => this.searchKey(novel.name).indexOf(needle) !== -1);
   }

@@ -2,7 +2,6 @@ import { Cheerio, CheerioAPI, load } from 'cheerio';
 import { Element } from 'domhandler';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 const challengeTitles = new Set([
@@ -37,7 +36,7 @@ class XiaowazPlugin implements Plugin.PluginBase {
   name = 'Xiaowaz';
   icon = 'src/fr/xiaowaz/icon.png';
   site = 'https://xiaowaz.fr';
-  version = '1.0.5';
+  version = '1.0.6';
   static novels: Plugin.NovelItem[] | undefined;
 
   async getCheerio(url: string): Promise<CheerioAPI> {
@@ -96,8 +95,7 @@ class XiaowazPlugin implements Plugin.PluginBase {
         const $novel = await this.getCheerio(this.site + novel.path);
         novel.cover =
           $novel('img[fetchpriority = "high"]').first().attr('src') ||
-          $novel('img.aligncenter').first().attr('src') ||
-          defaultCover;
+          $novel('img.aligncenter').first().attr('src');
       }),
     );
     return novels;
@@ -129,8 +127,7 @@ class XiaowazPlugin implements Plugin.PluginBase {
     novel.name = $('.card_title').text().trim();
     novel.cover =
       $('img[fetchpriority = "high"]').first().attr('src') ||
-      $('img.aligncenter').first().attr('src') ||
-      defaultCover;
+      $('img.aligncenter').first().attr('src');
 
     novel.status = NovelStatus.Ongoing;
     if (novel.name.charAt(novel.name.length - 1) === '✔') {

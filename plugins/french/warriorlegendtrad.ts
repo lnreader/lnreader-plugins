@@ -1,7 +1,6 @@
 import { CheerioAPI, load } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 import dayjs from 'dayjs';
 
@@ -37,7 +36,7 @@ class WarriorLegendTradPlugin implements Plugin.PluginBase {
   name = 'Warrior Legend Trad';
   icon = 'src/fr/warriorlegendtrad/icon.png';
   site = 'https://warriorlegendtrad.wordpress.com';
-  version = '1.0.4';
+  version = '1.0.5';
 
   regexAuthors = [/Auteur\u00A0:([^\n]*)/];
 
@@ -68,8 +67,7 @@ class WarriorLegendTradPlugin implements Plugin.PluginBase {
     $('div div div article').each((i, elem) => {
       const novelName = $(elem).find('.entry-wrapper h2').first().text().trim();
       const novelUrl = $(elem).find('.entry-wrapper h2 a').attr('href');
-      const novelCover =
-        $(elem).find('figure a img').attr('src') || defaultCover;
+      const novelCover = $(elem).find('figure a img').attr('src');
 
       if (novelUrl && novelName) {
         novel = {
@@ -92,8 +90,7 @@ class WarriorLegendTradPlugin implements Plugin.PluginBase {
     const $ = await this.getCheerio(this.site + novelPath);
 
     novel.name = $('.site-main article header h1').text().trim();
-    novel.cover =
-      $('.site-main article figure img').first().attr('src') || defaultCover;
+    novel.cover = $('.site-main article figure img').first().attr('src');
     const entryContentText = $('.entry-content').text();
     novel.author = this.extractInfo(entryContentText, this.regexAuthors);
     novel.genres = this.extractInfo(entryContentText, this.regexGenres);

@@ -2,13 +2,12 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { load as parseHTML } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 type CatalogueEntry = {
   name: string;
   path: string;
-  cover: string;
+  cover?: string;
   status: string;
   added: number;
   updated: number;
@@ -34,7 +33,7 @@ class NovelonomiconPlugin implements Plugin.PluginBase {
   name = 'Novelonomicon';
   icon = 'src/en/novelonomicon/icon.png';
   site = 'https://novelonomicon.com/';
-  version = '1.0.0';
+  version = '1.0.1';
 
   private cataloguePromise: Promise<CatalogueEntry[]> | null = null;
 
@@ -70,7 +69,7 @@ class NovelonomiconPlugin implements Plugin.PluginBase {
     const url = img.attr('data-src') || img.attr('src') || '';
     return url.startsWith('http') && !url.includes('missingcover')
       ? url
-      : defaultCover;
+      : undefined;
   }
 
   /** Fetches the catalogue once per session; retried if the request fails. */

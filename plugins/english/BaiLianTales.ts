@@ -3,7 +3,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { storage } from '@libs/storage';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 /**
@@ -23,7 +22,7 @@ import { NovelStatus } from '@libs/novelStatus';
 class BaiLianTales implements Plugin.PluginBase {
   id = 'bailiantales';
   name = 'BaiLianTales';
-  version = '2.3.0';
+  version = '2.3.1';
   icon = 'src/en/bailiantales/icon.png';
   site = 'https://bailiantales.com/';
 
@@ -82,7 +81,7 @@ class BaiLianTales implements Plugin.PluginBase {
       novels.push({
         name: link.text().trim(),
         path,
-        cover: $(el).find('img').attr('src') || defaultCover,
+        cover: $(el).find('img').attr('src'),
       });
     });
     return novels;
@@ -113,7 +112,7 @@ class BaiLianTales implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: $('.jt-novel-details h1').text().trim() || 'Untitled',
-      cover: $('.novel-hero img.wp-post-image').attr('src') || defaultCover,
+      cover: $('.novel-hero img.wp-post-image').attr('src'),
       summary: $('.jt-hero-synopsis p')
         .map((_, el) => $(el).text().trim())
         .get()
@@ -205,7 +204,7 @@ class BaiLianTales implements Plugin.PluginBase {
       novels.push({
         name: link.text().trim(),
         path,
-        cover: $(el).find('img').attr('src') || defaultCover,
+        cover: $(el).find('img').attr('src'),
       });
     });
     return novels;

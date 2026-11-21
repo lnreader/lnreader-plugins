@@ -1,5 +1,4 @@
 import { load } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { fetchApi } from '@libs/fetch';
 import { NovelStatus } from '@libs/novelStatus';
 import { Plugin } from '@/types/plugin';
@@ -24,7 +23,7 @@ class LightNovelVFPlugin implements Plugin.PagePlugin {
   name = 'LightNovelVF';
   icon = 'src/fr/lightnovelvf/icon.png';
   site = 'https://www.lightnovelvf.com/';
-  version = '1.0.4';
+  version = '1.0.5';
 
   resolveUrl(path: string, _isNovel = false): string {
     void _isNovel;
@@ -165,7 +164,7 @@ class LightNovelVFPlugin implements Plugin.PagePlugin {
       novels.set(match[1], {
         name,
         path: match[1],
-        cover: cover ? new URL(cover, this.site).toString() : defaultCover,
+        cover: cover ? new URL(cover, this.site).toString() : undefined,
       });
     });
     return Array.from(novels.values());
@@ -264,7 +263,7 @@ class LightNovelVFPlugin implements Plugin.PagePlugin {
     return {
       path: slug,
       name: $('h1').first().text().trim(),
-      cover: cover ? new URL(cover, this.site).toString() : defaultCover,
+      cover: cover ? new URL(cover, this.site).toString() : undefined,
       summary: $('.lnv-synopsis__body').first().text().trim() || undefined,
       author:
         this.labelledValue(html, 'auteur') ||

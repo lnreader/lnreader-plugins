@@ -1,7 +1,6 @@
 import { load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
-import { defaultCover } from '@libs/defaultCover';
 
 const BASE = 'https://grensia.blogspot.com';
 const SEARCH_PAGE_SIZE = 150;
@@ -131,7 +130,7 @@ class GrensiaPlugin implements Plugin.PluginBase {
   name = 'Grensia';
   icon = 'src/id/grensia/icon.png';
   site = `${BASE}/`;
-  version = '1.0.0';
+  version = '1.0.1';
   filters = undefined;
 
   private landingCache?: Promise<Landing[]>;
@@ -171,7 +170,7 @@ class GrensiaPlugin implements Plugin.PluginBase {
       novels.push({
         name: landing.name,
         path: encodeURIComponent(landing.name),
-        cover: landing.cover || defaultCover,
+        cover: landing.cover,
       });
     });
     return novels;
@@ -210,10 +209,7 @@ class GrensiaPlugin implements Plugin.PluginBase {
     );
 
     const withCover = matching.find(post => !!post.cover);
-    novel.cover =
-      (landing && landing.cover) ||
-      (withCover && withCover.cover) ||
-      defaultCover;
+    novel.cover = (landing && landing.cover) || (withCover && withCover.cover);
 
     novel.chapters = matching.map(post => ({
       name: post.title,
@@ -262,7 +258,7 @@ class GrensiaPlugin implements Plugin.PluginBase {
         novels.push({
           name,
           path: encodeURIComponent(name),
-          cover: (landing && landing.cover) || post.cover || defaultCover,
+          cover: (landing && landing.cover) || post.cover,
         });
       });
     });

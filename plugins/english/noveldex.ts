@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 // NovelDex is a Next.js application using app router, rsc ( react server components ), and flight protocol
@@ -110,7 +109,7 @@ class Noveldex implements Plugin.PluginBase {
   name = 'NovelDex';
   icon = 'src/en/noveldex/icon.png';
   site = 'https://noveldex.io';
-  version = '1.0.1';
+  version = '1.0.2';
   // Filter do take a lot of space
   filters = {
     sort: {
@@ -595,9 +594,7 @@ class Noveldex implements Plugin.PluginBase {
     return pageData.initialSeries.map(s => ({
       name: s.title,
       path: `/series/novel/${s.urlSlug}`,
-      cover: s.coverImage
-        ? new URL(s.coverImage, this.site).href
-        : defaultCover,
+      cover: s.coverImage ? new URL(s.coverImage, this.site).href : undefined,
     }));
   }
 
@@ -751,7 +748,7 @@ class Noveldex implements Plugin.PluginBase {
     return {
       path: novelPath,
       name: title || seriesData?.title || 'Untitled',
-      cover: cover || defaultCover,
+      cover,
       status: this.mapStatus(seriesData?.status),
       summary: description,
       genres: genres.join(', '),
@@ -793,7 +790,7 @@ class Noveldex implements Plugin.PluginBase {
 
         const cover = s.coverImage
           ? new URL(s.coverImage, this.site).href
-          : defaultCover;
+          : undefined;
 
         const description = (s.description || '')
           .replace(/\\r\\n/g, '\n')
@@ -990,9 +987,7 @@ class Noveldex implements Plugin.PluginBase {
     return page.initialSeries.map(s => ({
       name: s.title,
       path: `/series/novel/${s.urlSlug}`,
-      cover: s.coverImage
-        ? new URL(s.coverImage, this.site).href
-        : defaultCover,
+      cover: s.coverImage ? new URL(s.coverImage, this.site).href : undefined,
     }));
   }
 

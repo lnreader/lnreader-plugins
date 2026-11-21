@@ -1,6 +1,5 @@
 import { Plugin } from '@/types/plugin';
 import { FilterTypes, Filters } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 import { fetchApi } from '@libs/fetch';
 import { NovelStatus } from '@libs/novelStatus';
 import dayjs from 'dayjs';
@@ -14,7 +13,7 @@ class RNRF implements Plugin.PluginBase {
   name = 'РанобэРФ';
   // ранобе.рф; the old ранобэ.рф domain no longer resolves
   site = 'https://xn--80acm4afj.xn--p1ai';
-  version = '1.0.2';
+  version = '1.0.3';
   icon = 'src/ru/ranoberf/icon.png';
 
   async popularNovels(
@@ -39,7 +38,7 @@ class RNRF implements Plugin.PluginBase {
           name: novel.title,
           cover: novel?.verticalImage?.url
             ? this.site + novel.verticalImage.url
-            : defaultCover,
+            : undefined,
           path: '/' + novel.slug,
         }),
       );
@@ -64,7 +63,7 @@ class RNRF implements Plugin.PluginBase {
 
       novel.cover = book.verticalImage?.url
         ? this.site + book.verticalImage.url
-        : defaultCover;
+        : undefined;
       novel.status = book?.additionalInfo.includes('Активен')
         ? NovelStatus.Ongoing
         : NovelStatus.Completed;
@@ -120,7 +119,7 @@ class RNRF implements Plugin.PluginBase {
         name: novel.title,
         cover: novel?.verticalImage?.url
           ? this.site + novel.verticalImage.url
-          : defaultCover,
+          : undefined,
         path: '/' + novel.slug,
       }),
     );

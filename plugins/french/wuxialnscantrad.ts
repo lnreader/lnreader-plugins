@@ -1,7 +1,6 @@
 import { CheerioAPI, load } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 import dayjs from 'dayjs';
 
@@ -37,7 +36,7 @@ class WuxialnscantradPlugin implements Plugin.PluginBase {
   name = 'WuxiaLnScantrad';
   icon = 'src/fr/wuxialnscantrad/icon.png';
   site = 'https://wuxialnscantrad.wordpress.com';
-  version = '1.0.4';
+  version = '1.0.5';
 
   private async findMovedChapter(chapterPath: string): Promise<string | null> {
     const slug = chapterPath.split('/').filter(Boolean).pop() || '';
@@ -85,7 +84,6 @@ class WuxialnscantradPlugin implements Plugin.PluginBase {
       if (novelUrl && novelName) {
         novel = {
           name: novelName,
-          cover: defaultCover,
           path: novelUrl.replace(this.site, ''),
         };
         novels.push(novel);
@@ -96,8 +94,7 @@ class WuxialnscantradPlugin implements Plugin.PluginBase {
         const detail = await this.getCheerio(this.site + item.path);
         item.cover =
           detail('.entry-content p strong img').first().attr('src') ||
-          detail('.entry-content p img').first().attr('src') ||
-          defaultCover;
+          detail('.entry-content p img').first().attr('src');
       }),
     );
     return novels;

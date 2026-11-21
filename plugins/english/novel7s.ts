@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 // ─── WP REST Types ────────────────────────────────────────────────────────────
@@ -41,9 +40,9 @@ function toPath(url: string): string {
 }
 
 /** Parse the cover image URL out of a WP category description field. */
-function coverFromDesc(description: string): string {
+function coverFromDesc(description: string): string | undefined {
   const m = description.match(/src=["']([^"'>]+)/);
-  return m ? m[1] : defaultCover;
+  return m ? m[1] : undefined;
 }
 
 /** Map a WP category to a NovelItem. */
@@ -74,7 +73,7 @@ class Novel7sPlugin implements Plugin.PluginBase {
   icon = 'src/en/novel7s/icon.png';
   site = 'https://novel7s.com';
   rest = `${this.site}/wp-json/wp/v2`;
-  version = '1.0.1';
+  version = '1.0.2';
 
   filters = {
     sort: {
@@ -100,7 +99,7 @@ class Novel7sPlugin implements Plugin.PluginBase {
       filters,
     }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
-    const sort = showLatestNovels ? 'id' : (filters?.sort?.value ?? 'count');
+    const sort = showLatestNovels ? 'id' : filters?.sort?.value ?? 'count';
 
     // "Trending" still relies on the custom admin-ajax endpoint (view count based)
     if (sort === 'trending') {
@@ -112,7 +111,7 @@ class Novel7sPlugin implements Plugin.PluginBase {
         (item: { name: string; url: string; cover: string }) => ({
           name: item.name,
           path: toPath(item.url),
-          cover: item.cover || defaultCover,
+          cover: item.cover,
         }),
       );
     }

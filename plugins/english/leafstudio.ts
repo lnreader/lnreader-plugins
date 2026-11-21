@@ -1,6 +1,5 @@
 import { CheerioAPI, load as parseHTML } from 'cheerio';
 import { Plugin } from '@/types/plugin';
-import { defaultCover } from '@libs/defaultCover';
 import { fetchApi } from '@libs/fetch';
 import { Filters } from '@libs/filterInputs';
 
@@ -9,7 +8,7 @@ class LeafStudio implements Plugin.PluginBase {
   name = 'LeafStudio';
   icon = 'src/en/leafstudio/icon.png';
   site = 'https://leafstudio.site/';
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters: Filters | undefined = undefined;
 
@@ -51,7 +50,7 @@ class LeafStudio implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: loadedCheerio('h1.title').text().trim() || '',
-      cover: loadedCheerio('img#novel_cover').attr('src') || defaultCover,
+      cover: loadedCheerio('img#novel_cover').attr('src'),
       summary: loadedCheerio('div.desc_div > p')
         .map((i, el) => parseHTML(el).text())
         .toArray()

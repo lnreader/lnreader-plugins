@@ -1,7 +1,6 @@
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { CheerioAPI, load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 const SITE = 'https://www.sinacortadores.com';
 const SITE_HOST = /^(?:www\.)?sinacortadores\.com$/i;
@@ -31,7 +30,7 @@ class NovelasMTLPlugin implements Plugin.PluginBase {
   name = 'Novelas MTL';
   icon = 'src/es/novelasmtl/icon.png';
   site = SITE;
-  version = '1.0.0';
+  version = '1.0.1';
 
   /**
    * Reads a page (/p/...) or a post (/2024/10/...) through the blog's public
@@ -92,8 +91,8 @@ class NovelasMTLPlugin implements Plugin.PluginBase {
   }
 
   /** Blogger serves thumbnails; ask for a size that suits a cover. */
-  private bigCover(src: string | undefined): string {
-    if (!src) return defaultCover;
+  private bigCover(src: string | undefined): string | undefined {
+    if (!src) return undefined;
     return src.replace(/\/(?:w\d+-h\d+[^/]*|s\d+[^/]*)\/([^/]+)$/, '/s400/$1');
   }
 
@@ -124,7 +123,7 @@ class NovelasMTLPlugin implements Plugin.PluginBase {
         const cover = link.find('img[src]').first().attr('src');
         const known = novels.get(path);
         if (known) {
-          if (known.cover === defaultCover && cover) {
+          if (!known.cover && cover) {
             known.cover = this.bigCover(cover);
           }
           if (!known.name && name) known.name = name;
@@ -133,7 +132,7 @@ class NovelasMTLPlugin implements Plugin.PluginBase {
         novels.set(path, {
           name,
           path,
-          cover: cover ? this.bigCover(cover) : defaultCover,
+          cover: cover ? this.bigCover(cover) : undefined,
         });
       });
     }

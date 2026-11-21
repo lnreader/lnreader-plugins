@@ -3,7 +3,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { storage } from '@libs/storage';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 type ChapterJSON = {
@@ -28,7 +27,7 @@ class CrimsonScrollsPlugin implements Plugin.PluginBase {
   name = 'Crimson Scrolls';
   icon = 'src/en/crimsonscrolls/icon.png';
   site = 'https://crimsonscrolls.net';
-  version = '1.1.0';
+  version = '1.1.1';
 
   hideLocked = storage.get('hideLocked');
   pluginSettings = {
@@ -62,7 +61,7 @@ class CrimsonScrollsPlugin implements Plugin.PluginBase {
 
       novels.push({
         name: (link.attr('title') || link.text()).trim(),
-        cover: src && !src.startsWith('data:') ? src : defaultCover,
+        cover: src && !src.startsWith('data:') ? src : undefined,
         path: this.toPath(novelUrl),
       });
     });
@@ -139,8 +138,7 @@ class CrimsonScrollsPlugin implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: novelInfo.find('h1').text().trim() || 'Untitled',
-      cover:
-        coverSrc && !coverSrc.startsWith('data:') ? coverSrc : defaultCover,
+      cover: coverSrc && !coverSrc.startsWith('data:') ? coverSrc : undefined,
       summary: loadedCheerio('.cs-synopsis-content p')
         .map((_, el) => loadedCheerio(el).text().trim())
         .toArray()

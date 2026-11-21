@@ -3,7 +3,6 @@ import { FilterTypes, Filters } from '@libs/filterInputs';
 import { fetchText } from '@libs/fetch';
 import { NovelStatus } from '@libs/novelStatus';
 import { load as parseHTML } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 const SITE = 'https://www.lewenn.com/';
 
@@ -27,9 +26,8 @@ class LeWennPlugin implements Plugin.PluginBase {
   id = 'lewenn';
   name = '乐文小说网';
   site = SITE;
-  version = '1.0.0';
+  version = '1.0.1';
   icon = 'src/cn/lewenn/icon.png';
-  defaultCover = defaultCover;
 
   filters = {
     genre: {
@@ -69,7 +67,7 @@ class LeWennPlugin implements Plugin.PluginBase {
       const path = toPath($a.attr('href'));
       if (!name || !path || !NOVEL_PATH.test(path) || seen.has(path)) return;
       seen.add(path);
-      novels.push({ name, path, cover: defaultCover });
+      novels.push({ name, path });
     });
 
     return novels;
@@ -113,7 +111,7 @@ class LeWennPlugin implements Plugin.PluginBase {
     return {
       path: novelPath,
       name: getMeta('og:novel:book_name'),
-      cover: getMeta('og:image') || defaultCover,
+      cover: getMeta('og:image'),
       summary:
         $('#intro')
           .text()

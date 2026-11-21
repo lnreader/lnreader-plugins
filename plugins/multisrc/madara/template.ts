@@ -3,7 +3,6 @@ import { Filters } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
 import { Cheerio, CheerioAPI, load as parseHTML } from 'cheerio';
 import { AnyNode, Element } from 'domhandler';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 import dayjs from 'dayjs';
 import { storage } from '@libs/storage';
@@ -58,7 +57,7 @@ export class MadaraPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/madara/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `2.4.${versionIncrements}`;
+    this.version = `2.4.${1 + versionIncrements}`;
     this.options = metadata.options;
     this.filters = metadata.filters;
 
@@ -149,7 +148,7 @@ export class MadaraPlugin implements Plugin.PluginBase {
     return parseHTML(text);
   }
 
-  extractCover(image: Cheerio<AnyNode>): string {
+  extractCover(image: Cheerio<AnyNode>): string | undefined {
     const candidates = [
       image.attr('data-lazy-src'),
       image.attr('data-src'),
@@ -166,7 +165,7 @@ export class MadaraPlugin implements Plugin.PluginBase {
       }
     }
 
-    return defaultCover;
+    return undefined;
   }
 
   parseNovels(loadedCheerio: CheerioAPI): Plugin.NovelItem[] {

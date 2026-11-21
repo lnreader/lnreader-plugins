@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 import { storage } from '@libs/storage';
 
@@ -11,7 +10,7 @@ class INovelTranslation implements Plugin.PluginBase {
   name = 'iNovelTranslation';
   icon = 'src/en/inoveltranslation/icon.png';
   site = 'https://inoveltranslation.com';
-  version = '1.0.2';
+  version = '1.0.3';
   filters: Filters | undefined = undefined;
 
   pluginSettings = {
@@ -45,7 +44,7 @@ class INovelTranslation implements Plugin.PluginBase {
         novels.push({
           name: doc.title,
           path: `/novels/${doc.id}`,
-          cover: doc.cover?.url ? this.site + doc.cover.url : defaultCover,
+          cover: doc.cover?.url ? this.site + doc.cover.url : undefined,
         });
       });
     }
@@ -82,9 +81,7 @@ class INovelTranslation implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: novelData.title || 'Untitled',
-      cover: novelData.cover?.url
-        ? this.site + novelData.cover.url
-        : defaultCover,
+      cover: novelData.cover?.url ? this.site + novelData.cover.url : undefined,
       summary: summary,
       author: novelData.author?.name || 'Unknown',
       genres: genres,
@@ -357,7 +354,7 @@ class INovelTranslation implements Plugin.PluginBase {
         novels.push({
           name: doc.title,
           path: `/novels/${doc.id}`,
-          cover: doc.cover?.url ? this.site + doc.cover.url : defaultCover,
+          cover: doc.cover?.url ? this.site + doc.cover.url : undefined,
         });
       });
     }

@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { CheerioAPI, load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 /**
  * Notes on the site (onlinereadfreenovel.com):
@@ -56,7 +55,7 @@ class OnlineReadFreeNovelPlugin implements Plugin.PluginBase {
   name = 'Online Read Free Novel';
   icon = 'src/en/onlinereadfreenovel/icon.png';
   site = 'https://onlinereadfreenovel.com';
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters = {
     genre: {
@@ -107,7 +106,7 @@ class OnlineReadFreeNovelPlugin implements Plugin.PluginBase {
     };
 
     const cover = $('#textToRead img').first().attr('src');
-    novel.cover = cover ? this.toAbsolute(cover) : defaultCover;
+    novel.cover = cover ? this.toAbsolute(cover) : undefined;
 
     novel.chapters = await this.parsePages(novelPath, $);
     return novel;
@@ -144,7 +143,7 @@ class OnlineReadFreeNovelPlugin implements Plugin.PluginBase {
           {
             name: item.find('.h2').attr('title') || item.text().trim(),
             path,
-            cover: cover ? this.toAbsolute(cover) : defaultCover,
+            cover: cover ? this.toAbsolute(cover) : undefined,
           },
         ];
       });
@@ -164,7 +163,7 @@ class OnlineReadFreeNovelPlugin implements Plugin.PluginBase {
           {
             name: link.text().trim(),
             path: this.toPath(href),
-            cover: src ? this.toAbsolute(src) : defaultCover,
+            cover: src ? this.toAbsolute(src) : undefined,
           },
         ];
       });

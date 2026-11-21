@@ -1,6 +1,5 @@
 import { Plugin } from '@/types/plugin';
 import { FilterTypes, Filters } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 import { fetchApi } from '@libs/fetch';
 import { NovelStatus } from '@libs/novelStatus';
 
@@ -17,7 +16,7 @@ class Neobook implements Plugin.PluginBase {
   name = 'Neobook';
   site = 'https://neobook.org';
   apiSite = 'https://api.neobook.org/';
-  version = '1.0.3';
+  version = '1.0.4';
   icon = 'src/ru/neobook/icon.png';
 
   async fetchNovels(
@@ -59,7 +58,7 @@ class Neobook implements Plugin.PluginBase {
       bundle_books.feed?.forEach(novel =>
         novels.push({
           name: novel.title,
-          cover: novel?.attachment?.image?.m || defaultCover,
+          cover: novel?.attachment?.image?.m,
           path: novel.token + '/',
         }),
       );
@@ -90,7 +89,6 @@ class Neobook implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: '',
-      cover: defaultCover,
     };
 
     const bookRaw = body.match(/var postData = ({.*?});/);

@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 type WpPage = {
   id: number;
@@ -138,7 +137,7 @@ class StabbingWithASyringePlugin implements Plugin.PluginBase {
   name = 'Stabbing with a Syringe';
   icon = 'src/en/stabbingwithasyringe/icon.png';
   site = 'https://stabbingwithasyringe.home.blog';
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters: Filters | undefined = undefined;
 
@@ -177,7 +176,6 @@ class StabbingWithASyringePlugin implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: this.toPath(page.link),
       name: this.decode(page.title.rendered),
-      cover: defaultCover,
       chapters: await this.fetchChapters(page.id),
     };
 
@@ -282,7 +280,7 @@ class StabbingWithASyringePlugin implements Plugin.PluginBase {
       .map(page => ({
         name: this.decode(page.title.rendered),
         path: this.toPath(page.link),
-        cover: covers[page.slug] || defaultCover,
+        cover: covers[page.slug],
       }))
       .filter(novel => this.searchKey(novel.name).indexOf(needle) !== -1);
   }

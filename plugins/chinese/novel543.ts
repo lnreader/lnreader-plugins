@@ -1,7 +1,6 @@
 import { load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 const makeAbsolute = (
@@ -29,7 +28,7 @@ class Novel543Plugin implements Plugin.PluginBase {
   id = 'novel543';
   name = 'Novel543';
   site = 'https://www.novel543.com/';
-  version = '1.0.0';
+  version = '1.0.1';
   icon = 'src/cn/novel543/icon.png';
 
   imageRequestInit = {
@@ -80,7 +79,7 @@ class Novel543Plugin implements Plugin.PluginBase {
           novels.push({
             name: novelName,
             path: novelPath,
-            cover: makeAbsolute(novelCover, this.site) || defaultCover,
+            cover: makeAbsolute(novelCover, this.site),
           });
           processedPaths.add(novelPath);
         }
@@ -104,11 +103,10 @@ class Novel543Plugin implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: $infoSection.find('h1.title').text().trim() || 'Untitled',
-      cover:
-        makeAbsolute(
-          $('section#detail div.cover img').attr('src'),
-          this.site,
-        ) || defaultCover,
+      cover: makeAbsolute(
+        $('section#detail div.cover img').attr('src'),
+        this.site,
+      ),
       summary: $modSection.find('div.intro').text().trim() || undefined,
       author:
         $infoSection.find('p.meta span.author').text().trim() || undefined,
@@ -316,7 +314,7 @@ class Novel543Plugin implements Plugin.PluginBase {
         novels.push({
           name: novelName,
           path: novelPath,
-          cover: makeAbsolute(novelCover, this.site) || defaultCover,
+          cover: makeAbsolute(novelCover, this.site),
         });
       }
     });

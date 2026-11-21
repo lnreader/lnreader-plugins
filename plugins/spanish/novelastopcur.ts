@@ -1,7 +1,6 @@
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 // The site is a Blogger blog: the catalogue is a static page, every novel is a
@@ -41,7 +40,7 @@ class NovelasTopcur implements Plugin.PluginBase {
   name = 'Novelas Topcur';
   site = 'https://animeshoy12.blogspot.com';
   icon = 'src/es/novelastopcur/icon.png';
-  version = '1.0.0';
+  version = '1.0.1';
 
   private async request(path: string) {
     const response = await fetchApi(this.resolveUrl(path));
@@ -97,9 +96,9 @@ class NovelasTopcur implements Plugin.PluginBase {
   }
 
   /** Blogger serves covers at any size: ask for a sharper one than the grid's. */
-  private cover(src: string | undefined): string {
+  private cover(src: string | undefined): string | undefined {
     if (!src || src.startsWith('data:') || /notavailable/i.test(src)) {
-      return defaultCover;
+      return undefined;
     }
     return src
       .replace(/=(?:[ws]\d+(?:-h\d+)?)(?:-[a-z0-9]+)*$/i, `=${COVER_SIZE}`)

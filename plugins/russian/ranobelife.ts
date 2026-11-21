@@ -1,7 +1,6 @@
 import { Plugin } from '@/types/plugin';
 import { FilterTypes, Filters } from '@libs/filterInputs';
 import { fetchApi } from '@libs/fetch';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 import { load as parseHTML } from 'cheerio';
 
@@ -9,7 +8,7 @@ class RanobeLife implements Plugin.PluginBase {
   id = 'ranobelife';
   name = 'Ranobe.life';
   site = 'https://ranobe.life';
-  version = '1.0.0';
+  version = '1.0.1';
   icon = 'src/ru/ranobelife/icon.png';
 
   async popularNovels(
@@ -71,7 +70,7 @@ class RanobeLife implements Plugin.PluginBase {
         cover:
           cover && !cover.startsWith('data:')
             ? this.absolute(cover)
-            : defaultCover,
+            : undefined,
       });
     });
 
@@ -94,7 +93,7 @@ class RanobeLife implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: $('h1').first().text().trim(),
-      cover: cover ? this.absolute(cover) : defaultCover,
+      cover: cover ? this.absolute(cover) : undefined,
       summary: this.htmlToText($('.page__text').first().html() || ''),
       status: status.includes('Заверш')
         ? NovelStatus.Completed

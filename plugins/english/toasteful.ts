@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { CheerioAPI, load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 type FeedLink = { rel: string; href: string };
@@ -32,7 +31,7 @@ class Toasteful implements Plugin.PluginBase {
   name = 'Toasteful';
   site = 'https://www.toasteful.com';
   icon = 'src/en/toasteful/icon.png';
-  version = '1.0.2';
+  version = '1.0.3';
 
   private listedCache = new Map<string, Set<string>>();
 
@@ -96,7 +95,7 @@ class Toasteful implements Plugin.PluginBase {
       return {
         name,
         path: new URL(resolved).pathname,
-        cover: cover || defaultCover,
+        cover,
       };
     } catch {
       return undefined;
@@ -140,9 +139,7 @@ class Toasteful implements Plugin.PluginBase {
       $('link[rel="image_src"]').attr('href') ||
       $('.post-body img').first().attr('src');
     const cover =
-      coverSrc && !coverSrc.includes(PLACEHOLDER_COVER)
-        ? coverSrc
-        : defaultCover;
+      coverSrc && !coverSrc.includes(PLACEHOLDER_COVER) ? coverSrc : undefined;
 
     const labels = $('span.post-labels a[rel="tag"]')
       .toArray()

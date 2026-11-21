@@ -1,7 +1,6 @@
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { load as parseHTML } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { Filters } from '@libs/filterInputs';
 
 class ReinoWuxia implements Plugin.PluginBase {
@@ -9,7 +8,7 @@ class ReinoWuxia implements Plugin.PluginBase {
   name = 'ReinoWuxia';
   icon = 'src/es/reinowuxia/icon.png';
   filters?: Filters | undefined;
-  version = '1.0.0';
+  version = '1.0.1';
   site = 'http://www.reinowuxia.com/';
   getNovelName(y: string | undefined) {
     return y?.replace(/-/g, ' ').replace(/(?:^|\s)\S/g, a => a.toUpperCase());
@@ -178,12 +177,9 @@ class ReinoWuxia implements Plugin.PluginBase {
       const exists = novels.some(novel => novel.name === novelName);
 
       if (!exists) {
-        const novelCover = defaultCover;
-
         if (!novelUrl || !novelName) return;
         const novel = {
           name: novelName,
-          cover: novelCover,
           path: novelUrl.replace(this.site, ''),
         };
 

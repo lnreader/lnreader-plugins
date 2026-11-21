@@ -2,7 +2,6 @@ import { CheerioAPI, load as parseHTML } from 'cheerio';
 import { fetchApi, type FetchInit } from '@libs/fetch';
 import { FilterTypes, Filters } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 // Invisible characters the site injects into its watermark lines.
@@ -15,7 +14,7 @@ class NovelaLigera4FanPlugin implements Plugin.PluginBase {
   name = 'NovelaLigera4Fan';
   icon = 'src/es/novelaligera4fan/icon.png';
   site = 'https://novelaligera4fan.com';
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters = {
     order: {
@@ -60,7 +59,7 @@ class NovelaLigera4FanPlugin implements Plugin.PluginBase {
       novels.push({
         name,
         path: this.toPath(href),
-        cover: card.find('img').attr('src') || defaultCover,
+        cover: card.find('img').attr('src'),
       });
     });
     return novels;
@@ -102,8 +101,7 @@ class NovelaLigera4FanPlugin implements Plugin.PluginBase {
       name: loadedCheerio('.post-title h1').text().trim() || 'Untitled',
       cover:
         loadedCheerio('.summary_image img').attr('src') ||
-        loadedCheerio('meta[property="og:image"]').attr('content') ||
-        defaultCover,
+        loadedCheerio('meta[property="og:image"]').attr('content'),
     };
 
     const author = loadedCheerio('.author-content').text().trim();
@@ -184,7 +182,7 @@ class NovelaLigera4FanPlugin implements Plugin.PluginBase {
     const catalogueCheerio = await this.getCheerio(`${this.site}/novelas/`);
     const catalogue = new Map<string, string>();
     for (const novel of this.parseNovelCards(catalogueCheerio)) {
-      catalogue.set(novel.path, novel.cover || defaultCover);
+      catalogue.set(novel.path, novel.cover);
     }
 
     const novels: Plugin.NovelItem[] = [];

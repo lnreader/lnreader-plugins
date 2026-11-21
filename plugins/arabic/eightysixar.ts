@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { NovelStatus } from '@libs/novelStatus';
-import { defaultCover } from '@libs/defaultCover';
 import { load as loadCheerio } from 'cheerio';
 
 type FeedLink = { rel: string; href: string };
@@ -37,7 +36,7 @@ class EightysixAR implements Plugin.PluginBase {
   name = 'EightysixAR';
   icon = 'src/ar/eightysixar/icon.png';
   site = 'https://eightysixar.blogspot.com';
-  version = '1.0.0';
+  version = '1.0.1';
   filters: Filters | undefined = undefined;
   private volumeCache?: { at: number; entries: FeedEntry[] };
 
@@ -97,9 +96,9 @@ class EightysixAR implements Plugin.PluginBase {
     return !!entry.category?.some(category => category.term === SERIES_LABEL);
   }
 
-  private coverFrom(entry?: FeedEntry): string {
+  private coverFrom(entry?: FeedEntry): string | undefined {
     const thumbnail = entry?.media$thumbnail?.url;
-    if (!thumbnail) return defaultCover;
+    if (!thumbnail) return undefined;
     return thumbnail.replace(/\/s\d+(-c)?\//, `/${COVER_SIZE}/`);
   }
 

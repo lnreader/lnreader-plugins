@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { CheerioAPI, load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 const pluginHeaders = {
   'User-Agent':
@@ -14,7 +13,7 @@ class ReadFromPlugin implements Plugin.PluginBase {
   name = 'Read From Net';
   icon = 'src/en/readfrom/icon.png';
   site = 'https://readfrom.net/';
-  version = '1.1.0';
+  version = '1.1.1';
   filters: Filters | undefined = undefined;
   headers = new Headers(pluginHeaders);
   imageRequestInit: Plugin.ImageRequestInit = {
@@ -53,7 +52,7 @@ class ReadFromPlugin implements Plugin.PluginBase {
         return {
           name: loadedCheerio(el).find('h2.title').text().trim(),
           path: new URL(novelPath, this.site).pathname.substring(1),
-          cover: loadedCheerio(el).find('img').attr('src') || defaultCover,
+          cover: loadedCheerio(el).find('img').attr('src'),
           summary:
             loadedCheerio(summary).text().trim() +
             loadedCheerio(summary).find('span.coll-hidden').text(),
@@ -111,9 +110,9 @@ class ReadFromPlugin implements Plugin.PluginBase {
       .text()
       .split(', \n\n')[0]
       .trim();
-    novel.cover =
-      loadedCheerio('article.box > div > center > div > a > img').attr('src') ||
-      defaultCover;
+    novel.cover = loadedCheerio(
+      'article.box > div > center > div > a > img',
+    ).attr('src');
 
     const rawChapters = loadedCheerio('div.pages')
       .first()

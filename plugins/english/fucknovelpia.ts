@@ -1,7 +1,6 @@
 import { CheerioAPI, load as parseHTML } from 'cheerio';
 import { Parser } from 'htmlparser2';
 import { Plugin } from '@/types/plugin';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 import { fetchApi } from '@libs/fetch';
 import { Filters, FilterTypes } from '@libs/filterInputs';
@@ -11,7 +10,7 @@ class FuckNovelpia implements Plugin.PluginBase {
   name = 'FuckNovelpia';
   icon = 'src/en/fucknovelpia/icon.png';
   site = 'https://fucknovelpia.com/';
-  version = '1.1.4';
+  version = '1.1.5';
 
   sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -92,7 +91,7 @@ class FuckNovelpia implements Plugin.PluginBase {
       novels.push({
         path,
         name: title,
-        cover: img || defaultCover,
+        cover: img,
       });
     });
 
@@ -247,7 +246,7 @@ class FuckNovelpia implements Plugin.PluginBase {
     }
 
     const name = parsed.name || loadedCheerio('h1').text().trim();
-    const cover = parsed.image || defaultCover;
+    const cover = parsed.image;
     const summary =
       parsed.description || loadedCheerio('.hero-summary').text().trim();
     let author = [parsed.author]

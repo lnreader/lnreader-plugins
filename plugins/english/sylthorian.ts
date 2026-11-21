@@ -1,7 +1,6 @@
 import { load as parseHTML } from 'cheerio';
 import { fetchApi, FetchInit } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
-import { defaultCover } from '@libs/defaultCover';
 
 /**
  * The Sylthorian (thesylthorian.com) — English LNReader plugin.
@@ -31,7 +30,7 @@ import { defaultCover } from '@libs/defaultCover';
 class Sylthorian implements Plugin.PluginBase {
   id = 'sylthorian';
   name = 'The Sylthorian';
-  version = '1.0.0';
+  version = '1.0.1';
   icon = 'src/en/sylthorian/icon.png';
   site = 'https://thesylthorian.com';
 
@@ -79,7 +78,6 @@ class Sylthorian implements Plugin.PluginBase {
       novels.push({
         name: lastTitle || path.split('/').pop() || path,
         path,
-        cover: defaultCover,
       });
       lastTitle = '';
     });

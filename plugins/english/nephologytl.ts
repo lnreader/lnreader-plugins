@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 type WpPost = {
   id: number;
@@ -42,7 +41,7 @@ class NephologyTLPlugin implements Plugin.PluginBase {
   name = 'NephologyTL';
   icon = 'src/en/nephologytl/icon.png';
   site = 'https://nephologytl.wordpress.com';
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters: Filters | undefined = undefined;
 
@@ -73,7 +72,6 @@ class NephologyTLPlugin implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: this.toPath(intro.link),
       name: this.decode(intro.title.rendered),
-      cover: defaultCover,
       chapters: await this.fetchChapters(category.id),
     };
 
@@ -132,7 +130,6 @@ class NephologyTLPlugin implements Plugin.PluginBase {
       .map(post => ({
         name: this.decode(post.title.rendered),
         path: this.toPath(post.link),
-        cover: defaultCover,
       }))
       .filter(novel => this.searchKey(novel.name).indexOf(needle) !== -1);
   }

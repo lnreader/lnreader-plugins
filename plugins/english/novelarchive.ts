@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
-import { defaultCover } from '@libs/defaultCover';
 
 type ApiNovel = {
   id: string;
@@ -47,7 +46,7 @@ type ApiChapter = {
 class NovelArchive implements Plugin.PluginBase {
   id = 'novelarchive';
   name = 'Novel Archive';
-  version = '1.0.0';
+  version = '1.0.1';
   icon = 'src/en/novelarchive/icon.png';
   site = 'https://novelarchive.cc';
 
@@ -82,7 +81,7 @@ class NovelArchive implements Plugin.PluginBase {
     return {
       name: novel.title,
       path: `/novel?id=${novel.id}`,
-      cover: novel.cover_url || novel.novel_image || defaultCover,
+      cover: novel.cover_url || novel.novel_image,
     };
   }
 
@@ -165,7 +164,7 @@ class NovelArchive implements Plugin.PluginBase {
       path: novelPath,
       name: novel.title,
       author: novel.author,
-      cover: novel.cover_url || novel.novel_image || defaultCover,
+      cover: novel.cover_url || novel.novel_image,
       genres: novel.genres,
       status: this.statusOf(novel.release_status || novel.ongoing),
       summary: (novel.description || '').trim(),

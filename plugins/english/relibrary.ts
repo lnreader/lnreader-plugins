@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 type FuzzySearchOptions = {
@@ -163,7 +162,7 @@ class ReLibraryPlugin implements Plugin.PluginBase {
   name = 'Re:Library';
   icon = 'src/en/relibrary/icon.png';
   site = 'https://re-library.com';
-  version = '1.0.4';
+  version = '1.0.5';
   imageRequestInit: Plugin.ImageRequestInit = {
     headers: {
       Referer: 'https://re-library.com/',
@@ -195,8 +194,7 @@ class ReLibraryPlugin implements Plugin.PluginBase {
         novel.path = title.attr('href');
         if (!novel.name || novel.path === undefined) return;
         const cover = loadedCheerio(el).find('img.relibrary-cover');
-        novel.cover =
-          cover.attr('data-cfsrc') || cover.attr('src') || defaultCover;
+        novel.cover = cover.attr('data-cfsrc') || cover.attr('src');
         novel.path = new URL(novel.path, this.site).pathname;
         novels.push(novel as Plugin.NovelItem);
       },
@@ -224,8 +222,7 @@ class ReLibraryPlugin implements Plugin.PluginBase {
       novel.path = title.attr('href');
       if (!novel.name || novel.path === undefined) return;
       const cover = loadedCheerio(el).find('img.relibrary-cover');
-      novel.cover =
-        cover.attr('data-cfsrc') || cover.attr('src') || defaultCover;
+      novel.cover = cover.attr('data-cfsrc') || cover.attr('src');
       novel.path = new URL(novel.path, this.site).pathname;
       novels.push(novel as Plugin.NovelItem);
     });
@@ -273,8 +270,7 @@ class ReLibraryPlugin implements Plugin.PluginBase {
     // Find the cover
     novel.cover =
       loadedCheerio('.entry-content > table img').attr('data-cfsrc') ||
-      loadedCheerio('.entry-content > table img').attr('src') ||
-      defaultCover;
+      loadedCheerio('.entry-content > table img').attr('src');
 
     novel.status = NovelStatus.Unknown;
     loadedCheerio('.entry-content > table > tbody > tr > td > p').each(
@@ -458,10 +454,7 @@ class ReLibraryPlugin implements Plugin.PluginBase {
         novels.push({
           name: e.find('h4').text(),
           path: new URL(href, this.site).pathname,
-          cover:
-            e.find('img').attr('data-cfsrc') ||
-            e.find('img').attr('src') ||
-            defaultCover,
+          cover: e.find('img').attr('data-cfsrc') || e.find('img').attr('src'),
         });
       }
     });

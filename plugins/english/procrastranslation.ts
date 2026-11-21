@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 type WpPage = {
   id: number;
@@ -27,7 +26,7 @@ const PER_PAGE = 100;
  * - Novels are the top-level pages that have child pages. Pages such as
  *   "About", "Projects" and "Dropped" have no children and are skipped.
  * - Chapters are the novel's child pages, in publication order.
- * - The site has no novel covers, so `defaultCover` is used.
+ * - The site has no novel covers, so no cover is returned.
  * - The whole site is a few dozen pages, so there is one listing page and
  *   search filters the novel titles locally.
  */
@@ -36,7 +35,7 @@ class ProcrastranslationPlugin implements Plugin.PluginBase {
   name = 'procrastranslation';
   icon = 'src/en/procrastranslation/icon.png';
   site = 'https://procrastranslation.wordpress.com';
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters: Filters | undefined = undefined;
 
@@ -81,7 +80,6 @@ class ProcrastranslationPlugin implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: this.toPath(novelPage.link),
       name: this.decode(novelPage.title.rendered),
-      cover: defaultCover,
       chapters,
     };
 
@@ -166,7 +164,6 @@ class ProcrastranslationPlugin implements Plugin.PluginBase {
       .map(page => ({
         name: this.decode(page.title.rendered),
         path: this.toPath(page.link),
-        cover: defaultCover,
       }))
       .filter(novel => this.searchKey(novel.name).indexOf(needle) !== -1);
   }

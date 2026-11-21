@@ -6,9 +6,9 @@ Review-time standards for LNReader plugins and repository tooling. Automated che
 
 - **Scope & theme reuse**: Check `plugins/multisrc/` for a matching CMS/theme before adding a standalone plugin.
 - **Placement & exports**: Place standalone plugins under `plugins/<language>/<id>.ts` (full language name). Implement `Plugin.PluginBase` with a `PascalCase` class and `export default new <ClassName>();`. Keep `id` unique, stable, and `camelCase` or lowercase alphanumeric.
-- **Runtime compatibility**: Use `@libs/*` helpers (e.g., `@libs/fetch`, `@libs/defaultCover`, `@libs/novelStatus`, `@libs/storage`) and target ES5/Hermes/React Native (avoid Node-only or browser-only globals).
+- **Runtime compatibility**: Use `@libs/*` helpers (e.g., `@libs/fetch`, `@libs/novelStatus`, `@libs/storage`) and target ES5/Hermes/React Native (avoid Node-only or browser-only globals).
 - **Semantic versioning**: Bump `version` on every existing-plugin change — patch for compatibility fixes, minor for new features/filters, major for breaking site/domain rewrites.
-- **Assets**: Place a 96x96 PNG at `public/static/src/<short-language-code>/<plugin-id>/icon.png` and set `icon` to `src/<short-language-code>/<plugin-id>/icon.png`. Use `defaultCover` when no usable cover exists; omit metadata the source does not provide.
+- **Assets**: Place a 96x96 PNG at `public/static/src/<short-language-code>/<plugin-id>/icon.png` and set `icon` to `src/<short-language-code>/<plugin-id>/icon.png`. Leave `cover` unset when no usable cover exists (the app shows its own placeholder; `@libs/defaultCover` is removed); omit metadata the source does not provide.
 - **Path & URL consistency**: Keep `novelPath`, `chapterPath`, and `resolveUrl` consistent across `popularNovels`, `searchNovels`, `parseNovel`, and `parseChapter`. When migrating from a multisrc generator whose paths include a trailing slash (e.g., Fictioneer `novels/<slug>/`), strip leading and trailing slashes before building URLs or selectors.
 - **Broken plugins**: Only add or remove a `*.broken.ts` suffix after verifying live site status and updating `version` on recovery.
 - **Blacklist**: Verify new sources are absent from `BLACKLIST.json`.

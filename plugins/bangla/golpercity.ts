@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 type FeedLink = { rel: string; href: string };
 type FeedEntry = {
@@ -42,7 +41,7 @@ class GolperCity implements Plugin.PluginBase {
   name = 'Golper City';
   icon = 'src/bn/golpercity/icon.png';
   site = 'https://golpercity.blogspot.com';
-  version = '1.0.0';
+  version = '1.0.1';
   filters: Filters | undefined = undefined;
 
   private async request(url: string) {
@@ -85,9 +84,9 @@ class GolperCity implements Plugin.PluginBase {
     return decodeURIComponent(match[1]);
   }
 
-  private coverFrom(entry?: FeedEntry): string {
+  private coverFrom(entry?: FeedEntry): string | undefined {
     const thumbnail = entry?.media$thumbnail?.url;
-    if (!thumbnail) return defaultCover;
+    if (!thumbnail) return undefined;
     return thumbnail.replace(/\/s\d+(-c)?\//, `/${COVER_SIZE}/`);
   }
 

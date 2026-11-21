@@ -1,7 +1,6 @@
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 /**
@@ -22,7 +21,7 @@ class NovelRestPlugin implements Plugin.PluginBase {
   icon = 'src/en/novelrest/icon.png';
   site = 'https://novelrest.vercel.app';
   apiBase = 'https://novelrest.vercel.app/api/lnreader';
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters: Filters = {
     status: {
@@ -85,7 +84,7 @@ class NovelRestPlugin implements Plugin.PluginBase {
           novels.push({
             name: novel.title,
             path: novel.slug, // Just the slug, we'll build full path in parseNovel
-            cover: novel.coverImage || defaultCover,
+            cover: novel.coverImage,
           });
         }
       }
@@ -115,7 +114,7 @@ class NovelRestPlugin implements Plugin.PluginBase {
       if (data) {
         novel.name = data.title || 'Untitled';
         novel.author = data.author || '';
-        novel.cover = data.coverImage || defaultCover;
+        novel.cover = data.coverImage;
         novel.genres = Array.isArray(data.genres)
           ? data.genres
               .map((g: { name: string } | string) =>
@@ -214,7 +213,7 @@ class NovelRestPlugin implements Plugin.PluginBase {
           novels.push({
             name: novel.title,
             path: novel.slug,
-            cover: novel.coverImage || defaultCover,
+            cover: novel.coverImage,
           });
         }
       }

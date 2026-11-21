@@ -1,14 +1,13 @@
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
-import { defaultCover } from '@libs/defaultCover';
 import { load as loadCheerio } from 'cheerio';
 
 class Novels2 implements Plugin.PluginBase {
   id = 'novels2';
   name = 'Novels2';
   site = 'https://www.novels2.com';
-  version = '1.0.0';
+  version = '1.0.1';
   icon = 'src/es/novels2/icon.png';
 
   private async fetchHtml(url: string): Promise<string> {
@@ -24,9 +23,9 @@ class Novels2 implements Plugin.PluginBase {
    * placeholder, so those fall back to the default cover. Other paths can be
    * relative, so they are resolved against the site.
    */
-  private toCover(src?: string): string {
+  private toCover(src?: string): string | undefined {
     if (!src || /_failed\.png$/.test(src)) {
-      return defaultCover;
+      return undefined;
     }
     return src.startsWith('http') ? src : `${this.site}${src}`;
   }

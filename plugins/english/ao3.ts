@@ -2,7 +2,6 @@ import { CheerioAPI, load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 
 function checkResponse(res: Response, body: string, context: string) {
   if (!res.ok) {
@@ -25,7 +24,7 @@ function checkResponse(res: Response, body: string, context: string) {
 class ArchiveOfOurOwn implements Plugin.PluginBase {
   id = 'archiveofourown';
   name = 'Archive Of Our Own';
-  version = '1.0.5';
+  version = '1.0.6';
   icon = 'src/en/ao3/icon.png';
   site = 'https://archiveofourown.org/';
 
@@ -48,7 +47,6 @@ class ArchiveOfOurOwn implements Plugin.PluginBase {
 
       const novel = {
         name: novelName,
-        cover: defaultCover, // No cover image
         path: novelUrl.slice(1),
       };
 
@@ -160,7 +158,6 @@ class ArchiveOfOurOwn implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelUrl,
       name: loadedCheerio('h2.title').text().trim() || 'Untitled',
-      cover: defaultCover, // No cover image available
       status: loadedCheerio('dt.status').text().includes('Updated')
         ? 'Ongoing'
         : 'Completed',

@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
 import { load as parseHTML } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 type SeriesListItem = {
@@ -71,7 +70,7 @@ class LuminareTranslationsPlugin implements Plugin.PluginBase {
   name = 'Luminare Translations';
   icon = 'src/en/luminaretranslations/icon.png';
   site = 'https://luminaretranslations.com';
-  version = '1.0.0';
+  version = '1.0.1';
 
   private headers = {
     Accept: 'application/json',
@@ -156,11 +155,11 @@ class LuminareTranslationsPlugin implements Plugin.PluginBase {
     const cover =
       ('cover_image' in s && s.cover_image) ||
       ('cover_url' in s && s.cover_url) ||
-      defaultCover;
+      undefined;
     return {
       name: this.decodeEntities(s.title),
       path: 'series/' + s.slug,
-      cover: cover || defaultCover,
+      cover,
     };
   }
 
@@ -270,7 +269,7 @@ class LuminareTranslationsPlugin implements Plugin.PluginBase {
       this.stripHtml(series.excerpt?.rendered || '') ||
       undefined;
 
-    let cover = defaultCover;
+    let cover: string | undefined;
     if (series.featured_media) {
       try {
         const media = await this.api<{ source_url?: string }>(
@@ -278,7 +277,7 @@ class LuminareTranslationsPlugin implements Plugin.PluginBase {
         );
         if (media?.source_url) cover = media.source_url;
       } catch {
-        // keep defaultCover
+        // leave the cover unset
       }
     }
 

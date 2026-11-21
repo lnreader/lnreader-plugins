@@ -1,7 +1,6 @@
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 type CoteNovelMeta = {
@@ -47,7 +46,7 @@ class CoteReader implements Plugin.PluginBase {
   name = 'COTE Reader';
   site = 'https://cote-reader.me';
   icon = 'src/en/cotereader/icon.png';
-  version = '1.0.7';
+  version = '1.0.8';
 
   private canonicalIds = new Set([
     'cote',
@@ -78,8 +77,8 @@ class CoteReader implements Plugin.PluginBase {
     '200298': '2958',
   };
 
-  private formatCover(cover?: string): string {
-    if (!cover) return defaultCover;
+  private formatCover(cover?: string): string | undefined {
+    if (!cover) return undefined;
     if (cover.startsWith('http://') || cover.startsWith('https://'))
       return cover;
     if (cover.startsWith('//')) return `https:${cover}`;

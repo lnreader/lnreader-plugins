@@ -2,7 +2,6 @@ import { fetchApi, fetchProto, fetchText } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 // import { isUrlAbsolute } from '@libs/isAbsoluteUrl';
 // import { storage, localStorage, sessionStorage } from '@libs/storage';
@@ -35,7 +34,6 @@ class TemplatePlugin implements Plugin.PluginBase {
     novels.push({
       name: 'Novel1',
       path: '/novels/1',
-      cover: defaultCover,
     });
     return novels;
   }
@@ -49,9 +47,9 @@ class TemplatePlugin implements Plugin.PluginBase {
     // un-comment and fill in the relevant fields below
 
     // novel.name = '';
+    // novel.cover = '';
     // novel.artist = '';
     // novel.author = '';
-    novel.cover = defaultCover;
     // novel.genres = '';
     // novel.status = NovelStatus.Completed;
     // novel.summary = '';

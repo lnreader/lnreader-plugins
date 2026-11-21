@@ -1,7 +1,6 @@
 import { Plugin } from '@/types/plugin';
 import { FilterTypes, Filters } from '@libs/filterInputs';
 import { fetchApi } from '@libs/fetch';
-import { defaultCover } from '@libs/defaultCover';
 import { load as parseHTML } from 'cheerio';
 
 const months: Record<string, number> = {
@@ -23,7 +22,7 @@ class RanobeMe implements Plugin.PluginBase {
   id = 'ranobeme';
   name = 'Ranobe.me';
   site = 'https://ranobe.me';
-  version = '1.0.0';
+  version = '1.0.1';
   icon = 'src/ru/ranobeme/icon.png';
 
   async popularNovels(
@@ -72,7 +71,7 @@ class RanobeMe implements Plugin.PluginBase {
       novels.push({
         name: link.text().trim(),
         path,
-        cover: cover ? this.site + cover : defaultCover,
+        cover: cover ? this.site + cover : undefined,
       });
     });
 
@@ -96,7 +95,7 @@ class RanobeMe implements Plugin.PluginBase {
       cover:
         cover.attr('data-src') || cover.attr('src')
           ? this.site + (cover.attr('data-src') || cover.attr('src'))
-          : defaultCover,
+          : undefined,
       author: info['Автор:'] || undefined,
       genres: head
         .find('.FicHeadRight a[href^="/catalog/genre/"]')

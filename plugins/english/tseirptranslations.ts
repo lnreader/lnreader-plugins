@@ -3,7 +3,6 @@ import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
 import { NovelStatus } from '@libs/novelStatus';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 type NovelEntry = { name: string; path: string; completed: boolean };
 
@@ -25,7 +24,7 @@ class TseirpTranslations implements Plugin.PluginBase {
   name = 'Tseirp Translations';
   icon = 'src/en/tseirptranslations/icon.png';
   site = 'https://www.tseirptranslations.com';
-  version = '1.0.0';
+  version = '1.0.1';
   filters: Filters | undefined = undefined;
 
   private async loadPage(url: string) {
@@ -78,10 +77,10 @@ class TseirpTranslations implements Plugin.PluginBase {
     return novels;
   }
 
-  private coverOf($: ReturnType<typeof loadCheerio>): string {
+  private coverOf($: ReturnType<typeof loadCheerio>): string | undefined {
     const img = $('.post-content img').first();
     const src = img.attr('data-src') || img.attr('src') || '';
-    return src.startsWith('http') ? src : defaultCover;
+    return src.startsWith('http') ? src : undefined;
   }
 
   private async toNovelItems(
@@ -95,7 +94,7 @@ class TseirpTranslations implements Plugin.PluginBase {
         return {
           name: novel.name,
           path: novel.path,
-          cover: $ ? this.coverOf($) : defaultCover,
+          cover: $ ? this.coverOf($) : undefined,
         };
       }),
     );

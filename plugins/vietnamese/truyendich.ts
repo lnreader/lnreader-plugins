@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { NovelStatus } from '@libs/novelStatus';
-import { defaultCover } from '@libs/defaultCover';
 
 type ApiNovel = {
   slug: string;
@@ -56,7 +55,7 @@ class TruyenDichPlugin implements Plugin.PluginBase {
   name = 'TruyenDich';
   icon = 'src/vi/truyendich/icon.png';
   site = 'https://truyendich.space';
-  version = '1.0.0';
+  version = '1.0.1';
 
   private async getJson<T>(path: string): Promise<T> {
     const res = await fetchApi(this.site + path);
@@ -97,7 +96,7 @@ class TruyenDichPlugin implements Plugin.PluginBase {
     return {
       name: item.title,
       path: this.novelPath(item.slug, edition),
-      cover: item.image_url ? this.site + item.image_url : defaultCover,
+      cover: item.image_url ? this.site + item.image_url : undefined,
     };
   }
 
@@ -125,7 +124,7 @@ class TruyenDichPlugin implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: data.title,
-      cover: data.image_url ? this.site + data.image_url : defaultCover,
+      cover: data.image_url ? this.site + data.image_url : undefined,
       author: data.author || undefined,
       genres: data.categories?.map(c => c.name).join(', ') || undefined,
       summary: data.description

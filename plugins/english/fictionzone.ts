@@ -2,10 +2,9 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { NovelStatus } from '@libs/novelStatus';
-import { defaultCover } from '@libs/defaultCover';
 
-function decodeCover(image?: string): string {
-  if (!image) return defaultCover;
+function decodeCover(image?: string): string | undefined {
+  if (!image) return undefined;
   if (image.startsWith('http://') || image.startsWith('https://')) return image;
   try {
     const decoded =
@@ -18,7 +17,7 @@ function decodeCover(image?: string): string {
   } catch {
     // Ignore base64 decoding failure
   }
-  return defaultCover;
+  return undefined;
 }
 
 function parseDate(dateStr?: string): string | null {
@@ -152,7 +151,7 @@ class FictionZonePlugin implements Plugin.PluginBase {
   name = 'Fiction Zone';
   icon = 'src/en/fictionzone/icon.png';
   site = 'https://fictionzone.net';
-  version = '1.1.0';
+  version = '1.1.1';
 
   filters = {
     sort: {

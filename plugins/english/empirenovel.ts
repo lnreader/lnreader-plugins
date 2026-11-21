@@ -2,7 +2,6 @@ import { load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 /**
@@ -27,7 +26,7 @@ import { NovelStatus } from '@libs/novelStatus';
 class EmpireNovel implements Plugin.PluginBase {
   id = 'empirenovel';
   name = 'Empire Novel';
-  version = '1.0.0';
+  version = '1.0.1';
   icon = 'src/en/empirenovel/icon.png';
   site = 'https://www.empirenovel.com/';
 
@@ -49,7 +48,7 @@ class EmpireNovel implements Plugin.PluginBase {
 
   private coverUrl(src: string | undefined) {
     const path = src?.trim();
-    return path ? new URL(path, this.site).href : defaultCover;
+    return path ? new URL(path, this.site).href : undefined;
   }
 
   async popularNovels(
@@ -222,7 +221,7 @@ class EmpireNovel implements Plugin.PluginBase {
       path: `novel/${novel.slug}`,
       cover: novel.cover
         ? `${this.site}uploads/novel/${novel.slug}/cover/cover_thumb.jpg`
-        : defaultCover,
+        : undefined,
     }));
   }
 

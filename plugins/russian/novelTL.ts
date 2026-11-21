@@ -1,6 +1,5 @@
 import { Plugin } from '@/types/plugin';
 import { FilterTypes, Filters } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 import { fetchApi } from '@libs/fetch';
 import { NovelStatus } from '@libs/novelStatus';
 import { load as parseHTML } from 'cheerio';
@@ -19,7 +18,7 @@ class TL implements Plugin.PluginBase {
   // same image storage without Cloudflare: novel.tl drops image downloads
   // on some networks while the small API responses still get through
   imageHost = 'https://znovel.space';
-  version = '1.0.3';
+  version = '1.0.4';
   icon = 'src/ru/noveltl/icon.png';
 
   async fetchNovels(
@@ -199,10 +198,10 @@ class TL implements Plugin.PluginBase {
       .replace(/(src|srcset|href)="\/(?!\/)/g, '$1="' + this.site + '/');
   }
 
-  private getCover(covers?: Cover[]): string {
+  private getCover(covers?: Cover[]): string | undefined {
     const cover = covers?.[0]?.thumbnail || covers?.[0]?.url;
     // thumbnails come percent-encoded, original urls may contain raw cyrillic
-    return cover ? this.imageHost + encodeURI(decodeURI(cover)) : defaultCover;
+    return cover ? this.imageHost + encodeURI(decodeURI(cover)) : undefined;
   }
 
   private parseSummary(html?: string): string | undefined {

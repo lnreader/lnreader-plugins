@@ -4,7 +4,6 @@ import { Plugin } from '@/types/plugin';
 import { load as loadCheerio } from 'cheerio';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { storage } from '@libs/storage';
-import { defaultCover } from '@libs/defaultCover';
 import { gcm } from '@libs/aes';
 
 const CONTENT_SALT_V1 = 'fr-content-v1';
@@ -315,7 +314,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
   name = 'Fenrir Realm';
   icon = 'src/en/fenrirrealm/icon.png';
   site = 'https://fenrirealm.com';
-  version = '1.2.0';
+  version = '1.2.1';
   imageRequestInit?: Plugin.ImageRequestInit | undefined = undefined;
 
   private cachedReadToken: CachedReadToken | null = null;
@@ -747,9 +746,7 @@ class FenrirRealmPlugin implements Plugin.PluginBase {
               .join('\n\n')
           : summaryCheerio.text() || '',
       author: seriesData.user?.name || seriesData.user?.username || '',
-      cover: seriesData.cover
-        ? this.site + '/' + seriesData.cover
-        : defaultCover,
+      cover: seriesData.cover ? this.site + '/' + seriesData.cover : undefined,
       genres: (seriesData.genres || []).map(g => g.name).join(','),
       status: seriesData.status || 'Unknown',
     };

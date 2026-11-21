@@ -1,7 +1,6 @@
 import { Plugin } from '@/types/plugin';
 import { fetchApi, FetchInit } from '@libs/fetch';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 type LuminaChapter = {
@@ -37,7 +36,7 @@ class Dragonholic implements Plugin.PluginBase {
   name = 'Dragonholic';
   icon = 'src/en/dragonholic/icon.png';
   site = 'https://dragonholictranslations.com';
-  version = '3.0.0';
+  version = '3.0.1';
 
   private decodeEntities(text: string): string {
     return text
@@ -119,8 +118,7 @@ class Dragonholic implements Plugin.PluginBase {
           loadedCheerio(element).first().text().trim();
         const cover =
           card.find('img').first().attr('src') ||
-          loadedCheerio(element).find('img').first().attr('src') ||
-          defaultCover;
+          loadedCheerio(element).find('img').first().attr('src');
 
         if (name) {
           novels.push({ name, path: slug, cover });
@@ -147,7 +145,7 @@ class Dragonholic implements Plugin.PluginBase {
     const cover =
       loadedCheerio('[x-data="coverModal()"] img').first().attr('src') ||
       loadedCheerio('h1').parent().parent().find('img').first().attr('src');
-    novel.cover = cover || defaultCover;
+    novel.cover = cover;
 
     novel.author =
       loadedCheerio('a[href*="/author/"]').first().text().trim() || undefined;
@@ -263,7 +261,7 @@ class Dragonholic implements Plugin.PluginBase {
         novels.push({
           name: this.decodeEntities(item.title),
           path: match[1],
-          cover: item.thumbnail || defaultCover,
+          cover: item.thumbnail,
         });
       }
     });

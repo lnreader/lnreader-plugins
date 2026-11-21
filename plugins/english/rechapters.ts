@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 const SITE = 'https://www.rechapters.com';
@@ -119,7 +118,7 @@ class ReChapters implements Plugin.PluginBase {
   name = 'ReChapters';
   icon = 'src/en/rechapters/icon.png';
   site = SITE;
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters = {
     sort: {
@@ -159,7 +158,7 @@ class ReChapters implements Plugin.PluginBase {
     return data.items.map(item => ({
       name: item.title,
       path: 'book/' + item.slug + '-' + item.nanoId,
-      cover: item.hasCover && item.coverUrl ? item.coverUrl : defaultCover,
+      cover: item.hasCover && item.coverUrl ? item.coverUrl : undefined,
     }));
   }
 
@@ -208,7 +207,7 @@ class ReChapters implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: $('h1').first().text().trim() || ld.name || 'Untitled',
-      cover: ld.image || defaultCover,
+      cover: ld.image,
     };
     const authors = ldAuthorNames(ld.author);
     if (authors.length) novel.author = authors.join(', ');

@@ -3,14 +3,13 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { Filters, FilterTypes } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 import dayjs from 'dayjs';
 import { storage } from '@libs/storage';
 
 class Mynovels implements Plugin.PagePlugin {
   id = 'mynovels';
   name = 'Mynovels';
-  version = '1.0.0';
+  version = '1.0.1';
   icon = 'src/en/mynovels/icon.png';
   site = 'https://mynovels.su/';
 
@@ -92,7 +91,7 @@ class Mynovels implements Plugin.PagePlugin {
       const bareNovelCover = el.find('img').attr('src');
       const novelCover = bareNovelCover
         ? this.site + bareNovelCover.replace(/^\//, '')
-        : defaultCover;
+        : undefined;
       if (!novelUrl) return;
 
       novels.push({
@@ -117,7 +116,7 @@ class Mynovels implements Plugin.PagePlugin {
     const novel: Plugin.SourceNovel & { totalPages: number } = {
       path: novelPath,
       name: loadedCheerio('h1').text().trim() || 'Untitled',
-      cover: coverSrc ? this.site + coverSrc.replace(/^\//, '') : defaultCover,
+      cover: coverSrc ? this.site + coverSrc.replace(/^\//, '') : undefined,
       summary: loadedCheerio('section.text-info.section > p').text().trim(),
       totalPages: Math.ceil(totalChapters / chunkSize) || 1,
       chapters: [],
@@ -319,7 +318,7 @@ class Mynovels implements Plugin.PagePlugin {
       const bareNovelCover = el.find('img').attr('src');
       const novelCover = bareNovelCover
         ? this.site + bareNovelCover.replace(/^\//, '')
-        : defaultCover;
+        : undefined;
       if (!novelUrl) return;
 
       novels.push({

@@ -27,7 +27,7 @@
    - **Default export**: The file MUST export an instantiated instance of the plugin as default export (`export default new MyNovelSitePlugin();`).
 2. Copy [`docs/plugin-template.ts`](./plugin-template.ts) into that file as a starting point. It
    already imports the pieces most plugins need (`fetchApi`/`fetchText`, `Plugin` namespace,
-   `Filters`, `loadCheerio`, `defaultCover`, `NovelStatus`) and stubs out the required methods.
+   `Filters`, `loadCheerio`, `NovelStatus`) and stubs out the required methods.
 3. Add a 96x96px icon at `public/static/src/<short-lang-code>/<plugin-id>/icon.png` (note: this
    folder uses the **short** language code, e.g. `en`, not the full folder name from step 1), then
    set `icon = 'src/<short-lang-code>/<plugin-id>/icon.png'` on your class — see
@@ -320,7 +320,7 @@ class ExamplePlugin implements Plugin.PluginBase {
       novels.push({
         name: 'Novel1',
         path: '/novel1',
-        cover: defaultCover,
+        cover: 'https://example.com/covers/novel1.jpg',
       });
     }
     return novels;
@@ -368,7 +368,7 @@ class ExamplePlugin implements Plugin.PluginBase {
       name: 'test',
       artist: 'none',
       author: 'none',
-      cover: defaultCover,
+      cover: 'https://example.com/covers/test.jpg',
       genres: 'Isekai, Neverland',
       status: NovelStatus.Completed,
       summary: '',
@@ -481,21 +481,23 @@ An object representing basic information to display and access a novel in search
 | ---------------------------------- | ----------- | -------- | --------------------------------------------------------- |
 | <p id="novelitemname">name</p>    | `string`    | yes      | The name of the novel shown in the library                 |
 | <p id="novelitempath">path</p>    | `string`    | yes      | The relative path to the novel (e.g. `/novel/example-slug`)|
-| <p id="novelitemcover">cover</p>  | `string`    | no       | URL to novel's cover image. Fallback to `defaultCover` if none |
+| <p id="novelitemcover">cover</p>  | `string`    | no       | URL to novel's cover image. Omit it if the source has none     |
 
-#### Default cover
+#### Missing covers
 
-When a novel lacks a cover image, fallback to `defaultCover`:
+When a novel has no cover image, leave `cover` unset (or `undefined`). Do not point it at a
+placeholder image: the app shows its own placeholder whenever a cover is missing or fails to load.
 
 ```ts
-import { defaultCover } from '@libs/defaultCover';
-
 novels.push({
   name: 'Novel Title',
   path: '/novel-path',
-  cover: defaultCover,
+  cover: coverUrl, // undefined when the site has no cover
 });
 ```
+
+> `@libs/defaultCover` is deprecated and has been removed from this repository. Existing app
+> builds still accept it from older plugins, but new and updated plugins must not use it.
 
 ---
 
@@ -507,7 +509,7 @@ novels.push({
 | -------- | ------------------------------------ | -------- | ----------------------------------------------------------------------------- |
 | <p id="sourcenovelpath">path</p> | `string`             | yes      | Must match the exact [NovelItem::path](#novelitempath) passed into `parseNovel` |
 | name     | `string`                             | yes      | The novel's title                                                             |
-| cover    | `string`                             | no       | URL to the novel's cover (or `defaultCover`)                                   |
+| cover    | `string`                             | no       | URL to the novel's cover; omit it if there is none                             |
 | genres   | `string`                             | no       | Comma-separated genre list, e.g. `"Action, Fantasy, Romance"` (NOT an array)  |
 | summary  | `string`                             | no       | The novel's synopsis/description                                               |
 | author   | `string`                             | no       | Author name                                                                    |
@@ -1152,7 +1154,6 @@ is what's actually injected into a running plugin's `require(...)` calls — any
 | `@libs/isAbsoluteUrl` | `isUrlAbsolute`                             | See below                                                          |
 | `@libs/filterInputs`  | `FilterTypes`, `Filters`, ...               | See [Filters](#filters)                                            |
 | `@libs/novelStatus`   | `NovelStatus`                               | See [NovelStatus](#novelstatus)                                    |
-| `@libs/defaultCover`  | `defaultCover`                              | See [Default cover](#default-cover)                                |
 | `@libs/aes`           | `gcm`                                       | See [AES decryption](#aes-decryption) below                        |
 | `@libs/utils`         | `utf8ToBytes`, `bytesToUtf8`                | See [AES decryption](#aes-decryption) below                        |
 

@@ -1,4 +1,3 @@
-import { defaultCover } from '@libs/defaultCover';
 import { fetchApi } from '@libs/fetch';
 import { Filters, FilterTypes, FilterValueWithType } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
@@ -10,7 +9,7 @@ class DDLPlugin implements Plugin.PluginBase {
   id = 'DDL.com';
   name = 'Divine Dao Library';
   site = 'https://www.divinedaolibrary.com/';
-  version = '1.1.1';
+  version = '1.1.2';
   icon = 'src/en/divinedaolibrary/icon.png';
 
   filters = {
@@ -138,7 +137,7 @@ class DDLPlugin implements Plugin.PluginBase {
     return {
       name: data[0].title.rendered,
       path,
-      cover: image.attr('data-lazy-src') ?? image.attr('src') ?? defaultCover,
+      cover: image.attr('data-lazy-src') ?? image.attr('src'),
       author: content('h3')
         .first()
         .text()

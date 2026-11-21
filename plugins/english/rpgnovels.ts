@@ -3,7 +3,6 @@ import { Plugin } from '@/types/plugin';
 import { FilterTypes, Filters } from '@libs/filterInputs';
 import { NovelStatus } from '@libs/novelStatus';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 
 type NovelEntry = { name: string; path: string; completed: boolean };
 
@@ -25,7 +24,7 @@ class RpgNovelsPlugin implements Plugin.PluginBase {
   name = 'RPGNovels';
   icon = 'src/en/rpgnovels/icon.png';
   site = 'https://rpgnovels.com';
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters = {
     status: {
@@ -88,7 +87,6 @@ class RpgNovelsPlugin implements Plugin.PluginBase {
     return novels.map(novel => ({
       name: novel.name,
       path: novel.path,
-      cover: defaultCover,
     }));
   }
 
@@ -142,7 +140,6 @@ class RpgNovelsPlugin implements Plugin.PluginBase {
         clean($('.wp-block-post-title').first().text()) ||
         entry?.name ||
         'Untitled',
-      cover: defaultCover,
       chapters,
     };
     if (entry) {

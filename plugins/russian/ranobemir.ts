@@ -1,6 +1,5 @@
 import { Plugin } from '@/types/plugin';
 import { FilterTypes, Filters } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 import { fetchApi } from '@libs/fetch';
 import { NovelStatus } from '@libs/novelStatus';
 import { load as parseHTML } from 'cheerio';
@@ -17,7 +16,7 @@ class RanobeMir implements Plugin.PluginBase {
   name = 'РанобэМир';
   icon = 'src/ru/ranobemir/icon.png';
   site = 'https://ranobemir.com';
-  version = '1.0.1';
+  version = '1.0.2';
 
   imageRequestInit: Plugin.ImageRequestInit = { headers };
 
@@ -42,11 +41,10 @@ class RanobeMir implements Plugin.PluginBase {
       novels.push({
         name: link.text().trim(),
         path,
-        cover:
-          link
-            .closest('section')
-            .find('a[data-card-link-type="poster"] img')
-            .attr('src') || defaultCover,
+        cover: link
+          .closest('section')
+          .find('a[data-card-link-type="poster"] img')
+          .attr('src'),
       });
     });
     return novels;
@@ -73,7 +71,7 @@ class RanobeMir implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: $('h1').first().text().trim() || 'Untitled',
-      cover: $('meta[property="og:image"]').attr('content') || defaultCover,
+      cover: $('meta[property="og:image"]').attr('content'),
     };
 
     const ldJson = $('script[type="application/ld+json"]').first().html();

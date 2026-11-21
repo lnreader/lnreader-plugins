@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { load as loadCheerio } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 const BASE = 'https://lnmakineceviri.blogspot.com';
@@ -66,7 +65,7 @@ class LnMakineCeviriPlugin implements Plugin.PluginBase {
   name = 'Türkçe Novel Makine Çeviri';
   icon = 'src/tr/lnmakineceviri/icon.png';
   site = BASE;
-  version = '1.0.0';
+  version = '1.0.1';
 
   filters = {
     status: {
@@ -250,7 +249,7 @@ class LnMakineCeviriPlugin implements Plugin.PluginBase {
     return {
       name: seriesTitle(card.name),
       path: card.path,
-      cover: card.cover || defaultCover,
+      cover: card.cover,
     };
   }
 
@@ -286,8 +285,7 @@ class LnMakineCeviriPlugin implements Plugin.PluginBase {
       name: title || 'Untitled',
       cover:
         $('#ceviri1 img').first().attr('src') ||
-        $('meta[property="og:image"]').attr('content') ||
-        defaultCover,
+        $('meta[property="og:image"]').attr('content'),
     };
 
     // The summary keeps its line breaks.

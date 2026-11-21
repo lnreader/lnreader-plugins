@@ -2,7 +2,6 @@ import { CheerioAPI, load } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 type WordPressCategory = {
@@ -15,7 +14,7 @@ class ChireadsPlugin implements Plugin.PluginBase {
   name = 'Chireads';
   icon = 'src/fr/chireads/icon.png';
   site = 'https://chireads.com';
-  version = '2.3.4';
+  version = '2.3.5';
 
   // The site is fronted by Cloudflare, which serves different HTML/JSON to a
   // plain device User-Agent (the mobile app injects its own UA via fetchApi)
@@ -40,13 +39,13 @@ class ChireadsPlugin implements Plugin.PluginBase {
     return load(body);
   }
 
-  private absoluteUrl(url?: string): string {
-    if (!url) return defaultCover;
+  private absoluteUrl(url?: string): string | undefined {
+    if (!url) return undefined;
     try {
       const absolute = new URL(url, this.site);
-      return /^https?:$/.test(absolute.protocol) ? absolute.href : defaultCover;
+      return /^https?:$/.test(absolute.protocol) ? absolute.href : undefined;
     } catch {
-      return defaultCover;
+      return undefined;
     }
   }
 
@@ -112,7 +111,6 @@ class ChireadsPlugin implements Plugin.PluginBase {
             .text()
             .trim()
             .replace(/^\[[TO]\]\s*/, ''),
-          cover: defaultCover,
           path: this.toPath(novelUrl),
         });
       });
@@ -126,7 +124,7 @@ class ChireadsPlugin implements Plugin.PluginBase {
           const cover =
             page('.refresh-detail-cover img').attr('src') ||
             page('.refresh-detail-cover img').attr('data-src');
-          return cover ? this.absoluteUrl(cover) : defaultCover;
+          return cover ? this.absoluteUrl(cover) : undefined;
         }),
       );
       return novels.map((novel, index) => ({
@@ -134,7 +132,7 @@ class ChireadsPlugin implements Plugin.PluginBase {
         cover:
           covers[index]?.status === 'fulfilled'
             ? covers[index].value
-            : defaultCover,
+            : undefined,
       }));
     }
 
@@ -297,7 +295,6 @@ class ChireadsPlugin implements Plugin.PluginBase {
     return categories
       .map(category => ({
         name: category.name,
-        cover: defaultCover,
         path: this.toPath(category.link),
       }))
       .filter(

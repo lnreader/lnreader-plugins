@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Filters } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
 import { CheerioAPI, load as parseHTML } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 class HangulPlanetPlugin implements Plugin.PluginBase {
@@ -10,7 +9,7 @@ class HangulPlanetPlugin implements Plugin.PluginBase {
   name = 'HangulPlanet';
   icon = 'src/en/hangulplanet/icon.png';
   site = 'https://hangulplanet.com';
-  version = '2.3.0';
+  version = '2.3.1';
 
   private async fetchPage(
     url: string,
@@ -50,7 +49,7 @@ class HangulPlanetPlugin implements Plugin.PluginBase {
       const img = $(el).find('img.object-cover').first();
       const name = img.attr('alt')?.trim() || '';
       const src = img.attr('src');
-      const cover = src ? this.site + src : defaultCover;
+      const cover = src ? this.site + src : undefined;
       if (!href || !name) return;
       novels.push({ name, cover, path: href });
     });
@@ -148,7 +147,7 @@ class HangulPlanetPlugin implements Plugin.PluginBase {
       path: novelPath,
       name: heading.text().trim(),
       author: heading.next('p').text().trim() || undefined,
-      cover: coverSrc ? this.site + coverSrc : defaultCover,
+      cover: coverSrc ? this.site + coverSrc : undefined,
       summary: $('.prose').first().text().trim(),
       status: NovelStatus.Unknown,
     };

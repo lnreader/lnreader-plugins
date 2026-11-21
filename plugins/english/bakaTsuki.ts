@@ -2,7 +2,6 @@ import { load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters, FilterTypes } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 
 type MWPage = {
@@ -31,7 +30,7 @@ type MWResponse = {
 class BakaTsuki implements Plugin.PluginBase {
   id = 'bakatsuki';
   name = 'Baka-Tsuki';
-  version = '1.1.0';
+  version = '1.1.1';
   icon = 'src/en/bakatsuki/icon.png';
   site = 'https://www.baka-tsuki.org/project/';
 
@@ -255,7 +254,6 @@ class BakaTsuki implements Plugin.PluginBase {
     const novels: Plugin.NovelItem[] = titles.map(title => ({
       name: title,
       path: this.toPath(title),
-      cover: defaultCover,
     }));
 
     for (let i = 0; i < titles.length; i += 50) {
@@ -556,7 +554,6 @@ class BakaTsuki implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: novelPath,
       name: requestedTitle,
-      cover: defaultCover,
       chapters: [],
     };
 

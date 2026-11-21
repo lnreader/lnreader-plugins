@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Filters, FilterTypes } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
 import { CheerioAPI, load as parseHTML } from 'cheerio';
-import { defaultCover } from '@libs/defaultCover';
 import { NovelStatus } from '@libs/novelStatus';
 import dayjs from 'dayjs';
 
@@ -31,7 +30,7 @@ type FetchHtmlOptions = {
 class BlNovels implements Plugin.PluginBase {
   id = 'blnovels';
   name = 'BL Novels';
-  version = '1.0.0';
+  version = '1.0.1';
   icon = 'src/pt-br/blnovels/icon.png';
   site = SITE;
 
@@ -75,12 +74,12 @@ class BlNovels implements Plugin.PluginBase {
   // WordPress stores covers as `name-WxH.ext` thumbnails; strip the size
   // suffix to use the full-size original (all suffix-stripped URLs checked
   // live returned HTTP 200).
-  private coverUrl(src?: string): string {
-    if (!src) return defaultCover;
+  private coverUrl(src?: string): string | undefined {
+    if (!src) return undefined;
     if (!/^https?:\/\//.test(src)) return src;
-    if (src === SITE) return defaultCover;
+    if (src === SITE) return undefined;
     const stripped = src.replace(/-\d+x\d+(\.\w+)$/, '$1');
-    return stripped || defaultCover;
+    return stripped;
   }
 
   private toPath(url: string): string {
@@ -104,12 +103,11 @@ class BlNovels implements Plugin.PluginBase {
       seen.add(path);
 
       const img = $(element).find('img').first();
-      const cover =
-        this.coverUrl(
-          img.attr('data-src') ||
-            img.attr('data-srcset')?.split(' ')[0] ||
-            img.attr('src'),
-        ) || defaultCover;
+      const cover = this.coverUrl(
+        img.attr('data-src') ||
+          img.attr('data-srcset')?.split(' ')[0] ||
+          img.attr('src'),
+      );
 
       novels.push({ name, cover, path });
     });
