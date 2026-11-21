@@ -29,8 +29,8 @@ Each step reports one of three outcomes:
 - **FAIL** — the plugin ran but returned something wrong (empty results, a novel with no chapters,
   a suspiciously short chapter body, or a thrown error that isn't network-related). This is what
   you're looking for before opening a PR.
-- **INCONCLUSIVE** — the site itself was unreachable, timed out, or returned a Cloudflare-style
-  block during this run. Not a plugin bug; re-run later or check the site manually.
+- **INCONCLUSIVE** — the site itself was unreachable, timed out, or was blocked by a Cloudflare
+  challenge (including a challenge page served for a plugin's own page loads) during this run. Not a plugin bug; re-run later or check the site manually.
 
 ## CI
 
