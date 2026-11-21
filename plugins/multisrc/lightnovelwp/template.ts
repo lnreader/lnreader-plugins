@@ -5,6 +5,7 @@ import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { Filters } from '@libs/filterInputs';
 import { storage } from '@libs/storage';
+import { assertNoChallenge, checkResponse } from '@libs/pluginError';
 
 type LightNovelWPOptions = {
   reverseChapters?: boolean;
@@ -41,7 +42,7 @@ export class LightNovelWPPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/lightnovelwp/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `1.1.${13 + versionIncrements}`;
+    this.version = `1.1.${14 + versionIncrements}`;
     this.options = metadata.options ?? ({} as LightNovelWPOptions);
     this.filters = metadata.filters satisfies Filters;
 
@@ -56,38 +57,19 @@ export class LightNovelWPPlugin implements Plugin.PluginBase {
     }
   }
 
-  getHostname(url: string): string {
-    url = url.split('/')[2];
-    const url_parts = url.split('.');
-    url_parts.pop(); // remove TLD
-    return url_parts.join('.');
-  }
-
   async safeFecth(url: string, search: boolean): Promise<string> {
     const urlParts = url.split('://');
     const protocol = urlParts.shift();
     const sanitizedUri = urlParts[0].replace(/\/\//g, '/');
-    const r = await fetchApi(protocol + '://' + sanitizedUri);
-    if (!r.ok && search != true)
-      throw new Error(
-        'Could not reach site (' + r.status + ') try to open in webview.',
-      );
+    const requestUrl = protocol + '://' + sanitizedUri;
+    const r = checkResponse(await fetchApi(requestUrl), { search });
     const data = await r.text();
-    const title = data.match(/<title>(.*?)<\/title>/)?.[1]?.trim();
-
-    if (
-      this.getHostname(url) != this.getHostname(r.url) ||
-      (title &&
-        (title == 'Bot Verification' ||
-          title == 'You are being redirected...' ||
-          title == 'Un instant...' ||
-          title == 'Just a moment...' ||
-          title == 'Redirecting...'))
-    )
-      throw new Error(
-        'Captcha error, please open in webview (or the website has changed url)',
-      );
-
+    assertNoChallenge(
+      data,
+      requestUrl,
+      r.url,
+      'Captcha error, please open in webview (or the website has changed url)',
+    );
     return data;
   }
 

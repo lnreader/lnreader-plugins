@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Filter, BookOpen } from 'lucide-react';
 
 import { FiltersSheet } from '@/components/filters/filters-sheet';
@@ -27,16 +27,21 @@ const PopularNovelsSection = React.memo(function PopularNovelsSection({
   const [maxIndex, setMaxIndex] = useState(0);
   const [isLatest, setIsLatest] = useState(true);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [fetchError, setFetchError] = useState('');
   const [filterValues, setFilterValues] = useState<
     FilterToValues<Filters> | undefined
   >();
   const [prevPluginId, setPrevPluginId] = useState<string | undefined>();
+  const requestGenerationRef = useRef(0);
 
   if (plugin?.id !== prevPluginId) {
+    requestGenerationRef.current += 1;
     setPrevPluginId(plugin?.id);
+    setLoading(false);
     setCurrentIndex(0);
     setMaxIndex(0);
     setNovels([]);
+    setFetchError('');
 
     if (plugin?.filters) {
       const filters: FilterToValues<typeof plugin.filters> = {};
@@ -57,12 +62,15 @@ const PopularNovelsSection = React.memo(function PopularNovelsSection({
     latestOverride?: boolean,
   ) => {
     if (plugin && index) {
+      const generation = ++requestGenerationRef.current;
       setLoading(true);
+      setFetchError('');
       try {
         const fetchedNovels = await plugin.popularNovels(index, {
           filters: filterValues || {},
           showLatestNovels: latestOverride ?? isLatest,
         });
+        if (generation !== requestGenerationRef.current) return;
         if (fetchedNovels.length !== 0) {
           setCurrentIndex(index);
           if (index > maxIndex) {
@@ -71,19 +79,28 @@ const PopularNovelsSection = React.memo(function PopularNovelsSection({
           setNovels(fetchedNovels);
         }
       } catch (error) {
+        if (generation !== requestGenerationRef.current) return;
+        const errorMessage =
+          error instanceof Error ? error.message : 'Failed to fetch novels';
+        setFetchError(errorMessage);
         console.error('Error fetching novels:', error);
       } finally {
-        setLoading(false);
+        if (generation === requestGenerationRef.current) {
+          setLoading(false);
+        }
       }
     }
   };
 
   const handleIsLatestChange = (latest: boolean) => {
     if (isLatest === latest) return;
+    requestGenerationRef.current += 1;
+    setLoading(false);
     setIsLatest(latest);
     setCurrentIndex(0);
     setMaxIndex(0);
     setNovels([]);
+    setFetchError('');
   };
 
   const handleParseNovel = (path: string) => {
@@ -170,6 +187,12 @@ const PopularNovelsSection = React.memo(function PopularNovelsSection({
             </div>
           )}
         </div>
+
+        {fetchError && (
+          <div className="p-4 mb-6 border border-destructive/50 bg-destructive/10 rounded-lg">
+            <p className="text-sm text-destructive">{fetchError}</p>
+          </div>
+        )}
 
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 lg:gap-6">

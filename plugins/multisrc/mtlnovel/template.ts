@@ -3,6 +3,7 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { Filters } from '@libs/filterInputs';
+import { checkResponse } from '@libs/pluginError';
 
 type MTLNovelOptions = {
   lang?: string;
@@ -32,7 +33,7 @@ export class MTLNovelPlugin implements Plugin.PluginBase {
     this.icon = 'multisrc/mtlnovel/mtlnovel/icon.png';
     this.site = metadata.sourceSite;
     this.mainUrl = 'https://www.mtlnovels.com/';
-    this.version = '1.1.4';
+    this.version = '1.1.5';
     this.options = metadata.options ?? ({} as MTLNovelOptions);
     this.filters = metadata.filters satisfies Filters;
   }
@@ -43,11 +44,7 @@ export class MTLNovelPlugin implements Plugin.PluginBase {
   ): Promise<Response> {
     headers.append('Alt-Used', 'www.mtlnovels.com');
     const r = await fetchApi(url, { headers });
-    if (!r.ok)
-      throw new Error(
-        'Could not reach site (' + r.status + ') try to open in webview.',
-      );
-    return r;
+    return checkResponse(r);
   }
 
   async popularNovels(

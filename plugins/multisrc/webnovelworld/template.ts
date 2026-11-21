@@ -2,6 +2,7 @@ import { load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { Filters } from '@libs/filterInputs';
+import { PluginError, checkResponse } from '@libs/pluginError';
 import dayjs from 'dayjs';
 
 type WebNovelWorldOptions = {
@@ -41,7 +42,7 @@ export class WebNovelWorld implements Plugin.PagePlugin {
     this.icon = `multisrc/webnovelworld/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `1.0.${2 + versionIncrements}`;
+    this.version = `1.0.${3 + versionIncrements}`;
     this.options = metadata.options;
     this.filters = metadata.filters;
   }
@@ -56,7 +57,9 @@ export class WebNovelWorld implements Plugin.PagePlugin {
     link += `${filters?.status?.value || 'all'}/`;
     link += page;
 
-    const body = await fetchApi(link).then((r: Response) => r.text());
+    const body = await fetchApi(link).then((r: Response) =>
+      checkResponse(r).text(),
+    );
 
     const loadedCheerio = parseHTML(body);
 
@@ -89,7 +92,7 @@ export class WebNovelWorld implements Plugin.PagePlugin {
     novelPath: string,
   ): Promise<Plugin.SourceNovel & { totalPages: number }> {
     const body = await fetchApi(this.site + novelPath).then((r: Response) =>
-      r.text(),
+      checkResponse(r, { notFoundCode: PluginError.NovelNotFound }).text(),
     );
 
     const loadedCheerio = parseHTML(body);
@@ -119,7 +122,9 @@ export class WebNovelWorld implements Plugin.PagePlugin {
 
   async parsePage(novelPath: string, page: string): Promise<Plugin.SourcePage> {
     const url = this.site + novelPath + '/chapters/page-' + page;
-    const body = await fetchApi(url).then((res: Response) => res.text());
+    const body = await fetchApi(url).then((res: Response) =>
+      checkResponse(res, { notFoundCode: PluginError.NovelNotFound }).text(),
+    );
     const loadedCheerio = parseHTML(body);
     const chapter: Plugin.ChapterItem[] = [];
     loadedCheerio('.chapter-list li').each(function () {
@@ -151,7 +156,7 @@ export class WebNovelWorld implements Plugin.PagePlugin {
 
   async parseChapter(chapterPath: string): Promise<string> {
     const body = await fetchApi(this.site + chapterPath).then((r: Response) =>
-      r.text(),
+      checkResponse(r, { notFoundCode: PluginError.ChapterNotFound }).text(),
     );
 
     const loadedCheerio = parseHTML(body);
@@ -164,7 +169,9 @@ export class WebNovelWorld implements Plugin.PagePlugin {
   async searchNovels(searchTerm: string): Promise<Plugin.NovelItem[]> {
     const url = `${this.site}lnsearchlive`;
     const link = `${this.site}search`;
-    const response = await fetchApi(link).then((r: Response) => r.text());
+    const response = await fetchApi(link).then((r: Response) =>
+      checkResponse(r).text(),
+    );
     const token = parseHTML(response);
     const verifytoken = token('#novelSearchForm > input').attr('value');
 
@@ -175,7 +182,7 @@ export class WebNovelWorld implements Plugin.PagePlugin {
       method: 'POST',
       headers: { LNRequestVerifyToken: verifytoken! },
       body: formData,
-    }).then((r: Response) => r.json());
+    }).then((r: Response) => checkResponse(r).json());
 
     const novels: Plugin.NovelItem[] = [];
 

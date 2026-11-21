@@ -2,6 +2,7 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { Filters, FilterTypes } from '@libs/filterInputs';
+import { PluginError, checkResponse } from '@libs/pluginError';
 import dayjs from 'dayjs';
 
 type NovelCoolOptions = {
@@ -33,7 +34,7 @@ export class NovelCoolPlugin implements Plugin.PluginBase {
     this.site = metadata.sourceSite;
     this.icon = 'multisrc/novelcool/novelcool/icon.png';
     this.mainUrl = 'https://api.novelcool.com';
-    this.version = '1.0.0';
+    this.version = '1.0.1';
     this.options = metadata.options ?? ({} as NovelCoolOptions);
     this.filters = {
       sortby: {
@@ -78,7 +79,7 @@ export class NovelCoolPlugin implements Plugin.PluginBase {
           page_size: '20',
         }).toString(),
       },
-    ).then((res: Response) => res.json());
+    ).then((res: Response) => checkResponse(res).json());
     const novels: Plugin.NovelItem[] = [];
 
     list.forEach(novel =>
@@ -110,7 +111,9 @@ export class NovelCoolPlugin implements Plugin.PluginBase {
           lang: this.options.langCode,
         }).toString(),
       },
-    ).then((res: Response) => res.json());
+    ).then((res: Response) =>
+      checkResponse(res, { notFoundCode: PluginError.NovelNotFound }).json(),
+    );
 
     const novel: Plugin.SourceNovel = {
       path: novelPath,
@@ -142,7 +145,9 @@ export class NovelCoolPlugin implements Plugin.PluginBase {
           lang: this.options.langCode,
         }).toString(),
       },
-    ).then((res: Response) => res.json());
+    ).then((res: Response) =>
+      checkResponse(res, { notFoundCode: PluginError.NovelNotFound }).json(),
+    );
 
     list.forEach(chapter => {
       if (!chapter.is_locked) {
@@ -179,7 +184,9 @@ export class NovelCoolPlugin implements Plugin.PluginBase {
           lang: this.options.langCode,
         }).toString(),
       },
-    ).then((res: Response) => res.json());
+    ).then((res: Response) =>
+      checkResponse(res, { notFoundCode: PluginError.ChapterNotFound }).json(),
+    );
 
     return info.content;
   }
@@ -207,7 +214,7 @@ export class NovelCoolPlugin implements Plugin.PluginBase {
           page_size: '20',
         }).toString(),
       },
-    ).then((res: Response) => res.json());
+    ).then((res: Response) => checkResponse(res).json());
     const novels: Plugin.NovelItem[] = [];
 
     list.forEach(novel =>

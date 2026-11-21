@@ -4,6 +4,11 @@ import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { Filters } from '@libs/filterInputs';
 import { storage } from '@libs/storage';
+import {
+  PluginError,
+  checkResponse,
+  createPluginError,
+} from '@libs/pluginError';
 
 type NovelFireOptions = {
   lang?: string;
@@ -88,22 +93,21 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
     this.site = metadata.sourceSite;
     const majorVer = metadata.options?.majorVer || 1;
     const minorVer = metadata.options?.minorVer || 0;
-    const versionIncrement = (metadata.options?.versionIncrement || 0) + 1;
+    const versionIncrement = (metadata.options?.versionIncrement || 0) + 2;
     this.version = `${majorVer}.${minorVer}.${versionIncrement}`;
     this.options = metadata.options;
     this.filters = metadata.filters satisfies Filters;
   }
 
   async getCheerio(url: string, search: boolean): Promise<CheerioAPI> {
-    const r = await fetchApi(url);
-    if (!r.ok && search != true)
-      throw new Error(
-        'Could not reach site (' + r.status + ') try to open in webview.',
-      );
+    const r = checkResponse(await fetchApi(url), { search });
     const $ = load(await r.text());
 
     if ($('title').text().includes('Cloudflare')) {
-      throw new Error('Cloudflare is blocking requests. Try again later.');
+      throw createPluginError(PluginError.Cloudflare, {
+        status: 403,
+        url: r.url || url,
+      });
     }
 
     return $;
@@ -240,11 +244,17 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
 
     const result = await fetchApi(`${url}?${params.toString()}`);
     if (result.status === 429) throw new NovelFireThrottlingError();
+    checkResponse(result);
 
     const body = await result.text();
     if (body.includes('You are being rate limited'))
       throw new NovelFireThrottlingError();
-    if (body.includes('Page Not Found 404')) throw new NovelFireAjaxNotFound();
+    if (body.includes('Page Not Found 404')) {
+      throw createPluginError(PluginError.NotFound, {
+        status: 404,
+        message: 'Novel Fire says its Ajax interface is not found',
+      });
+    }
 
     return (JSON.parse(body).data || [])
       .flatMap(
@@ -442,7 +452,7 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
     const length = this.pageLength ? 100 : -1;
     if (length === 100) {
       const url = `${this.site}${novelPath}/chapters?page=${page}`;
-      const result = await fetchApi(url);
+      const result = checkResponse(await fetchApi(url));
       const body = await result.text();
 
       const loadedCheerio = load(body);
@@ -512,9 +522,9 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
     const chapterText = loadedCheerio('#content');
 
     if (chapterText.length === 0) {
-      throw new Error(
-        `Chapter content container (#content) not found for ${chapterPath} — possible transient fetch issue. Retry`,
-      );
+      throw createPluginError(PluginError.EmptyContent, {
+        message: `Chapter content container (#content) not found for ${chapterPath} — possible transient fetch issue. Retry`,
+      });
     }
 
     const odds = chapterText.find(
@@ -530,9 +540,9 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
     const html = chapterText.html()?.replace(/&nbsp;/g, ' ');
 
     if (!html || html.trim().length === 0) {
-      throw new Error(
-        `Chapter content was empty after parsing for ${chapterPath}.`,
-      );
+      throw createPluginError(PluginError.EmptyContent, {
+        message: `Chapter content was empty after parsing for ${chapterPath}.`,
+      });
     }
 
     return html;
@@ -550,7 +560,7 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
     params.append('keyword', searchTerm);
     params.append('page', page.toString());
     const url = `${this.site}search?${params.toString()}`;
-    const result = await fetchApi(url);
+    const result = checkResponse(await fetchApi(url), { search: true });
     const body = await result.text();
 
     const loadedCheerio = load(body);
@@ -565,15 +575,10 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
 
 // Custom error for when Novel Fire is rate limiting requests
 class NovelFireThrottlingError extends Error {
+  code = PluginError.RateLimited;
+  status = 429;
   constructor(message = 'Novel Fire is rate limiting requests') {
     super(message);
     this.name = 'NovelFireError';
-  }
-}
-
-class NovelFireAjaxNotFound extends Error {
-  constructor(message = 'Novel Fire says its Ajax interface is not found') {
-    super(message);
-    this.name = 'NovelFireAjaxError';
   }
 }

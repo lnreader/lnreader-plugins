@@ -4,6 +4,11 @@ import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { Filters } from '@libs/filterInputs';
 import { load } from 'cheerio';
+import {
+  PluginError,
+  checkResponse,
+  createPluginError,
+} from '@libs/pluginError';
 
 const escapeMap: Record<string, string> = {
   '&': '&amp;',
@@ -68,7 +73,7 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/readnovelfull/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `2.3.${4 + versionIncrements}`;
+    this.version = `2.3.${5 + versionIncrements}`;
     this.options = metadata.options;
     this.filters = metadata.filters;
     if (this.options?.imageReferer) {
@@ -402,12 +407,7 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
       }
     }
 
-    const result = await fetchApi(url);
-    if (!result.ok) {
-      throw new Error(
-        `Could not reach site (${result.status}: ${result.statusText}) try to open in webview.`,
-      );
-    }
+    const result = checkResponse(await fetchApi(url));
     const html = await result.text();
     const novels = this.parseNovels(html);
     const paths = novels.map(n => n.path);
@@ -429,14 +429,9 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
     const url = this.site + novelPath;
-    const result = await fetchApi(url);
-    if (!result.ok) {
-      throw new Error(
-        result.status === 404
-          ? 'Novel not found (404), it may have been removed from this source.'
-          : `Could not reach site (${result.status}: ${result.statusText}) try to open in webview.`,
-      );
-    }
+    const result = checkResponse(await fetchApi(url), {
+      notFoundCode: PluginError.NovelNotFound,
+    });
     const body = await result.text();
 
     const novel: Partial<Plugin.SourceNovel> = {
@@ -861,14 +856,9 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const response = await fetchApi(this.site + chapterPath);
-    if (!response.ok) {
-      throw new Error(
-        response.status === 404
-          ? 'Chapter not found (404), it may have been removed from this source.'
-          : `Could not reach site (${response.status}: ${response.statusText}) try to open in webview.`,
-      );
-    }
+    const response = checkResponse(await fetchApi(this.site + chapterPath), {
+      notFoundCode: PluginError.ChapterNotFound,
+    });
     let html = await response.text();
     if (this.options?.customJs) {
       try {
@@ -1060,17 +1050,17 @@ export class ReadNovelFullPlugin implements Plugin.PluginBase {
     // Some sites (e.g. novelfull.com) return 404 for pages past the last one
     if (result.status === 404 && page > 1) return [];
 
-    if (!result.ok) {
-      throw new Error(
-        `Could not reach site ('${result.status}') try to open in webview.`,
-      );
-    }
+    checkResponse(result);
 
     const html = await result.text();
 
     // Check for alert error messages, ported over from cheerio TODO: confirm behaviour
     const alertText = html.match(/alert\((.*?)\)/)?.[1] || '';
-    if (alertText) throw new Error(alertText);
+    if (alertText) {
+      throw createPluginError(PluginError.InvalidResponse, {
+        message: alertText,
+      });
+    }
 
     return this.parseNovels(html);
   }

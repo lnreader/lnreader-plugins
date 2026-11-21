@@ -6,6 +6,7 @@ import { AnyNode, Element } from 'domhandler';
 import { NovelStatus } from '@libs/novelStatus';
 import dayjs from 'dayjs';
 import { storage } from '@libs/storage';
+import { assertNoChallenge, checkResponse } from '@libs/pluginError';
 
 const SECOND_REGEX = /detik|segundo|second|วินาที/i;
 const MINUTE_REGEX = /menit|dakika|min|minute|minuto|นาที|دقائق/i;
@@ -57,7 +58,7 @@ export class MadaraPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/madara/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `2.4.${1 + versionIncrements}`;
+    this.version = `2.4.${2 + versionIncrements}`;
     this.options = metadata.options;
     this.filters = metadata.filters;
 
@@ -120,31 +121,13 @@ export class MadaraPlugin implements Plugin.PluginBase {
     return text;
   }
 
-  getHostname(url: string): string {
-    url = url.split('/')[2];
-    const url_parts = url.split('.');
-    url_parts.pop(); // remove TLD
-    return url_parts.join('.');
-  }
-
   async getCheerio(url: string, search: boolean): Promise<CheerioAPI> {
-    const r = await fetchApi(url, { headers: this.requestHeaders });
-    if (!r.ok && search != true)
-      throw new Error(
-        'Could not reach site (' + r.status + ') try to open in webview.',
-      );
+    const r = checkResponse(
+      await fetchApi(url, { headers: this.requestHeaders }),
+      { search },
+    );
     const text = await r.text();
-    const titleMatch = text.match(/<title[^>]*>([^<]+)<\/title>/i);
-    const title = titleMatch ? titleMatch[1].trim() : '';
-    if (
-      this.getHostname(url) != this.getHostname(r.url) ||
-      title == 'Bot Verification' ||
-      title == 'You are being redirected...' ||
-      title == 'Un instant...' ||
-      title == 'Just a moment...' ||
-      title == 'Redirecting...'
-    )
-      throw new Error('Captcha error, please open in webview');
+    assertNoChallenge(text, url, r.url);
     return parseHTML(text);
   }
 
