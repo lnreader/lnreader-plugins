@@ -275,6 +275,136 @@ function parseChapterList(text: string): ChapterEntry[] {
  * then matched to its closing tag by depth scan so nested markup
  * can never truncate the content.
  */
+/**
+ * Strip executable content from chapter HTML. Chapter bodies are
+ * untrusted markup: scripts, frames, form elements, inline event
+ * handlers and javascript:/vbscript: URLs must not reach the reader.
+ * URL schemes are tested after stripping control characters and
+ * lowercasing, so java<TAB>script: and mixed-case smuggling can't pass.
+ */
+/**
+ * Strip executable content from chapter HTML before it reaches the
+ * reader: scripts, frames, form elements, inline event handlers and
+ * javascript:/vbscript:/data:text/html URLs. URL values are checked
+ * regardless of quoting (double, single, or unquoted) and AFTER
+ * decoding HTML entities, so 'javascript:...' and '&#106;avascript:...'
+ * are caught equally; schemes are then tested after stripping control
+ * characters and lowercasing, so mixed-case and control-character
+ * smuggling fail too.
+ */
+/**
+ * Strip executable content from chapter HTML before it reaches the
+ * reader. Attribute cleaning runs TAG BY TAG (not over the whole
+ * string), so story text is never touched: `<p>Set online=true</p>`
+ * keeps its words, while a real `on*` attribute inside a tag dies.
+ * Attribute separators are whitespace OR slash, so
+ * `<img src="x"/onerror=...>` is caught too. URL values are checked
+ * regardless of quoting (double, single, or unquoted) and AFTER
+ * decoding HTML entities, so `javascript&colon;...`, `&#106;...`,
+ * semicolon-less numerics, and mixed-case / control-character
+ * smuggling are all caught; story markup (paragraphs, images, links,
+ * tables) is kept.
+ */
+function sanitizeChapterHtml(html: string): string {
+  const noExecutable = html
+    .replace(
+      /<(script|style|noscript|iframe|object|embed|form)\b[\s\S]*?<\/\1\s*>/gi,
+      '',
+    )
+    .replace(
+      /<(script|style|noscript|iframe|object|embed|form|link|meta|base)\b[^>]*>/gi,
+      '',
+    );
+  return noExecutable.replace(/<[^>]*>/g, function (tag: string) {
+    return tag
+      .replace(/[\s/](on\w+)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+      .replace(/[\s/]style\s*=\s*(?:"[^"]*"|'[^']*')/gi, '')
+      .replace(
+        /[\s/](?:href|src)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi,
+        function (m: string) {
+          return isSafeUrlValue(m) ? m : '';
+        },
+      );
+  });
+}
+
+// Decode HTML character references the way a browser decodes an
+// attribute value, then test the scheme. Numeric references (decimal
+// and hex, either x case, with or without the semicolon) plus the
+// scheme-relevant named references (`&colon;`, `&Tab;`, `&NewLine;`,
+// `&sol;`) and the legacy semicolon-less named references; repeated so
+// double-encoding can't smuggle a scheme past the check. Decoding only
+// ever makes the check stricter, never looser.
+function decodeEntities(value: string): string {
+  let out = value;
+  for (let i = 0; i < 3; i++) {
+    const next = out
+      .replace(/&#(\d+);?/g, function (_m: string, code: string) {
+        const n = parseInt(code, 10);
+        return !isNaN(n) && n >= 0 && n <= 0x10ffff
+          ? String.fromCharCode(n)
+          : _m;
+      })
+      .replace(/&#[xX]([0-9a-fA-F]+);?/g, function (_m: string, code: string) {
+        const n = parseInt(code, 16);
+        return !isNaN(n) && n >= 0 && n <= 0x10ffff
+          ? String.fromCharCode(n)
+          : _m;
+      })
+      .replace(/&colon;/g, ':')
+      .replace(/&Tab;/g, '\t')
+      .replace(/&NewLine;/g, '\n')
+      .replace(/&sol;/g, '/')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/&amp(?![a-zA-Z0-9=])/g, '&')
+      .replace(/&lt(?![a-zA-Z0-9=])/g, '<')
+      .replace(/&gt(?![a-zA-Z0-9=])/g, '>')
+      .replace(/&quot(?![a-zA-Z0-9=])/g, '"');
+    if (next === out) break;
+    out = next;
+  }
+  return out;
+}
+
+// Read the attribute value from immediately after `=`: a quoted value
+// is everything up to its matching quote, an unquoted value runs to the
+// next whitespace or `>`. Never search for quotes anywhere in the
+// match — for `href=javascript:alert('x')` the value is the whole
+// `javascript:alert('x')`, not `'x'`.
+function attrValue(attr: string): string {
+  const eq = attr.indexOf('=');
+  if (eq < 0) return '';
+  const rest = attr.slice(eq + 1).replace(/^\s+/, '');
+  if (rest.charAt(0) === '"') {
+    const end = rest.indexOf('"', 1);
+    return end < 0 ? rest.slice(1) : rest.slice(1, end);
+  }
+  if (rest.charAt(0) === "'") {
+    const end = rest.indexOf("'", 1);
+    return end < 0 ? rest.slice(1) : rest.slice(1, end);
+  }
+  const m = /^[^\s>]+/.exec(rest);
+  return m ? m[0] : '';
+}
+
+function isSafeUrlValue(attr: string): boolean {
+  const clean = decodeEntities(attrValue(attr))
+    .split('')
+    .filter(function (ch: string) {
+      const code = ch.charCodeAt(0);
+      return code > 32 && code !== 127;
+    })
+    .join('')
+    .toLowerCase();
+  if (/^(javascript|vbscript)\s*:/.test(clean)) return false;
+  if (/^data\s*:\s*text\/html/.test(clean)) return false;
+  return true;
+}
+
 function parseChapterContent(html: string): string {
   checkSize(html);
   const clean = html
@@ -313,7 +443,7 @@ function parseChapterContent(html: string): string {
     }
   }
   if (contentEnd < 0) return '';
-  return clean.slice(contentStart, contentEnd).trim();
+  return sanitizeChapterHtml(clean.slice(contentStart, contentEnd).trim());
 }
 
 class LightNovelTo implements Plugin.PluginBase {
@@ -321,7 +451,7 @@ class LightNovelTo implements Plugin.PluginBase {
   name = 'LightNovel.to';
   icon = 'src/en/lightnovelto/icon.png';
   site = 'https://lightnovel.to';
-  version = '1.0.0';
+  version = '1.0.1';
 
   async popularNovels(
     pageNo: number,
@@ -400,8 +530,11 @@ class LightNovelTo implements Plugin.PluginBase {
 
   resolveUrl(path: string): string {
     // Absolute URLs (e.g. the cover image, which EPUB export passes
-    // through here) must go out unchanged.
-    return /^https?:\/\//i.test(path) ? path : this.site + path;
+    // through here) must go out unchanged; protocol-relative URLs
+    // upgrade to https.
+    if (/^https?:\/\//i.test(path)) return path;
+    if (path.indexOf('//') === 0) return 'https:' + path;
+    return this.site + path;
   }
 }
 
