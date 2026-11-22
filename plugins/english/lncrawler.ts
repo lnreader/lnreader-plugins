@@ -105,6 +105,9 @@ function sanitizeChapterHtml(html: string): string {
 type ListEntry = {
   slug?: string;
   title?: string;
+  /** The source the site recommends; it carries the display title/cover. */
+  suggested_source?: { title?: string; cover_min_url?: string };
+  /** Legacy misspelled field; still read when the API sends it. */
   prefered_source?: { cover_min_url?: string };
 };
 
@@ -142,9 +145,11 @@ function parseNovelListPage(data: unknown): ListPage {
   const cards: NovelCard[] = [];
   for (const entry of res.results) {
     if (!entry || typeof entry.slug !== 'string' || !entry.slug) continue;
-    const cover = entry.prefered_source?.cover_min_url;
+    const cover =
+      entry.suggested_source?.cover_min_url ||
+      entry.prefered_source?.cover_min_url;
     cards.push({
-      name: String(entry.title || entry.slug),
+      name: String(entry.title || entry.suggested_source?.title || entry.slug),
       path: entry.slug,
       cover: typeof cover === 'string' && cover ? cover : undefined,
     });
@@ -168,6 +173,9 @@ type NovelResponse = {
     language?: string;
     available_chapters_count?: number;
   }[];
+  /** The source the site recommends, with its display title. */
+  suggested_source?: { title?: string; source_slug?: string };
+  /** Legacy misspelled field; still read when the API sends it. */
   prefered_source?: { source_slug?: string };
 };
 
@@ -195,26 +203,22 @@ function parseNovelSources(data: unknown): NovelSources {
     });
   }
   return {
-    name: String(res.title || ''),
+    name: String(res.title || res.suggested_source?.title || ''),
     sources,
-    preferredSlug: res.prefered_source?.source_slug,
+    preferredSlug:
+      res.suggested_source?.source_slug || res.prefered_source?.source_slug,
   };
 }
 
 /**
- * Pick the source the plugin reads through: the English source with the
- * most available chapters (the site's preferred source wins ties when it
- * is English). Falls back to the largest source overall when the novel
- * has no English source, so the novel still opens.
- */
-/**
  * Pick the source the plugin reads through. When the catalog was
  * filtered to languages, those are carried in the novel path
  * (`slug?lang=a,b`) and a source in one of them wins — first listed
- * language first. Without them this is: the English source with the
- * most available chapters (the site's preferred source wins ties when
- * it is English), falling back to the largest source overall when the
- * novel has no English source, so the novel still opens.
+ * language first. Within a language the site's suggested source wins
+ * when it is available, otherwise the source with the most chapters.
+ * Without a language filter the same rule applies to English, falling
+ * back to the largest source overall when the novel has no English
+ * source, so the novel still opens.
  */
 function chooseSource(
   detail: NovelSources,
@@ -226,12 +230,8 @@ function chooseSource(
     let bestInLang: SourceOption | undefined;
     for (const s of detail.sources) {
       if (s.available <= 0 || s.language !== lang) continue;
-      if (
-        !bestInLang ||
-        s.available > bestInLang.available ||
-        (s.available === bestInLang.available &&
-          s.slug === detail.preferredSlug)
-      ) {
+      if (s.slug === detail.preferredSlug) return s;
+      if (!bestInLang || s.available > bestInLang.available) {
         bestInLang = s;
       }
     }
@@ -240,12 +240,9 @@ function chooseSource(
   for (const s of detail.sources) {
     if (s.available <= 0) continue;
     if (!bestAny || s.available > bestAny.available) bestAny = s;
-    if (
-      s.language === 'en' &&
-      (!bestEn ||
-        s.available > bestEn.available ||
-        (s.available === bestEn.available && s.slug === detail.preferredSlug))
-    ) {
+    if (s.language !== 'en') continue;
+    if (s.slug === detail.preferredSlug) return s;
+    if (!bestEn || s.available > bestEn.available) {
       bestEn = s;
     }
   }
@@ -403,7 +400,7 @@ class LNCrawler implements Plugin.PluginBase {
   name = 'LNCrawler';
   icon = 'src/en/lncrawler/icon.png';
   site = 'https://lncrawler.monster';
-  version = '1.1.1';
+  version = '1.1.2';
 
   filters = {
     languages: {
