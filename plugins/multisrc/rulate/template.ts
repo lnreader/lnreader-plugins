@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { FilterToValues, Filters } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
-import { PluginError, checkResponse } from '@libs/pluginError';
 import dayjs from 'dayjs';
 import { load as parseHTML } from 'cheerio';
 
@@ -34,16 +33,14 @@ export class RulatePlugin implements Plugin.PluginBase {
     this.name = metadata.sourceName + ' (API)';
     this.icon = `multisrc/rulate/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
-    this.version = '1.0.' + (2 + metadata.versionIncrements);
+    this.version = '1.0.' + (1 + metadata.versionIncrements);
     this.filters = metadata.filters;
     this.key = metadata.key;
   }
 
   parseNovels(url: string) {
     return fetchApi(url, { headers })
-      .then(
-        (res: Response) => checkResponse(res).json() as Promise<SearchResponse>,
-      )
+      .then((res: Response) => res.json() as Promise<SearchResponse>)
       .then((data: SearchResponse) => {
         const novels: Plugin.NovelItem[] = [];
 
@@ -96,12 +93,7 @@ export class RulatePlugin implements Plugin.PluginBase {
     const book = await fetchApi(
       this.site + '/api3/book?book_id=' + novelPath + '&key=' + this.key,
       { headers },
-    ).then(
-      (res: Response) =>
-        checkResponse(res, {
-          notFoundCode: PluginError.NovelNotFound,
-        }).json() as Promise<BookResponse>,
-    );
+    ).then((res: Response) => res.json() as Promise<BookResponse>);
 
     const novel: Plugin.SourceNovel = {
       name: book.response.t_title || book.response.s_title,
@@ -133,12 +125,7 @@ export class RulatePlugin implements Plugin.PluginBase {
         '&key=' +
         this.key,
       { headers },
-    ).then(
-      (res: Response) =>
-        checkResponse(res, {
-          notFoundCode: PluginError.NovelNotFound,
-        }).json() as Promise<ChaptersResponse>,
-    );
+    ).then((res: Response) => res.json() as Promise<ChaptersResponse>);
 
     const chapters: Plugin.ChapterItem[] = [];
 
@@ -170,12 +157,7 @@ export class RulatePlugin implements Plugin.PluginBase {
         '&key=' +
         this.key,
       { headers },
-    ).then(
-      (res: Response) =>
-        checkResponse(res, {
-          notFoundCode: PluginError.ChapterNotFound,
-        }).json() as Promise<ChapterTextResponse>,
-    );
+    ).then((res: Response) => res.json() as Promise<ChapterTextResponse>);
 
     return body.response.text;
   }

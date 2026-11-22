@@ -3,7 +3,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { Filters } from '@libs/filterInputs';
-import { PluginError, checkResponse } from '@libs/pluginError';
 
 type FictioneerSelectors = {
   browseCard: string;
@@ -59,7 +58,7 @@ export class FictioneerPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/fictioneer/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `1.3.${1 + versionIncrements}`;
+    this.version = `1.3.${0 + versionIncrements}`;
     this.options = metadata.options;
     this.selectors = { ...defaultSelectors, ...metadata.options?.selectors };
   }
@@ -114,11 +113,9 @@ export class FictioneerPlugin implements Plugin.PluginBase {
   ): Promise<Plugin.NovelItem[]> {
     if (showLatestNovels) {
       // Latest updates come from a search results page, so use searchCard.
-      const req = checkResponse(
-        await fetchApi(
-          this.resolveUrl(
-            `${pageNo === 1 ? '' : 'page/' + pageNo + '/'}?s=&post_type=fcn_story&orderby=modified&order=desc`,
-          ),
+      const req = await fetchApi(
+        this.resolveUrl(
+          `${pageNo === 1 ? '' : 'page/' + pageNo + '/'}?s=&post_type=fcn_story&orderby=modified&order=desc`,
         ),
       );
       const body = await req.text();
@@ -127,11 +124,9 @@ export class FictioneerPlugin implements Plugin.PluginBase {
       return this.parseNovels(loadedCheerio, this.selectors.searchCard);
     }
 
-    const req = checkResponse(
-      await fetchApi(
-        this.resolveUrl(
-          `${this.options.browsePage}/${pageNo === 1 ? '' : 'page/' + pageNo + '/'}`,
-        ),
+    const req = await fetchApi(
+      this.resolveUrl(
+        `${this.options.browsePage}/${pageNo === 1 ? '' : 'page/' + pageNo + '/'}`,
       ),
     );
     const body = await req.text();
@@ -141,9 +136,7 @@ export class FictioneerPlugin implements Plugin.PluginBase {
   }
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
-    const req = checkResponse(await fetchApi(this.resolveUrl(novelPath)), {
-      notFoundCode: PluginError.NovelNotFound,
-    });
+    const req = await fetchApi(this.resolveUrl(novelPath));
     const body = await req.text();
     const loadedCheerio = loadCheerio(body);
 
@@ -256,9 +249,7 @@ export class FictioneerPlugin implements Plugin.PluginBase {
   }
 
   async parseChapter(chapterPath: string): Promise<string> {
-    const req = checkResponse(await fetchApi(this.resolveUrl(chapterPath)), {
-      notFoundCode: PluginError.ChapterNotFound,
-    });
+    const req = await fetchApi(this.resolveUrl(chapterPath));
     const body = await req.text();
 
     const loadedCheerio = loadCheerio(body);
@@ -281,13 +272,10 @@ export class FictioneerPlugin implements Plugin.PluginBase {
     searchTerm: string,
     pageNo: number,
   ): Promise<Plugin.NovelItem[]> {
-    const req = checkResponse(
-      await fetchApi(
-        this.resolveUrl(
-          `${pageNo === 1 ? '' : 'page/' + pageNo + '/'}?s=${encodeURIComponent(searchTerm)}&post_type=fcn_story`,
-        ),
+    const req = await fetchApi(
+      this.resolveUrl(
+        `${pageNo === 1 ? '' : 'page/' + pageNo + '/'}?s=${encodeURIComponent(searchTerm)}&post_type=fcn_story`,
       ),
-      { search: true },
     );
     const body = await req.text();
     const loadedCheerio = loadCheerio(body);

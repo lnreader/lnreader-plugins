@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Filters } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
-import { PluginError, checkResponse } from '@libs/pluginError';
 import { load as parseHTML } from 'cheerio';
 import dayjs from 'dayjs';
 
@@ -32,7 +31,7 @@ export class ReadwnPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/readwn/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     const versionIncrements = metadata.options?.versionIncrements || 0;
-    this.version = `1.0.${4 + versionIncrements}`;
+    this.version = `1.0.${3 + versionIncrements}`;
     this.filters = metadata.filters;
   }
 
@@ -54,9 +53,7 @@ export class ReadwnPlugin implements Plugin.PluginBase {
       url = this.site + '/tags/' + filters.tags.value + '-0.html';
     }
 
-    const body = await fetchApi(url).then((res: Response) =>
-      checkResponse(res).text(),
-    );
+    const body = await fetchApi(url).then((res: Response) => res.text());
     const loadedCheerio = parseHTML(body);
 
     const novels: Plugin.NovelItem[] = loadedCheerio('li.novel-item')
@@ -75,7 +72,7 @@ export class ReadwnPlugin implements Plugin.PluginBase {
 
   async parseNovel(novelPath: string): Promise<Plugin.SourceNovel> {
     const body = await fetchApi(this.site + novelPath).then((res: Response) =>
-      checkResponse(res, { notFoundCode: PluginError.NovelNotFound }).text(),
+      res.text(),
     );
     const loadedCheerio = parseHTML(body);
 
@@ -195,7 +192,7 @@ export class ReadwnPlugin implements Plugin.PluginBase {
 
   async parseChapter(chapterPath: string): Promise<string> {
     const body = await fetchApi(this.site + chapterPath).then((res: Response) =>
-      checkResponse(res, { notFoundCode: PluginError.ChapterNotFound }).text(),
+      res.text(),
     );
     const loadedCheerio = parseHTML(body);
 
@@ -217,7 +214,7 @@ export class ReadwnPlugin implements Plugin.PluginBase {
         tbname: 'news',
         keyboard: searchTerm,
       }).toString(),
-    }).then((res: Response) => checkResponse(res).text());
+    }).then((res: Response) => res.text());
     const loadedCheerio = parseHTML(result);
 
     const novels: Plugin.NovelItem[] = loadedCheerio('li.novel-item')

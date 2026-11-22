@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Filters } from '@libs/filterInputs';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
-import { PluginError, checkResponse } from '@libs/pluginError';
 
 export type HotNovelPubMetadata = {
   id: string;
@@ -32,7 +31,7 @@ export class HotNovelPubPlugin implements Plugin.PluginBase {
     this.icon = `multisrc/hotnovelpub/${metadata.id.toLowerCase()}/icon.png`;
     this.site = metadata.sourceSite;
     this.apiSite = metadata.sourceSite.replace('://', '://api.');
-    this.version = '1.0.2';
+    this.version = '1.0.1';
     this.filters = metadata.filters;
     this.lang = metadata.options?.lang || 'en';
   }
@@ -56,7 +55,7 @@ export class HotNovelPubPlugin implements Plugin.PluginBase {
       headers: {
         lang: this.lang,
       },
-    }).then((res: Response) => checkResponse(res).json());
+    }).then((res: Response) => res.json());
     const novels: Plugin.NovelItem[] = [];
 
     if (result.status && result.data.books.data?.length) {
@@ -79,9 +78,7 @@ export class HotNovelPubPlugin implements Plugin.PluginBase {
           lang: this.lang,
         },
       },
-    ).then((res: Response) =>
-      checkResponse(res, { notFoundCode: PluginError.NovelNotFound }).json(),
-    );
+    ).then((res: Response) => res.json());
 
     const novel: Plugin.SourceNovel = {
       name: json.data.book.name,
@@ -117,19 +114,15 @@ export class HotNovelPubPlugin implements Plugin.PluginBase {
 
   async parseChapter(chapterPath: string): Promise<string> {
     const body = await fetchApi(this.resolveUrl(chapterPath)).then(
-      (res: Response) =>
-        checkResponse(res, {
-          notFoundCode: PluginError.ChapterNotFound,
-        }).text(),
+      (res: Response) => res.text(),
     );
 
     let chapterText =
       body.match(/<div id="content-item" ([\s\S]*?)<\/div>/)?.[0] || '';
 
     if (chapterText) {
-      const result = checkResponse(
-        await fetchApi(this.site + '/server/getContent?slug=' + chapterPath),
-        { notFoundCode: PluginError.ChapterNotFound },
+      const result = await fetchApi(
+        this.site + '/server/getContent?slug=' + chapterPath,
       );
       const json = (await result.json()) as ChapterType;
 
@@ -154,7 +147,7 @@ export class HotNovelPubPlugin implements Plugin.PluginBase {
       },
       method: 'POST',
       body: JSON.stringify({ key_search: searchTerm }),
-    }).then((res: Response) => checkResponse(res).json());
+    }).then((res: Response) => res.json());
     const novels: Plugin.NovelItem[] = [];
 
     if (result.status && result.data.books?.length) {

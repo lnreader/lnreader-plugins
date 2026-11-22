@@ -3,7 +3,6 @@ import { load as parseHTML } from 'cheerio';
 import { fetchApi, FetchInit } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
-import { assertNoChallenge, checkResponse } from '@libs/pluginError';
 
 type RanobesOptions = {
   lang?: string;
@@ -32,7 +31,7 @@ export class RanobesPlugin implements Plugin.PluginBase {
     this.name = metadata.sourceName;
     this.icon = 'multisrc/ranobes/ranobes/icon.png';
     this.site = metadata.sourceSite;
-    this.version = '2.0.4';
+    this.version = '2.0.3';
     this.options = metadata.options as RanobesOptions;
   }
 
@@ -43,9 +42,24 @@ export class RanobesPlugin implements Plugin.PluginBase {
   ): Promise<string> {
     const r = await fetchApi(url, init);
     if (r.status === 404 && emptyOn404) return '';
-    checkResponse(r);
+    if (!r.ok)
+      throw new Error(
+        'Could not reach site (' + r.status + ') try to open in webview.',
+      );
     const data = await r.text();
-    assertNoChallenge(data);
+    const title = data.match(/<title>(.*?)<\/title>/)?.[1]?.trim();
+
+    if (
+      title &&
+      (title == 'Bot Verification' ||
+        title == 'You are being redirected...' ||
+        title == 'Un instant...' ||
+        title == 'One moment...' ||
+        title == 'Just a moment...' ||
+        title == 'Redirecting...')
+    )
+      throw new Error('Captcha error, please open in webview');
+
     return data;
   }
 
