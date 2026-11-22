@@ -1,5 +1,4 @@
 import { minify_sync } from 'terser';
-import * as esbuild from 'esbuild';
 import ts from 'typescript';
 import fs from 'fs';
 import path from 'path';
@@ -29,24 +28,28 @@ function getPluginErrorFallbackHelper() {
   if (cachedPluginErrorFallbackHelper) {
     return cachedPluginErrorFallbackHelper;
   }
-  const bundled = esbuild.buildSync({
-    entryPoints: [path.join(REPO_ROOT, 'src/lib/pluginError.ts')],
-    bundle: true,
-    format: 'iife',
-    globalName: '__pluginErrorFallback',
-    target: 'es2020',
-    write: false,
-    logLevel: 'silent',
-  }).outputFiles[0].text;
+  const constantsSource = fs.readFileSync(
+    path.join(REPO_ROOT, 'src/types/constants.ts'),
+    'utf8',
+  );
+  const pluginErrorSource = fs
+    .readFileSync(path.join(REPO_ROOT, 'src/lib/pluginError.ts'), 'utf8')
+    .replace(
+      /^\s*import\s+\{\s*PluginError\s*\}\s+from\s+['"]\.\.\/types\/constants['"];?\r?\n?/m,
+      '',
+    );
+  const combinedSource = `${constantsSource}\n${pluginErrorSource}`;
 
-  cachedPluginErrorFallbackHelper = ts.transpileModule(bundled, {
+  const transpiled = ts.transpileModule(combinedSource, {
     compilerOptions: {
       target: ts.ScriptTarget.ES5,
-      module: ts.ModuleKind.None,
+      module: ts.ModuleKind.CommonJS,
       removeComments: true,
       alwaysStrict: false,
     },
   }).outputText;
+
+  cachedPluginErrorFallbackHelper = `var __pluginErrorFallback = (function () {\nvar exports = {};\n${transpiled}\nreturn exports;\n})();`;
 
   return cachedPluginErrorFallbackHelper;
 }
