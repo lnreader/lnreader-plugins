@@ -6,6 +6,7 @@ import { FilterOption, Filters, FilterTypes } from '@libs/filterInputs';
 const tagAutocompletePaths: Record<string, string> = {
   fandoms: 'fandom',
   characters: 'character',
+  relationships: 'relationship',
 };
 
 function setTagNames(
@@ -111,6 +112,7 @@ class ArchiveOfOurOwn implements Plugin.PluginBase {
     }
     setTagNames(params, 'fandom_names', filters.fandoms.value);
     setTagNames(params, 'character_names', filters.characters.value);
+    setTagNames(params, 'relationship_names', filters.relationships.value);
     if (filters.singlechap.value) {
       params.set('work_search[single_chapter]', '1');
     }
@@ -578,6 +580,12 @@ class ArchiveOfOurOwn implements Plugin.PluginBase {
     characters: {
       value: [],
       label: 'Characters',
+      type: FilterTypes.MultiText,
+      autocomplete: true,
+    },
+    relationships: {
+      value: [],
+      label: 'Relationships',
       type: FilterTypes.MultiText,
       autocomplete: true,
     },
