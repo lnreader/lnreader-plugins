@@ -47,6 +47,26 @@ const READER_SESSION_MS = 10 * 60 * 1000;
  *                   `/api/reader/chapter/<chapter-slug>/`, JSON with
  *                   `content_html` (null for locked chapters) or
  *                   `read_limit`. The plugin makes the same two calls.
+ *
+ * parseChapter flow (every request sends `Accept-Language: en-US,en;q=0.9`,
+ * because the default `*` plus `Sec-Fetch-Mode: cors` gets a Cloudflare 403):
+ *
+ *   parseChapter(path)
+ *     |
+ *     v
+ *   session cached < 10 min? --yes--------------------+
+ *     | no                                            |
+ *     v                                               |
+ *   POST /api/reader/session/  -> `kdt_reader` cookie |
+ *     |                                               |
+ *     +-----------------------------------------------+
+ *     v
+ *   GET /api/reader/chapter/<slug>/  (+ cookie)
+ *     |-- HTTP error ---> drop session, throw
+ *     |-- read_limit ---> throw the limit message
+ *     |-- no content_html (locked) -> throw
+ *     v
+ *   content_html -> strip scripts/handlers -> chapter HTML
  */
 class KDTNovels implements Plugin.PluginBase {
   id = 'kdtnovels';
