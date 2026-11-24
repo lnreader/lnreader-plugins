@@ -7,6 +7,7 @@ const tagAutocompletePaths: Record<string, string> = {
   fandoms: 'fandom',
   characters: 'character',
   relationships: 'relationship',
+  additionalTags: 'freeform',
 };
 
 function setTagNames(
@@ -113,6 +114,7 @@ class ArchiveOfOurOwn implements Plugin.PluginBase {
     setTagNames(params, 'fandom_names', filters.fandoms.value);
     setTagNames(params, 'character_names', filters.characters.value);
     setTagNames(params, 'relationship_names', filters.relationships.value);
+    setTagNames(params, 'freeform_names', filters.additionalTags.value);
     if (filters.singlechap.value) {
       params.set('work_search[single_chapter]', '1');
     }
@@ -586,6 +588,12 @@ class ArchiveOfOurOwn implements Plugin.PluginBase {
     relationships: {
       value: [],
       label: 'Relationships',
+      type: FilterTypes.MultiText,
+      autocomplete: true,
+    },
+    additionalTags: {
+      value: [],
+      label: 'Additional Tags',
       type: FilterTypes.MultiText,
       autocomplete: true,
     },
