@@ -26,7 +26,7 @@ interface ChapterRef {
 class LorachiPlugin implements Plugin.PluginBase {
   id = 'lorachi';
   name = 'Lorachi';
-  icon = 'src/ru/lorachi/icon.png'; // положи свою иконку 96x96 (путь смотри у соседних плагинов)
+  icon = 'public/static/src/ru/lorachi'; // положи свою иконку 96x96 (путь смотри у соседних плагинов)
   site = 'https://lorachi.baconana.com';
   version = '1.0.0';
 
