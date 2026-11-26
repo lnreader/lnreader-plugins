@@ -326,19 +326,30 @@ class ArchiveOfOurOwn implements Plugin.PluginBase {
     const body = await res.text();
     checkResponse(res, body, 'fetch filter suggestions');
 
-    let suggestions: { id?: string; name?: string }[];
+    let parsed: unknown;
     try {
-      const parsed = JSON.parse(body);
-      if (!Array.isArray(parsed)) {
-        return [];
-      }
-      suggestions = parsed;
+      parsed = JSON.parse(body);
     } catch {
-      return [];
+      throw new Error('Failed to parse AO3 filter suggestions');
     }
 
-    return suggestions
-      .map(suggestion => suggestion.name || suggestion.id)
+    if (
+      !Array.isArray(parsed) ||
+      !parsed.every(
+        suggestion =>
+          suggestion !== null &&
+          typeof suggestion === 'object' &&
+          !Array.isArray(suggestion),
+      )
+    ) {
+      throw new Error('Unexpected AO3 filter suggestions response');
+    }
+
+    return parsed
+      .map(
+        (suggestion: { id?: string; name?: string }) =>
+          suggestion.name || suggestion.id,
+      )
       .filter((name): name is string => Boolean(name))
       .map(name => ({ label: name, value: name }));
   }
