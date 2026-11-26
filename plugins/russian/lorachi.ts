@@ -2,7 +2,6 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { FilterTypes, Filters } from '@libs/filterInputs';
-import { defaultCover } from '@libs/defaultCover';
 
 // Lorachi — юри-портал переводов. У сайта есть публичный JSON API (/api/v1),
 // документация: https://lorachi.baconana.com/api-docs
@@ -28,7 +27,7 @@ class LorachiPlugin implements Plugin.PluginBase {
   name = 'Lorachi';
   icon = 'src/ru/lorachi/icon.png'; // положи свою иконку 96x96 (путь смотри у соседних плагинов)
   site = 'https://lorachi.baconana.com';
-  version = '1.0.0';
+  version = '1.0.3';
 
   private api = `${this.site}/api/v1`;
   private headers = { Accept: 'application/json' };
@@ -64,7 +63,7 @@ class LorachiPlugin implements Plugin.PluginBase {
     return {
       name: card.title,
       path: `/novel/${card.id}`,
-      cover: this.abs(card.coverUrl) || defaultCover,
+      cover: this.abs(card.coverUrl),
     };
   }
 
@@ -104,17 +103,9 @@ class LorachiPlugin implements Plugin.PluginBase {
       return `${this.api}/catalog?${q.toString()}`;
     };
 
-    const { sort, order, ...rest } = params;
-    let json: any;
-    try {
-      // значения sort в документации не описаны — пробуем, при ошибке повторяем без них
-      json = await this.getJson(
-        build({ ...rest, ...(sort ? { sort, order: order || 'desc' } : {}) }),
-      );
-    } catch (e) {
-      if (!sort) throw e;
-      json = await this.getJson(build(rest));
-    }
+    // значения sort известны (views, ratings.average, createdAt, title),
+    // поэтому тихого повтора без сортировки больше нет: ошибки видны сразу
+    const json = await this.getJson(build(params));
 
     const items: NovelCard[] = json?.data || [];
     return items.map(c => this.toNovelItem(c));
@@ -127,9 +118,13 @@ class LorachiPlugin implements Plugin.PluginBase {
       filters,
     }: Plugin.PopularNovelsOptions<typeof this.filters>,
   ): Promise<Plugin.NovelItem[]> {
+    // значения sort взяты с самого сайта: views, ratings.average, createdAt, title
     const params: Record<string, string> = showLatestNovels
-      ? { sort: 'updatedAt', order: 'desc' }
-      : { sort: 'views', order: 'desc' };
+      ? { sort: 'createdAt', order: 'desc' }
+      : {
+          sort: (filters?.sort?.value as string) || 'views',
+          order: (filters?.order?.value as string) || 'desc',
+        };
 
     const genre = filters?.genre?.value?.trim();
     if (genre) params.genre = genre;
@@ -143,7 +138,23 @@ class LorachiPlugin implements Plugin.PluginBase {
   ): Promise<Plugin.NovelItem[]> {
     const term = searchTerm.trim();
     if (term.length < 2) return []; // API требует минимум 2 символа
-    return this.fetchCatalog(pageNo, { search: term });
+
+    // отдельная ручка поиска: data.novels + meta (page, limit, total, hasMore)
+    const limit = 30;
+    const q = new URLSearchParams({
+      q: term,
+      type: 'novel',
+      page: String(pageNo),
+      limit: String(limit),
+    });
+    const json = await this.getJson(`${this.api}/search?${q.toString()}`);
+
+    // если страница уже за пределами результатов — отдаём пусто, чтобы поиск не крутился вечно
+    const total = json?.meta?.total;
+    if (typeof total === 'number' && (pageNo - 1) * limit >= total) return [];
+
+    const cards: NovelCard[] = json?.data?.novels || [];
+    return cards.map(c => this.toNovelItem(c));
   }
 
   // ---------- тайтл ----------
@@ -158,7 +169,7 @@ class LorachiPlugin implements Plugin.PluginBase {
     const novel: Plugin.SourceNovel = {
       path: `/novel/${id}`,
       name: n.title,
-      cover: this.abs(n.coverUrl) || defaultCover,
+      cover: this.abs(n.coverUrl),
       summary: n.description || undefined,
       author: n.author || undefined,
       artist: n.artist || undefined,
@@ -220,8 +231,7 @@ class LorachiPlugin implements Plugin.PluginBase {
       throw new Error('Глава пуста (или это глава манги).');
     }
 
-    // если сайт вдруг отдал готовый HTML — не трогаем
-    if (/<\/p>/i.test(content)) return content;
+    // всегда проходим через экранирование: сырой HTML с сайта не возвращаем
     return this.markdownToHtml(content);
   }
 
@@ -231,18 +241,26 @@ class LorachiPlugin implements Plugin.PluginBase {
     return s
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  // пропускаем только http(s)-ссылки, javascript: и прочее отбрасываем
+  private safeUrl(url: string): string {
+    const full = this.abs(url) || '';
+    return /^https?:\/\//i.test(full) ? full : '#';
   }
 
   private inline(text: string): string {
     let t = this.escapeHtml(text);
     t = t.replace(
       /!\[([^\]]*)\]\(([^)\s]+)(?:\s+&quot;[^)]*&quot;)?\)/g,
-      (_m, alt, src) => `<img src="${this.abs(src)}" alt="${alt}">`,
+      (_m, alt, src) => `<img src="${this.safeUrl(src)}" alt="${alt}">`,
     );
     t = t.replace(
       /\[([^\]]+)\]\(([^)\s]+)\)/g,
-      (_m, label, href) => `<a href="${this.abs(href)}">${label}</a>`,
+      (_m, label, href) => `<a href="${this.safeUrl(href)}">${label}</a>`,
     );
     t = t.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
     t = t.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
@@ -299,8 +317,28 @@ class LorachiPlugin implements Plugin.PluginBase {
   // ---------- фильтры ----------
 
   filters = {
+    sort: {
+      label: 'Сортировка',
+      value: 'views',
+      options: [
+        { label: 'По просмотрам', value: 'views' },
+        { label: 'По рейтингу', value: 'ratings.average' },
+        { label: 'По дате', value: 'createdAt' },
+        { label: 'По названию', value: 'title' },
+      ],
+      type: FilterTypes.Picker,
+    },
+    order: {
+      label: 'Порядок',
+      value: 'desc',
+      options: [
+        { label: 'По убыванию', value: 'desc' },
+        { label: 'По возрастанию', value: 'asc' },
+      ],
+      type: FilterTypes.Picker,
+    },
     genre: {
-      label: 'Жанр (точное название, например «фэнтези»)',
+      label: 'Жанр (как на сайте, например «Юри»)',
       value: '',
       type: FilterTypes.TextInput,
     },
