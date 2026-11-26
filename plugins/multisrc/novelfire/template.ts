@@ -3,13 +3,44 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { Filters } from '@libs/filterInputs';
+import type { FilterOption } from '@libs/filterInputs';
 import { storage } from '@libs/storage';
+import {
+  checkResponse,
+  createPluginError,
+  PluginError,
+  type PluginErrorCode,
+} from '@libs/pluginError';
+
+// Live contract for the sites this template serves (verified 2026-11-27):
+//   listing  <site>search-adv?country_id|country_id[]=…&categories[]=…
+//            &chapter_min/chapter_max|totalchapter=…&sort=…&page=…
+//   novel    <site><novelPath>              .novel-title, #novel-report[report-post_id]
+//   chapters <site>ajax/listChapterDataAjax  { recordsTotal, data: { n_sort, slug, title } }
+//   chapter  <site><novelPath>/chapter-<n>   #content
+// Chapter paths are user data: reading progress is keyed by them, so the
+// `<novelPath>/chapter-<n>` shape must not change without a migration plan.
+const CHAPTER_NOTICE_REGEX =
+  /Some novel pages moved|Page Not Found 404|Chapter not found/i;
+
+// Novel Phoenix only accepts numeric tag ids, so tag names have to be resolved
+// through its own tag list. The list rarely changes; cache it for a week.
+const TAGS_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+type TagIndex = {
+  tags: { id: string; name: string }[];
+  byName: Record<string, string>;
+};
 
 type NovelFireOptions = {
   lang?: string;
   majorVer?: number;
   minorVer?: number;
   versionIncrement?: number;
+  // Novel Phoenix moved its advanced search to single-value `country_id` and a
+  // `chapter_min` / `chapter_max` range. Novel Fire still expects `country_id[]`
+  // and `totalchapter`, so the parameter shape is chosen per source.
+  advSearchV2?: boolean;
 };
 
 export type NovelFireMetadata = {
@@ -20,7 +51,7 @@ export type NovelFireMetadata = {
   filters?: Filters;
 };
 
-const CHAPTER_PREFIX_REGEX = /^(chapter|ch\.?)\s*\d+/i;
+const CHAPTER_PREFIX_REGEX = /^(chapter|ch\.?)[\s-]*\d+/i;
 const LEADING_PUNCT_REGEX = /^[–—\-\s:]+/;
 const INVISIBLE_CHARS_REGEX = /[\u200B-\u200D\uFEFF]/g;
 
@@ -80,6 +111,7 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
   };
   singlePage = storage.get('singlePage');
   pageLength = storage.get('pageLength');
+  private tagIndexPromise?: Promise<TagIndex>;
 
   constructor(metadata: NovelFireMetadata) {
     this.id = metadata.id;
@@ -94,16 +126,23 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
     this.filters = metadata.filters satisfies Filters;
   }
 
-  async getCheerio(url: string, search: boolean): Promise<CheerioAPI> {
+  async getCheerio(
+    url: string,
+    search: boolean,
+    notFoundCode: PluginErrorCode = PluginError.NovelNotFound,
+  ): Promise<CheerioAPI> {
     const r = await fetchApi(url);
-    if (!r.ok && search != true)
-      throw new Error(
-        'Could not reach site (' + r.status + ') try to open in webview.',
-      );
+    checkResponse(r, { search, notFoundCode });
+
     const $ = load(await r.text());
 
+    // The source answers dead pages with HTTP 200 and its own 404 template.
+    if (/Page Not Found\s*404/i.test($('title').text())) {
+      throw createPluginError(notFoundCode, { url });
+    }
+
     if ($('title').text().includes('Cloudflare')) {
-      throw new Error('Cloudflare is blocking requests. Try again later.');
+      throw createPluginError(PluginError.Cloudflare, { url });
     }
 
     return $;
@@ -162,17 +201,74 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
       this.draw = 0;
     }
 
-    const url = this.site + 'search-adv';
+    const params = await this.buildSearchParams(
+      pageNo,
+      showLatestNovels,
+      filters,
+    );
+    const loadedCheerio = await this.getCheerio(
+      `${this.site}search-adv?${params.toString()}`,
+      false,
+    );
+
+    this.assertChapterFilterApplied(loadedCheerio, filters?.chapters?.value);
+
+    return this.parseNovels(loadedCheerio, '.novel-item', pageNo === 1);
+  }
+
+  private async buildSearchParams(
+    pageNo: number,
+    showLatestNovels: boolean | undefined,
+    filters: Plugin.PopularNovelsOptions<typeof this.filters>['filters'],
+  ): Promise<URLSearchParams> {
     const params = new URLSearchParams();
 
-    for (const language of filters?.language?.value || []) {
-      params.append('country_id[]', language);
+    if (this.options?.advSearchV2) {
+      // Novel Phoenix ignores the repeated `country_id[]` array and expects a
+      // single `country_id`, plus `chapter_min` / `chapter_max` instead of the
+      // combined `totalchapter` range. Novel Fire still uses the old shape.
+      const language = filters?.language?.value;
+      if (typeof language === 'string' && language !== '-1') {
+        params.append('country_id', language);
+      }
+
+      const chapterRange = filters?.chapters?.value;
+      if (chapterRange && chapterRange !== '0') {
+        const [min, max] = String(chapterRange).split(',');
+        if (min) params.append('chapter_min', min);
+        if (max) params.append('chapter_max', max);
+      }
+
+      params.append('content_rating', filters?.content_rating?.value || '-1');
+      params.append(
+        'latest_release_date',
+        filters?.latest_release_date?.value || '-1',
+      );
+
+      const tagValue = filters?.tags?.value;
+      const tagText = Array.isArray(tagValue) ? tagValue.join(',') : tagValue;
+      if (tagText && String(tagText).trim()) {
+        for (const tagId of await this.resolveTagIds(String(tagText))) {
+          params.append('tags[]', tagId);
+        }
+      }
+    } else {
+      for (const language of filters?.language?.value || []) {
+        params.append('country_id[]', language);
+      }
+      params.append('totalchapter', filters?.chapters?.value || '0');
+      for (const tag of filters?.tags?.value || []) {
+        params.append('tags[]', tag);
+      }
+      for (const tag of filters?.tags_excluded?.value || []) {
+        params.append('tags_excluded[]', tag);
+      }
     }
+
     params.append('ctgcon', filters?.genre_operator?.value || 'and');
     for (const genre of filters?.genres?.value || []) {
       params.append('categories[]', genre);
     }
-    params.append('totalchapter', filters?.chapters?.value || '0');
     params.append('ratcon', filters?.rating_operator?.value || 'min');
     params.append('rating', filters?.rating?.value || '0');
     params.append('status', filters?.status?.value || '-1');
@@ -181,23 +277,221 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
       showLatestNovels ? 'date' : filters?.sort?.value || 'rank-top',
     );
     params.append('tagcon', filters?.tagcon?.value || 'and');
-    for (const tag of filters?.tags?.value || []) {
-      params.append('tags[]', tag);
-    }
-    for (const tag of filters?.tags_excluded?.value || []) {
-      params.append('tags_excluded[]', tag);
-    }
-    if (filters?.author?.value) {
-      params.append('author', filters.author.value);
-    }
     params.append('page', pageNo.toString());
 
-    const loadedCheerio = await this.getCheerio(
-      `${url}?${params.toString()}`,
-      false,
-    );
+    return params;
+  }
 
-    return this.parseNovels(loadedCheerio, '.novel-item', pageNo === 1);
+  // Novel Phoenix ignores search parameters it does not recognise, so a renamed
+  // filter silently returns an unfiltered list. Every result card reports its
+  // chapter count, which lets us verify the range filter actually applied
+  // without a second request. Only throw when every card disagrees.
+  private assertChapterFilterApplied(
+    $: CheerioAPI,
+    chapterRange?: string,
+  ): void {
+    if (!this.options?.advSearchV2 || !chapterRange || chapterRange === '0') {
+      return;
+    }
+
+    const [min, max] = String(chapterRange).split(',').map(Number);
+    if (!Number.isFinite(min) || !Number.isFinite(max)) return;
+
+    const counts: number[] = [];
+    $('.novel-item .icon-book-open').each((_, el) => {
+      const match = $(el)
+        .parent()
+        .text()
+        .match(/([\d,]+)\s*Chapters/i);
+      if (!match) return;
+      const count = Number(match[1].replace(/,/g, ''));
+      if (Number.isFinite(count)) counts.push(count);
+    });
+
+    if (counts.length < 3) return;
+    if (counts.some(count => count >= min && count <= max)) return;
+
+    throw createPluginError(PluginError.InvalidResponse, {
+      message:
+        'Chapter filter was not applied by the source — the site may have changed.',
+    });
+  }
+
+  // Novel Phoenix only accepts numeric tag ids, so the tag names a user types
+  // are resolved through the site's own tag list. It changes rarely, so it is
+  // cached (see TAGS_CACHE_TTL_MS) and fetched at most once per session.
+  private async getTagIndex(): Promise<TagIndex> {
+    if (this.tagIndexPromise) return this.tagIndexPromise;
+
+    this.tagIndexPromise = (async () => {
+      const cacheKey = `${this.id}_tagIndex`;
+      const unexpected = () =>
+        createPluginError(PluginError.InvalidResponse, {
+          message: 'Source returned an unexpected tag list.',
+        });
+
+      try {
+        const cached = JSON.parse(String(storage.get(cacheKey) || 'null'));
+        if (
+          cached &&
+          Date.now() - Number(cached.at) < TAGS_CACHE_TTL_MS &&
+          Array.isArray(cached.tags) &&
+          cached.tags.length > 0
+        ) {
+          return this.buildTagIndex(cached.tags);
+        }
+      } catch {
+        // Stale or unreadable cache: refetch below.
+      }
+
+      const response = await fetchApi(`${this.site}ajax/getTags`);
+      checkResponse(response);
+
+      let payload: { data?: unknown };
+      try {
+        payload = JSON.parse(await response.text());
+      } catch {
+        throw unexpected();
+      }
+
+      // An error body is still valid JSON, and caching one would leave every
+      // tag name unresolvable until the cache expires.
+      const rows = payload?.data;
+      if (!Array.isArray(rows)) throw unexpected();
+
+      const tags = rows.flatMap(row => {
+        const tag = row as { id?: unknown; name?: unknown } | null;
+        const id = tag?.id;
+        const name = typeof tag?.name === 'string' ? tag.name.trim() : '';
+        const idText =
+          typeof id === 'number' || typeof id === 'string' ? String(id) : '';
+        return idText && name ? [{ id: idText, name }] : [];
+      });
+
+      if (tags.length === 0) throw unexpected();
+
+      storage.set(cacheKey, JSON.stringify({ at: Date.now(), tags }));
+      return this.buildTagIndex(tags);
+    })();
+
+    try {
+      return await this.tagIndexPromise;
+    } catch (error) {
+      this.tagIndexPromise = undefined;
+      throw error;
+    }
+  }
+
+  private buildTagIndex(tags: { id: string; name: string }[]): TagIndex {
+    const byName: Record<string, string> = {};
+    for (const tag of tags) {
+      const key = tag.name.toLowerCase();
+      if (key && !byName[key]) byName[key] = tag.id;
+    }
+    return { tags, byName };
+  }
+
+  private async resolveTagIds(rawValue: string): Promise<string[]> {
+    const tokens = rawValue
+      .split(',')
+      .map(token => token.trim())
+      .filter(Boolean);
+    if (tokens.length === 0) return [];
+
+    const index = await this.getTagIndex();
+    const ids: string[] = [];
+    const unknown: string[] = [];
+
+    for (const token of tokens) {
+      if (/^\d+$/.test(token)) {
+        ids.push(token);
+        continue;
+      }
+      const id = index.byName[token.toLowerCase()];
+      if (id) ids.push(id);
+      else unknown.push(token);
+    }
+
+    if (unknown.length > 0) {
+      throw createPluginError(PluginError.InvalidResponse, {
+        message: `Unknown tag(s): ${unknown.join(
+          ', ',
+        )}. Pick one from the suggestions.`,
+      });
+    }
+
+    return ids;
+  }
+
+  async getFilterSuggestions(
+    filterKey: string,
+    query: string,
+  ): Promise<FilterOption[]> {
+    if (filterKey !== 'tags') return [];
+
+    const index = await this.getTagIndex();
+    const needle = query.trim().toLowerCase();
+    const matches = needle
+      ? index.tags.filter(tag => tag.name.toLowerCase().includes(needle))
+      : index.tags;
+
+    // The name is the value so a picked tag reads as "Isekai" rather than its
+    // id; resolveTagIds turns names back into ids when searching.
+    return matches
+      .slice(0, 20)
+      .map(tag => ({ label: tag.name, value: tag.name }));
+  }
+
+  // Both chapter sources (AJAX rows and the HTML fallback) end up here, so
+  // naming, numbering, ordering and duplicate handling stay identical.
+  private finalizeChapters(
+    chapters: Plugin.ChapterItem[],
+  ): Plugin.ChapterItem[] {
+    const seen = new Set<string>();
+    return chapters
+      .filter(chapter => {
+        if (seen.has(chapter.path)) return false;
+        seen.add(chapter.path);
+        return true;
+      })
+      .sort((a, b) => (a.chapterNumber ?? 0) - (b.chapterNumber ?? 0));
+  }
+
+  private buildChapterItems(
+    novelPath: string,
+    rows: {
+      title?: string;
+      slug?: string;
+      n_sort: string | number;
+      path?: string;
+    }[],
+  ): Plugin.ChapterItem[] {
+    const chapters = rows.flatMap(row => {
+      const num = Number(row.n_sort);
+      if (isNaN(num)) return [];
+
+      // Some chapters have an empty `title`; the slug is then just
+      // "chapter-<n>", which would render as "Chapter 1 chapter-0".
+      const title = (row.title || '').trim();
+      const slugTitle = String(row.slug || '')
+        .replace(/^chapter-[\d.]+-?/i, '')
+        .trim();
+      const raw = title || slugTitle;
+
+      const decoded =
+        raw.includes('<') || raw.includes('&') ? load(raw).text() : raw;
+      const cleanRaw = decoded.replace(INVISIBLE_CHARS_REGEX, '').trim();
+
+      return [
+        {
+          name: cleanRaw ? formatChapterTitle(cleanRaw, num) : `Chapter ${num}`,
+          path: row.path ?? `${novelPath}/chapter-${num}`,
+          chapterNumber: num,
+        },
+      ];
+    });
+
+    return this.finalizeChapters(chapters);
   }
 
   async getAllChapters(
@@ -239,38 +533,51 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
     });
 
     const result = await fetchApi(`${url}?${params.toString()}`);
-    if (result.status === 429) throw new NovelFireThrottlingError();
+    if (result.status === 429) throw new ThrottlingError();
 
     const body = await result.text();
     if (body.includes('You are being rate limited'))
-      throw new NovelFireThrottlingError();
-    if (body.includes('Page Not Found 404')) throw new NovelFireAjaxNotFound();
+      throw new ThrottlingError();
+    if (body.includes('Page Not Found 404')) {
+      throw createPluginError(PluginError.NovelNotFound, {
+        message: 'Chapter list not found; the novel may have been removed.',
+        url,
+      });
+    }
 
-    return (JSON.parse(body).data || [])
-      .flatMap(
-        (idx: { title?: string; slug: string; n_sort: string | number }) => {
-          const num = Number(idx.n_sort);
-          if (isNaN(num)) return [];
+    let payload: {
+      data?: { title?: string; slug: string; n_sort: string | number }[];
+      recordsTotal?: number | string;
+    };
+    try {
+      payload = JSON.parse(body);
+    } catch {
+      throw createPluginError(PluginError.InvalidResponse, {
+        message: 'Source returned an unexpected response.',
+        url,
+      });
+    }
 
-          const raw = idx.title || idx.slug || '';
-          const decoded =
-            raw.includes('<') || raw.includes('&') ? load(raw).text() : raw;
-          const cleanRaw = decoded.replace(INVISIBLE_CHARS_REGEX, '').trim();
-          const name = formatChapterTitle(cleanRaw, num);
+    // Any other shape would surface as a novel with no chapters, or as a raw
+    // TypeError from the row mapper.
+    if (!Array.isArray(payload?.data)) {
+      throw createPluginError(PluginError.InvalidResponse, {
+        message: 'Source returned an unexpected chapter list.',
+        url,
+      });
+    }
 
-          return [
-            {
-              name,
-              path: `${novelPath}/chapter-${num}`,
-              chapterNumber: num,
-            },
-          ];
-        },
-      )
-      .sort(
-        (a: Plugin.ChapterItem, b: Plugin.ChapterItem) =>
-          (a.chapterNumber || 0) - (b.chapterNumber || 0),
-      );
+    const chapters = this.buildChapterItems(novelPath, payload.data);
+
+    // Rows the mapper could not read leave a list that looks empty.
+    if (chapters.length === 0 && Number(payload.recordsTotal) > 0) {
+      throw createPluginError(PluginError.InvalidResponse, {
+        message: `Source reported ${payload.recordsTotal} chapters but returned none.`,
+        url,
+      });
+    }
+
+    return chapters;
   }
 
   async getAllChaptersForce(
@@ -307,10 +614,10 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
           chaptersArray.push(...chaptersArrayChunk);
           break;
         } catch (err) {
-          if (err instanceof NovelFireThrottlingError) {
+          if (err instanceof ThrottlingError) {
             attempt += 1;
             console.warn(
-              `[pages=${firstPage}-${lastPage}] Novel Fire is rate limiting requests. Retry attempt ${attempt + 1} in ${sleepTime} seconds...`,
+              `[pages=${firstPage}-${lastPage}] Source is rate limiting requests. Retry attempt ${attempt + 1} in ${sleepTime} seconds...`,
             );
             if (attempt === retryCount) {
               throw err;
@@ -383,7 +690,7 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
         ?.replace(/\n{3,}/g, '\n\n')
         .trim() || 'Summary Not Found';
 
-    novel.author = $('.author .property-item > span').text();
+    novel.author = $('.author .property-item > span').text().trim();
 
     const rawStatus =
       $('.header-stats .ongoing').text() ||
@@ -401,6 +708,32 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
 
     novel.rating = parseFloat($('.nub').text().trim());
 
+    // The novel page shows these stats but the plugin never mapped them.
+    const statValue = (icon: string) =>
+      $(`.header-stats i.icon-${icon}`).parent().text().trim();
+
+    const reviewCount = $('.reviews-latest-container .latest')
+      .text()
+      .match(/([\d,]+)\s*readers?/i)?.[1];
+    if (reviewCount) {
+      novel.ratingCount = Number(reviewCount.replace(/,/g, ''));
+    }
+
+    const updated = $('.chapter-latest-container .update')
+      .text()
+      .replace(/^updated\s*/i, '')
+      .trim();
+
+    novel.info = [
+      { label: 'Views', value: statValue('eye') },
+      { label: 'Bookmarks', value: statValue('bookmark') },
+      {
+        label: 'Rank',
+        value: $('.rating .rank strong').text().replace(/rank/i, '').trim(),
+      },
+      { label: 'Updated', value: updated },
+    ].filter(entry => entry.value);
+
     const totalChapters = $('.header-stats i.icon-book-open')
       .parent()
       .text()
@@ -408,6 +741,13 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
     const length = this.pageLength ? 100 : -1;
     novel.totalPages =
       length === -1 ? 1 : Math.ceil(parseInt(totalChapters) / length) || 1;
+    if (novel.totalPages === 1 && !post_id) {
+      throw createPluginError(PluginError.InvalidResponse, {
+        message:
+          'Source novel page no longer exposes a chapter id; the site may have changed.',
+        url: this.site + novelPath,
+      });
+    }
     if (novel.totalPages === 1 && post_id) {
       novel.chapters = await this.getAllChapters(novelPath, post_id, '1');
     }
@@ -433,59 +773,39 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
           page,
         );
         return { chapters };
-      } catch (e) {
-        // Fallback to scraping if AJAX fails
+      } catch {
+        // Fall back to scraping when the AJAX endpoint fails.
       }
     }
 
     // Fallback only works for multiples of 100
     const length = this.pageLength ? 100 : -1;
     if (length === 100) {
-      const url = `${this.site}${novelPath}/chapters?page=${page}`;
-      const result = await fetchApi(url);
-      const body = await result.text();
+      const $ = await this.getCheerio(
+        `${this.site}${novelPath}/chapters?page=${page}`,
+        false,
+        PluginError.NovelNotFound,
+      );
 
-      const loadedCheerio = load(body);
+      const rows: { title?: string; n_sort: number; path: string }[] = [];
 
-      const chapters = loadedCheerio('.chapter-list li')
-        .map((_, ele) => {
-          const $ele = loadedCheerio(ele);
-          const $a = $ele.find('a');
-          const chapterPath = $a.attr('href');
+      $('.chapter-list li').each((_, el) => {
+        const $el = $(el);
+        const href = $el.find('a').attr('href');
+        const numberMatch = $el
+          .find('.chapter-no')
+          .text()
+          .match(/(\d+(?:\.\d+)?)/);
+        if (!href || !numberMatch) return;
 
-          if (!chapterPath) return null;
+        rows.push({
+          title: $el.find('.chapter-title').text().trim() || undefined,
+          n_sort: Number(numberMatch[1]),
+          path: new URL(href, this.site).pathname.substring(1),
+        });
+      });
 
-          const chapterNo = $ele.find('.chapter-no').text().trim();
-          const chapterTitle = $ele.find('.chapter-title').text().trim();
-          const attrTitle = $a.attr('title')?.trim() || '';
-
-          let chapterName = '';
-          if (chapterNo && chapterTitle) {
-            chapterName = formatChapterTitle(chapterTitle, chapterNo);
-          } else if (chapterNo && attrTitle) {
-            chapterName = formatChapterTitle(attrTitle, chapterNo);
-          } else if (attrTitle) {
-            chapterName = attrTitle;
-          } else if (chapterNo) {
-            chapterName = chapterNo;
-          } else if (chapterTitle) {
-            chapterName = chapterTitle;
-          } else {
-            chapterName =
-              $a.text().replace(/\s+/g, ' ').trim() || 'No Title Found';
-          }
-
-          return {
-            name: chapterName,
-            path: new URL(chapterPath, this.site).pathname.substring(1),
-          };
-        })
-        .get()
-        .filter(chapter => chapter !== null) as Plugin.ChapterItem[];
-
-      return {
-        chapters,
-      };
+      return { chapters: this.buildChapterItems(novelPath, rows) };
     }
 
     return {
@@ -495,7 +815,11 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
 
   async parseChapter(chapterPath: string): Promise<string> {
     const url = this.site + chapterPath;
-    let loadedCheerio = await this.getCheerio(url, false);
+    let loadedCheerio = await this.getCheerio(
+      url,
+      false,
+      PluginError.ChapterNotFound,
+    );
 
     // Chapters may redirect to a mirror (e.g. readnovel.site) that serves a
     // "Loading..." page and forwards via JavaScript. Follow that redirect.
@@ -505,16 +829,23 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
         .match(/window\.location\.href\s*=\s*["']([^"']+)["']/);
       if (redirect) {
         const target = redirect[1].replace(/\\\//g, '/');
-        loadedCheerio = await this.getCheerio(target, false);
+        loadedCheerio = await this.getCheerio(
+          target,
+          false,
+          PluginError.ChapterNotFound,
+        );
       }
     }
 
     const chapterText = loadedCheerio('#content');
 
     if (chapterText.length === 0) {
-      throw new Error(
-        `Chapter content container (#content) not found for ${chapterPath} — possible transient fetch issue. Retry`,
-      );
+      throw createPluginError(PluginError.ChapterNotFound, { url });
+    }
+
+    // Some dead chapter URLs answer 200 with a notice inside the content box.
+    if (CHAPTER_NOTICE_REGEX.test(chapterText.text())) {
+      throw createPluginError(PluginError.ChapterNotFound, { url });
     }
 
     const odds = chapterText.find(
@@ -527,12 +858,29 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
       }
     }
 
-    const html = chapterText.html()?.replace(/&nbsp;/g, ' ');
+    // The site injects an a-ads iframe, pubfuture placeholder paragraphs and
+    // site-UI links into the body; none of it belongs in the reader.
+    chapterText
+      .find(
+        'script, iframe, object, embed, ins, form, button, .free-support-top, .nf-ads, [id^="pf-"]',
+      )
+      .remove();
+    chapterText.find('a[href^="javascript:"]').each((_, el) => {
+      const link = loadedCheerio(el);
+      // A string is parsed as HTML, so escaped text such as `&lt;skill&gt;`
+      // would come back as an element. Its own text nodes are already text.
+      link.replaceWith(link.contents());
+    });
+
+    const html = chapterText
+      .html()
+      ?.replace(/&nbsp;/g, ' ')
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*')/gi, '')
+      .replace(/<p>\s*<\/p>/gi, '');
 
     if (!html || html.trim().length === 0) {
-      throw new Error(
-        `Chapter content was empty after parsing for ${chapterPath}.`,
-      );
+      throw createPluginError(PluginError.EmptyContent, { url });
     }
 
     return html;
@@ -551,6 +899,7 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
     params.append('page', page.toString());
     const url = `${this.site}search?${params.toString()}`;
     const result = await fetchApi(url);
+    checkResponse(result, { search: true });
     const body = await result.text();
 
     const loadedCheerio = load(body);
@@ -563,17 +912,11 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
   }
 }
 
-// Custom error for when Novel Fire is rate limiting requests
-class NovelFireThrottlingError extends Error {
-  constructor(message = 'Novel Fire is rate limiting requests') {
+// Raised when the source throttles chapter enumeration; the retry loop in
+// getAllChaptersForce only retries this error.
+class ThrottlingError extends Error {
+  constructor(message = 'Source is rate limiting requests') {
     super(message);
-    this.name = 'NovelFireError';
-  }
-}
-
-class NovelFireAjaxNotFound extends Error {
-  constructor(message = 'Novel Fire says its Ajax interface is not found') {
-    super(message);
-    this.name = 'NovelFireAjaxError';
+    this.name = 'ThrottlingError';
   }
 }
