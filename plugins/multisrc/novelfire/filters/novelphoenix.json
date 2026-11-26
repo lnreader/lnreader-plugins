@@ -76,8 +76,12 @@
     },
     "language": {
       "label": "Language",
-      "value": [],
+      "value": "-1",
       "options": [
+        {
+          "label": "All",
+          "value": "-1"
+        },
         {
           "label": "Chinese Novel",
           "value": "1"
@@ -95,7 +99,7 @@
           "value": "4"
         }
       ],
-      "type": "Checkbox"
+      "type": "Picker"
     },
     "genre_operator": {
       "label": "Genres (And/Or/Exclude)",
@@ -444,10 +448,10 @@
       "type": "Picker"
     },
     "tags": {
-      "label": "Tags (comma separated, e.g. Isekai, Weak to Strong)",
-      "value": "",
+      "label": "Tags",
+      "value": [],
       "autocomplete": true,
-      "type": "Text"
+      "type": "MultiText"
     },
     "content_rating": {
       "label": "Content Rating",

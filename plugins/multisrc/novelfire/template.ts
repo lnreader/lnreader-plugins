@@ -227,8 +227,10 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
       // Novel Phoenix ignores the repeated `country_id[]` array and expects a
       // single `country_id`, plus `chapter_min` / `chapter_max` instead of the
       // combined `totalchapter` range. Novel Fire still uses the old shape.
-      const language = filters?.language?.value?.[0];
-      if (language) params.append('country_id', language);
+      const language = filters?.language?.value;
+      if (typeof language === 'string' && language !== '-1') {
+        params.append('country_id', language);
+      }
 
       const chapterRange = filters?.chapters?.value;
       if (chapterRange && chapterRange !== '0') {
@@ -323,12 +325,18 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
 
     this.tagIndexPromise = (async () => {
       const cacheKey = `${this.id}_tagIndex`;
+      const unexpected = () =>
+        createPluginError(PluginError.InvalidResponse, {
+          message: 'Source returned an unexpected tag list.',
+        });
+
       try {
         const cached = JSON.parse(String(storage.get(cacheKey) || 'null'));
         if (
           cached &&
           Date.now() - Number(cached.at) < TAGS_CACHE_TTL_MS &&
-          Array.isArray(cached.tags)
+          Array.isArray(cached.tags) &&
+          cached.tags.length > 0
         ) {
           return this.buildTagIndex(cached.tags);
         }
@@ -339,18 +347,28 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
       const response = await fetchApi(`${this.site}ajax/getTags`);
       checkResponse(response);
 
-      let payload: { data?: { id: number | string; name: string }[] };
+      let payload: { data?: unknown };
       try {
         payload = JSON.parse(await response.text());
       } catch {
-        throw createPluginError(PluginError.InvalidResponse, {
-          message: 'Source returned an unexpected tag list.',
-        });
+        throw unexpected();
       }
-      const tags = (payload.data || []).map(tag => ({
-        id: String(tag.id),
-        name: String(tag.name).trim(),
-      }));
+
+      // An error body is still valid JSON, and caching one would leave every
+      // tag name unresolvable until the cache expires.
+      const rows = payload?.data;
+      if (!Array.isArray(rows)) throw unexpected();
+
+      const tags = rows.flatMap(row => {
+        const tag = row as { id?: unknown; name?: unknown } | null;
+        const id = tag?.id;
+        const name = typeof tag?.name === 'string' ? tag.name.trim() : '';
+        const idText =
+          typeof id === 'number' || typeof id === 'string' ? String(id) : '';
+        return idText && name ? [{ id: idText, name }] : [];
+      });
+
+      if (tags.length === 0) throw unexpected();
 
       storage.set(cacheKey, JSON.stringify({ at: Date.now(), tags }));
       return this.buildTagIndex(tags);
@@ -417,9 +435,11 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
       ? index.tags.filter(tag => tag.name.toLowerCase().includes(needle))
       : index.tags;
 
+    // The name is the value so a picked tag reads as "Isekai" rather than its
+    // id; resolveTagIds turns names back into ids when searching.
     return matches
       .slice(0, 20)
-      .map(tag => ({ label: tag.name, value: tag.id }));
+      .map(tag => ({ label: tag.name, value: tag.name }));
   }
 
   // Both chapter sources (AJAX rows and the HTML fallback) end up here, so
