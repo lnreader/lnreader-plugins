@@ -17,7 +17,7 @@ class HexNovels implements Plugin.PluginBase {
   name = 'HexNovels';
   icon = 'src/ru/hexnovels/icon.png';
   site = 'https://hexnovels.me';
-  version = '1.0.2';
+  version = '1.0.3';
 
   // Paths are site-relative with a leading slash. Library entries saved by
   // 1.0.0 lack it, so accept both forms.
@@ -157,7 +157,7 @@ class HexNovels implements Plugin.PluginBase {
     );
     const unescape = (s: string) => JSON.parse(`"${s}"`) as string;
     const re =
-      /\{id:"([0-9a-f-]{36})",name:"(?:[^"\\]|\\.)*",title:"((?:[^"\\]|\\.)*)",number:([0-9.]+),volume:(\d+)[^}]*?branchId:"([0-9a-f-]{36})"[^}]*?createdAt:"([^"]+)"/g;
+      /\{id:"([0-9a-f-]{36})",name:(?:null|"(?:[^"\\]|\\.)*"),title:"((?:[^"\\]|\\.)*)",number:([0-9.]+),volume:(\d+)[^}]*?branchId:"([0-9a-f-]{36})"[^}]*?createdAt:"([^"]+)"/g;
     const byId = new Map<string, ChapterData>();
     for (const m of Array.from(chaptersHtml.matchAll(re))) {
       byId.set(m[1], {
