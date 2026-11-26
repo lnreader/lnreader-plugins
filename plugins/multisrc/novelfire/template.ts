@@ -3,6 +3,7 @@ import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
 import { NovelStatus } from '@libs/novelStatus';
 import { Filters } from '@libs/filterInputs';
+import type { FilterOption } from '@libs/filterInputs';
 import { storage } from '@libs/storage';
 import {
   checkResponse,
@@ -11,8 +12,9 @@ import {
   type PluginErrorCode,
 } from '@libs/pluginError';
 
-// Live contract for the sites this template serves:
-//   listing  <site>search-adv?…&sort=…&page=…
+// Live contract for the sites this template serves (verified 2026-11-27):
+//   listing  <site>search-adv?country_id|country_id[]=…&categories[]=…
+//            &chapter_min/chapter_max|totalchapter=…&sort=…&page=…
 //   novel    <site><novelPath>              .novel-title, #novel-report[report-post_id]
 //   chapters <site>ajax/listChapterDataAjax  { recordsTotal, data: { n_sort, slug, title } }
 //   chapter  <site><novelPath>/chapter-<n>   #content
@@ -21,11 +23,24 @@ import {
 const CHAPTER_NOTICE_REGEX =
   /Some novel pages moved|Page Not Found 404|Chapter not found/i;
 
+// Novel Phoenix only accepts numeric tag ids, so tag names have to be resolved
+// through its own tag list. The list rarely changes; cache it for a week.
+const TAGS_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+type TagIndex = {
+  tags: { id: string; name: string }[];
+  byName: Record<string, string>;
+};
+
 type NovelFireOptions = {
   lang?: string;
   majorVer?: number;
   minorVer?: number;
   versionIncrement?: number;
+  // Novel Phoenix moved its advanced search to single-value `country_id` and a
+  // `chapter_min` / `chapter_max` range. Novel Fire still expects `country_id[]`
+  // and `totalchapter`, so the parameter shape is chosen per source.
+  advSearchV2?: boolean;
 };
 
 export type NovelFireMetadata = {
@@ -96,6 +111,7 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
   };
   singlePage = storage.get('singlePage');
   pageLength = storage.get('pageLength');
+  private tagIndexPromise?: Promise<TagIndex>;
 
   constructor(metadata: NovelFireMetadata) {
     this.id = metadata.id;
@@ -185,31 +201,66 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
       this.draw = 0;
     }
 
-    const params = this.buildSearchParams(pageNo, showLatestNovels, filters);
+    const params = await this.buildSearchParams(
+      pageNo,
+      showLatestNovels,
+      filters,
+    );
     const loadedCheerio = await this.getCheerio(
       `${this.site}search-adv?${params.toString()}`,
       false,
     );
 
+    this.assertChapterFilterApplied(loadedCheerio, filters?.chapters?.value);
+
     return this.parseNovels(loadedCheerio, '.novel-item', pageNo === 1);
   }
 
-  private buildSearchParams(
+  private async buildSearchParams(
     pageNo: number,
     showLatestNovels: boolean | undefined,
     filters: Plugin.PopularNovelsOptions<typeof this.filters>['filters'],
-  ): URLSearchParams {
+  ): Promise<URLSearchParams> {
     const params = new URLSearchParams();
 
-    for (const language of filters?.language?.value || []) {
-      params.append('country_id[]', language);
-    }
-    params.append('totalchapter', filters?.chapters?.value || '0');
-    for (const tag of filters?.tags?.value || []) {
-      params.append('tags[]', tag);
-    }
-    for (const tag of filters?.tags_excluded?.value || []) {
-      params.append('tags_excluded[]', tag);
+    if (this.options?.advSearchV2) {
+      // Novel Phoenix ignores the repeated `country_id[]` array and expects a
+      // single `country_id`, plus `chapter_min` / `chapter_max` instead of the
+      // combined `totalchapter` range. Novel Fire still uses the old shape.
+      const language = filters?.language?.value?.[0];
+      if (language) params.append('country_id', language);
+
+      const chapterRange = filters?.chapters?.value;
+      if (chapterRange && chapterRange !== '0') {
+        const [min, max] = String(chapterRange).split(',');
+        if (min) params.append('chapter_min', min);
+        if (max) params.append('chapter_max', max);
+      }
+
+      params.append('content_rating', filters?.content_rating?.value || '-1');
+      params.append(
+        'latest_release_date',
+        filters?.latest_release_date?.value || '-1',
+      );
+
+      const tagValue = filters?.tags?.value;
+      const tagText = Array.isArray(tagValue) ? tagValue.join(',') : tagValue;
+      if (tagText && String(tagText).trim()) {
+        for (const tagId of await this.resolveTagIds(String(tagText))) {
+          params.append('tags[]', tagId);
+        }
+      }
+    } else {
+      for (const language of filters?.language?.value || []) {
+        params.append('country_id[]', language);
+      }
+      params.append('totalchapter', filters?.chapters?.value || '0');
+      for (const tag of filters?.tags?.value || []) {
+        params.append('tags[]', tag);
+      }
+      for (const tag of filters?.tags_excluded?.value || []) {
+        params.append('tags_excluded[]', tag);
+      }
     }
 
     params.append('ctgcon', filters?.genre_operator?.value || 'and');
@@ -227,6 +278,148 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
     params.append('page', pageNo.toString());
 
     return params;
+  }
+
+  // Novel Phoenix ignores search parameters it does not recognise, so a renamed
+  // filter silently returns an unfiltered list. Every result card reports its
+  // chapter count, which lets us verify the range filter actually applied
+  // without a second request. Only throw when every card disagrees.
+  private assertChapterFilterApplied(
+    $: CheerioAPI,
+    chapterRange?: string,
+  ): void {
+    if (!this.options?.advSearchV2 || !chapterRange || chapterRange === '0') {
+      return;
+    }
+
+    const [min, max] = String(chapterRange).split(',').map(Number);
+    if (!Number.isFinite(min) || !Number.isFinite(max)) return;
+
+    const counts: number[] = [];
+    $('.novel-item .icon-book-open').each((_, el) => {
+      const match = $(el)
+        .parent()
+        .text()
+        .match(/([\d,]+)\s*Chapters/i);
+      if (!match) return;
+      const count = Number(match[1].replace(/,/g, ''));
+      if (Number.isFinite(count)) counts.push(count);
+    });
+
+    if (counts.length < 3) return;
+    if (counts.some(count => count >= min && count <= max)) return;
+
+    throw createPluginError(PluginError.InvalidResponse, {
+      message:
+        'Chapter filter was not applied by the source — the site may have changed.',
+    });
+  }
+
+  // Novel Phoenix only accepts numeric tag ids, so the tag names a user types
+  // are resolved through the site's own tag list. It changes rarely, so it is
+  // cached (see TAGS_CACHE_TTL_MS) and fetched at most once per session.
+  private async getTagIndex(): Promise<TagIndex> {
+    if (this.tagIndexPromise) return this.tagIndexPromise;
+
+    this.tagIndexPromise = (async () => {
+      const cacheKey = `${this.id}_tagIndex`;
+      try {
+        const cached = JSON.parse(String(storage.get(cacheKey) || 'null'));
+        if (
+          cached &&
+          Date.now() - Number(cached.at) < TAGS_CACHE_TTL_MS &&
+          Array.isArray(cached.tags)
+        ) {
+          return this.buildTagIndex(cached.tags);
+        }
+      } catch {
+        // Stale or unreadable cache: refetch below.
+      }
+
+      const response = await fetchApi(`${this.site}ajax/getTags`);
+      checkResponse(response);
+
+      let payload: { data?: { id: number | string; name: string }[] };
+      try {
+        payload = JSON.parse(await response.text());
+      } catch {
+        throw createPluginError(PluginError.InvalidResponse, {
+          message: 'Source returned an unexpected tag list.',
+        });
+      }
+      const tags = (payload.data || []).map(tag => ({
+        id: String(tag.id),
+        name: String(tag.name).trim(),
+      }));
+
+      storage.set(cacheKey, JSON.stringify({ at: Date.now(), tags }));
+      return this.buildTagIndex(tags);
+    })();
+
+    try {
+      return await this.tagIndexPromise;
+    } catch (error) {
+      this.tagIndexPromise = undefined;
+      throw error;
+    }
+  }
+
+  private buildTagIndex(tags: { id: string; name: string }[]): TagIndex {
+    const byName: Record<string, string> = {};
+    for (const tag of tags) {
+      const key = tag.name.toLowerCase();
+      if (key && !byName[key]) byName[key] = tag.id;
+    }
+    return { tags, byName };
+  }
+
+  private async resolveTagIds(rawValue: string): Promise<string[]> {
+    const tokens = rawValue
+      .split(',')
+      .map(token => token.trim())
+      .filter(Boolean);
+    if (tokens.length === 0) return [];
+
+    const index = await this.getTagIndex();
+    const ids: string[] = [];
+    const unknown: string[] = [];
+
+    for (const token of tokens) {
+      if (/^\d+$/.test(token)) {
+        ids.push(token);
+        continue;
+      }
+      const id = index.byName[token.toLowerCase()];
+      if (id) ids.push(id);
+      else unknown.push(token);
+    }
+
+    if (unknown.length > 0) {
+      throw createPluginError(PluginError.InvalidResponse, {
+        message: `Unknown tag(s): ${unknown.join(
+          ', ',
+        )}. Pick one from the suggestions.`,
+      });
+    }
+
+    return ids;
+  }
+
+  async getFilterSuggestions(
+    filterKey: string,
+    query: string,
+  ): Promise<FilterOption[]> {
+    if (filterKey !== 'tags') return [];
+
+    const index = await this.getTagIndex();
+    const needle = query.trim().toLowerCase();
+    const matches = needle
+      ? index.tags.filter(tag => tag.name.toLowerCase().includes(needle))
+      : index.tags;
+
+    return matches
+      .slice(0, 20)
+      .map(tag => ({ label: tag.name, value: tag.id }));
   }
 
   // Both chapter sources (AJAX rows and the HTML fallback) end up here, so

@@ -15,7 +15,8 @@
     "sourceName": "Novel Phoenix",
     "options": {
       "lang": "English",
-      "versionIncrement": 4
+      "minorVer": 1,
+      "advSearchV2": true
     }
   }
 ]

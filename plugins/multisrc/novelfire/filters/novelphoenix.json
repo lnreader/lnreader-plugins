@@ -83,6 +83,10 @@
           "value": "1"
         },
         {
+          "label": "Korean Novel",
+          "value": "2"
+        },
+        {
           "label": "Japanese Novel",
           "value": "3"
         },
@@ -435,6 +439,62 @@
         {
           "label": "OR",
           "value": "or"
+        }
+      ],
+      "type": "Picker"
+    },
+    "tags": {
+      "label": "Tags (comma separated, e.g. Isekai, Weak to Strong)",
+      "value": "",
+      "autocomplete": true,
+      "type": "Text"
+    },
+    "content_rating": {
+      "label": "Content Rating",
+      "value": "-1",
+      "options": [
+        {
+          "label": "All",
+          "value": "-1"
+        },
+        {
+          "label": "Safe",
+          "value": "0"
+        },
+        {
+          "label": "Suggestive",
+          "value": "1"
+        },
+        {
+          "label": "18+",
+          "value": "2"
+        }
+      ],
+      "type": "Picker"
+    },
+    "latest_release_date": {
+      "label": "Last Updated",
+      "value": "-1",
+      "options": [
+        {
+          "label": "Any time",
+          "value": "-1"
+        },
+        {
+          "label": "Within 24 hours",
+          "value": "0"
+        },
+        {
+          "label": "Within 7 days",
+          "value": "1"
+        },
+        {
+          "label": "Within 30 days",
+          "value": "2"
+        },
+        {
+          "label": "Within 3 months",
+          "value": "3"
         }
       ],
       "type": "Picker"
