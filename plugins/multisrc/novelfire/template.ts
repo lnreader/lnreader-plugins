@@ -345,9 +345,18 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
       });
     }
 
-    const chapters = this.buildChapterItems(novelPath, payload.data || []);
+    // Any other shape would surface as a novel with no chapters, or as a raw
+    // TypeError from the row mapper.
+    if (!Array.isArray(payload?.data)) {
+      throw createPluginError(PluginError.InvalidResponse, {
+        message: 'Source returned an unexpected chapter list.',
+        url,
+      });
+    }
 
-    // A changed payload shape would otherwise surface as a novel with no chapters.
+    const chapters = this.buildChapterItems(novelPath, payload.data);
+
+    // Rows the mapper could not read leave a list that looks empty.
     if (chapters.length === 0 && Number(payload.recordsTotal) > 0) {
       throw createPluginError(PluginError.InvalidResponse, {
         message: `Source reported ${payload.recordsTotal} chapters but returned none.`,
@@ -645,7 +654,9 @@ export class NovelFirePlugin implements Plugin.PagePlugin {
       .remove();
     chapterText.find('a[href^="javascript:"]').each((_, el) => {
       const link = loadedCheerio(el);
-      link.replaceWith(link.text());
+      // A string is parsed as HTML, so escaped text such as `&lt;skill&gt;`
+      // would come back as an element. Its own text nodes are already text.
+      link.replaceWith(link.contents());
     });
 
     const html = chapterText
