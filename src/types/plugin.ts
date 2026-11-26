@@ -1,4 +1,4 @@
-import { FilterToValues, Filters } from '@libs/filterInputs';
+import { FilterOption, FilterToValues, Filters } from '@libs/filterInputs';
 export namespace Plugin {
   export type ChapterItem = {
     name: string;
@@ -98,6 +98,15 @@ export namespace Plugin {
     parseNovel(novelPath: string): Promise<SourceNovel>;
     parseChapter(chapterPath: string): Promise<string>;
     searchNovels(searchTerm: string, pageNo: number): Promise<NovelItem[]>;
+    /**
+     * Optional suggestion source for filters flagged with `autocomplete: true`.
+     * Called with the filter's key and the text typed so far; return the
+     * matching options (an empty array when nothing matches).
+     */
+    getFilterSuggestions?(
+      filterKey: string,
+      query: string,
+    ): Promise<FilterOption[]>;
     resolveUrl?(path: string, isNovel?: boolean): string;
   };
 

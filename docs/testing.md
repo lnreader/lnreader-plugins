@@ -51,3 +51,7 @@ its target site changes layout.
 looking at the output. See the [website tutorial](./website-tutorial.md) for testing your plugin
 interactively in the browser — useful for spot-checking filters, pagination, and chapter
 formatting by eye before opening a PR.
+
+Filters that set `autocomplete: true` and the optional
+[`getFilterSuggestions`](./docs.md#pluginbasegetfiltersuggestions) method are not covered by
+`check:plugin`; exercise them in the playground filter sheet instead.
