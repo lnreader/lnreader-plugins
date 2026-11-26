@@ -14,6 +14,24 @@ type ChapterGroup = {
   }[];
 };
 
+/** `/api/reader/chapter/<slug>/` response. */
+type ReaderChapter = {
+  message?: string;
+  read_limit?: boolean;
+  read_limit_message?: string | null;
+  content_html?: unknown;
+};
+
+/**
+ * The site's Cloudflare firewall answers 403 ("Sorry, you have been blocked")
+ * when a request carries fetchApi's default `Accept-Language: *` together with
+ * its `Sec-Fetch-Mode: cors`, so every request sends a browser's language.
+ */
+const LANGUAGE = { 'Accept-Language': 'en-US,en;q=0.9' };
+
+/** How long to reuse a reader session (the site's cookie lasts 15 min). */
+const READER_SESSION_MS = 10 * 60 * 1000;
+
 /**
  * KDT Novels replaced its LightNovelWP WordPress theme with its own Next.js
  * site, so it no longer fits the lightnovelwp multisrc template.
@@ -23,18 +41,45 @@ type ChapterGroup = {
  * - Novel page:     `/series/<slug>/`. The HTML only lists the chapters of
  *                   the expanded volume; every volume's chapters are in the
  *                   embedded React Server Components payload.
- * - Chapter page:   `/<chapter-slug>/`, text in `article.reader-content`.
- *                   VIP chapters render an unlock prompt instead.
+ * - Chapter text:   the chapter page (`/<chapter-slug>/`) no longer holds
+ *                   it. Its script opens a reader session
+ *                   (`POST /api/reader/session/`) and then loads
+ *                   `/api/reader/chapter/<chapter-slug>/`, JSON with
+ *                   `content_html` (null for locked chapters) or
+ *                   `read_limit`. The plugin makes the same two calls.
+ *
+ * parseChapter flow (every request sends `Accept-Language: en-US,en;q=0.9`,
+ * because the default `*` plus `Sec-Fetch-Mode: cors` gets a Cloudflare 403):
+ *
+ *   parseChapter(path)
+ *     |
+ *     v
+ *   session cached < 10 min? --yes--------------------+
+ *     | no                                            |
+ *     v                                               |
+ *   POST /api/reader/session/  -> `kdt_reader` cookie |
+ *     |                                               |
+ *     +-----------------------------------------------+
+ *     v
+ *   GET /api/reader/chapter/<slug>/  (+ cookie)
+ *     |-- HTTP error ---> drop session, throw
+ *     |-- read_limit ---> throw the limit message
+ *     |-- no content_html (locked) -> throw
+ *     v
+ *   content_html -> strip scripts/handlers -> chapter HTML
  */
 class KDTNovels implements Plugin.PluginBase {
   id = 'kdtnovels';
   name = 'KDT Novels';
-  version = '2.0.1';
+  version = '2.0.2';
   icon = 'src/en/kdtnovels/icon.png';
   site = 'https://kdtnovels.net/';
 
+  /** The reader session cookie, and when to open a new session. */
+  private readerSession?: { cookie: string; renewAt: number };
+
   private async fetchHtml(url: string): Promise<string> {
-    const res = await fetchApi(url);
+    const res = await fetchApi(url, { headers: LANGUAGE });
     // Throw (carrying the HTTP status) so a runner-side block is reported
     // INCONCLUSIVE per docs/testing.md instead of an empty-result FAIL.
     if (!res.ok) {
@@ -179,24 +224,90 @@ class KDTNovels implements Plugin.PluginBase {
     return novel;
   }
 
+  /** Headers the site's own script sends from the chapter page. */
+  private readerHeaders(chapterUrl: string): Record<string, string> {
+    return {
+      ...LANGUAGE,
+      'Referer': chapterUrl,
+      'Sec-Fetch-Site': 'same-origin',
+      'Sec-Fetch-Mode': 'cors',
+      'Sec-Fetch-Dest': 'empty',
+    };
+  }
+
+  /**
+   * Opens a reader session, or reuses the current one, the way the chapter
+   * page's script does before it loads a chapter.
+   *
+   * @returns the session cookie to send, or '' where the app's cookie jar
+   * already sends it.
+   */
+  private async openReaderSession(chapterUrl: string): Promise<string> {
+    const now = Date.now();
+    if (this.readerSession && now < this.readerSession.renewAt) {
+      return this.readerSession.cookie;
+    }
+    const res = await fetchApi(this.site + 'api/reader/session/', {
+      method: 'POST',
+      headers: {
+        ...this.readerHeaders(chapterUrl),
+        'Origin': this.site.slice(0, -1),
+        'x-kdt-reader-bootstrap': '1',
+      },
+    });
+    if (!res.ok) {
+      const data: ReaderChapter = await res.json().catch(() => ({}));
+      throw Object.assign(
+        new Error(data.message || 'Request failed: ' + res.status),
+        { status: res.status },
+      );
+    }
+    // Android's cookie jar keeps the cookie on its own; the live check's
+    // fetch has no jar, so the cookie is also sent by hand.
+    const cookie =
+      /kdt_reader=[^;]+/.exec(res.headers.get('set-cookie') || '')?.[0] || '';
+    this.readerSession = { cookie, renewAt: now + READER_SESSION_MS };
+    return cookie;
+  }
+
   async parseChapter(chapterPath: string): Promise<string> {
-    const $ = await this.fetchPage(this.site + chapterPath);
-    const content = $('article.reader-content').first();
-    if (!content.length) {
-      if ($('main h2').text().includes('This chapter is locked')) {
-        throw new Error(
-          'This chapter is locked. Unlock it on KDT Novels to read it.',
-        );
-      }
-      throw new Error('Could not find the chapter text.');
+    const slug = chapterPath.replace(/^\/+|\/+$/g, '');
+    const chapterUrl = this.site + slug + '/';
+    const cookie = await this.openReaderSession(chapterUrl);
+    const headers = {
+      ...this.readerHeaders(chapterUrl),
+      Accept: 'application/json',
+    };
+    const res = await fetchApi(
+      this.site + 'api/reader/chapter/' + encodeURIComponent(slug) + '/',
+      { headers: cookie ? { ...headers, Cookie: cookie } : headers },
+    );
+    const data: ReaderChapter = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      this.readerSession = undefined; // a fresh session for the next try
+      throw Object.assign(
+        new Error(
+          data.message || 'The chapter could not be loaded. Please try again.',
+        ),
+        { status: res.status },
+      );
+    }
+    if (data.read_limit) {
+      throw new Error(
+        data.read_limit_message ||
+          'KDT Novels limits how many chapters you can read. Sign in on the site to read more.',
+      );
+    }
+    if (typeof data.content_html !== 'string') {
+      // The site sends no text for locked (🔒) chapters.
+      throw new Error(
+        'Chapter content is unavailable. If the chapter is locked, unlock it on KDT Novels to read it.',
+      );
     }
 
+    const $ = parseHTML(data.content_html, null, false);
+    const content = $.root();
     content.find('script, style, noscript').remove();
-    // Illustrations are placeholders that the site's script swaps for images.
-    content.find('.kdt-ilus[data-ilus]').each((_, el) => {
-      const src = this.absolute($(el).attr('data-ilus'));
-      $(el).replaceWith(src ? $('<img>').attr('src', src) : '');
-    });
 
     // The app renders this HTML as is, so drop event handlers and URLs that
     // would run script.
