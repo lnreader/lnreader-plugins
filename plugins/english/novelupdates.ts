@@ -6,7 +6,7 @@ import { Plugin } from '@/types/plugin';
 class NovelUpdates implements Plugin.PluginBase {
   id = 'novelupdates';
   name = 'Novel Updates';
-  version = '0.9.11';
+  version = '0.9.12';
   icon = 'src/en/novelupdates/icon.png';
   customCSS = 'src/en/novelupdates/customCSS.css';
   site = 'https://www.novelupdates.com/';
@@ -453,8 +453,7 @@ class NovelUpdates implements Plugin.PluginBase {
               const content = data[String(mapping[contentKey])] as string;
               const notes = data[String(mapping[notesKey])] as string;
               const footnotes = data[String(mapping[footnotesKey])] as
-                | string
-                | undefined;
+                string | undefined;
               // Combine the parts with appropriate formatting
               chapterText =
                 content +
@@ -914,11 +913,46 @@ class NovelUpdates implements Plugin.PluginBase {
         }
         break;
       }
-      // Last edited in 0.9.0 by Batorian - 19/03/2025
+      // Last edited in 0.9.12 - 25/11/2026
       case 'readingpia': {
-        bloatElements = ['.ezoic-ad', '.ezoic-adpicker-ad', '.ez-video-wrap'];
+        bloatElements = [
+          'script',
+          'style',
+          'noscript',
+          'ins',
+          'iframe',
+          '[style*="display:none"]',
+          '[style*="display: none"]',
+          '.advertisement',
+          '.advertisement_warpper',
+          '.novel-promo-card',
+          '.promo-container',
+          '.comments',
+          '.ezoic-ad',
+          '.ezoic-adpicker-ad',
+          '.ez-video-wrap',
+        ];
         bloatElements.forEach(tag => loadedCheerio(tag).remove());
-        chapterText = loadedCheerio('.chapter-body').html()!;
+
+        const chapterBody = loadedCheerio('.chapter-body').first();
+        if (chapterBody.length && chapterBody.text().trim()) {
+          chapterText = chapterBody.html()!;
+          break;
+        }
+
+        const container = loadedCheerio('main > div')
+          .toArray()
+          .map(el => loadedCheerio(el))
+          .sort((a, b) => b.find('p').length - a.find('p').length)[0];
+        if (!container || !container.find('p').length) {
+          throw new Error('ReadingPia: chapter text not found');
+        }
+        container.find('a').each((_, el) => {
+          if (!loadedCheerio(el).text().replace(/\s+/g, ' ').trim()) {
+            loadedCheerio(el).remove();
+          }
+        });
+        chapterText = container.html() || '';
         break;
       }
       // Last edited in 0.9.0 by Batorian - 19/03/2025
