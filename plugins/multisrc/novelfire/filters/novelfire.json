@@ -444,11 +444,6 @@
         }
       ],
       "type": "Picker"
-    },
-    "author": {
-      "label": "Author",
-      "value": "",
-      "type": "Text"
     }
   }
 }
