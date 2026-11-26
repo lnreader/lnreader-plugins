@@ -9,6 +9,7 @@
   - [Filters](#filters)
   - [PluginSettings](#pluginsettings)
   - [NovelStatus](#novelstatus)
+  - [PluginError](#pluginerror)
   - [Pagination](#pagination)
   - [Using Cheerio](#using-cheerio)
   - [Custom fetching functions](#custom-fetching-functions)
@@ -869,6 +870,57 @@ onto any of them).
 
 ---
 
+### PluginError
+
+`@libs/pluginError` standardizes error codes and HTTP status propagation so the LNReader app,
+Playground UI, and live-check CI can distinguish site blocks/rate limits from broken selectors.
+
+```ts
+import {
+  PluginError,
+  checkResponse,
+  createPluginError,
+  httpError,
+  assertNoChallenge,
+} from '@libs/pluginError';
+```
+
+| Member             | Value / Purpose                                                   |
+| ------------------ | ----------------------------------------------------------------- |
+| `Captcha`          | `'Captcha error, please open in webview'` (anti-bot challenge)    |
+| `Cloudflare`       | `'Cloudflare is blocking requests. Try again later.'` (`403`/`503`) |
+| `RateLimited`      | `'Too many requests (429). Please try again later.'` (`429`)      |
+| `NotFound`         | Generic `404` missing content                                     |
+| `NovelNotFound`    | `404` novel missing from source                                   |
+| `ChapterNotFound`  | `404` chapter missing from source                                 |
+| `AuthRequired`     | `'Authentication required. Please log in via WebView.'` (`401`)   |
+| `EmptyContent`     | `'No readable content was found.'` (parsed body/container empty)  |
+| `InvalidResponse`  | `'Invalid response from source.'` (malformed JSON/HTML payload)   |
+| `NetworkError`     | `'Could not reach site, please try to open in webview.'`          |
+
+- **`checkResponse(res, options?)`**: Checks `res.ok` and throws `httpError(res.status)` (or
+  `createPluginError(options.notFoundCode, { status: 404 })` when `404` and `notFoundCode` is set).
+  Pass `{ search: true }` when a search endpoint returns `404` for empty results (only `404` is
+  skipped; other non-OK statuses still throw).
+- **`assertNoChallenge(html, requestUrl?, responseUrl?)`**: Throws `PluginError.Captcha` with
+  `status: 403` when challenge titles (`Just a moment...`, `Bot Verification`, Cloudflare) or
+  off-domain redirects are detected.
+- **`createPluginError(code, { status?, message?, url? })`**: Creates an `Error` instance with
+  `.code` and optional `.status`/`.url` properties attached.
+
+```ts
+const res = checkResponse(await fetchApi(url), {
+  notFoundCode: PluginError.ChapterNotFound,
+});
+const html = await res.text();
+assertNoChallenge(html, url, res.url);
+if (!content.length) {
+  throw createPluginError(PluginError.EmptyContent);
+}
+```
+
+---
+
 ### Pagination
 
 Some sites split a novel's chapter list across multiple pages rather than returning it all from
@@ -1154,6 +1206,7 @@ is what's actually injected into a running plugin's `require(...)` calls — any
 | `@libs/isAbsoluteUrl` | `isUrlAbsolute`                             | See below                                                          |
 | `@libs/filterInputs`  | `FilterTypes`, `Filters`, ...               | See [Filters](#filters)                                            |
 | `@libs/novelStatus`   | `NovelStatus`                               | See [NovelStatus](#novelstatus)                                    |
+| `@libs/pluginError`   | `PluginError`, `checkResponse`, `createPluginError`, `httpError`, `isChallengeHtml`, `assertNoChallenge`, `isPluginError` | Standardized plugin errors — see [PluginError](#pluginerror) |
 | `@libs/aes`           | `gcm`                                       | See [AES decryption](#aes-decryption) below                        |
 | `@libs/utils`         | `utf8ToBytes`, `bytesToUtf8`                | See [AES decryption](#aes-decryption) below                        |
 
