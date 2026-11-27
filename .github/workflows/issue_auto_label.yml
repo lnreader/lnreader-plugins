@@ -5,6 +5,7 @@ on:
     types:
       - opened
       - edited
+      - labeled
 
 permissions: {}
 
@@ -16,11 +17,16 @@ jobs:
   auto-label:
     name: Auto Label Issues
     if: >-
-      ${{ github.event.issue.body && (
-        (contains(github.event.issue.labels.*.name, 'bug') && contains(github.event.issue.body, '### Plugin')) ||
-        (contains(github.event.issue.labels.*.name, 'plugin request') && contains(github.event.issue.body, '### Language'))
-      ) }}
+      ${{
+        github.event.issue.body &&
+        (github.event.action != 'labeled' || github.event.label.name == 'bug' || github.event.label.name == 'plugin request') &&
+        (
+          contains(github.event.issue.labels.*.name, 'bug') ||
+          contains(github.event.issue.labels.*.name, 'plugin request')
+        )
+      }}
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: read
       issues: write
@@ -43,22 +49,45 @@ jobs:
           ISSUE_LABELS: ${{ toJSON(github.event.issue.labels.*.name) }}
         run: |
           node .github/scripts/auto-label-issue.cjs > "$RUNNER_TEMP/labels.json"
-          COUNT=$(jq '.labels | length' "$RUNNER_TEMP/labels.json")
-          echo "label_count=$COUNT" >> "$GITHUB_OUTPUT"
+          ADD_COUNT=$(jq '.add | length' "$RUNNER_TEMP/labels.json")
+          REMOVE_COUNT=$(jq '.remove | length' "$RUNNER_TEMP/labels.json")
+          {
+            echo "add_count=$ADD_COUNT"
+            echo "remove_count=$REMOVE_COUNT"
+          } >> "$GITHUB_OUTPUT"
 
-      - name: Add Labels To Issue
-        if: steps.determine-labels.outputs.label_count != '0'
+      - name: Sync Labels On Issue
+        if: steps.determine-labels.outputs.add_count != '0' || steps.determine-labels.outputs.remove_count != '0'
         env:
           GH_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           REPOSITORY: ${{ github.repository }}
+          ADD_COUNT: ${{ steps.determine-labels.outputs.add_count }}
+          REMOVE_COUNT: ${{ steps.determine-labels.outputs.remove_count }}
         run: |
           while IFS= read -r label; do
             [ -n "$label" ] || continue
-            gh api --method POST "repos/$REPOSITORY/labels" -f "name=$label" -f "color=ADD8E6" >/dev/null 2>&1 || true
-          done < <(jq -r '.labels[] | select(startswith("language: "))' "$RUNNER_TEMP/labels.json")
-          gh api --method POST "repos/$REPOSITORY/issues/$ISSUE_NUMBER/labels" --input "$RUNNER_TEMP/labels.json"
+            encoded=$(jq -rn --arg l "$label" '$l | @uri')
+            if ! gh api "repos/$REPOSITORY/labels/$encoded" >/dev/null 2>&1; then
+              if ! gh api --method POST "repos/$REPOSITORY/labels" -f "name=$label" -f "color=ADD8E6" >/dev/null; then
+                gh api "repos/$REPOSITORY/labels/$encoded" >/dev/null
+              fi
+            fi
+          done < <(jq -r '.add[] | select(startswith("language: "))' "$RUNNER_TEMP/labels.json")
+
+          if [ "$ADD_COUNT" != "0" ]; then
+            jq '{labels: .add}' "$RUNNER_TEMP/labels.json" \
+              | gh api --method POST "repos/$REPOSITORY/issues/$ISSUE_NUMBER/labels" --input -
+          fi
+
+          if [ "$REMOVE_COUNT" != "0" ]; then
+            while IFS= read -r label; do
+              [ -n "$label" ] || continue
+              encoded=$(jq -rn --arg l "$label" '$l | @uri')
+              gh api --method DELETE "repos/$REPOSITORY/issues/$ISSUE_NUMBER/labels/$encoded" >/dev/null 2>&1 || true
+            done < <(jq -r '.remove[]' "$RUNNER_TEMP/labels.json")
+          fi
 
       - name: Log No Matching Labels
-        if: steps.determine-labels.outputs.label_count == '0'
-        run: echo "No matching labels found for the issue."
+        if: steps.determine-labels.outputs.add_count == '0' && steps.determine-labels.outputs.remove_count == '0'
+        run: echo "No matching label changes found for the issue."

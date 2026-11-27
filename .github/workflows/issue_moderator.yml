@@ -12,15 +12,16 @@ concurrency:
 
 jobs:
   autoclose:
-    name: Auto Close Invalid Issues
+    name: Moderate Issues
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       issues: write
       pull-requests: write
       actions: write
     steps:
       - name: Moderate Issues
-        uses: tachiyomiorg/issue-moderator-action@v2
+        uses: tachiyomiorg/issue-moderator-action@32a31ab12ad6e68ebf4c65408f47bef132d4fd3c # v2
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           duplicate-label: duplicate
@@ -37,12 +38,58 @@ jobs:
         if: ${{ always() && !cancelled() && !github.event.issue.pull_request }}
         env:
           GH_TOKEN: ${{ github.token }}
+          GITHUB_API_URL: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
+          EVENT_ISSUE_STATE: ${{ github.event.issue.state }}
+          EVENT_ISSUE_LABELS: ${{ toJSON(github.event.issue.labels.*.name) }}
         shell: bash
         run: |
           set -euo pipefail
+          NEEDS_DISPATCH=$(node <<'NODE'
+          const normalizeLabels = labels =>
+            [...new Set((Array.isArray(labels) ? labels : []).map(l => String(l).trim().toLowerCase()))].sort();
+
+          async function main() {
+            const url = `${process.env.GITHUB_API_URL}/repos/${process.env.REPOSITORY}/issues/${process.env.ISSUE_NUMBER}`;
+            const response = await fetch(url, {
+              redirect: 'manual',
+              headers: {
+                Authorization: `Bearer ${process.env.GH_TOKEN}`,
+                Accept: 'application/vnd.github+json',
+                'User-Agent': 'lnreader-issue-moderator',
+              },
+            });
+            if (response.status === 404 || response.status === 410) {
+              process.stdout.write('true');
+              return;
+            }
+            if (response.status !== 200) {
+              throw new Error(`Issue lookup failed with HTTP ${response.status}.`);
+            }
+            const issue = await response.json();
+            const currentLabels = normalizeLabels(
+              Array.isArray(issue.labels) ? issue.labels.map(l => (typeof l === 'string' ? l : l && l.name)) : [],
+            );
+            const eventLabels = normalizeLabels(JSON.parse(process.env.EVENT_ISSUE_LABELS || '[]'));
+            const stateChanged = issue.state !== process.env.EVENT_ISSUE_STATE;
+            const labelsChanged = JSON.stringify(currentLabels) !== JSON.stringify(eventLabels);
+            process.stdout.write(stateChanged || labelsChanged ? 'true' : 'false');
+          }
+
+          main().catch(err => {
+            process.stderr.write(`${err.message}\n`);
+            process.exitCode = 1;
+          });
+          NODE
+          )
+
+          if [ "$NEEDS_DISPATCH" != "true" ]; then
+            echo "No moderator state/label changes; skipping issue index dispatch."
+            exit 0
+          fi
+
           jq -n --arg ref "$DEFAULT_BRANCH" --arg number "$ISSUE_NUMBER" \
             '{ref: $ref, inputs: {issue_number: $number}}' \
             | gh api --method POST "repos/$REPOSITORY/actions/workflows/generate-issue-index.yml/dispatches" --input -

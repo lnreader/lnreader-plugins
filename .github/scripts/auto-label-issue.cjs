@@ -10,6 +10,8 @@ const {
   nonEmptySectionLines,
 } = require('./issue-parsing.cjs');
 
+const MAX_LABEL_LENGTH = 50;
+
 const LANGUAGE_ALIASES = new Map([
   // Arabic
   ['arabic', 'arabic'],
@@ -21,6 +23,10 @@ const LANGUAGE_ALIASES = new Map([
   ['bangla', 'bengali'],
   ['bn', 'bengali'],
   ['বাংলা', 'bengali'],
+  // Burmese
+  ['burmese', 'burmese'],
+  ['my', 'burmese'],
+  ['မြန်မာ', 'burmese'],
   // Chinese
   ['chinese', 'chinese'],
   ['zh', 'chinese'],
@@ -32,6 +38,20 @@ const LANGUAGE_ALIASES = new Map([
   ['漢語', 'chinese'],
   ['简体中文', 'chinese'],
   ['繁體中文', 'chinese'],
+  // Czech
+  ['czech', 'czech'],
+  ['cs', 'czech'],
+  ['čeština', 'czech'],
+  ['cestina', 'czech'],
+  // Dutch
+  ['dutch', 'dutch'],
+  ['nl', 'dutch'],
+  ['nederlands', 'dutch'],
+  // Filipino / Tagalog
+  ['filipino', 'filipino'],
+  ['tagalog', 'filipino'],
+  ['tl', 'filipino'],
+  ['fil', 'filipino'],
   // French
   ['french', 'french'],
   ['fr', 'french'],
@@ -41,6 +61,20 @@ const LANGUAGE_ALIASES = new Map([
   ['german', 'german'],
   ['de', 'german'],
   ['deutsch', 'german'],
+  // Greek
+  ['greek', 'greek'],
+  ['el', 'greek'],
+  ['ελληνικά', 'greek'],
+  ['ellinika', 'greek'],
+  // Hebrew
+  ['hebrew', 'hebrew'],
+  ['he', 'hebrew'],
+  ['עברית', 'hebrew'],
+  // Hindi
+  ['hindi', 'hindi'],
+  ['hi', 'hindi'],
+  ['हिन्दी', 'hindi'],
+  ['हिंदी', 'hindi'],
   // Indonesian
   ['indonesian', 'indonesian'],
   ['id', 'indonesian'],
@@ -61,6 +95,15 @@ const LANGUAGE_ALIASES = new Map([
   ['kr', 'korean'],
   ['한국어', 'korean'],
   ['조선말', 'korean'],
+  // Malay
+  ['malay', 'malay'],
+  ['ms', 'malay'],
+  ['bahasa melayu', 'malay'],
+  // Persian / Farsi
+  ['persian', 'persian'],
+  ['farsi', 'persian'],
+  ['fa', 'persian'],
+  ['فارسی', 'persian'],
   // Polish
   ['polish', 'polish'],
   ['pl', 'polish'],
@@ -71,6 +114,11 @@ const LANGUAGE_ALIASES = new Map([
   ['pt-br', 'portuguese'],
   ['português', 'portuguese'],
   ['portugues', 'portuguese'],
+  // Romanian
+  ['romanian', 'romanian'],
+  ['ro', 'romanian'],
+  ['română', 'romanian'],
+  ['romana', 'romanian'],
   // Russian
   ['russian', 'russian'],
   ['ru', 'russian'],
@@ -103,13 +151,30 @@ const LANGUAGE_ALIASES = new Map([
   ['tieng viet', 'vietnamese'],
 ]);
 
+function resolveLanguageAlias(rawLanguage) {
+  if (!rawLanguage) return null;
+  const direct = LANGUAGE_ALIASES.get(rawLanguage);
+  if (direct) return direct;
+  const firstSegment = comparisonValue(rawLanguage.split(/[,/(]/)[0]);
+  return firstSegment ? LANGUAGE_ALIASES.get(firstSegment) || null : null;
+}
+
 function formatPluginLabel(displayKey, id) {
   const idx = displayKey.indexOf(': ');
   const rawName = idx >= 0 ? displayKey.slice(idx + 2) : displayKey;
   const name = comparisonValue(rawName);
   const cleanId = comparisonValue(id);
   if (!name || !cleanId) return null;
-  return `plugin: ${name}[${cleanId}]`;
+  const full = `plugin: ${name}[${cleanId}]`;
+  if (full.length <= MAX_LABEL_LENGTH) return full;
+
+  const suffix = `[${cleanId}]`;
+  const maxNameLen = MAX_LABEL_LENGTH - 'plugin: '.length - suffix.length;
+  if (maxNameLen >= 4) {
+    const truncated = name.slice(0, maxNameLen - 1).trimEnd();
+    if (truncated) return `plugin: ${truncated}…${suffix}`;
+  }
+  return `plugin: ${suffix}`.slice(0, MAX_LABEL_LENGTH);
 }
 
 function matchPluginLabels(lines, pluginKeys) {
@@ -145,23 +210,24 @@ function matchPluginLabels(lines, pluginKeys) {
   return labels;
 }
 
-function computeIssueLabels({ body, existingLabels = [], pluginKeys = {} }) {
-  const normalizedExisting = new Set(
-    (Array.isArray(existingLabels) ? existingLabels : [])
-      .filter(label => typeof label === 'string')
-      .map(comparisonValue),
-  );
+function computeLabelPlan({ body, existingLabels = [], pluginKeys = {} }) {
+  const rawExisting = (
+    Array.isArray(existingLabels) ? existingLabels : []
+  ).filter(label => typeof label === 'string');
+  const normalizedExisting = new Set(rawExisting.map(comparisonValue));
 
-  const result = [];
-  const seen = new Set();
+  const desired = [];
+  const seenDesired = new Set();
   const addLabel = label => {
-    if (!label || seen.has(label)) return;
-    seen.add(label);
-    result.push(label);
+    const normalized = comparisonValue(label);
+    if (!normalized || seenDesired.has(normalized)) return;
+    seenDesired.add(normalized);
+    desired.push(label);
   };
 
   const pluginSection = extractSection(body, 'Plugin');
-  if (normalizedExisting.has('bug') && pluginSection.present) {
+  const manageBug = normalizedExisting.has('bug') && pluginSection.present;
+  if (manageBug) {
     const severityLines = nonEmptySectionLines(
       extractSection(body, 'Severity'),
     );
@@ -179,17 +245,55 @@ function computeIssueLabels({ body, existingLabels = [], pluginKeys = {} }) {
   }
 
   const languageSection = extractSection(body, 'Language');
-  if (normalizedExisting.has('plugin request') && languageSection.present) {
+  const manageLanguage =
+    normalizedExisting.has('plugin request') && languageSection.present;
+  if (manageLanguage) {
     const languageLines = nonEmptySectionLines(languageSection);
     const rawLanguage =
       languageLines.length > 0 ? comparisonValue(languageLines[0]) : '';
-    const canonical = LANGUAGE_ALIASES.get(rawLanguage);
+    const canonical = resolveLanguageAlias(rawLanguage);
     if (canonical) {
       addLabel(`language: ${canonical}`);
     }
   }
 
-  return result;
+  const isManagedLabel = normalized => {
+    if (
+      manageBug &&
+      (normalized === 'plugin:' ||
+        normalized.startsWith('plugin: ') ||
+        normalized.startsWith('severity: '))
+    ) {
+      return true;
+    }
+    return manageLanguage && normalized.startsWith('language: ');
+  };
+
+  const add = desired.filter(
+    label => !normalizedExisting.has(comparisonValue(label)),
+  );
+
+  const remove = [];
+  const seenRemove = new Set();
+  for (const label of rawExisting) {
+    const normalized = comparisonValue(label);
+    if (
+      !normalized ||
+      !isManagedLabel(normalized) ||
+      seenDesired.has(normalized) ||
+      seenRemove.has(normalized)
+    ) {
+      continue;
+    }
+    seenRemove.add(normalized);
+    remove.push(label);
+  }
+
+  return { desired, add, remove };
+}
+
+function computeIssueLabels(args) {
+  return computeLabelPlan(args).desired;
 }
 
 if (require.main === module) {
@@ -197,8 +301,10 @@ if (require.main === module) {
   const pluginKeys = JSON.parse(fs.readFileSync(keysPath, 'utf8'));
   const body = process.env.ISSUE_BODY || '';
   const existingLabels = JSON.parse(process.env.ISSUE_LABELS || '[]');
-  const labels = computeIssueLabels({ body, existingLabels, pluginKeys });
-  process.stdout.write(`${JSON.stringify({ labels })}\n`);
+  const plan = computeLabelPlan({ body, existingLabels, pluginKeys });
+  process.stdout.write(
+    `${JSON.stringify({ labels: plan.add, add: plan.add, remove: plan.remove })}\n`,
+  );
 }
 
-module.exports = { computeIssueLabels };
+module.exports = { computeIssueLabels, computeLabelPlan, formatPluginLabel };

@@ -4,8 +4,12 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const { execFileSync } = require('node:child_process');
 
-const { computeIssueLabels } = require('./auto-label-issue.cjs');
+const {
+  computeIssueLabels,
+  computeLabelPlan,
+} = require('./auto-label-issue.cjs');
 
 const pluginKeys = JSON.parse(
   fs.readFileSync(path.join(__dirname, 'keys.json'), 'utf8'),
@@ -214,4 +218,177 @@ test('unrelated issue emits []', () => {
     }),
     [],
   );
+});
+
+test('all plugin labels in keys.json stay within GitHub 50-character limit and preserve [id]', () => {
+  for (const [displayKey, id] of Object.entries(pluginKeys)) {
+    const body = [
+      '### Plugin',
+      '',
+      displayKey,
+      '',
+      '### Severity',
+      '',
+      'Other',
+    ].join('\n');
+
+    const labels = computeIssueLabels({
+      body,
+      existingLabels: ['bug'],
+      pluginKeys,
+    });
+    const pluginLabels = labels.filter(label => label.startsWith('plugin:'));
+    assert.equal(pluginLabels.length, 1, `Expected 1 label for ${displayKey}`);
+    const [pluginLabel] = pluginLabels;
+    assert.ok(
+      pluginLabel.length <= 50,
+      `Label too long (${pluginLabel.length}): ${pluginLabel}`,
+    );
+    assert.match(pluginLabel, /^plugin: .*\[[^\]]+\]$/);
+    assert.ok(pluginLabel.includes(`[${id.toLowerCase()}]`));
+    assert.notEqual(pluginLabel.trim(), 'plugin:');
+  }
+
+  const longestBody = [
+    '### Plugin',
+    '',
+    "English: TaxingCorn117's Translations",
+    '',
+    '### Severity',
+    '',
+    'Other',
+  ].join('\n');
+  assert.deepEqual(
+    computeIssueLabels({
+      body: longestBody,
+      existingLabels: ['bug'],
+      pluginKeys,
+    }),
+    ['severity: other', 'plugin: taxingcorn117…[taxingcorn117stranslations]'],
+  );
+});
+
+test('computeLabelPlan reconciles stale severity, plugin, and language labels on edited issues', () => {
+  const editedBugBody = [
+    '### Plugin',
+    '',
+    'English: NovelBuddy',
+    '',
+    '### Severity',
+    '',
+    'Domain Changed',
+  ].join('\n');
+
+  assert.deepEqual(
+    computeLabelPlan({
+      body: editedBugBody,
+      existingLabels: [
+        'bug',
+        'severity: wrong formatting',
+        'plugin: novel fire[novelfire]',
+        'plugin:',
+        'duplicate',
+      ],
+      pluginKeys,
+    }),
+    {
+      desired: ['severity: domain changed', 'plugin: novelbuddy[novelbuddy]'],
+      add: ['severity: domain changed', 'plugin: novelbuddy[novelbuddy]'],
+      remove: [
+        'severity: wrong formatting',
+        'plugin: novel fire[novelfire]',
+        'plugin:',
+      ],
+    },
+  );
+
+  assert.deepEqual(
+    computeLabelPlan({
+      body: editedBugBody,
+      existingLabels: [
+        'bug',
+        'severity: domain changed',
+        'plugin: novelbuddy[novelbuddy]',
+      ],
+      pluginKeys,
+    }),
+    {
+      desired: ['severity: domain changed', 'plugin: novelbuddy[novelbuddy]'],
+      add: [],
+      remove: [],
+    },
+  );
+
+  assert.deepEqual(
+    computeLabelPlan({
+      body: '### Language\n\nEnglish',
+      existingLabels: ['plugin request', 'language: vietnamese'],
+      pluginKeys,
+    }),
+    {
+      desired: [],
+      add: [],
+      remove: ['language: vietnamese'],
+    },
+  );
+
+  assert.deepEqual(
+    computeLabelPlan({
+      body: '### Language\n\nVietnamese (Tiếng Việt)',
+      existingLabels: ['plugin request', 'language: arabic'],
+      pluginKeys,
+    }),
+    {
+      desired: ['language: vietnamese'],
+      add: ['language: vietnamese'],
+      remove: ['language: arabic'],
+    },
+  );
+});
+
+test('plugin request issue supports expanded language aliases and delimited primary language', () => {
+  const cases = [
+    ['Hindi', ['language: hindi']],
+    ['Tagalog', ['language: filipino']],
+    ['Filipino', ['language: filipino']],
+    ['Bahasa Melayu', ['language: malay']],
+    ['Persian', ['language: persian']],
+    ['Dutch', ['language: dutch']],
+    ['Vietnamese (Tiếng Việt)', ['language: vietnamese']],
+    ['English / Vietnamese', []],
+  ];
+
+  for (const [languageInput, expected] of cases) {
+    const body = ['### Language', '', languageInput].join('\n');
+    assert.deepEqual(
+      computeIssueLabels({
+        body,
+        existingLabels: ['plugin request'],
+        pluginKeys,
+      }),
+      expected,
+    );
+  }
+});
+
+test('auto-label-issue CLI outputs labels, add, and remove JSON', () => {
+  const stdout = execFileSync(
+    process.execPath,
+    [path.join(__dirname, 'auto-label-issue.cjs')],
+    {
+      env: {
+        ...process.env,
+        ISSUE_BODY:
+          '### Plugin\n\nEnglish: Novel Fire\n\n### Severity\n\nMissing Chapter',
+        ISSUE_LABELS: JSON.stringify(['bug', 'severity: other']),
+      },
+      encoding: 'utf8',
+    },
+  );
+
+  assert.deepEqual(JSON.parse(stdout), {
+    labels: ['severity: missing chapter', 'plugin: novel fire[novelfire]'],
+    add: ['severity: missing chapter', 'plugin: novel fire[novelfire]'],
+    remove: ['severity: other'],
+  });
 });

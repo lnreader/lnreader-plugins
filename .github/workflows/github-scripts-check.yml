@@ -3,6 +3,8 @@ name: GitHub Scripts & Templates Check
 on:
   pull_request:
     branches: [master]
+  push:
+    branches: [master]
     paths:
       - '.github/**'
   workflow_dispatch:
@@ -17,6 +19,7 @@ jobs:
   check:
     name: Validate GitHub Scripts & YAML
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
 
@@ -24,27 +27,90 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 1 }}
           persist-credentials: false
 
+      - name: Detect .github Changes
+        id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            echo "run_checks=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if git rev-parse --verify HEAD^1 >/dev/null 2>&1; then
+            if [ -n "$(git diff --name-only HEAD^1 HEAD -- .github/)" ]; then
+              echo "run_checks=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "run_checks=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "run_checks=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Setup Node.js
+        if: steps.scope.outputs.run_checks == 'true'
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: '24'
+          cache: 'npm'
 
       - name: Run GitHub Script Tests
+        if: steps.scope.outputs.run_checks == 'true'
         run: node --test .github/scripts/*.test.cjs
 
-      - name: Validate GitHub YAML Files
+      - name: Install Dependencies
+        if: steps.scope.outputs.run_checks == 'true'
+        run: npm ci
+
+      - name: Check Formatting & Lint for GitHub Scripts
+        if: steps.scope.outputs.run_checks == 'true'
         run: |
+          ./node_modules/.bin/prettier --check ".github/scripts/*.cjs"
+          ./node_modules/.bin/eslint --max-warnings 0 ".github/scripts/*.cjs"
+
+      - name: Validate GitHub YAML & Issue Templates
+        if: steps.scope.outputs.run_checks == 'true'
+        run: |
+          python3 -c 'import yaml' 2>/dev/null || python3 -m pip install --quiet PyYAML==6.0.2
           python3 - <<'PY'
           import glob
+          import json
+          import os
           import sys
           import yaml
 
+          class UniqueKeyLoader(yaml.SafeLoader):
+              pass
+
+          def construct_mapping_no_duplicates(loader, node, deep=False):
+              mapping = {}
+              for key_node, value_node in node.value:
+                  key = loader.construct_object(key_node, deep=deep)
+                  if key in mapping:
+                      raise yaml.constructor.ConstructorError(
+                          'while constructing a mapping',
+                          node.start_mark,
+                          f'found duplicate key {key!r}',
+                          key_node.start_mark,
+                      )
+                  mapping[key] = loader.construct_object(value_node, deep=deep)
+              return mapping
+
+          UniqueKeyLoader.add_constructor(
+              yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+              construct_mapping_no_duplicates,
+          )
+
           paths = sorted(
-              glob.glob('.github/workflows/*.yml')
-              + glob.glob('.github/ISSUE_TEMPLATE/*.yml')
-              + ['.github/scripts/blank_report_issue.yml']
+              set(
+                  glob.glob('.github/workflows/*.yml')
+                  + glob.glob('.github/workflows/*.yaml')
+                  + glob.glob('.github/ISSUE_TEMPLATE/*.yml')
+                  + glob.glob('.github/ISSUE_TEMPLATE/*.yaml')
+                  + ['.github/scripts/blank_report_issue.yml']
+              )
           )
 
           failed = False
@@ -54,12 +120,71 @@ jobs:
                       content = fh.read()
                   if path == '.github/scripts/blank_report_issue.yml':
                       content = content.replace('{#CHANGE#}', '- "English: Example"')
-                  yaml.safe_load(content)
+                  data = yaml.load(content, Loader=UniqueKeyLoader)
+                  if path.startswith('.github/ISSUE_TEMPLATE/') and os.path.basename(path) not in ('config.yml', 'config.yaml'):
+                      if not isinstance(data, dict):
+                          raise ValueError('Issue template must be a YAML mapping')
+                      for field in ('name', 'description'):
+                          val = data.get(field)
+                          if not isinstance(val, str) or not val.strip():
+                              raise ValueError(f'Missing or empty string field: {field}')
+                      body = data.get('body')
+                      if not isinstance(body, list) or len(body) == 0:
+                          raise ValueError('Issue template body must be a non-empty list')
+                      for idx, item in enumerate(body):
+                          if not isinstance(item, dict) or not isinstance(item.get('type'), str) or not item['type'].strip():
+                              raise ValueError(f'Issue template body[{idx}] missing valid type')
               except Exception as exc:
                   print(f'Invalid YAML in {path}: {exc}', file=sys.stderr)
                   failed = True
 
+          try:
+              with open('.github/scripts/blank_report_issue.yml', encoding='utf-8') as fh:
+                  blank = fh.read()
+              with open('.github/scripts/keys.json', encoding='utf-8') as fh:
+                  keys = list(json.load(fh).keys())
+              with open('.github/ISSUE_TEMPLATE/report_issue.yml', encoding='utf-8') as fh:
+                  actual_report = fh.read()
+              rendered = blank.replace('{#CHANGE#}', '- "' + '"\n        - "'.join(keys) + '"')
+              yaml.load(rendered, Loader=UniqueKeyLoader)
+              if rendered != actual_report:
+                  print(
+                      'Drift detected: .github/ISSUE_TEMPLATE/report_issue.yml does not match blank_report_issue.yml + keys.json',
+                      file=sys.stderr,
+                  )
+                  failed = True
+          except Exception as exc:
+              print(f'Template sync check failed: {exc}', file=sys.stderr)
+              failed = True
+
           if failed:
               sys.exit(1)
-          print(f'Validated {len(paths)} YAML files.')
+          print(f'Validated {len(paths)} YAML files and issue template sync.')
           PY
+
+      - name: Run actionlint
+        if: steps.scope.outputs.run_checks == 'true'
+        run: |
+          set -euo pipefail
+          ARCHIVE="$RUNNER_TEMP/actionlint.tar.gz"
+          BIN_DIR="$RUNNER_TEMP/actionlint-bin"
+          mkdir -p "$BIN_DIR"
+          curl --silent --show-error --fail --location --max-time 30 \
+            -o "$ARCHIVE" \
+            "https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz"
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  $ARCHIVE" | sha256sum -c -
+          tar -xzf "$ARCHIVE" -C "$BIN_DIR" actionlint
+          shopt -s nullglob
+          WORKFLOWS=()
+          for wf in .github/workflows/*.yml .github/workflows/*.yaml; do
+            # Exclude untouched upstream workflow with pre-existing SC2086 notice
+            [ "$(basename "$wf")" = "publish-plugins.yml" ] && continue
+            WORKFLOWS+=("$wf")
+          done
+          # Ignore 2 pre-existing upstream workflow notices unrelated to PR changes:
+          # - generate-issue-index.yml uses concurrency.queue (beta/unsupported in actionlint schema)
+          # - lint.yml uses reviewdog/action-eslint@v1 deprecated fail_on_error input
+          "$BIN_DIR/actionlint" \
+            -ignore 'unexpected key "queue" for "concurrency" section' \
+            -ignore 'avoid using deprecated input "fail_on_error" in action "reviewdog/action-eslint@v1"' \
+            "${WORKFLOWS[@]}"
