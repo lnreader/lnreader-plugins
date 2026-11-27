@@ -73,10 +73,18 @@ jobs:
       - name: Validate GitHub YAML & Issue Templates
         if: steps.scope.outputs.run_checks == 'true'
         run: |
+          node <<'JS'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const { renderIssueTemplate } = require('./.github/scripts/generate-issue-template-options.cjs');
+          const blank = fs.readFileSync('.github/scripts/blank_report_issue.yml', 'utf8');
+          const keys = Object.keys(JSON.parse(fs.readFileSync('.github/scripts/keys.json', 'utf8')));
+          const outPath = path.join(process.env.RUNNER_TEMP, 'rendered-report-issue.yml');
+          fs.writeFileSync(outPath, renderIssueTemplate(blank, keys));
+          JS
           python3 -c 'import yaml' 2>/dev/null || python3 -m pip install --quiet PyYAML==6.0.2
           python3 - <<'PY'
           import glob
-          import json
           import os
           import sys
           import yaml
@@ -103,13 +111,19 @@ jobs:
               construct_mapping_no_duplicates,
           )
 
+          rendered_report = os.path.join(os.environ['RUNNER_TEMP'], 'rendered-report-issue.yml')
+          issue_templates = sorted(
+              set(
+                  glob.glob('.github/ISSUE_TEMPLATE/*.yml')
+                  + glob.glob('.github/ISSUE_TEMPLATE/*.yaml')
+              )
+          )
           paths = sorted(
               set(
                   glob.glob('.github/workflows/*.yml')
                   + glob.glob('.github/workflows/*.yaml')
-                  + glob.glob('.github/ISSUE_TEMPLATE/*.yml')
-                  + glob.glob('.github/ISSUE_TEMPLATE/*.yaml')
-                  + ['.github/scripts/blank_report_issue.yml']
+                  + issue_templates
+                  + [rendered_report]
               )
           )
 
@@ -118,10 +132,15 @@ jobs:
               try:
                   with open(path, encoding='utf-8') as fh:
                       content = fh.read()
-                  if path == '.github/scripts/blank_report_issue.yml':
-                      content = content.replace('{#CHANGE#}', '- "English: Example"')
                   data = yaml.load(content, Loader=UniqueKeyLoader)
-                  if path.startswith('.github/ISSUE_TEMPLATE/') and os.path.basename(path) not in ('config.yml', 'config.yaml'):
+                  is_issue_form = (
+                      path == rendered_report
+                      or (
+                          path.startswith('.github/ISSUE_TEMPLATE/')
+                          and os.path.basename(path) not in ('config.yml', 'config.yaml')
+                      )
+                  )
+                  if is_issue_form:
                       if not isinstance(data, dict):
                           raise ValueError('Issue template must be a YAML mapping')
                       for field in ('name', 'description'):
@@ -138,28 +157,9 @@ jobs:
                   print(f'Invalid YAML in {path}: {exc}', file=sys.stderr)
                   failed = True
 
-          try:
-              with open('.github/scripts/blank_report_issue.yml', encoding='utf-8') as fh:
-                  blank = fh.read()
-              with open('.github/scripts/keys.json', encoding='utf-8') as fh:
-                  keys = list(json.load(fh).keys())
-              with open('.github/ISSUE_TEMPLATE/report_issue.yml', encoding='utf-8') as fh:
-                  actual_report = fh.read()
-              rendered = blank.replace('{#CHANGE#}', '- "' + '"\n        - "'.join(keys) + '"')
-              yaml.load(rendered, Loader=UniqueKeyLoader)
-              if rendered != actual_report:
-                  print(
-                      'Drift detected: .github/ISSUE_TEMPLATE/report_issue.yml does not match blank_report_issue.yml + keys.json',
-                      file=sys.stderr,
-                  )
-                  failed = True
-          except Exception as exc:
-              print(f'Template sync check failed: {exc}', file=sys.stderr)
-              failed = True
-
           if failed:
               sys.exit(1)
-          print(f'Validated {len(paths)} YAML files and issue template sync.')
+          print(f'Validated {len(paths)} YAML files (including rendered blank_report_issue.yml).')
           PY
 
       - name: Run actionlint
@@ -177,7 +177,6 @@ jobs:
           shopt -s nullglob
           WORKFLOWS=()
           for wf in .github/workflows/*.yml .github/workflows/*.yaml; do
-            # Exclude untouched upstream workflow with pre-existing SC2086 notice
             [ "$(basename "$wf")" = "publish-plugins.yml" ] && continue
             WORKFLOWS+=("$wf")
           done
@@ -188,3 +187,8 @@ jobs:
             -ignore 'unexpected key "queue" for "concurrency" section' \
             -ignore 'avoid using deprecated input "fail_on_error" in action "reviewdog/action-eslint@v1"' \
             "${WORKFLOWS[@]}"
+          if [ -f .github/workflows/publish-plugins.yml ]; then
+            "$BIN_DIR/actionlint" \
+              -ignore 'SC2086:info:1:29: Double quote to prevent globbing and word splitting' \
+              .github/workflows/publish-plugins.yml
+          fi

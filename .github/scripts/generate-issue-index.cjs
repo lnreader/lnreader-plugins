@@ -3,8 +3,8 @@
 const fs = require('node:fs');
 const {
   CATEGORY_CODES,
+  buildSelectionMatcher,
   comparisonValue,
-  escapeRegExp,
   extractSection,
 } = require('./issue-parsing.cjs');
 
@@ -67,11 +67,10 @@ function resolveSelection(lines, lookups, issueNumber, warn) {
     .filter(Boolean)
     .join(', ');
   const normalized = comparisonValue(selection);
-  const alternatives = lookups.candidates
-    .map(candidate => escapeRegExp(candidate.value))
-    .join('|');
-  if (!alternatives) return { ids: new Set(), unresolved: selection };
-  const regex = new RegExp(`(?:^|, )(${alternatives})(?=, |$)`, 'g');
+  const regex = buildSelectionMatcher(
+    lookups.candidates.map(candidate => candidate.value),
+  );
+  if (!regex) return { ids: new Set(), unresolved: selection };
   const ids = new Set();
   const spans = [];
   let match;

@@ -25,6 +25,15 @@ function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+function buildSelectionMatcher(normalizedKeys) {
+  const sorted = [...new Set(normalizedKeys)].sort(
+    (a, b) => b.length - a.length || (a < b ? -1 : a > b ? 1 : 0),
+  );
+  if (sorted.length === 0) return null;
+  const alternatives = sorted.map(escapeRegExp).join('|');
+  return new RegExp(`(?:^|, )(${alternatives})(?=, |$)`, 'g');
+}
+
 function extractSection(body, headingName) {
   const lines = String(body || '')
     .replace(/\r\n?/g, '\n')
@@ -63,6 +72,7 @@ module.exports = {
   stripDirectional,
   comparisonValue,
   escapeRegExp,
+  buildSelectionMatcher,
   extractSection,
   nonEmptySectionLines,
 };

@@ -43,7 +43,7 @@ jobs:
         env:
           URL: ${{ steps.get_url.outputs.URL }}
         run: |
-          BASE_URL=$(printf '%s' "$URL" | sed -E 's#^https?://##; s#[/?#].*$##')
+          BASE_URL=$(printf '%s' "$URL" | sed -E 's#^[Hh][Tt][Tt][Pp][Ss]?://##; s#[/?#].*$##')
           if [[ ! "$BASE_URL" =~ ^[A-Za-z0-9.-]+\.([A-Za-z]{2,}|xn--[A-Za-z0-9-]{2,})(:[0-9]+)?$ ]]; then
             BASE_URL=""
           else
@@ -63,179 +63,81 @@ jobs:
           CHROME_VERSION="${CHROME_VERSION:-126.0.6478.36}"
           echo "USER_AGENT=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/$CHROME_VERSION Safari/537.36" >> "$GITHUB_OUTPUT"
 
-      - name: Check Madara Theme
-        id: check_madara
+      - name: Detect Website Theme
+        id: detect_theme
         if: always() && !cancelled() && steps.get_base_url.outputs.BASE_URL != ''
         env:
           BASE_URL: ${{ steps.get_base_url.outputs.BASE_URL }}
           USER_AGENT: ${{ steps.get_user_agent.outputs.USER_AGENT }}
         run: |
-          echo "🔍 Checking for Madara theme..." >> "$GITHUB_STEP_SUMMARY"
           check_head() {
-            local url="$1" meta code ctype
+            local url="$1" expected_ct="$2" meta code ctype
             meta=$(curl --location --max-redirs 5 --output /dev/null --silent --head --max-time 10 -w '%{http_code}\t%{content_type}' "$url" -H "User-Agent: $USER_AGENT" 2>/dev/null || true)
             IFS=$'\t' read -r code ctype <<< "$meta"
             ctype=$(printf '%s' "$ctype" | tr '[:upper:]' '[:lower:]')
-            [[ "$code" == "200" && "$ctype" == *"text/css"* ]]
+            [[ "$code" == "200" && "$ctype" == *"$expected_ct"* ]]
           }
-          if check_head "https://$BASE_URL/wp-content/themes/madara/style.css" || \
-             check_head "http://$BASE_URL/wp-content/themes/madara/style.css"; then
-            echo "madara=true" >> "$GITHUB_OUTPUT"
-            echo "✅ Madara Theme Detected" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "madara=false" >> "$GITHUB_OUTPUT"
-            echo "❌ Madara Theme Not Found" >> "$GITHUB_STEP_SUMMARY"
-          fi
 
-      - name: Check Lightnovelwp Theme
-        id: check_lightnovelwp
-        if: always() && !cancelled() && steps.get_base_url.outputs.BASE_URL != ''
-        env:
-          BASE_URL: ${{ steps.get_base_url.outputs.BASE_URL }}
-          USER_AGENT: ${{ steps.get_user_agent.outputs.USER_AGENT }}
-        run: |
-          echo "🔍 Checking for Lightnovelwp theme..." >> "$GITHUB_STEP_SUMMARY"
-          check_head() {
-            local url="$1" meta code ctype
-            meta=$(curl --location --max-redirs 5 --output /dev/null --silent --head --max-time 10 -w '%{http_code}\t%{content_type}' "$url" -H "User-Agent: $USER_AGENT" 2>/dev/null || true)
-            IFS=$'\t' read -r code ctype <<< "$meta"
-            ctype=$(printf '%s' "$ctype" | tr '[:upper:]' '[:lower:]')
-            [[ "$code" == "200" && "$ctype" == *"text/css"* ]]
-          }
-          if check_head "https://$BASE_URL/wp-content/themes/lightnovel/style.css" || \
-             check_head "http://$BASE_URL/wp-content/themes/lightnovel/style.css"; then
-            echo "lightnovelwp=true" >> "$GITHUB_OUTPUT"
-            echo "✅ Lightnovelwp Theme Detected" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "lightnovelwp=false" >> "$GITHUB_OUTPUT"
-            echo "❌ Lightnovelwp Theme Not Found" >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-      - name: Check HotNovelPub Theme
-        id: check_hotnovelpub
-        if: always() && !cancelled() && steps.get_base_url.outputs.BASE_URL != ''
-        env:
-          BASE_URL: ${{ steps.get_base_url.outputs.BASE_URL }}
-          USER_AGENT: ${{ steps.get_user_agent.outputs.USER_AGENT }}
-        run: |
-          echo "🔍 Checking for HotNovelPub theme..." >> "$GITHUB_STEP_SUMMARY"
           fetch_and_grep() {
-            local url="$1" out_file="$RUNNER_TEMP/hotnovelpub.txt"
+            local url="$1" pattern="$2" out_file="$3"
             rm -f "$out_file"
             if curl --location --max-redirs 5 --silent --fail --max-time 10 --max-filesize 2097152 -o "$out_file" "$url" -H "User-Agent: $USER_AGENT" 2>/dev/null; then
-              grep -q "Hello!" "$out_file"
+              grep -q "$pattern" "$out_file"
               return $?
             fi
             return 1
           }
-          if fetch_and_grep "https://api.$BASE_URL" || \
-             fetch_and_grep "http://api.$BASE_URL"; then
-            echo "hotnovelpub=true" >> "$GITHUB_OUTPUT"
-            echo "✅ HotNovelPub Theme Detected" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "hotnovelpub=false" >> "$GITHUB_OUTPUT"
-            echo "❌ HotNovelPub Theme Not Found" >> "$GITHUB_STEP_SUMMARY"
-          fi
 
-      - name: Check Fictioneer Theme
-        id: check_fictioneer
-        if: always() && !cancelled() && steps.get_base_url.outputs.BASE_URL != ''
-        env:
-          BASE_URL: ${{ steps.get_base_url.outputs.BASE_URL }}
-          USER_AGENT: ${{ steps.get_user_agent.outputs.USER_AGENT }}
-        run: |
-          echo "🔍 Checking for Fictioneer theme..." >> "$GITHUB_STEP_SUMMARY"
-          check_head() {
-            local url="$1" meta code ctype
-            meta=$(curl --location --max-redirs 5 --output /dev/null --silent --head --max-time 10 -w '%{http_code}\t%{content_type}' "$url" -H "User-Agent: $USER_AGENT" 2>/dev/null || true)
-            IFS=$'\t' read -r code ctype <<< "$meta"
-            ctype=$(printf '%s' "$ctype" | tr '[:upper:]' '[:lower:]')
-            [[ "$code" == "200" && "$ctype" == *"text/css"* ]]
-          }
-          if check_head "https://$BASE_URL/wp-content/themes/fictioneer/css/application.css" || \
-             check_head "http://$BASE_URL/wp-content/themes/fictioneer/css/application.css"; then
-            echo "fictioneer=true" >> "$GITHUB_OUTPUT"
-            echo "✅ Fictioneer Theme Detected" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "fictioneer=false" >> "$GITHUB_OUTPUT"
-            echo "❌ Fictioneer Theme Not Found" >> "$GITHUB_STEP_SUMMARY"
-          fi
+          MATCHED=()
 
-      - name: Check Novel Fire Theme
-        id: check_novel_fire
-        if: always() && !cancelled() && steps.get_base_url.outputs.BASE_URL != ''
-        env:
-          BASE_URL: ${{ steps.get_base_url.outputs.BASE_URL }}
-          USER_AGENT: ${{ steps.get_user_agent.outputs.USER_AGENT }}
-        run: |
-          echo "🔍 Checking for Novel Fire theme..." >> "$GITHUB_STEP_SUMMARY"
-          check_head() {
-            local url="$1" meta code ctype
-            meta=$(curl --location --max-redirs 5 --output /dev/null --silent --head --max-time 10 -w '%{http_code}\t%{content_type}' "$url" -H "User-Agent: $USER_AGENT" 2>/dev/null || true)
-            IFS=$'\t' read -r code ctype <<< "$meta"
-            ctype=$(printf '%s' "$ctype" | tr '[:upper:]' '[:lower:]')
-            [[ "$code" == "200" && "$ctype" == *"javascript"* ]]
-          }
-          if check_head "https://$BASE_URL/frontend/js/appsettings.min.js" || \
-             check_head "http://$BASE_URL/frontend/js/appsettings.min.js"; then
-            echo "novel_fire=true" >> "$GITHUB_OUTPUT"
-            echo "✅ Novel Fire Theme Detected" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "novel_fire=false" >> "$GITHUB_OUTPUT"
-            echo "❌ Novel Fire Theme Not Found" >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-      - name: Check Readwn Theme
-        id: check_readwn
-        if: always() && !cancelled() && steps.get_base_url.outputs.BASE_URL != ''
-        env:
-          BASE_URL: ${{ steps.get_base_url.outputs.BASE_URL }}
-          USER_AGENT: ${{ steps.get_user_agent.outputs.USER_AGENT }}
-        run: |
-          echo "🔍 Checking for Readwn theme..." >> "$GITHUB_STEP_SUMMARY"
-          fetch_and_grep() {
-            local url="$1" out_file="$RUNNER_TEMP/readwn.html"
-            rm -f "$out_file"
-            if curl --location --max-redirs 5 --silent --fail --max-time 10 --max-filesize 2097152 -o "$out_file" "$url" -H "User-Agent: $USER_AGENT" 2>/dev/null; then
-              grep -q 'novel-item' "$out_file"
-              return $?
+          probe_head() {
+            local name="$1" label="$2" path="$3" expected_ct="$4"
+            echo "🔍 Checking for $name theme..." >> "$GITHUB_STEP_SUMMARY"
+            if check_head "https://$BASE_URL$path" "$expected_ct" || \
+               check_head "http://$BASE_URL$path" "$expected_ct"; then
+              MATCHED+=("$label")
+              echo "✅ $name Theme Detected" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "❌ $name Theme Not Found" >> "$GITHUB_STEP_SUMMARY"
             fi
-            return 1
           }
-          if fetch_and_grep "https://$BASE_URL/list/all/all-newstime-0.html" || \
-             fetch_and_grep "http://$BASE_URL/list/all/all-newstime-0.html"; then
-            echo "readwn=true" >> "$GITHUB_OUTPUT"
-            echo "✅ Readwn Theme Detected" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "readwn=false" >> "$GITHUB_OUTPUT"
-            echo "❌ Readwn Theme Not Found" >> "$GITHUB_STEP_SUMMARY"
-          fi
+
+          probe_body() {
+            local name="$1" label="$2" host="$3" path="$4" pattern="$5" out_file="$6"
+            echo "🔍 Checking for $name theme..." >> "$GITHUB_STEP_SUMMARY"
+            if fetch_and_grep "https://$host$path" "$pattern" "$out_file" || \
+               fetch_and_grep "http://$host$path" "$pattern" "$out_file"; then
+              MATCHED+=("$label")
+              echo "✅ $name Theme Detected" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "❌ $name Theme Not Found" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          }
+
+          probe_head "Madara" "theme: madara" "/wp-content/themes/madara/style.css" "text/css"
+          probe_head "Lightnovelwp" "theme: lightnovelwp" "/wp-content/themes/lightnovel/style.css" "text/css"
+          probe_body "HotNovelPub" "theme: hotnovelpub" "api.$BASE_URL" "" "Hello!" "$RUNNER_TEMP/hotnovelpub.txt"
+          probe_head "Fictioneer" "theme: fictioneer" "/wp-content/themes/fictioneer/css/application.css" "text/css"
+          probe_head "Novel Fire" "theme: novel fire" "/frontend/js/appsettings.min.js" "javascript"
+          probe_body "Readwn" "theme: readwn" "$BASE_URL" "/list/all/all-newstime-0.html" "novel-item" "$RUNNER_TEMP/readwn.html"
+
+          {
+            echo "match_count=${#MATCHED[@]}"
+            echo "theme_label=${MATCHED[0]:-}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Add Theme Label To Issue
         id: add_theme_label
         if: always() && !cancelled() && steps.get_base_url.outputs.BASE_URL != ''
         env:
-          MADARA: ${{ steps.check_madara.outputs.madara }}
-          LIGHTNOVELWP: ${{ steps.check_lightnovelwp.outputs.lightnovelwp }}
-          HOTNOVELPUB: ${{ steps.check_hotnovelpub.outputs.hotnovelpub }}
-          FICTIONEER: ${{ steps.check_fictioneer.outputs.fictioneer }}
-          NOVEL_FIRE: ${{ steps.check_novel_fire.outputs.novel_fire }}
-          READWN: ${{ steps.check_readwn.outputs.readwn }}
+          MATCH_COUNT: ${{ steps.detect_theme.outputs.match_count }}
+          THEME_LABEL: ${{ steps.detect_theme.outputs.theme_label }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          MATCHED=()
-          [[ "$MADARA" == "true" ]] && MATCHED+=("theme: madara")
-          [[ "$LIGHTNOVELWP" == "true" ]] && MATCHED+=("theme: lightnovelwp")
-          [[ "$HOTNOVELPUB" == "true" ]] && MATCHED+=("theme: hotnovelpub")
-          [[ "$FICTIONEER" == "true" ]] && MATCHED+=("theme: fictioneer")
-          [[ "$NOVEL_FIRE" == "true" ]] && MATCHED+=("theme: novel fire")
-          [[ "$READWN" == "true" ]] && MATCHED+=("theme: readwn")
-
           echo "## Theme Detection Result" >> "$GITHUB_STEP_SUMMARY"
-          if (( ${#MATCHED[@]} > 1 )); then
-            echo "⚠️ Multiple themes detected (${#MATCHED[@]})." >> "$GITHUB_STEP_SUMMARY"
-          elif (( ${#MATCHED[@]} == 1 )); then
-            THEME_LABEL="${MATCHED[0]}"
+          if (( MATCH_COUNT > 1 )); then
+            echo "⚠️ Multiple themes detected ($MATCH_COUNT)." >> "$GITHUB_STEP_SUMMARY"
+          elif (( MATCH_COUNT == 1 )) && [ -n "$THEME_LABEL" ]; then
             if [ "$THEME_LABEL" = "theme: lightnovelwp" ]; then
               if ! gh api "repos/$REPO/labels/theme%3A%20lightnovelwp" >/dev/null 2>&1; then
                 if gh api "repos/$REPO/labels/theme%3A%20lighnovelwp" >/dev/null 2>&1; then

@@ -6,10 +6,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 
+const { computeLabelPlan } = require('./auto-label-issue.cjs');
 const {
-  computeIssueLabels,
-  computeLabelPlan,
-} = require('./auto-label-issue.cjs');
+  renderIssueTemplate,
+} = require('./generate-issue-template-options.cjs');
 
 const pluginKeys = JSON.parse(
   fs.readFileSync(path.join(__dirname, 'keys.json'), 'utf8'),
@@ -27,7 +27,7 @@ test('bug issue with single English plugin and valid severity', () => {
   ].join('\n');
 
   assert.deepEqual(
-    computeIssueLabels({ body, existingLabels: ['bug'], pluginKeys }),
+    computeLabelPlan({ body, existingLabels: ['bug'], pluginKeys }).desired,
     ["severity: can't load novels", 'plugin: novel fire[novelfire]'],
   );
 });
@@ -44,7 +44,7 @@ test('bug issue with comma-containing Chinese and Korean plugin keys', () => {
   ].join('\n');
 
   assert.deepEqual(
-    computeIssueLabels({ body, existingLabels: ['bug'], pluginKeys }),
+    computeLabelPlan({ body, existingLabels: ['bug'], pluginKeys }).desired,
     [
       'severity: wrong formatting',
       'plugin: 69书吧[69shu]',
@@ -75,15 +75,16 @@ test('bug issue with Arabic plugin with or without leading LRM directional contr
   ].join('\n');
 
   assert.deepEqual(
-    computeIssueLabels({ body: withLrm, existingLabels: ['bug'], pluginKeys }),
+    computeLabelPlan({ body: withLrm, existingLabels: ['bug'], pluginKeys })
+      .desired,
     ['severity: missing chapter', 'plugin: arnovel[arnovel]'],
   );
   assert.deepEqual(
-    computeIssueLabels({
+    computeLabelPlan({
       body: withoutLrm,
       existingLabels: ['bug'],
       pluginKeys,
-    }),
+    }).desired,
     ['severity: missing chapter', 'plugin: arnovel[arnovel]'],
   );
 });
@@ -100,7 +101,7 @@ test('bug issue with colon inside plugin name preserves colon after language pre
   ].join('\n');
 
   assert.deepEqual(
-    computeIssueLabels({ body, existingLabels: ['bug'], pluginKeys }),
+    computeLabelPlan({ body, existingLabels: ['bug'], pluginKeys }).desired,
     ['severity: wrong content', 'plugin: re:library[relib]'],
   );
 });
@@ -127,11 +128,11 @@ test('bug issue with unmatched plugin or _No response_ never emits bare plugin: 
   ].join('\n');
 
   for (const body of [staleBody, noResponseBody]) {
-    const labels = computeIssueLabels({
+    const labels = computeLabelPlan({
       body,
       existingLabels: ['bug'],
       pluginKeys,
-    });
+    }).desired;
     assert.deepEqual(labels, ['severity: other']);
     assert.ok(!labels.some(label => label.trim() === 'plugin:'));
   }
@@ -152,7 +153,7 @@ test('bug issue handles CRLF line endings and extra blank lines', () => {
   ].join('\r\n');
 
   assert.deepEqual(
-    computeIssueLabels({ body, existingLabels: ['bug'], pluginKeys }),
+    computeLabelPlan({ body, existingLabels: ['bug'], pluginKeys }).desired,
     ['severity: domain changed', 'plugin: novelbuddy[novelbuddy]'],
   );
 });
@@ -168,11 +169,11 @@ test('plugin request issue maps non-English language names and native aliases', 
   for (const [languageInput, expectedLabel] of cases) {
     const body = ['### Language', '', languageInput].join('\n');
     assert.deepEqual(
-      computeIssueLabels({
+      computeLabelPlan({
         body,
         existingLabels: ['plugin request'],
         pluginKeys,
-      }),
+      }).desired,
       [expectedLabel],
     );
   }
@@ -189,11 +190,11 @@ test('plugin request issue with English, Multi, empty, _No response_, or unrecog
   ]) {
     const body = ['### Language', '', languageInput].join('\n');
     assert.deepEqual(
-      computeIssueLabels({
+      computeLabelPlan({
         body,
         existingLabels: ['plugin request'],
         pluginKeys,
-      }),
+      }).desired,
       [],
     );
   }
@@ -211,11 +212,11 @@ test('unrelated issue emits []', () => {
   ].join('\n');
 
   assert.deepEqual(
-    computeIssueLabels({
+    computeLabelPlan({
       body,
       existingLabels: ['feature request'],
       pluginKeys,
-    }),
+    }).desired,
     [],
   );
 });
@@ -232,11 +233,11 @@ test('all plugin labels in keys.json stay within GitHub 50-character limit and p
       'Other',
     ].join('\n');
 
-    const labels = computeIssueLabels({
+    const labels = computeLabelPlan({
       body,
       existingLabels: ['bug'],
       pluginKeys,
-    });
+    }).desired;
     const pluginLabels = labels.filter(label => label.startsWith('plugin:'));
     assert.equal(pluginLabels.length, 1, `Expected 1 label for ${displayKey}`);
     const [pluginLabel] = pluginLabels;
@@ -259,16 +260,37 @@ test('all plugin labels in keys.json stay within GitHub 50-character limit and p
     'Other',
   ].join('\n');
   assert.deepEqual(
-    computeIssueLabels({
+    computeLabelPlan({
       body: longestBody,
       existingLabels: ['bug'],
       pluginKeys,
-    }),
+    }).desired,
     ['severity: other', 'plugin: taxingcorn117…[taxingcorn117stranslations]'],
   );
+
+  const syntheticLongIdBody = [
+    '### Plugin',
+    '',
+    'English: Ultra Long Plugin Name',
+    '',
+    '### Severity',
+    '',
+    'Other',
+  ].join('\n');
+  const syntheticPlan = computeLabelPlan({
+    body: syntheticLongIdBody,
+    existingLabels: ['bug'],
+    pluginKeys: { 'English: Ultra Long Plugin Name': 'a'.repeat(45) },
+  });
+  const syntheticPluginLabel = syntheticPlan.desired.find(label =>
+    label.startsWith('plugin:'),
+  );
+  assert.ok(syntheticPluginLabel);
+  assert.ok(syntheticPluginLabel.length <= 50);
+  assert.match(syntheticPluginLabel, /^plugin: .*\[[^\]]+\]$/);
 });
 
-test('computeLabelPlan reconciles stale severity, plugin, and language labels on edited issues', () => {
+test('computeLabelPlan reconciles stale labels and preserves unlisted manual language labels', () => {
   const editedBugBody = [
     '### Plugin',
     '',
@@ -344,10 +366,30 @@ test('computeLabelPlan reconciles stale severity, plugin, and language labels on
       remove: ['language: arabic'],
     },
   );
+
+  assert.deepEqual(
+    computeLabelPlan({
+      body: '### Language\n\nSwedish',
+      existingLabels: ['plugin request', 'language: swedish'],
+      pluginKeys,
+    }),
+    {
+      desired: [],
+      add: [],
+      remove: [],
+    },
+  );
 });
 
-test('plugin request issue supports expanded language aliases and delimited primary language', () => {
+test('plugin request issue supports all expanded language aliases and delimited primary language', () => {
   const cases = [
+    ['Burmese', ['language: burmese']],
+    ['မြန်မာ', ['language: burmese']],
+    ['Czech', ['language: czech']],
+    ['Čeština', ['language: czech']],
+    ['Greek', ['language: greek']],
+    ['Hebrew', ['language: hebrew']],
+    ['Romanian', ['language: romanian']],
     ['Hindi', ['language: hindi']],
     ['Tagalog', ['language: filipino']],
     ['Filipino', ['language: filipino']],
@@ -361,17 +403,17 @@ test('plugin request issue supports expanded language aliases and delimited prim
   for (const [languageInput, expected] of cases) {
     const body = ['### Language', '', languageInput].join('\n');
     assert.deepEqual(
-      computeIssueLabels({
+      computeLabelPlan({
         body,
         existingLabels: ['plugin request'],
         pluginKeys,
-      }),
+      }).desired,
       expected,
     );
   }
 });
 
-test('auto-label-issue CLI outputs labels, add, and remove JSON', () => {
+test('auto-label-issue CLI outputs add and remove JSON', () => {
   const stdout = execFileSync(
     process.execPath,
     [path.join(__dirname, 'auto-label-issue.cjs')],
@@ -387,8 +429,17 @@ test('auto-label-issue CLI outputs labels, add, and remove JSON', () => {
   );
 
   assert.deepEqual(JSON.parse(stdout), {
-    labels: ['severity: missing chapter', 'plugin: novel fire[novelfire]'],
     add: ['severity: missing chapter', 'plugin: novel fire[novelfire]'],
     remove: ['severity: other'],
   });
+});
+
+test('renderIssueTemplate substitutes {#CHANGE#} placeholder with YAML list options', () => {
+  assert.equal(
+    renderIssueTemplate('options:\n        {#CHANGE#}\n', [
+      'English: A',
+      'English: B',
+    ]),
+    'options:\n        - "English: A"\n        - "English: B"\n',
+  );
 });

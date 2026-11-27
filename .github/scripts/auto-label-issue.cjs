@@ -4,8 +4,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const {
   VALID_SEVERITIES,
+  buildSelectionMatcher,
   comparisonValue,
-  escapeRegExp,
   extractSection,
   nonEmptySectionLines,
 } = require('./issue-parsing.cjs');
@@ -151,6 +151,10 @@ const LANGUAGE_ALIASES = new Map([
   ['tieng viet', 'vietnamese'],
 ]);
 
+const MANAGED_LANGUAGE_LABELS = new Set(
+  [...LANGUAGE_ALIASES.values()].map(lang => `language: ${lang}`),
+);
+
 function resolveLanguageAlias(rawLanguage) {
   if (!rawLanguage) return null;
   const direct = LANGUAGE_ALIASES.get(rawLanguage);
@@ -174,7 +178,8 @@ function formatPluginLabel(displayKey, id) {
     const truncated = name.slice(0, maxNameLen - 1).trimEnd();
     if (truncated) return `plugin: ${truncated}…${suffix}`;
   }
-  return `plugin: ${suffix}`.slice(0, MAX_LABEL_LENGTH);
+  const maxIdLen = MAX_LABEL_LENGTH - 'plugin: []'.length;
+  return `plugin: [${cleanId.slice(0, maxIdLen)}]`;
 }
 
 function matchPluginLabels(lines, pluginKeys) {
@@ -190,14 +195,9 @@ function matchPluginLabels(lines, pluginKeys) {
     entriesByKey.set(normalizedKey, { displayKey, id });
   }
 
-  if (entriesByKey.size === 0) return [];
-
-  const sortedKeys = [...entriesByKey.keys()].sort(
-    (a, b) => b.length - a.length || (a < b ? -1 : a > b ? 1 : 0),
-  );
-  const alternatives = sortedKeys.map(escapeRegExp).join('|');
+  const regex = buildSelectionMatcher(entriesByKey.keys());
+  if (!regex) return [];
   const selection = comparisonValue(lines.join(', '));
-  const regex = new RegExp(`(?:^|, )(${alternatives})(?=, |$)`, 'g');
 
   const labels = [];
   let match;
@@ -266,7 +266,7 @@ function computeLabelPlan({ body, existingLabels = [], pluginKeys = {} }) {
     ) {
       return true;
     }
-    return manageLanguage && normalized.startsWith('language: ');
+    return manageLanguage && MANAGED_LANGUAGE_LABELS.has(normalized);
   };
 
   const add = desired.filter(
@@ -292,10 +292,6 @@ function computeLabelPlan({ body, existingLabels = [], pluginKeys = {} }) {
   return { desired, add, remove };
 }
 
-function computeIssueLabels(args) {
-  return computeLabelPlan(args).desired;
-}
-
 if (require.main === module) {
   const keysPath = path.join(__dirname, 'keys.json');
   const pluginKeys = JSON.parse(fs.readFileSync(keysPath, 'utf8'));
@@ -303,8 +299,8 @@ if (require.main === module) {
   const existingLabels = JSON.parse(process.env.ISSUE_LABELS || '[]');
   const plan = computeLabelPlan({ body, existingLabels, pluginKeys });
   process.stdout.write(
-    `${JSON.stringify({ labels: plan.add, add: plan.add, remove: plan.remove })}\n`,
+    `${JSON.stringify({ add: plan.add, remove: plan.remove })}\n`,
   );
 }
 
-module.exports = { computeIssueLabels, computeLabelPlan, formatPluginLabel };
+module.exports = { computeLabelPlan };
