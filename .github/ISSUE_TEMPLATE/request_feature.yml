@@ -33,7 +33,7 @@ body:
           required: true
         - label: I understand that app-specific features should be requested in the [app repository](https://github.com/LNReader/lnreader/issues/new/choose).
           required: true
-        - label: I have updated the app to the latest version **[1.1.19](https://github.com/LNReader/lnreader/releases/latest)**.
+        - label: I have updated the app to the **[latest version](https://github.com/LNReader/lnreader/releases/latest)**.
           required: true
         - label: I have provided all requested information in this form.
           required: true

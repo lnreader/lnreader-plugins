@@ -26,30 +26,12 @@ jobs:
           duplicate-label: duplicate
 
           duplicate-check-enabled: true
+          # tachiyomiorg/issue-moderator-action@v2 checks duplicates on issues.opened using initial payload.issue.labels,
+          # so including both labels lets new plugin requests deduplicate against open domain-change reports too.
           duplicate-check-labels: |
-            ["plugin request", "domain changed"]
+            ["plugin request", "domain changed", "severity: domain changed"]
 
           existing-check-enabled: false
-
-          auto-close-rules: |
-            [
-              {
-                "type": "body",
-                "regex": ".*DELETE THIS SECTION IF YOU HAVE READ AND ACKNOWLEDGED IT.*",
-                "message": "The acknowledgment section was not removed."
-              },
-              {
-                "type": "body",
-                "regex": ".*\\* (LNReader version|Android version|Device): \\?.*",
-                "message": "Requested information in the template was not filled out."
-              },
-              {
-                "type": "title",
-                "regex": ".*(Plugin name|Short description).*",
-                "message": "You did not fill out the description in the title"
-              }
-            ]
-          auto-close-ignore-label: do-not-autoclose
 
       - name: Update moderated issue index
         if: ${{ always() && !cancelled() && !github.event.issue.pull_request }}
