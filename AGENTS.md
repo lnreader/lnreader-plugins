@@ -2,7 +2,7 @@
 
 ## Navigation pointers
 
-- `CODING_STANDARDS.md` — coding, plugin, multisrc migration, and PR review standards (consult during review and before adding/migrating plugins).
+- `CODING_STANDARDS.md` — coding, plugin, multisrc migration, and PR review standards (consult before editing plugins, workflows, or repo tooling and during review).
 - `package.json` — authoritative scripts (`lint`, `format:check`, `build:compile`, `build:full`, `dev:start`, `check:plugin`, `check:sites`).
 - `README.md`, `docs/quickstart.md`, `docs/docs.md`, `docs/testing.md`, `docs/plugin-template.ts` — setup, plugin API, live checker, and starter template.
 
