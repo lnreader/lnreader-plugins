@@ -26,7 +26,8 @@ Review-time standards for LNReader plugins and repository tooling. Automated che
 ## GitHub workflows & scripts
 
 - **Live-issue & concurrency safety**: Auto-close workflows (`issue_moderator.yml`, `theme_auto_label.yml`) must fetch the live GitHub issue before deciding to close and set `concurrency.cancel-in-progress: false` whenever `edited` runs skip checks on unchanged URLs or targets.
-- **SSRF-safe probing**: Outbound website checks and theme probes in `.github/scripts/` must reuse `site-reachability.cjs` (pre-connection DNS resolution, `curl --resolve` IP pinning, and hop-by-hop redirect validation) rather than raw `curl --location`.
+- **SSRF-safe probing & reachability**: Outbound website checks and theme probes in `.github/scripts/` must reuse `site-reachability.cjs` (pre-connection DNS resolution via `resolvePublicIps` with multi-IP failover, `curl --resolve` IP pinning, and hop-by-hop redirect validation) rather than raw `curl --location`; reachability-only checks must stop at the first HTTP response (`maxRedirs: 0`) so `3xx` responses count as reachable, while theme probes follow redirects (`maxRedirs: 5`).
+- **Managed label reconciliation**: Workflows triggered on `issues.edited` that apply managed labels (`language: *`, `theme: *`, `plugin: *`, `severity: *`) must reconcile (`add`/`remove`) against an explicit `MANAGED_*_LABELS` set rather than issuing add-only `POST /labels` calls.
 - **Shared issue actions & async subprocesses**: Apply `invalid` + comment + `not_planned` closures through `close-invalid-issue.cjs`, share form/label helpers via `issue-parsing.cjs`, and use async `child_process.execFile` (not `execFileSync`) in scripts tested against in-process `node:http` servers.
 
 ## Naming & scope
