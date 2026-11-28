@@ -1,0 +1,132 @@
+name: GitHub Scripts & Templates Check
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+    paths:
+      - '.github/**'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Validate GitHub Scripts & YAML
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 1 }}
+          persist-credentials: false
+
+      - name: Detect .github Changes
+        id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            echo "run_checks=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if git rev-parse --verify HEAD^1 >/dev/null 2>&1; then
+            if [ -n "$(git diff --name-only HEAD^1 HEAD -- .github/)" ]; then
+              echo "run_checks=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "run_checks=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "run_checks=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Reject Direct Edits To Generated Issue Template
+        if: github.event_name == 'pull_request' && steps.scope.outputs.run_checks == 'true'
+        run: |
+          if git rev-parse --verify HEAD^1 >/dev/null 2>&1 && \
+             [ -n "$(git diff --name-only HEAD^1 HEAD -- .github/ISSUE_TEMPLATE/report_issue.yml)" ]; then
+            echo "Do not edit .github/ISSUE_TEMPLATE/report_issue.yml directly; edit .github/scripts/blank_report_issue.yml instead." >&2
+            exit 1
+          fi
+
+      - name: Setup Node.js
+        if: steps.scope.outputs.run_checks == 'true'
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Run GitHub Script Tests
+        if: steps.scope.outputs.run_checks == 'true'
+        run: |
+          node --test .github/scripts/*.test.cjs
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "GitHub script tests modified the working tree:" >&2
+            git status --short >&2
+            exit 1
+          fi
+
+      - name: Install Dependencies
+        if: steps.scope.outputs.run_checks == 'true'
+        run: npm ci
+
+      - name: Check Formatting & Lint for GitHub Scripts
+        if: steps.scope.outputs.run_checks == 'true'
+        run: |
+          ./node_modules/.bin/prettier --check ".github/scripts/*.cjs"
+          ./node_modules/.bin/eslint --max-warnings 0 ".github/scripts/*.cjs"
+
+      - name: Validate GitHub YAML & Issue Templates
+        if: steps.scope.outputs.run_checks == 'true'
+        run: |
+          node <<'JS'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const { renderIssueTemplate } = require('./.github/scripts/generate-issue-template-options.cjs');
+          const blank = fs.readFileSync('.github/scripts/blank_report_issue.yml', 'utf8');
+          const keys = Object.keys(JSON.parse(fs.readFileSync('.github/scripts/keys.json', 'utf8')));
+          const outPath = path.join(process.env.RUNNER_TEMP, 'rendered-report-issue.yml');
+          fs.writeFileSync(outPath, renderIssueTemplate(blank, keys));
+          JS
+          python3 -c 'import yaml' 2>/dev/null || python3 -m pip install --quiet PyYAML==6.0.2
+          python3 .github/scripts/validate-github-yaml.py --rendered-report "$RUNNER_TEMP/rendered-report-issue.yml"
+
+      - name: Run actionlint
+        if: steps.scope.outputs.run_checks == 'true'
+        run: |
+          set -euo pipefail
+          ARCHIVE="$RUNNER_TEMP/actionlint.tar.gz"
+          BIN_DIR="$RUNNER_TEMP/actionlint-bin"
+          mkdir -p "$BIN_DIR"
+          curl --silent --show-error --fail --location --max-time 30 \
+            -o "$ARCHIVE" \
+            "https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz"
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  $ARCHIVE" | sha256sum -c -
+          tar -xzf "$ARCHIVE" -C "$BIN_DIR" actionlint
+          shopt -s nullglob
+          WORKFLOWS=()
+          for wf in .github/workflows/*.yml .github/workflows/*.yaml; do
+            [ "$(basename "$wf")" = "publish-plugins.yml" ] && continue
+            WORKFLOWS+=("$wf")
+          done
+          # Ignore 2 pre-existing upstream workflow notices unrelated to PR changes:
+          # - generate-issue-index.yml uses concurrency.queue (beta/unsupported in actionlint schema)
+          # - lint.yml uses reviewdog/action-eslint@v1 deprecated fail_on_error input
+          "$BIN_DIR/actionlint" \
+            -ignore 'unexpected key "queue" for "concurrency" section' \
+            -ignore 'avoid using deprecated input "fail_on_error" in action "reviewdog/action-eslint@v1"' \
+            "${WORKFLOWS[@]}"
+          if [ -f .github/workflows/publish-plugins.yml ]; then
+            "$BIN_DIR/actionlint" \
+              -ignore 'SC2086:info:1:29: Double quote to prevent globbing and word splitting' \
+              .github/workflows/publish-plugins.yml
+          fi

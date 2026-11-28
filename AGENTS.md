@@ -2,7 +2,7 @@
 
 ## Navigation pointers
 
-- `CODING_STANDARDS.md` — coding, plugin, multisrc migration, and PR review standards (consult during review and before adding/migrating plugins).
+- `CODING_STANDARDS.md` — coding, plugin, multisrc migration, and PR review standards (consult before editing plugins, workflows, or repo tooling and during review).
 - `package.json` — authoritative scripts (`lint`, `format:check`, `build:compile`, `build:full`, `dev:start`, `check:plugin`, `check:sites`).
 - `README.md`, `docs/quickstart.md`, `docs/docs.md`, `docs/testing.md`, `docs/plugin-template.ts` — setup, plugin API, live checker, and starter template.
 
@@ -15,6 +15,7 @@
 - `src/types/plugin.ts`, `src/libs/`: canonical plugin interfaces and `@libs/*` runtime helpers.
 - `src/`: React/Vite playground; `scripts/`: build, manifest, publishing, and live-check tooling.
 - `BLACKLIST.json`: disallowed sources.
+- `.github/scripts/`, `.github/workflows/`: issue-form generation (`blank_report_issue.yml` -> `report_issue.yml`), issue-index publishing, and label/moderator automation (`keys.json` is shared; validate via `npm run test:scripts` or `npm run check:github`).
 
 ## Environment & package management
 

@@ -11,56 +11,205 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  autoclose:
-    name: Auto Close Invalid Issues
+  moderate:
+    name: Moderate Issues
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
+      contents: read
       issues: write
       pull-requests: write
       actions: write
     steps:
+      - name: Checkout Repository
+        if: >-
+          ${{
+            github.event_name == 'issues' &&
+            !github.event.issue.pull_request &&
+            (
+              github.event.action == 'opened' ||
+              (
+                github.event.action == 'edited' &&
+                github.event.issue.state == 'open' &&
+                contains(github.event.issue.labels.*.name, 'bug')
+              )
+            )
+          }}
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        if: >-
+          ${{
+            github.event_name == 'issues' &&
+            !github.event.issue.pull_request &&
+            (
+              github.event.action == 'opened' ||
+              (
+                github.event.action == 'edited' &&
+                github.event.issue.state == 'open' &&
+                contains(github.event.issue.labels.*.name, 'bug')
+              )
+            )
+          }}
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '24'
+
+      - name: Validate Issue Template
+        id: validate-template
+        if: github.event_name == 'issues' && github.event.action == 'opened' && !github.event.issue.pull_request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_API_URL: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/$REPOSITORY/issues/$ISSUE_NUMBER" > "$RUNNER_TEMP/live-issue.json"
+          node .github/scripts/validate-issue-template.cjs --issue-file "$RUNNER_TEMP/live-issue.json" > "$RUNNER_TEMP/template-check.json"
+          if [ "$(jq -r '.shouldClose' "$RUNNER_TEMP/template-check.json")" = "true" ]; then
+            node .github/scripts/close-invalid-issue.cjs "$RUNNER_TEMP/template-check.json" >/dev/null
+            echo "closed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "closed=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Moderate Issues
-        uses: tachiyomiorg/issue-moderator-action@v2
+        if: steps.validate-template.outputs.closed != 'true'
+        uses: tachiyomiorg/issue-moderator-action@32a31ab12ad6e68ebf4c65408f47bef132d4fd3c # v2
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           duplicate-label: duplicate
 
           duplicate-check-enabled: true
+          # tachiyomiorg/issue-moderator-action@v2 checks duplicates on issues.opened using initial payload.issue.labels,
+          # so including both labels lets new plugin requests deduplicate against open domain-change reports too.
           duplicate-check-labels: |
-            ["plugin request", "domain changed"]
+            ["plugin request", "domain changed", "severity: domain changed"]
 
           existing-check-enabled: false
 
-          auto-close-rules: |
-            [
-              {
-                "type": "body",
-                "regex": ".*DELETE THIS SECTION IF YOU HAVE READ AND ACKNOWLEDGED IT.*",
-                "message": "The acknowledgment section was not removed."
-              },
-              {
-                "type": "body",
-                "regex": ".*\\* (LNReader version|Android version|Device): \\?.*",
-                "message": "Requested information in the template was not filled out."
-              },
-              {
-                "type": "title",
-                "regex": ".*(Plugin name|Short description).*",
-                "message": "You did not fill out the description in the title"
-              }
-            ]
-          auto-close-ignore-label: do-not-autoclose
+      - name: Check Reported Plugin Website
+        id: check-bug-site
+        if: >-
+          ${{
+            github.event_name == 'issues' &&
+            !github.event.issue.pull_request &&
+            github.event.issue.state == 'open' &&
+            (github.event.action == 'opened' || github.event.action == 'edited') &&
+            contains(github.event.issue.labels.*.name, 'bug') &&
+            steps.validate-template.outputs.closed != 'true'
+          }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_API_URL: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          PREVIOUS_ISSUE_BODY_JSON: ${{ toJSON(github.event.changes.body.from) }}
+          EVENT_ACTION: ${{ github.event.action }}
+          ISSUE_LABELS: ${{ toJSON(github.event.issue.labels.*.name) }}
+          ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
+          ISSUE_AUTHOR_ASSOCIATION: ${{ github.event.issue.author_association }}
+          ISSUE_AUTHOR_TYPE: ${{ github.event.issue.user.type }}
+          ISSUE_STATE: ${{ github.event.issue.state }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/$REPOSITORY/issues/$ISSUE_NUMBER" > "$RUNNER_TEMP/pre-check-issue.json"
+          if [ "$(jq -r '.state' "$RUNNER_TEMP/pre-check-issue.json")" != "open" ]; then
+            echo "Issue #$ISSUE_NUMBER is no longer open; skipping website check." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          node .github/scripts/check-bug-report-site.cjs > "$RUNNER_TEMP/bug-site-check.json"
+          MODE=$(jq -r '.mode' "$RUNNER_TEMP/bug-site-check.json")
+          TARGETS=$(jq -r '.targets | join(", ")' "$RUNNER_TEMP/bug-site-check.json")
+          REACHABLE=$(jq -r '.reachable' "$RUNNER_TEMP/bug-site-check.json")
+          SHOULD_CLOSE=$(jq -r '.shouldClose' "$RUNNER_TEMP/bug-site-check.json")
+          SKIPPED=$(jq -r '.skipped // ""' "$RUNNER_TEMP/bug-site-check.json")
+
+          {
+            echo "## Plugin Website Reachability Check"
+            echo "- Mode: \`$MODE\`"
+            echo "- Targets: \`$TARGETS\`"
+            echo "- Reachable: \`$REACHABLE\`"
+            if [ -n "$SKIPPED" ]; then
+              echo "- Auto-close skipped: \`$SKIPPED\`"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$SHOULD_CLOSE" = "true" ]; then
+            gh api "repos/$REPOSITORY/issues/$ISSUE_NUMBER" > "$RUNNER_TEMP/current-issue.json"
+            node .github/scripts/check-bug-report-site.cjs --confirm-close "$RUNNER_TEMP/bug-site-check.json" "$RUNNER_TEMP/current-issue.json" > "$RUNNER_TEMP/bug-close-decision.json"
+            if [ "$(jq -r '.shouldClose' "$RUNNER_TEMP/bug-close-decision.json")" = "true" ]; then
+              node .github/scripts/close-invalid-issue.cjs "$RUNNER_TEMP/bug-close-decision.json" >/dev/null
+              echo "- Action: Added \`invalid\` label and closed issue as \`not_planned\`." >> "$GITHUB_STEP_SUMMARY"
+            else
+              CONFIRM_SKIPPED=$(jq -r '.skipped // "unknown"' "$RUNNER_TEMP/bug-close-decision.json")
+              echo "- Action: Skipped closing after live issue recheck (\`$CONFIRM_SKIPPED\`)." >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
 
       - name: Update moderated issue index
         if: ${{ always() && !cancelled() && !github.event.issue.pull_request }}
         env:
           GH_TOKEN: ${{ github.token }}
+          GITHUB_API_URL: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
+          EVENT_ISSUE_STATE: ${{ github.event.issue.state }}
+          EVENT_ISSUE_LABELS: ${{ toJSON(github.event.issue.labels.*.name) }}
         shell: bash
         run: |
           set -euo pipefail
+          NEEDS_DISPATCH=$(node <<'NODE'
+          const normalizeLabels = labels =>
+            [...new Set((Array.isArray(labels) ? labels : []).map(l => String(l).trim().toLowerCase()))].sort();
+
+          async function main() {
+            const url = `${process.env.GITHUB_API_URL}/repos/${process.env.REPOSITORY}/issues/${process.env.ISSUE_NUMBER}`;
+            const response = await fetch(url, {
+              redirect: 'manual',
+              headers: {
+                Authorization: `Bearer ${process.env.GH_TOKEN}`,
+                Accept: 'application/vnd.github+json',
+                'User-Agent': 'lnreader-issue-moderator',
+              },
+            });
+            if (response.status === 404 || response.status === 410) {
+              process.stdout.write('true');
+              return;
+            }
+            if (response.status !== 200) {
+              throw new Error(`Issue lookup failed with HTTP ${response.status}.`);
+            }
+            const issue = await response.json();
+            const currentLabels = normalizeLabels(
+              Array.isArray(issue.labels) ? issue.labels.map(l => (typeof l === 'string' ? l : l && l.name)) : [],
+            );
+            const eventLabels = normalizeLabels(JSON.parse(process.env.EVENT_ISSUE_LABELS || '[]'));
+            const stateChanged = issue.state !== process.env.EVENT_ISSUE_STATE;
+            const labelsChanged = JSON.stringify(currentLabels) !== JSON.stringify(eventLabels);
+            process.stdout.write(stateChanged || labelsChanged ? 'true' : 'false');
+          }
+
+          main().catch(err => {
+            process.stderr.write(`${err.message}\n`);
+            process.exitCode = 1;
+          });
+          NODE
+          )
+
+          if [ "$NEEDS_DISPATCH" != "true" ]; then
+            echo "No moderator state/label changes; skipping issue index dispatch."
+            exit 0
+          fi
+
           jq -n --arg ref "$DEFAULT_BRANCH" --arg number "$ISSUE_NUMBER" \
             '{ref: $ref, inputs: {issue_number: $number}}' \
             | gh api --method POST "repos/$REPOSITORY/actions/workflows/generate-issue-index.yml/dispatches" --input -

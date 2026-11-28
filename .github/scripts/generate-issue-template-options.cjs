@@ -2,12 +2,16 @@ const version = require('../../package.json').version;
 const dist = `plugins/v${version}`;
 const fs = require('fs');
 
-const rawText = fs.readFileSync(
-  '.github/scripts/blank_report_issue.yml',
-  'utf8',
-);
+function renderIssueTemplate(rawText, keys) {
+  const text = keys.join('"\n        - "');
+  return rawText.replace(/{#CHANGE#}/g, '- "' + text + '"');
+}
 
 async function main() {
+  const rawText = fs.readFileSync(
+    '.github/scripts/blank_report_issue.yml',
+    'utf8',
+  );
   console.log(`Fetching published plugin manifest from ${dist}...`);
 
   try {
@@ -41,8 +45,7 @@ async function main() {
       console.log('No saved plugin keys found; a new key map will be created.');
     }
 
-    const text = newKeys.join('"\n        - "');
-    const issueTemplate = rawText.replace(/{#CHANGE#}/g, '- "' + text + '"');
+    const issueTemplate = renderIssueTemplate(rawText, newKeys);
 
     const keysChanged = !sameKeys(newKeys, savedKeys) && Array.isArray(newKeys);
     if (keysChanged) {
@@ -80,7 +83,11 @@ async function main() {
   }
 }
 
-main().catch(err => {
-  console.error('Fatal error:', err);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch(err => {
+    console.error('Fatal error:', err);
+    process.exit(1);
+  });
+}
+
+module.exports = { renderIssueTemplate };

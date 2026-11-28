@@ -1,39 +1,12 @@
 'use strict';
 
 const fs = require('node:fs');
-
-const CATEGORY_CODES = new Map([
-  ['wrong formatting', 1],
-  ['wrong content', 2],
-  ['missing chapter', 3],
-  ['missing images', 4],
-  ["can't load novels", 5],
-  ['domain changed', 6],
-]);
-const DIRECTIONAL_CONTROLS = /[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g;
-
-function comparisonValue(value) {
-  return value
-    .replace(DIRECTIONAL_CONTROLS, '')
-    .trim()
-    .toLocaleLowerCase('en-US');
-}
-
-function extractSection(body, name) {
-  const lines = (body || '').replace(/\r\n?/g, '\n').split('\n');
-  const heading = new RegExp(`^\\s{0,3}###\\s+${name}\\s*#*\\s*$`, 'i');
-  const start = lines.findIndex(line =>
-    heading.test(line.replace(DIRECTIONAL_CONTROLS, '')),
-  );
-  if (start < 0) return { present: false, lines: [] };
-  let end = start + 1;
-  while (
-    end < lines.length &&
-    !/^\s{0,3}#{1,6}(?:\s|$)/.test(lines[end].replace(DIRECTIONAL_CONTROLS, ''))
-  )
-    end += 1;
-  return { present: true, lines: lines.slice(start + 1, end) };
-}
+const {
+  CATEGORY_CODES,
+  buildSelectionMatcher,
+  comparisonValue,
+  extractSection,
+} = require('./issue-parsing.cjs');
 
 function createLookups(pluginKeys) {
   const prototype =
@@ -94,11 +67,10 @@ function resolveSelection(lines, lookups, issueNumber, warn) {
     .filter(Boolean)
     .join(', ');
   const normalized = comparisonValue(selection);
-  const alternatives = lookups.candidates
-    .map(candidate => candidate.value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-    .join('|');
-  if (!alternatives) return { ids: new Set(), unresolved: selection };
-  const regex = new RegExp(`(?:^|, )(${alternatives})(?=, |$)`, 'g');
+  const regex = buildSelectionMatcher(
+    lookups.candidates.map(candidate => candidate.value),
+  );
+  if (!regex) return { ids: new Set(), unresolved: selection };
   const ids = new Set();
   const spans = [];
   let match;
