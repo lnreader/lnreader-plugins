@@ -23,6 +23,12 @@ Review-time standards for LNReader plugins and repository tooling. Automated che
   2. Move `public/static/multisrc/<generator>/<id>/icon.png` to `public/static/src/<short-language-code>/<id>/icon.png`.
   3. Preserve `id`, support legacy `resolveUrl`/trailing-slash paths, and bump the major `version`.
 
+## GitHub workflows & scripts
+
+- **Live-issue & concurrency safety**: Auto-close workflows (`issue_moderator.yml`, `theme_auto_label.yml`) must fetch the live GitHub issue before deciding to close and set `concurrency.cancel-in-progress: false` whenever `edited` runs skip checks on unchanged URLs or targets.
+- **SSRF-safe probing**: Outbound website checks and theme probes in `.github/scripts/` must reuse `site-reachability.cjs` (pre-connection DNS resolution, `curl --resolve` IP pinning, and hop-by-hop redirect validation) rather than raw `curl --location`.
+- **Shared issue actions & async subprocesses**: Apply `invalid` + comment + `not_planned` closures through `close-invalid-issue.cjs`, share form/label helpers via `issue-parsing.cjs`, and use async `child_process.execFile` (not `execFileSync`) in scripts tested against in-process `node:http` servers.
+
 ## Naming & scope
 
 - **camelCase**: Use `camelCase` for plugin variables, properties, methods, and function parameters. Fields on type aliases that mirror external JSON/API/RSC schemas (e.g., `chapter_number`, `published_at`) are exempt.

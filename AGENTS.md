@@ -15,7 +15,7 @@
 - `src/types/plugin.ts`, `src/libs/`: canonical plugin interfaces and `@libs/*` runtime helpers.
 - `src/`: React/Vite playground; `scripts/`: build, manifest, publishing, and live-check tooling.
 - `BLACKLIST.json`: disallowed sources.
-- `.github/scripts/`, `.github/workflows/`: issue-form generation (`blank_report_issue.yml` -> `report_issue.yml`), issue-index publishing, and label/moderator automation (`keys.json` is shared; validate via `npm run test:scripts`).
+- `.github/scripts/`, `.github/workflows/`: issue-form generation (`blank_report_issue.yml` -> `report_issue.yml`), issue-index publishing, and label/moderator automation (`keys.json` is shared; validate via `npm run test:scripts` or `npm run check:github`).
 
 ## Environment & package management
 
