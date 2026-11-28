@@ -48,7 +48,7 @@ jobs:
             BASE_URL=""
           else
             HOST_ONLY=$(printf '%s' "${BASE_URL%%:*}" | tr '[:upper:]' '[:lower:]')
-            if [[ "$HOST_ONLY" == "localhost" || "$HOST_ONLY" == *.localhost || "$HOST_ONLY" == *.local || "$HOST_ONLY" == *.internal ]]; then
+            if [[ "$HOST_ONLY" == "localhost" || "$HOST_ONLY" == *.localhost || "$HOST_ONLY" == *.local || "$HOST_ONLY" == *.internal || "$HOST_ONLY" == *.home.arpa || "$HOST_ONLY" == *.lan || "$HOST_ONLY" == *.localdomain ]]; then
               BASE_URL=""
             fi
           fi
@@ -70,31 +70,49 @@ jobs:
           BASE_URL: ${{ steps.get_base_url.outputs.BASE_URL }}
           USER_AGENT: ${{ steps.get_user_agent.outputs.USER_AGENT }}
         run: |
+          is_private_ip() {
+            local ip="${1,,}"
+            ip="${ip#\[}"
+            ip="${ip%\]}"
+            ip="${ip%%%*}"
+            [[ -z "$ip" ]] && return 0
+            if [[ "$ip" == *:* ]]; then
+              [[ "$ip" == "::" || "$ip" == "::1" || "$ip" == 0:0:0:0:0:0:0:[01] || "$ip" == fc* || "$ip" == fd* || "$ip" == fe[89ab]* || "$ip" == ::ffff:* ]]
+              return $?
+            fi
+            local o1 o2 _o3 _o4
+            IFS=. read -r o1 o2 _o3 _o4 <<< "$ip"
+            [[ "$o1" =~ ^[0-9]+$ && "$o2" =~ ^[0-9]+$ ]] || return 0
+            (( o1 == 0 || o1 == 10 || o1 == 127 )) && return 0
+            (( o1 == 169 && o2 == 254 )) && return 0
+            (( o1 == 172 && o2 >= 16 && o2 <= 31 )) && return 0
+            (( o1 == 192 && o2 == 168 )) && return 0
+            (( o1 == 100 && o2 >= 64 && o2 <= 127 )) && return 0
+            return 1
+          }
+
           check_head() {
-            local url="$1" expected_ct="$2" meta code ctype
-            meta=$(curl --location --max-redirs 5 --output /dev/null --silent --head --max-time 10 -w '%{http_code}\t%{content_type}' "$url" -H "User-Agent: $USER_AGENT" 2>/dev/null || true)
-            IFS=$'\t' read -r code ctype <<< "$meta"
+            local url="$1" expected_ct="$2" meta code ctype remote_ip
+            meta=$(curl --location --max-redirs 5 --proto '=http,https' --proto-redir '=http,https' --output /dev/null --silent --head --max-time 10 -w '%{http_code}\t%{content_type}\t%{remote_ip}' "$url" -H "User-Agent: $USER_AGENT" 2>/dev/null || true)
+            IFS=$'\t' read -r code ctype remote_ip <<< "$meta"
             ctype=$(printf '%s' "$ctype" | tr '[:upper:]' '[:lower:]')
-            [[ "$code" == "200" && "$ctype" == *"$expected_ct"* ]]
+            ! is_private_ip "$remote_ip" && [[ "$code" == "200" && "$ctype" == *"$expected_ct"* ]]
           }
 
           fetch_and_grep() {
-            local url="$1" pattern="$2" out_file="$3"
+            local url="$1" pattern="$2" out_file="$3" remote_ip
             rm -f "$out_file"
-            if curl --location --max-redirs 5 --silent --fail --max-time 10 --max-filesize 2097152 -o "$out_file" "$url" -H "User-Agent: $USER_AGENT" 2>/dev/null; then
-              grep -q "$pattern" "$out_file"
-              return $?
-            fi
-            return 1
+            remote_ip=$(curl --location --max-redirs 5 --proto '=http,https' --proto-redir '=http,https' --silent --fail --max-time 10 --max-filesize 2097152 -w '%{remote_ip}' -o "$out_file" "$url" -H "User-Agent: $USER_AGENT" 2>/dev/null) || return 1
+            ! is_private_ip "$remote_ip" && grep -q "$pattern" "$out_file"
           }
 
           MATCHED=()
 
-          probe_head() {
-            local name="$1" label="$2" path="$3" expected_ct="$4"
+          run_probe() {
+            local name="$1" label="$2" fn="$3" host="$4"
+            shift 4
             echo "🔍 Checking for $name theme..." >> "$GITHUB_STEP_SUMMARY"
-            if check_head "https://$BASE_URL$path" "$expected_ct" || \
-               check_head "http://$BASE_URL$path" "$expected_ct"; then
+            if "$fn" "https://$host" "$@" || "$fn" "http://$host" "$@"; then
               MATCHED+=("$label")
               echo "✅ $name Theme Detected" >> "$GITHUB_STEP_SUMMARY"
             else
@@ -102,24 +120,22 @@ jobs:
             fi
           }
 
-          probe_body() {
-            local name="$1" label="$2" host="$3" path="$4" pattern="$5" out_file="$6"
-            echo "🔍 Checking for $name theme..." >> "$GITHUB_STEP_SUMMARY"
-            if fetch_and_grep "https://$host$path" "$pattern" "$out_file" || \
-               fetch_and_grep "http://$host$path" "$pattern" "$out_file"; then
-              MATCHED+=("$label")
-              echo "✅ $name Theme Detected" >> "$GITHUB_STEP_SUMMARY"
-            else
-              echo "❌ $name Theme Not Found" >> "$GITHUB_STEP_SUMMARY"
-            fi
+          probe_head_url() {
+            local base="$1" path="$2" expected_ct="$3"
+            check_head "$base$path" "$expected_ct"
           }
 
-          probe_head "Madara" "theme: madara" "/wp-content/themes/madara/style.css" "text/css"
-          probe_head "Lightnovelwp" "theme: lightnovelwp" "/wp-content/themes/lightnovel/style.css" "text/css"
-          probe_body "HotNovelPub" "theme: hotnovelpub" "api.$BASE_URL" "" "Hello!" "$RUNNER_TEMP/hotnovelpub.txt"
-          probe_head "Fictioneer" "theme: fictioneer" "/wp-content/themes/fictioneer/css/application.css" "text/css"
-          probe_head "Novel Fire" "theme: novel fire" "/frontend/js/appsettings.min.js" "javascript"
-          probe_body "Readwn" "theme: readwn" "$BASE_URL" "/list/all/all-newstime-0.html" "novel-item" "$RUNNER_TEMP/readwn.html"
+          probe_body_url() {
+            local base="$1" path="$2" pattern="$3" out_file="$4"
+            fetch_and_grep "$base$path" "$pattern" "$out_file"
+          }
+
+          run_probe "Madara" "theme: madara" probe_head_url "$BASE_URL" "/wp-content/themes/madara/style.css" "text/css"
+          run_probe "Lightnovelwp" "theme: lightnovelwp" probe_head_url "$BASE_URL" "/wp-content/themes/lightnovel/style.css" "text/css"
+          run_probe "HotNovelPub" "theme: hotnovelpub" probe_body_url "api.$BASE_URL" "" "Hello!" "$RUNNER_TEMP/hotnovelpub.txt"
+          run_probe "Fictioneer" "theme: fictioneer" probe_head_url "$BASE_URL" "/wp-content/themes/fictioneer/css/application.css" "text/css"
+          run_probe "Novel Fire" "theme: novel fire" probe_head_url "$BASE_URL" "/frontend/js/appsettings.min.js" "javascript"
+          run_probe "Readwn" "theme: readwn" probe_body_url "$BASE_URL" "/list/all/all-newstime-0.html" "novel-item" "$RUNNER_TEMP/readwn.html"
 
           {
             echo "match_count=${#MATCHED[@]}"

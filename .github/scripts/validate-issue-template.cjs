@@ -23,24 +23,27 @@ const TEMPLATES = [
       'Plugin Version',
       'Android Version',
     ],
+    optionalSections: ['Other Details'],
     requiredAcknowledgements: 5,
   },
   {
     name: 'Request Plugin',
     label: 'plugin request',
     requiredSections: ['Plugin Name', 'Website URL', 'Language'],
+    optionalSections: ['Other Details'],
     requiredAcknowledgements: 4,
   },
   {
     name: 'Request Feature',
     label: 'feature request',
     requiredSections: ['Feature Description'],
+    optionalSections: ['Other Details'],
     requiredAcknowledgements: 5,
   },
 ];
 
-function checkAcknowledgements(body, expectedCount) {
-  const section = extractSection(body, 'Acknowledgements');
+function checkAcknowledgements(body, expectedCount, boundaryHeadings) {
+  const section = extractSection(body, 'Acknowledgements', boundaryHeadings);
   if (!section.present) {
     return ['Missing required section: `Acknowledgements`.'];
   }
@@ -68,11 +71,16 @@ function checkAcknowledgements(body, expectedCount) {
 }
 
 function evaluateTemplate(body, template) {
+  const boundaryHeadings = [
+    ...template.requiredSections,
+    ...template.optionalSections,
+    'Acknowledgements',
+  ];
   let matchedSections = 0;
   const missingOrEmpty = [];
 
   for (const heading of template.requiredSections) {
-    const section = extractSection(body, heading);
+    const section = extractSection(body, heading, boundaryHeadings);
     if (section.present) {
       matchedSections += 1;
     }
@@ -89,33 +97,45 @@ function evaluateTemplate(body, template) {
     reasons.push(`Missing or empty required section(s): ${formatted}.`);
   }
   reasons.push(
-    ...checkAcknowledgements(body, template.requiredAcknowledgements),
+    ...checkAcknowledgements(
+      body,
+      template.requiredAcknowledgements,
+      boundaryHeadings,
+    ),
   );
 
   return {
     template: template.name,
     valid: reasons.length === 0,
     matchedSections,
-    missingOrEmpty,
     reasons,
   };
 }
 
-function buildCloseComment({ author, repository, templateName, reasons }) {
-  const safeAuthor =
+function isValidAuthor(author) {
+  return (
     typeof author === 'string' &&
     /^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$/.test(author)
-      ? author
-      : '';
-  const mention = safeAuthor ? `@${safeAuthor} ` : '';
+  );
+}
 
-  const safeRepo =
-    typeof repository === 'string' &&
-    /^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/.test(repository)
-      ? repository
-      : '';
-  const chooseUrl = safeRepo
-    ? `https://github.com/${safeRepo}/issues/new/choose`
+function isValidRepository(repository) {
+  if (typeof repository !== 'string') return false;
+  const parts = repository.split('/');
+  if (parts.length !== 2) return false;
+  const [owner, repo] = parts;
+  return (
+    isValidAuthor(owner) &&
+    /^[a-zA-Z0-9._-]+$/.test(repo) &&
+    repo !== '.' &&
+    repo !== '..'
+  );
+}
+
+function buildCloseComment({ author, repository, templateName, reasons }) {
+  const mention = isValidAuthor(author) ? `@${author} ` : '';
+  const chooseUrl = isValidRepository(repository)
+    ? `https://github.com/${repository}/issues/new/choose`
     : '';
 
   const intro = templateName
@@ -138,6 +158,33 @@ function buildCloseComment({ author, repository, templateName, reasons }) {
   ].join('\n');
 }
 
+function makeResult({
+  shouldClose = false,
+  skipped = null,
+  template = null,
+  reasons = [],
+  comment = '',
+} = {}) {
+  return { shouldClose, skipped, template, reasons, comment };
+}
+
+function evaluateCandidates(body, candidates) {
+  const evaluations = candidates.map(template =>
+    evaluateTemplate(body, template),
+  );
+  const validMatch = evaluations.find(evaluation => evaluation.valid);
+  if (validMatch) {
+    return { valid: validMatch, best: null };
+  }
+
+  evaluations.sort(
+    (a, b) =>
+      b.matchedSections - a.matchedSections ||
+      a.reasons.length - b.reasons.length,
+  );
+  return { valid: null, best: evaluations[0] || null };
+}
+
 function validateIssueTemplate({
   body = '',
   labels = [],
@@ -148,26 +195,14 @@ function validateIssueTemplate({
   repository = '',
 } = {}) {
   if (comparisonValue(state) !== 'open') {
-    return {
-      shouldClose: false,
-      skipped: 'not-open',
-      template: null,
-      reasons: [],
-      comment: '',
-    };
+    return makeResult({ skipped: 'not-open' });
   }
 
   if (
     EXEMPT_ASSOCIATIONS.has(comparisonValue(authorAssociation)) ||
     comparisonValue(authorType) === 'bot'
   ) {
-    return {
-      shouldClose: false,
-      skipped: 'exempt-author',
-      template: null,
-      reasons: [],
-      comment: '',
-    };
+    return makeResult({ skipped: 'exempt-author' });
   }
 
   const normalizedLabels = new Set(
@@ -180,31 +215,16 @@ function validateIssueTemplate({
   const labeledTemplates = TEMPLATES.filter(template =>
     normalizedLabels.has(template.label),
   );
+  const candidates = labeledTemplates.length > 0 ? labeledTemplates : TEMPLATES;
 
-  if (labeledTemplates.length > 0) {
-    const evaluations = labeledTemplates.map(template =>
-      evaluateTemplate(body, template),
-    );
-    const validMatch = evaluations.find(evaluation => evaluation.valid);
-    if (validMatch) {
-      return {
-        shouldClose: false,
-        skipped: null,
-        template: validMatch.template,
-        reasons: [],
-        comment: '',
-      };
-    }
+  const { valid, best } = evaluateCandidates(body, candidates);
+  if (valid) {
+    return makeResult({ template: valid.template });
+  }
 
-    evaluations.sort(
-      (a, b) =>
-        a.reasons.length - b.reasons.length ||
-        b.matchedSections - a.matchedSections,
-    );
-    const best = evaluations[0];
-    return {
+  if (best && (labeledTemplates.length > 0 || best.matchedSections > 0)) {
+    return makeResult({
       shouldClose: true,
-      skipped: null,
       template: best.template,
       reasons: best.reasons,
       comment: buildCloseComment({
@@ -213,51 +233,14 @@ function validateIssueTemplate({
         templateName: best.template,
         reasons: best.reasons,
       }),
-    };
-  }
-
-  const evaluations = TEMPLATES.map(template =>
-    evaluateTemplate(body, template),
-  );
-  const validMatch = evaluations.find(evaluation => evaluation.valid);
-  if (validMatch) {
-    return {
-      shouldClose: false,
-      skipped: null,
-      template: validMatch.template,
-      reasons: [],
-      comment: '',
-    };
-  }
-
-  evaluations.sort(
-    (a, b) =>
-      b.matchedSections - a.matchedSections ||
-      a.reasons.length - b.reasons.length,
-  );
-  const best = evaluations[0];
-  if (best.matchedSections > 0) {
-    return {
-      shouldClose: true,
-      skipped: null,
-      template: best.template,
-      reasons: best.reasons,
-      comment: buildCloseComment({
-        author,
-        repository,
-        templateName: best.template,
-        reasons: best.reasons,
-      }),
-    };
+    });
   }
 
   const reasons = [
     "The issue body does not use one of the repository's issue templates (Report Issue, Request Plugin, or Request Feature).",
   ];
-  return {
+  return makeResult({
     shouldClose: true,
-    skipped: null,
-    template: null,
     reasons,
     comment: buildCloseComment({
       author,
@@ -265,7 +248,7 @@ function validateIssueTemplate({
       templateName: null,
       reasons,
     }),
-  };
+  });
 }
 
 if (require.main === module) {

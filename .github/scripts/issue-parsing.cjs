@@ -34,7 +34,7 @@ function buildSelectionMatcher(normalizedKeys) {
   return new RegExp(`(?:^|, )(${alternatives})(?=, |$)`, 'g');
 }
 
-function extractSection(body, headingName) {
+function extractSection(body, headingName, boundaryHeadings) {
   const lines = String(body || '')
     .replace(/\r\n?/g, '\n')
     .split('\n');
@@ -45,10 +45,21 @@ function extractSection(body, headingName) {
   const start = lines.findIndex(line => heading.test(stripDirectional(line)));
   if (start < 0) return { present: false, lines: [] };
 
+  const validBoundaries = Array.isArray(boundaryHeadings)
+    ? [...new Set(boundaryHeadings.filter(Boolean))]
+    : [];
+  const stopHeading =
+    validBoundaries.length > 0
+      ? new RegExp(
+          `^\\s{0,3}###\\s+(?:${validBoundaries.map(escapeRegExp).join('|')})\\s*#*\\s*$`,
+          'i',
+        )
+      : /^\s{0,3}#{1,6}(?:\s|$)/;
+
   let end = start + 1;
   while (
     end < lines.length &&
-    !/^\s{0,3}#{1,6}(?:\s|$)/.test(stripDirectional(lines[end]))
+    !stopHeading.test(stripDirectional(lines[end]))
   ) {
     end += 1;
   }
@@ -66,12 +77,10 @@ function nonEmptySectionLines(section) {
 }
 
 module.exports = {
-  DIRECTIONAL_CONTROLS,
   CATEGORY_CODES,
   VALID_SEVERITIES,
   stripDirectional,
   comparisonValue,
-  escapeRegExp,
   buildSelectionMatcher,
   extractSection,
   nonEmptySectionLines,

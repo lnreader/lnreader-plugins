@@ -107,6 +107,7 @@ function parseIssueTemplateSchema(filePath) {
     .split('\n');
   let label = null;
   const requiredSections = [];
+  const optionalSections = [];
   let requiredAcknowledgements = 0;
 
   let inBody = false;
@@ -121,10 +122,13 @@ function parseIssueTemplateSchema(filePath) {
       currentType &&
       currentType !== 'markdown' &&
       currentType !== 'checkboxes' &&
-      currentLabel &&
-      currentRequired
+      currentLabel
     ) {
-      requiredSections.push(currentLabel);
+      if (currentRequired) {
+        requiredSections.push(currentLabel);
+      } else {
+        optionalSections.push(currentLabel);
+      }
     }
     currentType = null;
     currentLabel = null;
@@ -186,7 +190,12 @@ function parseIssueTemplateSchema(filePath) {
   }
   flushBlock();
 
-  return { label, requiredSections, requiredAcknowledgements };
+  return {
+    label,
+    requiredSections,
+    optionalSections,
+    requiredAcknowledgements,
+  };
 }
 
 test('valid Report Issue, Request Plugin, and Request Feature pass validation', () => {
@@ -402,6 +411,96 @@ test('invalid or unsafe author login is omitted instead of interpolated', () => 
   assert.ok(result.comment.startsWith('this issue was automatically closed'));
 });
 
+test('required textareas containing markdown headings pass while empty required sections still fail', () => {
+  const bugWithHeadings = VALID_REPORT_ISSUE_BODY.replace(
+    'chapter list wont load',
+    '#### Step 1\nOpen plugin\n# Extra Heading',
+  ).replace(
+    'its just empty cant see the chapters',
+    '## Observed Error\nEmpty chapter list',
+  );
+  const featureWithHeadings = VALID_FEATURE_REQUEST_BODY.replace(
+    'Add a toggle to hide disabled books.',
+    '# Summary\nAdd a toggle to hide disabled books.',
+  );
+
+  for (const [body, label, expectedTemplate] of [
+    [bugWithHeadings, 'bug', 'Report Issue'],
+    [featureWithHeadings, 'feature request', 'Request Feature'],
+  ]) {
+    const validResult = validateIssueTemplate({
+      body,
+      labels: [label],
+      author: 'reader123',
+      authorAssociation: 'NONE',
+    });
+    assert.equal(validResult.shouldClose, false);
+    assert.equal(validResult.template, expectedTemplate);
+  }
+
+  const emptyBeforeOptional = VALID_FEATURE_REQUEST_BODY.replace(
+    'Add a toggle to hide disabled books.',
+    '',
+  );
+  const invalidResult = validateIssueTemplate({
+    body: emptyBeforeOptional,
+    labels: ['feature request'],
+    author: 'reader123',
+    authorAssociation: 'NONE',
+  });
+  assert.equal(invalidResult.shouldClose, true);
+  assert.ok(
+    invalidResult.reasons.some(reason =>
+      reason.includes('`Feature Description`'),
+    ),
+  );
+});
+
+test('multi-label issue prioritizes the template with most matched sections', () => {
+  const bugBodyMissingSteps = VALID_REPORT_ISSUE_BODY.replace(
+    'chapter list wont load',
+    '_No response_',
+  ).replace(
+    '- [x] I understand that app-specific issues should be reported in the [app repository](https://github.com/LNReader/lnreader/issues/new/choose).',
+    '',
+  );
+
+  const result = validateIssueTemplate({
+    body: bugBodyMissingSteps,
+    labels: ['bug', 'plugin request'],
+    author: 'reader123',
+    authorAssociation: 'NONE',
+  });
+
+  assert.equal(result.shouldClose, true);
+  assert.equal(result.template, 'Report Issue');
+  assert.ok(result.comment.includes('**Report Issue**'));
+});
+
+test('unsafe repository slug omits issues/new/choose URL', () => {
+  for (const repository of [
+    '../..',
+    'lnreader/..',
+    'bad owner/repo',
+    'a/b/c',
+  ]) {
+    const result = validateIssueTemplate({
+      body: '',
+      labels: [],
+      author: 'reader123',
+      authorAssociation: 'NONE',
+      repository,
+    });
+    assert.equal(result.shouldClose, true);
+    assert.ok(!result.comment.includes('https://github.com/'));
+    assert.ok(
+      result.comment.includes(
+        "Please open a new issue using one of the repository's issue templates",
+      ),
+    );
+  }
+});
+
 test('validate-issue-template CLI outputs JSON decision', () => {
   const stdout = execFileSync(
     process.execPath,
@@ -441,6 +540,10 @@ test('TEMPLATES schema stays in sync with YAML issue template files', () => {
     assert.deepEqual(
       TEMPLATES[i].requiredSections,
       parsedSchemas[i].requiredSections,
+    );
+    assert.deepEqual(
+      TEMPLATES[i].optionalSections,
+      parsedSchemas[i].optionalSections,
     );
     assert.equal(
       TEMPLATES[i].requiredAcknowledgements,
