@@ -137,14 +137,18 @@ jobs:
           THEME_LABEL: ${{ steps.detect_theme.outputs.theme_label }}
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
           echo "## Theme Detection Result" >> "$GITHUB_STEP_SUMMARY"
+
+          RESOLVED_THEME_LABEL=""
           if (( MATCH_COUNT > 1 )); then
             echo "⚠️ Multiple themes detected ($MATCH_COUNT)." >> "$GITHUB_STEP_SUMMARY"
           elif (( MATCH_COUNT == 1 )) && [ -n "$THEME_LABEL" ]; then
-            if [ "$THEME_LABEL" = "theme: lightnovelwp" ]; then
+            RESOLVED_THEME_LABEL="$THEME_LABEL"
+            if [ "$RESOLVED_THEME_LABEL" = "theme: lightnovelwp" ]; then
               if ! gh api "repos/$REPO/labels/theme%3A%20lightnovelwp" >/dev/null 2>&1; then
                 if gh api "repos/$REPO/labels/theme%3A%20lighnovelwp" >/dev/null 2>&1; then
-                  THEME_LABEL="theme: lighnovelwp"
+                  RESOLVED_THEME_LABEL="theme: lighnovelwp"
                 else
                   gh api --method POST "repos/$REPO/labels" \
                     -f "name=theme: lightnovelwp" \
@@ -153,9 +157,27 @@ jobs:
                 fi
               fi
             fi
-            echo "🏷️ Adding label: $THEME_LABEL" >> "$GITHUB_STEP_SUMMARY"
-            jq -n --arg label "$THEME_LABEL" '{labels: [$label]}' \
-              | gh api --method POST "repos/$REPO/issues/$ISSUE_NUMBER/labels" --input -
           else
             echo "❌ No Theme Detected" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          gh api "repos/$REPO/issues/$ISSUE_NUMBER" --jq '[.labels[].name]' > "$RUNNER_TEMP/live-labels.json"
+          RESOLVED_THEME_LABEL="$RESOLVED_THEME_LABEL" node .github/scripts/check-plugin-request-site.cjs --plan-theme-labels "$RUNNER_TEMP/theme-detect.json" "$RUNNER_TEMP/live-labels.json" > "$RUNNER_TEMP/theme-label-plan.json"
+
+          if [ "$(jq '.add | length' "$RUNNER_TEMP/theme-label-plan.json")" -gt 0 ]; then
+            ADDED=$(jq -r '.add | join(", ")' "$RUNNER_TEMP/theme-label-plan.json")
+            echo "🏷️ Adding label: $ADDED" >> "$GITHUB_STEP_SUMMARY"
+            jq '{labels: .add}' "$RUNNER_TEMP/theme-label-plan.json" \
+              | gh api --method POST "repos/$REPO/issues/$ISSUE_NUMBER/labels" --input - >/dev/null
+          elif [ -n "$RESOLVED_THEME_LABEL" ]; then
+            echo "🏷️ Label already present: $RESOLVED_THEME_LABEL" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          if [ "$(jq '.remove | length' "$RUNNER_TEMP/theme-label-plan.json")" -gt 0 ]; then
+            while IFS= read -r old_label; do
+              [ -n "$old_label" ] || continue
+              encoded=$(jq -rn --arg l "$old_label" '$l | @uri')
+              gh api --method DELETE "repos/$REPO/issues/$ISSUE_NUMBER/labels/$encoded" >/dev/null 2>&1 || true
+              echo "🧹 Removed stale label: $old_label" >> "$GITHUB_STEP_SUMMARY"
+            done < <(jq -r '.remove[]' "$RUNNER_TEMP/theme-label-plan.json")
           fi

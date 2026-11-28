@@ -15,6 +15,7 @@ const {
 } = require('./issue-parsing.cjs');
 const {
   DEFAULT_USER_AGENT,
+  MANAGED_THEME_LABELS,
   PRIVATE_DOMAIN_SUFFIXES,
   TLS_CERT_EXIT_CODES,
   UNREACHABLE_EXIT_CODES,
@@ -160,6 +161,45 @@ function confirmCloseWithCurrentIssue(siteCheckResult, currentIssue) {
   };
 }
 
+function computeThemeLabelPlan({
+  detection = null,
+  existingLabels = [],
+  resolvedThemeLabel = '',
+} = {}) {
+  const desiredLabel =
+    detection && detection.matchCount === 1
+      ? resolvedThemeLabel || detection.themeLabel || ''
+      : '';
+  const normalizedDesired = comparisonValue(desiredLabel);
+  const rawExisting = (
+    Array.isArray(existingLabels) ? existingLabels : []
+  ).filter(label => typeof label === 'string');
+  const normalizedExisting = normalizeLabelNames(rawExisting);
+
+  const add =
+    desiredLabel && !normalizedExisting.has(normalizedDesired)
+      ? [desiredLabel]
+      : [];
+
+  const remove = [];
+  const seenRemove = new Set();
+  for (const label of rawExisting) {
+    const normalized = comparisonValue(label);
+    if (
+      !normalized ||
+      !MANAGED_THEME_LABELS.has(normalized) ||
+      normalized === normalizedDesired ||
+      seenRemove.has(normalized)
+    ) {
+      continue;
+    }
+    seenRemove.add(normalized);
+    remove.push(label);
+  }
+
+  return { desiredLabel, add, remove };
+}
+
 async function runCli(argv = process.argv.slice(2)) {
   if (argv[0] === '--extract-url') {
     const url = extractWebsiteUrl(process.env.ISSUE_BODY || '');
@@ -199,6 +239,26 @@ async function runCli(argv = process.argv.slice(2)) {
       tempDir: process.env.RUNNER_TEMP || os.tmpdir(),
     });
     process.stdout.write(`${JSON.stringify(result)}\n`);
+    return;
+  }
+
+  if (argv[0] === '--plan-theme-labels') {
+    const [, detectJsonPath, liveLabelsJsonPath] = argv;
+    if (!detectJsonPath || !liveLabelsJsonPath) {
+      throw new Error(
+        'Usage: --plan-theme-labels <detectJsonPath> <liveLabelsJsonPath>',
+      );
+    }
+    const detection = JSON.parse(fs.readFileSync(detectJsonPath, 'utf8'));
+    const existingLabels = JSON.parse(
+      fs.readFileSync(liveLabelsJsonPath, 'utf8'),
+    );
+    const plan = computeThemeLabelPlan({
+      detection,
+      existingLabels,
+      resolvedThemeLabel: process.env.RESOLVED_THEME_LABEL || '',
+    });
+    process.stdout.write(`${JSON.stringify(plan)}\n`);
     return;
   }
 
@@ -258,4 +318,5 @@ module.exports = {
   buildUnreachableComment,
   evaluatePluginRequestSite,
   confirmCloseWithCurrentIssue,
+  computeThemeLabelPlan,
 };

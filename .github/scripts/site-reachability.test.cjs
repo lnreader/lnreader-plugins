@@ -236,3 +236,67 @@ test('applyCloseDecision skips non-closable decisions and posts label, comment, 
     /HTTP 403/,
   );
 });
+
+test('probeUrlWithCurl tries remaining public IPs when first address fails', async () => {
+  const triedResolveArgs = [];
+  const lookup = async () => [
+    { address: '198.51.100.1', family: 4 },
+    { address: '198.51.100.2', family: 4 },
+  ];
+  const execCurl = async args => {
+    const resolveArg = args[args.indexOf('--resolve') + 1];
+    triedResolveArgs.push(resolveArg);
+    if (resolveArg.endsWith(':198.51.100.1')) {
+      return { stdout: '000\t7\t\t\t\tConnection refused', processExitCode: 7 };
+    }
+    return {
+      stdout: '200\t0\t198.51.100.2\ttext/html\t\t',
+      processExitCode: 0,
+    };
+  };
+
+  const probeRes = await probeUrlWithCurl('https://cdn.example/', {
+    lookup,
+    execCurl,
+  });
+  assert.deepEqual(triedResolveArgs, [
+    'cdn.example:443:198.51.100.1',
+    'cdn.example:443:198.51.100.2',
+  ]);
+  assert.equal(probeRes.httpCode, 200);
+  assert.equal(probeRes.remoteIp, '198.51.100.2');
+
+  const reachRes = await checkSiteReachability('cdn.example', {
+    sleep: () => Promise.resolve(),
+    probeUrl: (url, opts) =>
+      probeUrlWithCurl(url, { ...opts, lookup, execCurl }),
+  });
+  assert.equal(reachRes.status, 'reachable');
+  assert.equal(reachRes.httpCode, 200);
+});
+
+test('checkSiteReachability treats 3xx redirect as reachable without following dead redirect target', async () => {
+  const lookedUpHosts = [];
+  const reachRes = await checkSiteReachability('source.example', {
+    sleep: () => Promise.resolve(),
+    probeUrl: (url, opts) =>
+      probeUrlWithCurl(url, {
+        ...opts,
+        lookup: async host => {
+          lookedUpHosts.push(host);
+          if (host === 'source.example') {
+            return [{ address: '93.184.216.34', family: 4 }];
+          }
+          throw new Error(`Unexpected DNS lookup for ${host}`);
+        },
+        execCurl: async () => ({
+          stdout:
+            '301\t0\t93.184.216.34\ttext/html\thttps://dead-target.invalid/\t',
+          processExitCode: 0,
+        }),
+      }),
+  });
+  assert.deepEqual(lookedUpHosts, ['source.example']);
+  assert.equal(reachRes.status, 'reachable');
+  assert.equal(reachRes.httpCode, 301);
+});

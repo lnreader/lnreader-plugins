@@ -11,6 +11,7 @@ const test = require('node:test');
 const {
   UNREACHABLE_EXIT_CODES,
   checkSiteReachability,
+  computeThemeLabelPlan,
   confirmCloseWithCurrentIssue,
   evaluatePluginRequestSite,
   extractBaseUrl,
@@ -638,6 +639,91 @@ test('CLI supports --extract-url and --confirm-close without dirtying the repo t
     assert.equal(decision.shouldClose, true);
     assert.equal(decision.label, 'invalid');
     assert.match(decision.comment, /@reporter/);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('computeThemeLabelPlan reconciles stale managed theme labels and preserves manual labels', () => {
+  assert.deepEqual(
+    computeThemeLabelPlan({
+      detection: { matchCount: 1, themeLabel: 'theme: fictioneer' },
+      existingLabels: [
+        'plugin request',
+        'theme: madara',
+        'theme: custom-manual',
+      ],
+    }),
+    {
+      desiredLabel: 'theme: fictioneer',
+      add: ['theme: fictioneer'],
+      remove: ['theme: madara'],
+    },
+  );
+
+  assert.deepEqual(
+    computeThemeLabelPlan({
+      detection: { matchCount: 0, themeLabel: '' },
+      existingLabels: [
+        'plugin request',
+        'theme: madara',
+        'theme: custom-manual',
+      ],
+    }),
+    {
+      desiredLabel: '',
+      add: [],
+      remove: ['theme: madara'],
+    },
+  );
+
+  assert.deepEqual(
+    computeThemeLabelPlan({
+      detection: { matchCount: 2, themeLabel: '' },
+      existingLabels: ['plugin request', 'theme: lighnovelwp'],
+    }),
+    {
+      desiredLabel: '',
+      add: [],
+      remove: ['theme: lighnovelwp'],
+    },
+  );
+
+  assert.deepEqual(
+    computeThemeLabelPlan({
+      detection: { matchCount: 1, themeLabel: 'theme: lightnovelwp' },
+      resolvedThemeLabel: 'theme: lighnovelwp',
+      existingLabels: ['plugin request', 'theme: lighnovelwp'],
+    }),
+    {
+      desiredLabel: 'theme: lighnovelwp',
+      add: [],
+      remove: [],
+    },
+  );
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'theme-plan-cli-'));
+  try {
+    const detectPath = path.join(tmpDir, 'detect.json');
+    const labelsPath = path.join(tmpDir, 'labels.json');
+    fs.writeFileSync(
+      detectPath,
+      JSON.stringify({ matchCount: 1, themeLabel: 'theme: readwn' }),
+    );
+    fs.writeFileSync(
+      labelsPath,
+      JSON.stringify(['plugin request', 'theme: lighnovelwp']),
+    );
+    const out = execFileSync(
+      process.execPath,
+      [SCRIPT_PATH, '--plan-theme-labels', detectPath, labelsPath],
+      { encoding: 'utf8' },
+    );
+    assert.deepEqual(JSON.parse(out), {
+      desiredLabel: 'theme: readwn',
+      add: ['theme: readwn'],
+      remove: ['theme: lighnovelwp'],
+    });
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }

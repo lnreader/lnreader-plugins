@@ -25,6 +25,7 @@ const PRIVATE_DOMAIN_SUFFIXES = [
 const UNREACHABLE_EXIT_CODES = new Set([6, 7, 28, 35, 52, 56]);
 const TLS_CERT_EXIT_CODES = new Set([51, 60]);
 const REDIRECT_STATUS_CODES = new Set([301, 302, 303, 307, 308]);
+const MAX_ADDRESSES_PER_HOP = 4;
 const REACHABILITY_SKIP_REASONS = Object.freeze({
   blocked_private_ip: 'private-ip',
   tls_cert_error: 'tls-cert-error',
@@ -82,6 +83,11 @@ const THEME_PROBES = [
     fileName: 'readwn.html',
   },
 ];
+
+const MANAGED_THEME_LABELS = new Set([
+  ...THEME_PROBES.map(probe => probe.label),
+  'theme: lighnovelwp',
+]);
 
 function reachabilitySkipReason(status) {
   if (status === 'reachable' || status === 'unreachable') return null;
@@ -180,9 +186,13 @@ function isPrivateIp(ip) {
   return false;
 }
 
-async function resolvePublicIp(
+async function resolvePublicIps(
   hostname,
-  { lookup = dns.promises.lookup, allowPrivateIp = false } = {},
+  {
+    lookup = dns.promises.lookup,
+    allowPrivateIp = false,
+    maxAddresses = MAX_ADDRESSES_PER_HOP,
+  } = {},
 ) {
   const normalizedHost = String(hostname || '')
     .replace(/^\[|\]$/g, '')
@@ -205,7 +215,7 @@ async function resolvePublicIp(
         error: 'Resolved to a private or loopback IP address',
       };
     }
-    return { ok: true, ip: normalizedHost };
+    return { ok: true, ip: normalizedHost, ips: [normalizedHost] };
   }
 
   let records;
@@ -245,11 +255,37 @@ async function resolvePublicIp(
     }
   }
 
-  const ipv4Record = records.find(
-    record => record && (record.family === 4 || net.isIPv4(record.address)),
-  );
-  const selected = ipv4Record || records[0];
-  return { ok: true, ip: selected.address };
+  const ipv4 = [];
+  const ipv6 = [];
+  const seen = new Set();
+  for (const record of records) {
+    const address =
+      record && typeof record.address === 'string' ? record.address.trim() : '';
+    if (!address || seen.has(address)) continue;
+    seen.add(address);
+    if (record.family === 4 || net.isIPv4(address)) {
+      ipv4.push(address);
+    } else {
+      ipv6.push(address);
+    }
+  }
+
+  const ips = [...ipv4, ...ipv6].slice(0, Math.max(1, maxAddresses));
+  if (ips.length === 0) {
+    return {
+      ok: false,
+      blockedPrivateIp: false,
+      exitCode: 6,
+      remoteIp: '',
+      error: `No usable DNS records found for ${normalizedHost}`,
+    };
+  }
+
+  return { ok: true, ip: ips[0], ips };
+}
+
+async function resolvePublicIp(hostname, options) {
+  return resolvePublicIps(hostname, options);
 }
 
 function runCurlRequest(args, timeoutMs) {
@@ -368,7 +404,7 @@ async function probeUrlWithCurl(
       };
     }
 
-    const resolved = await resolvePublicIp(rawHostname, {
+    const resolved = await resolvePublicIps(rawHostname, {
       lookup,
       allowPrivateIp,
     });
@@ -385,91 +421,111 @@ async function probeUrlWithCurl(
       };
     }
 
-    const pinnedIp = resolved.ip;
     const port = parsed.port || (parsed.protocol === 'https:' ? '443' : '80');
-    const resolveTarget = pinnedIp.includes(':') ? `[${pinnedIp}]` : pinnedIp;
-    const resolveEntry = `${rawHostname}:${port}:${resolveTarget}`;
+    let hopResponse = null;
 
-    const args = [
-      '--resolve',
-      resolveEntry,
-      '--proto',
-      '=http,https',
-      '--silent',
-      '--output',
-      outputFile,
-      '--connect-timeout',
-      String(connectTimeoutSec),
-      '--max-time',
-      String(maxTimeSec),
-    ];
-    if (headOnly) {
-      args.push('--head');
-    }
-    if (maxFilesize > 0) {
-      args.push('--max-filesize', String(maxFilesize));
-    }
-    args.push(
-      '-H',
-      `User-Agent: ${userAgent || DEFAULT_USER_AGENT}`,
-      '-w',
-      '%{http_code}\t%{exitcode}\t%{remote_ip}\t%{content_type}\t%{redirect_url}\t%{errormsg}',
-      '--',
-      currentUrl,
-    );
+    for (const pinnedIp of resolved.ips) {
+      const resolveTarget = pinnedIp.includes(':') ? `[${pinnedIp}]` : pinnedIp;
+      const resolveEntry = `${rawHostname}:${port}:${resolveTarget}`;
 
-    const execRes = await execCurl(args, (maxTimeSec + 5) * 1000);
-    if (execRes.spawnError) {
-      return {
+      const args = [
+        '--resolve',
+        resolveEntry,
+        '--proto',
+        '=http,https',
+        '--silent',
+        '--output',
+        outputFile,
+        '--connect-timeout',
+        String(connectTimeoutSec),
+        '--max-time',
+        String(maxTimeSec),
+      ];
+      if (headOnly) {
+        args.push('--head');
+      }
+      if (maxFilesize > 0) {
+        args.push('--max-filesize', String(maxFilesize));
+      }
+      args.push(
+        '-H',
+        `User-Agent: ${userAgent || DEFAULT_USER_AGENT}`,
+        '-w',
+        '%{http_code}\t%{exitcode}\t%{remote_ip}\t%{content_type}\t%{redirect_url}\t%{errormsg}',
+        '--',
+        currentUrl,
+      );
+
+      const execRes = await execCurl(args, (maxTimeSec + 5) * 1000);
+      if (execRes.spawnError) {
+        return {
+          url: currentUrl,
+          httpCode: 0,
+          exitCode: -1,
+          remoteIp: '',
+          contentType: '',
+          error: execRes.error || 'curl unavailable',
+          blockedPrivateIp: false,
+          spawnError: true,
+        };
+      }
+
+      const [
+        codeStr = '0',
+        exitStr = '',
+        remoteIpRaw = '',
+        contentType = '',
+        redirectUrl = '',
+        ...errParts
+      ] = execRes.stdout.split('\t');
+
+      const httpCode = /^\d{3}$/.test(codeStr.trim())
+        ? Number(codeStr.trim())
+        : 0;
+      const exitCode = /^\d+$/.test(exitStr.trim())
+        ? Number(exitStr.trim())
+        : execRes.processExitCode;
+      const remoteIp = remoteIpRaw.trim() || pinnedIp;
+      const error = errParts.join('\t').trim();
+
+      if (!allowPrivateIp && remoteIp && isPrivateIp(remoteIp)) {
+        return {
+          url: currentUrl,
+          httpCode: 0,
+          exitCode: 0,
+          remoteIp,
+          contentType: '',
+          error: 'Resolved to a private or loopback IP address',
+          blockedPrivateIp: true,
+          spawnError: false,
+        };
+      }
+
+      hopResponse = {
         url: currentUrl,
-        httpCode: 0,
-        exitCode: -1,
-        remoteIp: '',
-        contentType: '',
-        error: execRes.error || 'curl unavailable',
-        blockedPrivateIp: false,
-        spawnError: true,
-      };
-    }
-
-    const [
-      codeStr = '0',
-      exitStr = '',
-      remoteIpRaw = '',
-      contentType = '',
-      redirectUrl = '',
-      ...errParts
-    ] = execRes.stdout.split('\t');
-
-    const httpCode = /^\d{3}$/.test(codeStr.trim())
-      ? Number(codeStr.trim())
-      : 0;
-    const exitCode = /^\d+$/.test(exitStr.trim())
-      ? Number(exitStr.trim())
-      : execRes.processExitCode;
-    const remoteIp = remoteIpRaw.trim() || pinnedIp;
-    const error = errParts.join('\t').trim();
-
-    if (!allowPrivateIp && remoteIp && isPrivateIp(remoteIp)) {
-      return {
-        url: currentUrl,
-        httpCode: 0,
-        exitCode: 0,
+        httpCode,
+        exitCode,
         remoteIp,
-        contentType: '',
-        error: 'Resolved to a private or loopback IP address',
-        blockedPrivateIp: true,
+        contentType: contentType.trim(),
+        redirectUrl: redirectUrl.trim(),
+        error,
+        blockedPrivateIp: false,
         spawnError: false,
       };
+
+      if (httpCode >= 100 && httpCode <= 599) {
+        break;
+      }
     }
 
     if (
-      REDIRECT_STATUS_CODES.has(httpCode) &&
-      redirectUrl.trim() &&
+      hopResponse &&
+      REDIRECT_STATUS_CODES.has(hopResponse.httpCode) &&
+      hopResponse.redirectUrl &&
       hop < maxRedirs
     ) {
       try {
-        const nextUrl = new URL(redirectUrl.trim(), currentUrl);
+        const nextUrl = new URL(hopResponse.redirectUrl, currentUrl);
         if (nextUrl.protocol === 'http:' || nextUrl.protocol === 'https:') {
           currentUrl = nextUrl.toString();
           continue;
@@ -480,12 +536,12 @@ async function probeUrlWithCurl(
     }
 
     return {
-      url: currentUrl,
-      httpCode,
-      exitCode,
-      remoteIp,
-      contentType: contentType.trim(),
-      error,
+      url: hopResponse.url,
+      httpCode: hopResponse.httpCode,
+      exitCode: hopResponse.exitCode,
+      remoteIp: hopResponse.remoteIp,
+      contentType: hopResponse.contentType,
+      error: hopResponse.error,
       blockedPrivateIp: false,
       spawnError: false,
     };
@@ -547,6 +603,7 @@ async function checkSiteReachability(
         userAgent,
         connectTimeoutSec,
         maxTimeSec,
+        maxRedirs: 0,
       });
       attempts.push(result);
 
@@ -791,12 +848,15 @@ module.exports = {
   PRIVATE_DOMAIN_SUFFIXES,
   UNREACHABLE_EXIT_CODES,
   TLS_CERT_EXIT_CODES,
+  MAX_ADDRESSES_PER_HOP,
   REACHABILITY_SKIP_REASONS,
   THEME_PROBES,
+  MANAGED_THEME_LABELS,
   reachabilitySkipReason,
   extractBaseUrl,
   isPrivateIp,
   resolvePublicIp,
+  resolvePublicIps,
   runCurlRequest,
   probeUrlWithCurl,
   checkSiteReachability,
