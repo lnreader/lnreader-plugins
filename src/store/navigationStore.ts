@@ -3,6 +3,13 @@ import { StoreCreator } from '.';
 export type NavigationStore = {
   parseNovelPath?: string;
   parseChapterPath?: string;
+  /**
+   * Bumped on every navigation request. The target panel watches this instead
+   * of comparing paths, so requesting the same path twice still triggers, and a
+   * request made before the plugin is ready is not silently dropped.
+   */
+  parseNovelNonce: number;
+  parseChapterNonce: number;
   shouldAutoSubmitNovel: boolean;
   shouldAutoSubmitChapter: boolean;
   setParseNovelPath(path: string, autoSubmit?: boolean): void;
@@ -18,6 +25,8 @@ export type NavigationStore = {
 export const NavigationStore: StoreCreator<NavigationStore> = set => ({
   parseNovelPath: undefined,
   parseChapterPath: undefined,
+  parseNovelNonce: 0,
+  parseChapterNonce: 0,
   shouldAutoSubmitNovel: false,
   shouldAutoSubmitChapter: false,
 
@@ -26,6 +35,7 @@ export const NavigationStore: StoreCreator<NavigationStore> = set => ({
       ...state,
       parseNovelPath: path,
       shouldAutoSubmitNovel: autoSubmit,
+      parseNovelNonce: state.parseNovelNonce + 1,
     }));
   },
 
@@ -42,6 +52,7 @@ export const NavigationStore: StoreCreator<NavigationStore> = set => ({
       ...state,
       parseChapterPath: path,
       shouldAutoSubmitChapter: autoSubmit,
+      parseChapterNonce: state.parseChapterNonce + 1,
     }));
   },
 
