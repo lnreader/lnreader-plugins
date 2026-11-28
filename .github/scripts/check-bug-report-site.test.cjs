@@ -153,6 +153,49 @@ test('extractCandidateNewUrls extracts new URLs, ignores old/meta/screenshots, a
     extractCandidateNewUrls(screenshotOnlyBody, ['dragonholic.com']),
     [],
   );
+
+  // Subdomain plugin (free.kolnovel.com) mentioning dead old apex https://kolnovel.com/ + live bare domain newkolnovel.com
+  const subdomainAndBareBody = makeBugReportBody({
+    plugin: '‎العربية: Free Kol Novel',
+    severity: 'Domain Changed',
+    steps: 'Old link https://kolnovel.com/ stopped working.',
+    expected: 'Please update to newkolnovel.com',
+  });
+  assert.deepEqual(
+    extractCandidateNewUrls(subdomainAndBareBody, ['free.kolnovel.com']),
+    [{ rawUrl: 'https://newkolnovel.com', baseUrl: 'newkolnovel.com' }],
+  );
+
+  // Shared hosting (ynvermoon.wordpress.com) must NOT exclude another blog on wordpress.com
+  const sharedHostBody = makeBugReportBody({
+    plugin: 'English: Ynver Moon',
+    severity: 'Domain Changed',
+    expected: 'Moved to https://other.wordpress.com/',
+  });
+  assert.deepEqual(
+    extractCandidateNewUrls(sharedHostBody, ['ynvermoon.wordpress.com']),
+    [
+      {
+        rawUrl: 'https://other.wordpress.com/',
+        baseUrl: 'other.wordpress.com',
+      },
+    ],
+  );
+
+  // Explicit dead sibling URL + bare live domain must return BOTH (no early return before Pass 2)
+  const mixedExplicitAndBare = makeBugReportBody({
+    plugin: 'English: Belle Reservoir',
+    severity: 'Domain Changed',
+    steps: 'Tried https://old-mirror.example/ and it failed.',
+    expected: 'Use workingnewsite.com instead.',
+  });
+  assert.deepEqual(
+    extractCandidateNewUrls(mixedExplicitAndBare, ['bellereservoir.com']),
+    [
+      { rawUrl: 'https://old-mirror.example/', baseUrl: 'old-mirror.example' },
+      { rawUrl: 'https://workingnewsite.com', baseUrl: 'workingnewsite.com' },
+    ],
+  );
 });
 
 test('evaluateBugReportSite closes unreachable bug reports with website-owner & domain-change guidance', async () => {
@@ -588,6 +631,22 @@ test('confirmBugCloseWithCurrentIssue aborts when live issue changes before clos
           plugin: 'English: Novel7s',
           severity: 'Domain Changed',
           expected: 'Move to https://novel7s.org',
+        }),
+      },
+      { pluginKeys: PLUGIN_KEYS, pluginSites: PLUGIN_SITES },
+    ).skipped,
+    'target-changed-during-check',
+  );
+
+  // Adding an unresolved plugin (komga) during the probe window must abort closing
+  assert.equal(
+    confirmBugCloseWithCurrentIssue(
+      checkResult,
+      {
+        state: 'open',
+        labels: [{ name: 'bug' }],
+        body: makeBugReportBody({
+          plugin: 'English: Novel7s, Multi: Komga',
         }),
       },
       { pluginKeys: PLUGIN_KEYS, pluginSites: PLUGIN_SITES },

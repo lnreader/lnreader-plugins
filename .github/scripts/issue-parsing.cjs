@@ -2,6 +2,31 @@
 
 const DIRECTIONAL_CONTROLS = /[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g;
 
+const EXEMPT_ASSOCIATIONS = new Set(['owner', 'member', 'collaborator']);
+
+const TEMPLATE_BOUNDARIES = Object.freeze({
+  reportIssue: [
+    'Plugin',
+    'Severity',
+    'Steps To Reproduce',
+    'Expected Behavior',
+    'Actual Behavior',
+    'LNReader Version',
+    'Plugin Version',
+    'Android Version',
+    'Other Details',
+    'Acknowledgements',
+  ],
+  requestPlugin: [
+    'Plugin Name',
+    'Website URL',
+    'Language',
+    'Other Details',
+    'Acknowledgements',
+  ],
+  requestFeature: ['Feature Description', 'Other Details', 'Acknowledgements'],
+});
+
 const CATEGORY_CODES = new Map([
   ['wrong formatting', 1],
   ['wrong content', 2],
@@ -76,12 +101,110 @@ function nonEmptySectionLines(section) {
     );
 }
 
+function isValidAuthor(author) {
+  return (
+    typeof author === 'string' &&
+    /^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$/.test(author)
+  );
+}
+
+function isValidRepository(repository) {
+  if (typeof repository !== 'string') return false;
+  const parts = repository.split('/');
+  if (parts.length !== 2) return false;
+  const [owner, repo] = parts;
+  return (
+    isValidAuthor(owner) &&
+    /^[a-zA-Z0-9._-]+$/.test(repo) &&
+    repo !== '.' &&
+    repo !== '..'
+  );
+}
+
+function normalizeLabelNames(labels) {
+  return new Set(
+    (Array.isArray(labels) ? labels : [])
+      .map(label => (typeof label === 'string' ? label : label && label.name))
+      .filter(label => typeof label === 'string')
+      .map(comparisonValue)
+      .filter(Boolean),
+  );
+}
+
+function parseJsonOrDefault(rawValue, fallback) {
+  if (!rawValue) return fallback;
+  try {
+    const parsed = JSON.parse(rawValue);
+    return parsed === undefined ? fallback : parsed;
+  } catch {
+    return fallback;
+  }
+}
+
+function isExemptAuthor({ authorAssociation = '', authorType = '' } = {}) {
+  return (
+    EXEMPT_ASSOCIATIONS.has(comparisonValue(authorAssociation)) ||
+    comparisonValue(authorType) === 'bot'
+  );
+}
+
+function matchPluginEntries(lines, pluginKeys) {
+  if (
+    !pluginKeys ||
+    typeof pluginKeys !== 'object' ||
+    !Array.isArray(lines) ||
+    lines.length === 0
+  ) {
+    return [];
+  }
+
+  const entriesByKey = new Map();
+  for (const [displayKey, id] of Object.entries(pluginKeys)) {
+    if (typeof id !== 'string') continue;
+    const normalizedKey = comparisonValue(displayKey);
+    if (!normalizedKey || !comparisonValue(id)) continue;
+    entriesByKey.set(normalizedKey, { displayKey, id });
+  }
+
+  const regex = buildSelectionMatcher(entriesByKey.keys());
+  if (!regex) return [];
+  const selection = comparisonValue(lines.join(', '));
+
+  const matched = [];
+  const seenIds = new Set();
+  let match;
+  while ((match = regex.exec(selection)) !== null) {
+    const entry = entriesByKey.get(match[1]);
+    if (!entry) continue;
+    const normId = comparisonValue(entry.id);
+    if (seenIds.has(normId)) continue;
+    seenIds.add(normId);
+    const sepIdx = entry.displayKey.indexOf(': ');
+    const name =
+      sepIdx >= 0 ? entry.displayKey.slice(sepIdx + 2) : entry.displayKey;
+    matched.push({
+      displayKey: entry.displayKey,
+      name,
+      id: entry.id,
+    });
+  }
+  return matched;
+}
+
 module.exports = {
   CATEGORY_CODES,
   VALID_SEVERITIES,
+  EXEMPT_ASSOCIATIONS,
+  TEMPLATE_BOUNDARIES,
   stripDirectional,
   comparisonValue,
   buildSelectionMatcher,
   extractSection,
   nonEmptySectionLines,
+  isValidAuthor,
+  isValidRepository,
+  normalizeLabelNames,
+  parseJsonOrDefault,
+  isExemptAuthor,
+  matchPluginEntries,
 };

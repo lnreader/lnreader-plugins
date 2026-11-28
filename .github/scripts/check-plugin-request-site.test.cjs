@@ -1,8 +1,9 @@
 'use strict';
 
 const assert = require('node:assert/strict');
-const { execFileSync, spawn } = require('node:child_process');
+const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
+const http = require('node:http');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
@@ -512,105 +513,75 @@ test('confirmCloseWithCurrentIssue aborts close when live issue changed during p
 });
 
 test('probeUrlWithCurl reports HTTP status codes, stalled bodies after headers, socket resets, and refused ports', async () => {
-  // Run the HTTP test server in a child process because probeUrlWithCurl uses execFileSync.
-  const serverScript = [
-    "const http = require('node:http');",
-    'const server = http.createServer((req, res) => {',
-    "  const url = new URL(req.url, 'http://127.0.0.1');",
-    "  const mode = url.searchParams.get('mode');",
-    "  if (mode === '200') {",
-    "    res.writeHead(200, { 'Content-Type': 'text/plain' });",
-    "    res.end('ok');",
-    '    return;',
-    '  }',
-    "  if (mode === '403') {",
-    "    res.writeHead(403, { 'Content-Type': 'text/html' });",
-    "    res.end('cf challenge');",
-    '    return;',
-    '  }',
-    "  if (mode === 'stall') {",
-    "    res.writeHead(200, { 'Content-Type': 'text/html' });",
-    "    res.write('<html>');",
-    '    return;',
-    '  }',
-    "  if (mode === 'reset') {",
-    '    req.socket.destroy();',
-    '  }',
-    '});',
-    "server.listen(0, '127.0.0.1', () => {",
-    '  process.stdout.write(`${server.address().port}\\n`);',
-    '});',
-  ].join('\n');
-
-  const child = spawn(process.execPath, ['-e', serverScript], {
-    stdio: ['ignore', 'pipe', 'pipe'],
+  const server = http.createServer((req, res) => {
+    const reqUrl = new URL(req.url, 'http://127.0.0.1');
+    const mode = reqUrl.searchParams.get('mode');
+    if (mode === '200') {
+      res.writeHead(200, { 'Content-Type': 'text/plain' });
+      res.end('ok');
+      return;
+    }
+    if (mode === '403') {
+      res.writeHead(403, { 'Content-Type': 'text/html' });
+      res.end('cf challenge');
+      return;
+    }
+    if (mode === 'stall') {
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.write('<html>');
+      return;
+    }
+    if (mode === 'reset') {
+      req.socket.destroy();
+    }
   });
 
-  const port = await new Promise((resolve, reject) => {
-    let stdout = '';
-    let stderr = '';
-    child.stdout.on('data', chunk => {
-      stdout += chunk;
-      const line = stdout.trim();
-      if (/^\d+$/.test(line)) {
-        resolve(Number(line));
-      }
-    });
-    child.stderr.on('data', chunk => {
-      stderr += chunk;
-    });
-    child.once('error', reject);
-    child.once('exit', code => {
-      reject(
-        new Error(
-          `Test HTTP server exited early (code=${code}): ${stderr.trim()}`,
-        ),
-      );
-    });
-  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const { port } = server.address();
 
   try {
-    const okRes = probeUrlWithCurl(`http://127.0.0.1:${port}/?mode=200`, {
+    const okRes = await probeUrlWithCurl(`http://127.0.0.1:${port}/?mode=200`, {
       maxTimeSec: 2,
+      allowPrivateIp: true,
     });
     assert.equal(okRes.httpCode, 200);
     assert.equal(okRes.exitCode, 0);
 
-    const forbiddenRes = probeUrlWithCurl(
+    const forbiddenRes = await probeUrlWithCurl(
       `http://127.0.0.1:${port}/?mode=403`,
       {
         maxTimeSec: 2,
+        allowPrivateIp: true,
       },
     );
     assert.equal(forbiddenRes.httpCode, 403);
 
-    const stalledRes = probeUrlWithCurl(
+    const stalledRes = await probeUrlWithCurl(
       `http://127.0.0.1:${port}/?mode=stall`,
       {
         maxTimeSec: 1,
+        allowPrivateIp: true,
       },
     );
     assert.equal(stalledRes.httpCode, 200);
 
-    const resetRes = probeUrlWithCurl(`http://127.0.0.1:${port}/?mode=reset`, {
-      maxTimeSec: 2,
-    });
+    const resetRes = await probeUrlWithCurl(
+      `http://127.0.0.1:${port}/?mode=reset`,
+      {
+        maxTimeSec: 2,
+        allowPrivateIp: true,
+      },
+    );
     assert.equal(resetRes.httpCode, 0);
     assert.equal(UNREACHABLE_EXIT_CODES.has(resetRes.exitCode), true);
   } finally {
-    await new Promise(resolve => {
-      if (child.exitCode !== null || child.signalCode !== null) {
-        resolve();
-        return;
-      }
-      child.once('exit', resolve);
-      child.kill('SIGTERM');
-    });
+    await new Promise(resolve => server.close(resolve));
   }
 
-  const refusedRes = probeUrlWithCurl(`http://127.0.0.1:${port}/`, {
+  const refusedRes = await probeUrlWithCurl(`http://127.0.0.1:${port}/`, {
     connectTimeoutSec: 2,
     maxTimeSec: 2,
+    allowPrivateIp: true,
   });
   assert.equal(refusedRes.httpCode, 0);
   assert.equal(refusedRes.exitCode, 7);

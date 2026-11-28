@@ -8,7 +8,7 @@ permissions: {}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.issue.number }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   auto-label:
@@ -53,22 +53,17 @@ jobs:
             echo "EOF_URL"
             echo "BASE_URL=$BASE_URL"
           } >> "$GITHUB_OUTPUT"
-          echo "Using URL: \`$URL\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "Using Base URL: \`$BASE_URL\`" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Get User Agent
-        id: get_user_agent
-        if: steps.get_url.outputs.BASE_URL != ''
-        run: |
-          CHROME_VERSION=$(curl --silent --max-time 10 'https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Windows&num=1' | jq -r '.[0].version // empty' || true)
-          CHROME_VERSION="${CHROME_VERSION:-126.0.6478.36}"
-          echo "USER_AGENT=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/$CHROME_VERSION Safari/537.36" >> "$GITHUB_OUTPUT"
+          {
+            echo "Using URL: \`$URL\`"
+            echo "Using Base URL: \`$BASE_URL\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Check Website Reachability
         id: check_site
         if: always() && !cancelled() && steps.get_url.outputs.BASE_URL != ''
         env:
           GH_TOKEN: ${{ github.token }}
+          GITHUB_API_URL: ${{ github.api_url }}
           ISSUE_BODY: ${{ github.event.issue.body }}
           PREVIOUS_ISSUE_BODY_JSON: ${{ toJSON(github.event.changes.body.from) }}
           EVENT_ACTION: ${{ github.event.action }}
@@ -77,7 +72,6 @@ jobs:
           ISSUE_AUTHOR_ASSOCIATION: ${{ github.event.issue.author_association }}
           ISSUE_AUTHOR_TYPE: ${{ github.event.issue.user.type }}
           ISSUE_STATE: ${{ github.event.issue.state }}
-          USER_AGENT: ${{ steps.get_user_agent.outputs.USER_AGENT }}
         run: |
           set -euo pipefail
           node .github/scripts/check-plugin-request-site.cjs > "$RUNNER_TEMP/site-check.json"
@@ -87,26 +81,22 @@ jobs:
           SKIPPED=$(jq -r '.skipped // ""' "$RUNNER_TEMP/site-check.json")
           FAILURE_REASON=$(jq -r '.reachability.failureReason // ""' "$RUNNER_TEMP/site-check.json")
 
-          echo "## Website Reachability Check" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Status: \`$STATUS\` (reachable: \`$REACHABLE\`)" >> "$GITHUB_STEP_SUMMARY"
-          if [ -n "$FAILURE_REASON" ]; then
-            echo "- Reason: $FAILURE_REASON" >> "$GITHUB_STEP_SUMMARY"
-          fi
-          if [ -n "$SKIPPED" ]; then
-            echo "- Auto-close skipped: \`$SKIPPED\`" >> "$GITHUB_STEP_SUMMARY"
-          fi
+          {
+            echo "## Website Reachability Check"
+            echo "- Status: \`$STATUS\` (reachable: \`$REACHABLE\`)"
+            if [ -n "$FAILURE_REASON" ]; then
+              echo "- Reason: $FAILURE_REASON"
+            fi
+            if [ -n "$SKIPPED" ]; then
+              echo "- Auto-close skipped: \`$SKIPPED\`"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
           if [ "$SHOULD_CLOSE" = "true" ]; then
             gh api "repos/$REPO/issues/$ISSUE_NUMBER" > "$RUNNER_TEMP/current-issue.json"
             node .github/scripts/check-plugin-request-site.cjs --confirm-close "$RUNNER_TEMP/site-check.json" "$RUNNER_TEMP/current-issue.json" > "$RUNNER_TEMP/close-decision.json"
             if [ "$(jq -r '.shouldClose' "$RUNNER_TEMP/close-decision.json")" = "true" ]; then
-              jq -n '{labels: ["invalid"]}' \
-                | gh api --method POST "repos/$REPO/issues/$ISSUE_NUMBER/labels" --input - >/dev/null
-              jq '{body: .comment}' "$RUNNER_TEMP/close-decision.json" \
-                | gh api --method POST "repos/$REPO/issues/$ISSUE_NUMBER/comments" --input - >/dev/null
-              gh api --method PATCH "repos/$REPO/issues/$ISSUE_NUMBER" \
-                -f state=closed \
-                -f state_reason=not_planned >/dev/null
+              node .github/scripts/close-invalid-issue.cjs "$RUNNER_TEMP/close-decision.json" >/dev/null
               echo "- Action: Added \`invalid\` label and closed issue as \`not_planned\`." >> "$GITHUB_STEP_SUMMARY"
             else
               CONFIRM_SKIPPED=$(jq -r '.skipped // "unknown"' "$RUNNER_TEMP/close-decision.json")
@@ -124,78 +114,19 @@ jobs:
         if: steps.get_url.outputs.BASE_URL != '' && steps.check_site.outputs.reachable == 'true'
         env:
           BASE_URL: ${{ steps.get_url.outputs.BASE_URL }}
-          USER_AGENT: ${{ steps.get_user_agent.outputs.USER_AGENT }}
         run: |
-          is_private_ip() {
-            local ip="${1,,}"
-            ip="${ip#\[}"
-            ip="${ip%\]}"
-            ip="${ip%%%*}"
-            [[ -z "$ip" ]] && return 0
-            if [[ "$ip" == *:* ]]; then
-              [[ "$ip" == "::" || "$ip" == "::1" || "$ip" == 0:0:0:0:0:0:0:[01] || "$ip" == fc* || "$ip" == fd* || "$ip" == fe[89ab]* || "$ip" == ::ffff:* ]]
-              return $?
-            fi
-            local o1 o2 _o3 _o4
-            IFS=. read -r o1 o2 _o3 _o4 <<< "$ip"
-            [[ "$o1" =~ ^[0-9]+$ && "$o2" =~ ^[0-9]+$ ]] || return 0
-            (( o1 == 0 || o1 == 10 || o1 == 127 )) && return 0
-            (( o1 == 169 && o2 == 254 )) && return 0
-            (( o1 == 172 && o2 >= 16 && o2 <= 31 )) && return 0
-            (( o1 == 192 && o2 == 168 )) && return 0
-            (( o1 == 100 && o2 >= 64 && o2 <= 127 )) && return 0
-            return 1
-          }
+          set -euo pipefail
+          node .github/scripts/check-plugin-request-site.cjs --detect-theme > "$RUNNER_TEMP/theme-detect.json"
+          MATCH_COUNT=$(jq -r '.matchCount' "$RUNNER_TEMP/theme-detect.json")
+          THEME_LABEL=$(jq -r '.themeLabel' "$RUNNER_TEMP/theme-detect.json")
 
-          check_head() {
-            local url="$1" expected_ct="$2" meta code ctype remote_ip
-            meta=$(curl --location --max-redirs 5 --proto '=http,https' --proto-redir '=http,https' --output /dev/null --silent --head --max-time 10 -w '%{http_code}\t%{content_type}\t%{remote_ip}' "$url" -H "User-Agent: $USER_AGENT" 2>/dev/null || true)
-            IFS=$'\t' read -r code ctype remote_ip <<< "$meta"
-            ctype=$(printf '%s' "$ctype" | tr '[:upper:]' '[:lower:]')
-            ! is_private_ip "$remote_ip" && [[ "$code" == "200" && "$ctype" == *"$expected_ct"* ]]
-          }
-
-          fetch_and_grep() {
-            local url="$1" pattern="$2" out_file="$3" remote_ip
-            rm -f "$out_file"
-            remote_ip=$(curl --location --max-redirs 5 --proto '=http,https' --proto-redir '=http,https' --silent --fail --max-time 10 --max-filesize 2097152 -w '%{remote_ip}' -o "$out_file" "$url" -H "User-Agent: $USER_AGENT" 2>/dev/null) || return 1
-            ! is_private_ip "$remote_ip" && grep -q "$pattern" "$out_file"
-          }
-
-          MATCHED=()
-
-          run_probe() {
-            local name="$1" label="$2" fn="$3" host="$4"
-            shift 4
-            echo "🔍 Checking for $name theme..." >> "$GITHUB_STEP_SUMMARY"
-            if "$fn" "https://$host" "$@" || "$fn" "http://$host" "$@"; then
-              MATCHED+=("$label")
-              echo "✅ $name Theme Detected" >> "$GITHUB_STEP_SUMMARY"
-            else
-              echo "❌ $name Theme Not Found" >> "$GITHUB_STEP_SUMMARY"
-            fi
-          }
-
-          probe_head_url() {
-            local base="$1" path="$2" expected_ct="$3"
-            check_head "$base$path" "$expected_ct"
-          }
-
-          probe_body_url() {
-            local base="$1" path="$2" pattern="$3" out_file="$4"
-            fetch_and_grep "$base$path" "$pattern" "$out_file"
-          }
-
-          run_probe "Madara" "theme: madara" probe_head_url "$BASE_URL" "/wp-content/themes/madara/style.css" "text/css"
-          run_probe "Lightnovelwp" "theme: lightnovelwp" probe_head_url "$BASE_URL" "/wp-content/themes/lightnovel/style.css" "text/css"
-          run_probe "HotNovelPub" "theme: hotnovelpub" probe_body_url "api.$BASE_URL" "" "Hello!" "$RUNNER_TEMP/hotnovelpub.txt"
-          run_probe "Fictioneer" "theme: fictioneer" probe_head_url "$BASE_URL" "/wp-content/themes/fictioneer/css/application.css" "text/css"
-          run_probe "Novel Fire" "theme: novel fire" probe_head_url "$BASE_URL" "/frontend/js/appsettings.min.js" "javascript"
-          run_probe "Readwn" "theme: readwn" probe_body_url "$BASE_URL" "/list/all/all-newstime-0.html" "novel-item" "$RUNNER_TEMP/readwn.html"
+          while IFS= read -r line; do
+            echo "$line" >> "$GITHUB_STEP_SUMMARY"
+          done < <(jq -r '.checks[] | "🔍 Checking for \(.name) theme...\n" + (if .detected then "✅ \(.name) Theme Detected" else "❌ \(.name) Theme Not Found" end)' "$RUNNER_TEMP/theme-detect.json")
 
           {
-            echo "match_count=${#MATCHED[@]}"
-            echo "theme_label=${MATCHED[0]:-}"
+            echo "match_count=$MATCH_COUNT"
+            echo "theme_label=$THEME_LABEL"
           } >> "$GITHUB_OUTPUT"
 
       - name: Add Theme Label To Issue

@@ -4,9 +4,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const {
   VALID_SEVERITIES,
-  buildSelectionMatcher,
   comparisonValue,
   extractSection,
+  matchPluginEntries,
   nonEmptySectionLines,
 } = require('./issue-parsing.cjs');
 
@@ -183,31 +183,9 @@ function formatPluginLabel(displayKey, id) {
 }
 
 function matchPluginLabels(lines, pluginKeys) {
-  if (!pluginKeys || typeof pluginKeys !== 'object' || lines.length === 0) {
-    return [];
-  }
-
-  const entriesByKey = new Map();
-  for (const [displayKey, id] of Object.entries(pluginKeys)) {
-    if (typeof id !== 'string') continue;
-    const normalizedKey = comparisonValue(displayKey);
-    if (!normalizedKey || !comparisonValue(id)) continue;
-    entriesByKey.set(normalizedKey, { displayKey, id });
-  }
-
-  const regex = buildSelectionMatcher(entriesByKey.keys());
-  if (!regex) return [];
-  const selection = comparisonValue(lines.join(', '));
-
-  const labels = [];
-  let match;
-  while ((match = regex.exec(selection)) !== null) {
-    const entry = entriesByKey.get(match[1]);
-    if (!entry) continue;
-    const label = formatPluginLabel(entry.displayKey, entry.id);
-    if (label) labels.push(label);
-  }
-  return labels;
+  return matchPluginEntries(lines, pluginKeys)
+    .map(entry => formatPluginLabel(entry.displayKey, entry.id))
+    .filter(Boolean);
 }
 
 function computeLabelPlan({ body, existingLabels = [], pluginKeys = {} }) {

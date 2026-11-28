@@ -3,31 +3,28 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const {
-  buildSelectionMatcher,
+  TEMPLATE_BOUNDARIES,
   comparisonValue,
   extractSection,
+  isExemptAuthor,
+  isValidAuthor,
+  isValidRepository,
+  matchPluginEntries,
   nonEmptySectionLines,
+  normalizeLabelNames,
+  parseJsonOrDefault,
   stripDirectional,
 } = require('./issue-parsing.cjs');
 const {
   DEFAULT_USER_AGENT,
-  EXEMPT_ASSOCIATIONS,
+  checkLiveIssueGuard,
   checkSiteReachability,
   extractBaseUrl,
-} = require('./check-plugin-request-site.cjs');
+  fetchLatestUserAgent,
+  reachabilitySkipReason,
+} = require('./site-reachability.cjs');
 
-const REPORT_ISSUE_BOUNDARIES = [
-  'Plugin',
-  'Severity',
-  'Steps To Reproduce',
-  'Expected Behavior',
-  'Actual Behavior',
-  'LNReader Version',
-  'Plugin Version',
-  'Android Version',
-  'Other Details',
-  'Acknowledgements',
-];
+const REPORT_ISSUE_BOUNDARIES = TEMPLATE_BOUNDARIES.reportIssue;
 
 const DOMAIN_CHANGE_SECTIONS = [
   'Steps To Reproduce',
@@ -59,6 +56,41 @@ const IGNORED_META_DOMAINS = new Set([
   'example.com',
   'example.org',
   'example.net',
+]);
+
+const SHARED_HOST_SUFFIXES = new Set([
+  'wordpress.com',
+  'blogspot.com',
+  'github.io',
+  'netlify.app',
+  'pages.dev',
+  'vercel.app',
+  'web.app',
+  'firebaseapp.com',
+  'herokuapp.com',
+  'fandom.com',
+  'neocities.org',
+  'tumblr.com',
+  'wixsite.com',
+  'weebly.com',
+  'substack.com',
+]);
+
+const MULTI_PART_PUBLIC_SUFFIXES = new Set([
+  'co.uk',
+  'org.uk',
+  'com.br',
+  'com.au',
+  'co.jp',
+  'co.id',
+  'my.id',
+  'com.cn',
+  'com.tw',
+  'com.vn',
+  'com.tr',
+  'com.mx',
+  'com.ar',
+  'co.kr',
 ]);
 
 const UNAMBIGUOUS_BARE_TLDS = new Set([
@@ -204,52 +236,9 @@ function loadPluginSites(
 }
 
 function matchReportedPlugins(body, pluginKeys) {
-  if (!pluginKeys || typeof pluginKeys !== 'object') return [];
   const section = extractSection(body, 'Plugin', REPORT_ISSUE_BOUNDARIES);
   const lines = nonEmptySectionLines(section);
-  if (lines.length === 0) return [];
-
-  const entriesByKey = new Map();
-  for (const [displayKey, id] of Object.entries(pluginKeys)) {
-    if (typeof id !== 'string') continue;
-    const normalizedKey = comparisonValue(displayKey);
-    if (!normalizedKey || !comparisonValue(id)) continue;
-    entriesByKey.set(normalizedKey, { displayKey, id });
-  }
-
-  const regex = buildSelectionMatcher(entriesByKey.keys());
-  if (!regex) return [];
-  const selection = comparisonValue(lines.join(', '));
-
-  const matched = [];
-  const seenIds = new Set();
-  let match;
-  while ((match = regex.exec(selection)) !== null) {
-    const entry = entriesByKey.get(match[1]);
-    if (!entry) continue;
-    const normId = comparisonValue(entry.id);
-    if (seenIds.has(normId)) continue;
-    seenIds.add(normId);
-    const sepIdx = entry.displayKey.indexOf(': ');
-    const name =
-      sepIdx >= 0 ? entry.displayKey.slice(sepIdx + 2) : entry.displayKey;
-    matched.push({
-      displayKey: entry.displayKey,
-      name,
-      id: entry.id,
-    });
-  }
-  return matched;
-}
-
-function normalizeLabelNames(labels) {
-  return new Set(
-    (Array.isArray(labels) ? labels : [])
-      .map(label => (typeof label === 'string' ? label : label && label.name))
-      .filter(label => typeof label === 'string')
-      .map(comparisonValue)
-      .filter(Boolean),
-  );
+  return matchPluginEntries(lines, pluginKeys);
 }
 
 function isDomainChangedReport(body, labels = []) {
@@ -292,6 +281,23 @@ function isIgnoredMetaDomain(baseUrl) {
   return false;
 }
 
+function isExcludedOldHost(candidateHost, excludedHosts) {
+  if (!candidateHost) return true;
+  if (excludedHosts.has(candidateHost)) return true;
+  if (
+    SHARED_HOST_SUFFIXES.has(candidateHost) ||
+    MULTI_PART_PUBLIC_SUFFIXES.has(candidateHost)
+  ) {
+    return false;
+  }
+  for (const oldHost of excludedHosts) {
+    if (oldHost.endsWith(`.${candidateHost}`)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function extractCandidateNewUrls(body, excludedBaseUrls = []) {
   const excludedHosts = new Set(excludedBaseUrls.map(stripWww).filter(Boolean));
 
@@ -317,27 +323,23 @@ function extractCandidateNewUrls(body, excludedBaseUrls = []) {
     const baseUrl = extractBaseUrl(rawUrl);
     if (!baseUrl) return;
     if (isIgnoredMetaDomain(baseUrl)) return;
-    if (excludedHosts.has(stripWww(baseUrl))) return;
+    if (isExcludedOldHost(stripWww(baseUrl), excludedHosts)) return;
     if (seenBaseUrls.has(baseUrl)) return;
     seenBaseUrls.add(baseUrl);
     candidates.push({ rawUrl, baseUrl });
   };
 
   const explicitUrlRegex = /https?:\/\/[^\s<>'"`)\]]+/gi;
-  let urlMatch;
-  while ((urlMatch = explicitUrlRegex.exec(combined)) !== null) {
-    const cleaned = urlMatch[0].replace(/[.,;:!?'"`)\]]+$/, '');
+  const bareScanText = combined.replace(explicitUrlRegex, match => {
+    const cleaned = match.replace(/[.,;:!?'"`)\]]+$/, '');
     tryAddCandidate(cleaned);
-  }
-
-  if (candidates.length > 0) {
-    return candidates;
-  }
+    return ' ';
+  });
 
   const bareDomainRegex =
     /(?<![@/.A-Za-z0-9_-])([A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)+)(?![.\w])/g;
   let bareMatch;
-  while ((bareMatch = bareDomainRegex.exec(combined)) !== null) {
+  while ((bareMatch = bareDomainRegex.exec(bareScanText)) !== null) {
     const token = bareMatch[1];
     const tld = token.split('.').pop().toLowerCase();
     if (!UNAMBIGUOUS_BARE_TLDS.has(tld)) continue;
@@ -404,26 +406,6 @@ function resolveBugCheckTargets({
     targets,
     unresolvedPlugins,
   };
-}
-
-function isValidAuthor(author) {
-  return (
-    typeof author === 'string' &&
-    /^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$/.test(author)
-  );
-}
-
-function isValidRepository(repository) {
-  if (typeof repository !== 'string') return false;
-  const parts = repository.split('/');
-  if (parts.length !== 2) return false;
-  const [owner, repo] = parts;
-  return (
-    isValidAuthor(owner) &&
-    /^[a-zA-Z0-9._-]+$/.test(repo) &&
-    repo !== '.' &&
-    repo !== '..'
-  );
 }
 
 function buildUnreachableBugComment({ author, repository, targetResults }) {
@@ -541,10 +523,7 @@ async function evaluateBugReportSite({
     return makeDecision({ skipped: 'not-open' });
   }
 
-  if (
-    EXEMPT_ASSOCIATIONS.has(comparisonValue(authorAssociation)) ||
-    comparisonValue(authorType) === 'bot'
-  ) {
+  if (isExemptAuthor({ authorAssociation, authorType })) {
     return makeDecision({ skipped: 'exempt-author' });
   }
 
@@ -628,30 +607,13 @@ async function evaluateBugReportSite({
     return makeDecision({ targetResults, reachable: true });
   }
 
-  if (
-    targetResults.some(
-      item =>
-        item.reachability && item.reachability.status === 'blocked_private_ip',
+  const nonReachableSkip = targetResults
+    .map(item =>
+      reachabilitySkipReason(item.reachability && item.reachability.status),
     )
-  ) {
-    return makeDecision({ targetResults, skipped: 'private-ip' });
-  }
-
-  if (
-    targetResults.some(
-      item =>
-        item.reachability && item.reachability.status === 'tls_cert_error',
-    )
-  ) {
-    return makeDecision({ targetResults, skipped: 'tls-cert-error' });
-  }
-
-  if (
-    targetResults.some(
-      item => !item.reachability || item.reachability.status !== 'unreachable',
-    )
-  ) {
-    return makeDecision({ targetResults, skipped: 'probe-error' });
+    .find(Boolean);
+  if (nonReachableSkip) {
+    return makeDecision({ targetResults, skipped: nonReachableSkip });
   }
 
   return makeDecision({ targetResults, shouldClose: true });
@@ -662,45 +624,9 @@ function confirmBugCloseWithCurrentIssue(
   currentIssue,
   { pluginKeys = {}, pluginSites = new Map() } = {},
 ) {
-  if (!checkResult || !checkResult.shouldClose) {
-    return {
-      shouldClose: false,
-      skipped: (checkResult && checkResult.skipped) || 'not-closable',
-      label: '',
-      comment: '',
-    };
-  }
-
-  if (
-    !currentIssue ||
-    typeof currentIssue !== 'object' ||
-    Array.isArray(currentIssue) ||
-    Object.hasOwn(currentIssue, 'pull_request')
-  ) {
-    return {
-      shouldClose: false,
-      skipped: 'invalid-issue',
-      label: '',
-      comment: '',
-    };
-  }
-
-  if (comparisonValue(currentIssue.state) !== 'open') {
-    return {
-      shouldClose: false,
-      skipped: 'already-closed',
-      label: '',
-      comment: '',
-    };
-  }
-
-  if (!normalizeLabelNames(currentIssue.labels).has('bug')) {
-    return {
-      shouldClose: false,
-      skipped: 'label-removed',
-      label: '',
-      comment: '',
-    };
+  const guard = checkLiveIssueGuard(checkResult, currentIssue, 'bug');
+  if (!guard.ok) {
+    return guard.decision;
   }
 
   const liveResolved = resolveBugCheckTargets({
@@ -709,6 +635,19 @@ function confirmBugCloseWithCurrentIssue(
     pluginKeys,
     pluginSites,
   });
+
+  if (
+    liveResolved.mode === 'bug' &&
+    (liveResolved.unresolvedPlugins.length > 0 ||
+      liveResolved.targets.length === 0)
+  ) {
+    return {
+      shouldClose: false,
+      skipped: 'target-changed-during-check',
+      label: '',
+      comment: '',
+    };
+  }
 
   const expectedTargets = [...(checkResult.targets || [])].sort();
   const liveTargets = sortedBaseUrls(liveResolved.targets);
@@ -731,16 +670,6 @@ function confirmBugCloseWithCurrentIssue(
     label: checkResult.label,
     comment: checkResult.comment,
   };
-}
-
-function parseJsonOrDefault(rawValue, fallback) {
-  if (!rawValue) return fallback;
-  try {
-    const parsed = JSON.parse(rawValue);
-    return parsed === undefined ? fallback : parsed;
-  } catch {
-    return fallback;
-  }
 }
 
 async function runCli(argv = process.argv.slice(2)) {
@@ -768,6 +697,8 @@ async function runCli(argv = process.argv.slice(2)) {
     return;
   }
 
+  const userAgent = process.env.USER_AGENT || (await fetchLatestUserAgent());
+
   const result = await evaluateBugReportSite({
     body: process.env.ISSUE_BODY || '',
     previousBody: parseJsonOrDefault(
@@ -781,7 +712,7 @@ async function runCli(argv = process.argv.slice(2)) {
     authorType: process.env.ISSUE_AUTHOR_TYPE || '',
     state: process.env.ISSUE_STATE || 'open',
     repository: process.env.REPOSITORY || '',
-    userAgent: process.env.USER_AGENT || DEFAULT_USER_AGENT,
+    userAgent,
     pluginKeys,
     pluginSites,
   });
@@ -801,6 +732,8 @@ module.exports = {
   DOMAIN_CHANGE_SECTIONS,
   MAX_TARGETS_TO_CHECK,
   IGNORED_META_DOMAINS,
+  SHARED_HOST_SUFFIXES,
+  MULTI_PART_PUBLIC_SUFFIXES,
   UNAMBIGUOUS_BARE_TLDS,
   extractStandalonePluginSite,
   loadPluginSites,

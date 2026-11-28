@@ -62,26 +62,16 @@ jobs:
         if: github.event_name == 'issues' && github.event.action == 'opened' && !github.event.issue.pull_request
         env:
           GH_TOKEN: ${{ github.token }}
+          GITHUB_API_URL: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
-          ISSUE_BODY: ${{ github.event.issue.body }}
-          ISSUE_LABELS: ${{ toJSON(github.event.issue.labels.*.name) }}
-          ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
-          ISSUE_AUTHOR_ASSOCIATION: ${{ github.event.issue.author_association }}
-          ISSUE_AUTHOR_TYPE: ${{ github.event.issue.user.type }}
-          ISSUE_STATE: ${{ github.event.issue.state }}
         shell: bash
         run: |
           set -euo pipefail
-          node .github/scripts/validate-issue-template.cjs > "$RUNNER_TEMP/template-check.json"
+          gh api "repos/$REPOSITORY/issues/$ISSUE_NUMBER" > "$RUNNER_TEMP/live-issue.json"
+          node .github/scripts/validate-issue-template.cjs --issue-file "$RUNNER_TEMP/live-issue.json" > "$RUNNER_TEMP/template-check.json"
           if [ "$(jq -r '.shouldClose' "$RUNNER_TEMP/template-check.json")" = "true" ]; then
-            jq -n '{labels: ["invalid"]}' \
-              | gh api --method POST "repos/$REPOSITORY/issues/$ISSUE_NUMBER/labels" --input - >/dev/null
-            jq '{body: .comment}' "$RUNNER_TEMP/template-check.json" \
-              | gh api --method POST "repos/$REPOSITORY/issues/$ISSUE_NUMBER/comments" --input - >/dev/null
-            gh api --method PATCH "repos/$REPOSITORY/issues/$ISSUE_NUMBER" \
-              -f state=closed \
-              -f state_reason=not_planned >/dev/null
+            node .github/scripts/close-invalid-issue.cjs "$RUNNER_TEMP/template-check.json" >/dev/null
             echo "closed=true" >> "$GITHUB_OUTPUT"
           else
             echo "closed=false" >> "$GITHUB_OUTPUT"
@@ -115,6 +105,7 @@ jobs:
           }}
         env:
           GH_TOKEN: ${{ github.token }}
+          GITHUB_API_URL: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           ISSUE_BODY: ${{ github.event.issue.body }}
@@ -133,10 +124,6 @@ jobs:
             echo "Issue #$ISSUE_NUMBER is no longer open; skipping website check." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-
-          CHROME_VERSION=$(curl --silent --max-time 5 'https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Windows&num=1' | jq -r '.[0].version // empty' || true)
-          CHROME_VERSION="${CHROME_VERSION:-126.0.6478.36}"
-          export USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/$CHROME_VERSION Safari/537.36"
 
           node .github/scripts/check-bug-report-site.cjs > "$RUNNER_TEMP/bug-site-check.json"
           MODE=$(jq -r '.mode' "$RUNNER_TEMP/bug-site-check.json")
@@ -159,13 +146,7 @@ jobs:
             gh api "repos/$REPOSITORY/issues/$ISSUE_NUMBER" > "$RUNNER_TEMP/current-issue.json"
             node .github/scripts/check-bug-report-site.cjs --confirm-close "$RUNNER_TEMP/bug-site-check.json" "$RUNNER_TEMP/current-issue.json" > "$RUNNER_TEMP/bug-close-decision.json"
             if [ "$(jq -r '.shouldClose' "$RUNNER_TEMP/bug-close-decision.json")" = "true" ]; then
-              jq -n '{labels: ["invalid"]}' \
-                | gh api --method POST "repos/$REPOSITORY/issues/$ISSUE_NUMBER/labels" --input - >/dev/null
-              jq '{body: .comment}' "$RUNNER_TEMP/bug-close-decision.json" \
-                | gh api --method POST "repos/$REPOSITORY/issues/$ISSUE_NUMBER/comments" --input - >/dev/null
-              gh api --method PATCH "repos/$REPOSITORY/issues/$ISSUE_NUMBER" \
-                -f state=closed \
-                -f state_reason=not_planned >/dev/null
+              node .github/scripts/close-invalid-issue.cjs "$RUNNER_TEMP/bug-close-decision.json" >/dev/null
               echo "- Action: Added \`invalid\` label and closed issue as \`not_planned\`." >> "$GITHUB_STEP_SUMMARY"
             else
               CONFIRM_SKIPPED=$(jq -r '.skipped // "unknown"' "$RUNNER_TEMP/bug-close-decision.json")

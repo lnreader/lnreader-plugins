@@ -1,42 +1,38 @@
 'use strict';
 
 const {
+  EXEMPT_ASSOCIATIONS,
+  TEMPLATE_BOUNDARIES,
   comparisonValue,
   extractSection,
+  isExemptAuthor,
+  isValidAuthor,
+  isValidRepository,
   nonEmptySectionLines,
+  normalizeLabelNames,
+  parseJsonOrDefault,
   stripDirectional,
 } = require('./issue-parsing.cjs');
-
-const EXEMPT_ASSOCIATIONS = new Set(['owner', 'member', 'collaborator']);
 
 const TEMPLATES = [
   {
     name: 'Report Issue',
     label: 'bug',
-    requiredSections: [
-      'Plugin',
-      'Severity',
-      'Steps To Reproduce',
-      'Expected Behavior',
-      'Actual Behavior',
-      'LNReader Version',
-      'Plugin Version',
-      'Android Version',
-    ],
+    requiredSections: TEMPLATE_BOUNDARIES.reportIssue.slice(0, 8),
     optionalSections: ['Other Details'],
     requiredAcknowledgements: 5,
   },
   {
     name: 'Request Plugin',
     label: 'plugin request',
-    requiredSections: ['Plugin Name', 'Website URL', 'Language'],
+    requiredSections: TEMPLATE_BOUNDARIES.requestPlugin.slice(0, 3),
     optionalSections: ['Other Details'],
     requiredAcknowledgements: 4,
   },
   {
     name: 'Request Feature',
     label: 'feature request',
-    requiredSections: ['Feature Description'],
+    requiredSections: TEMPLATE_BOUNDARIES.requestFeature.slice(0, 1),
     optionalSections: ['Other Details'],
     requiredAcknowledgements: 5,
   },
@@ -112,26 +108,6 @@ function evaluateTemplate(body, template) {
   };
 }
 
-function isValidAuthor(author) {
-  return (
-    typeof author === 'string' &&
-    /^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$/.test(author)
-  );
-}
-
-function isValidRepository(repository) {
-  if (typeof repository !== 'string') return false;
-  const parts = repository.split('/');
-  if (parts.length !== 2) return false;
-  const [owner, repo] = parts;
-  return (
-    isValidAuthor(owner) &&
-    /^[a-zA-Z0-9._-]+$/.test(repo) &&
-    repo !== '.' &&
-    repo !== '..'
-  );
-}
-
 function buildCloseComment({ author, repository, templateName, reasons }) {
   const mention = isValidAuthor(author) ? `@${author} ` : '';
   const chooseUrl = isValidRepository(repository)
@@ -198,19 +174,11 @@ function validateIssueTemplate({
     return makeResult({ skipped: 'not-open' });
   }
 
-  if (
-    EXEMPT_ASSOCIATIONS.has(comparisonValue(authorAssociation)) ||
-    comparisonValue(authorType) === 'bot'
-  ) {
+  if (isExemptAuthor({ authorAssociation, authorType })) {
     return makeResult({ skipped: 'exempt-author' });
   }
 
-  const normalizedLabels = new Set(
-    (Array.isArray(labels) ? labels : [])
-      .filter(label => typeof label === 'string')
-      .map(comparisonValue)
-      .filter(Boolean),
-  );
+  const normalizedLabels = normalizeLabelNames(labels);
 
   const labeledTemplates = TEMPLATES.filter(template =>
     normalizedLabels.has(template.label),
@@ -251,17 +219,58 @@ function validateIssueTemplate({
   });
 }
 
-if (require.main === module) {
-  const result = validateIssueTemplate({
-    body: process.env.ISSUE_BODY || '',
-    labels: JSON.parse(process.env.ISSUE_LABELS || '[]'),
-    author: process.env.ISSUE_AUTHOR || '',
-    authorAssociation: process.env.ISSUE_AUTHOR_ASSOCIATION || '',
-    authorType: process.env.ISSUE_AUTHOR_TYPE || '',
-    state: process.env.ISSUE_STATE || 'open',
-    repository: process.env.REPOSITORY || '',
+function validateLiveIssue(issue, repository = '') {
+  if (
+    !issue ||
+    typeof issue !== 'object' ||
+    Array.isArray(issue) ||
+    Object.hasOwn(issue, 'pull_request')
+  ) {
+    return makeResult({ skipped: 'pull-request' });
+  }
+  const labels = Array.isArray(issue.labels)
+    ? issue.labels
+        .map(label => (typeof label === 'string' ? label : label && label.name))
+        .filter(Boolean)
+    : [];
+  return validateIssueTemplate({
+    body: issue.body || '',
+    labels,
+    author: (issue.user && issue.user.login) || '',
+    authorAssociation: issue.author_association || '',
+    authorType: (issue.user && issue.user.type) || '',
+    state: issue.state || 'open',
+    repository,
   });
+}
+
+if (require.main === module) {
+  const fs = require('node:fs');
+  const argv = process.argv.slice(2);
+  let result;
+  if (argv[0] === '--issue-file') {
+    if (!argv[1]) {
+      throw new Error('Usage: validate-issue-template.cjs --issue-file <path>');
+    }
+    const liveIssue = JSON.parse(fs.readFileSync(argv[1], 'utf8'));
+    result = validateLiveIssue(liveIssue, process.env.REPOSITORY || '');
+  } else {
+    result = validateIssueTemplate({
+      body: process.env.ISSUE_BODY || '',
+      labels: parseJsonOrDefault(process.env.ISSUE_LABELS, []),
+      author: process.env.ISSUE_AUTHOR || '',
+      authorAssociation: process.env.ISSUE_AUTHOR_ASSOCIATION || '',
+      authorType: process.env.ISSUE_AUTHOR_TYPE || '',
+      state: process.env.ISSUE_STATE || 'open',
+      repository: process.env.REPOSITORY || '',
+    });
+  }
   process.stdout.write(`${JSON.stringify(result)}\n`);
 }
 
-module.exports = { TEMPLATES, validateIssueTemplate };
+module.exports = {
+  EXEMPT_ASSOCIATIONS,
+  TEMPLATES,
+  validateIssueTemplate,
+  validateLiveIssue,
+};

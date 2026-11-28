@@ -3,12 +3,14 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 
 const {
   TEMPLATES,
   validateIssueTemplate,
+  validateLiveIssue,
 } = require('./validate-issue-template.cjs');
 
 const VALID_REPORT_ISSUE_BODY = [
@@ -523,6 +525,65 @@ test('validate-issue-template CLI outputs JSON decision', () => {
   assert.equal(parsed.shouldClose, true);
   assert.equal(parsed.template, null);
   assert.ok(parsed.comment.includes('@reader123 '));
+});
+
+test('validateLiveIssue respects live edited issue state and --issue-file CLI flag', () => {
+  const validLiveIssue = {
+    state: 'open',
+    labels: [{ name: 'feature request' }],
+    user: { login: 'reader123', type: 'User' },
+    author_association: 'NONE',
+    body: [
+      '### Feature Description',
+      'Add dark theme option.',
+      '',
+      '### Acknowledgements',
+      '- [x] I have searched existing issues and confirmed this is not a duplicate.',
+      '- [x] I have written a clear and descriptive title.',
+      '- [x] I understand that app-specific features should be requested in the app repository.',
+      '- [x] I have updated the app to the latest version.',
+      '- [x] I have provided all requested information in this form.',
+    ].join('\n'),
+  };
+  assert.equal(
+    validateLiveIssue(validLiveIssue, 'lnreader/lnreader-plugins').shouldClose,
+    false,
+  );
+
+  assert.equal(
+    validateLiveIssue({ ...validLiveIssue, body: '', state: 'closed' }).skipped,
+    'not-open',
+  );
+  assert.equal(
+    validateLiveIssue({ ...validLiveIssue, pull_request: {} }).skipped,
+    'pull-request',
+  );
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'validate-live-'));
+  try {
+    const issuePath = path.join(tmpDir, 'live-issue.json');
+    fs.writeFileSync(
+      issuePath,
+      JSON.stringify({ ...validLiveIssue, body: 'not a template' }),
+    );
+    const out = execFileSync(
+      process.execPath,
+      [
+        path.join(__dirname, 'validate-issue-template.cjs'),
+        '--issue-file',
+        issuePath,
+      ],
+      {
+        env: { ...process.env, REPOSITORY: 'lnreader/lnreader-plugins' },
+        encoding: 'utf8',
+      },
+    );
+    const decision = JSON.parse(out);
+    assert.equal(decision.shouldClose, true);
+    assert.match(decision.comment, /@reader123 /);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
 });
 
 test('TEMPLATES schema stays in sync with YAML issue template files', () => {
