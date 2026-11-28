@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Copy, FileText, Code } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -18,6 +18,7 @@ import { usePluginCustomAssets } from '@/hooks/usePluginCustomAssets';
 const ParseChapterSection = React.memo(function ParseChapterSection() {
   const plugin = useAppStore(state => state.plugin);
   const parseChapterPath = useAppStore(state => state.parseChapterPath);
+  const parseChapterNonce = useAppStore(state => state.parseChapterNonce);
   const shouldAutoSubmitChapter = useAppStore(
     state => state.shouldAutoSubmitChapter,
   );
@@ -29,7 +30,6 @@ const ParseChapterSection = React.memo(function ParseChapterSection() {
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState('');
   const [showRawHtml, setShowRawHtml] = useState(false);
-  const lastProcessedPath = useRef<string>();
   const [prevPluginId, setPrevPluginId] = useState<string | undefined>();
 
   if (plugin?.id !== prevPluginId) {
@@ -80,19 +80,23 @@ const ParseChapterSection = React.memo(function ParseChapterSection() {
 
   // Handle pre-filled path from navigation
   useEffect(() => {
-    if (parseChapterPath === lastProcessedPath.current) return;
-    lastProcessedPath.current = parseChapterPath;
+    if (!parseChapterPath) return;
 
-    if (parseChapterPath) {
-      setChapterPath(parseChapterPath);
+    setChapterPath(parseChapterPath);
 
-      if (shouldAutoSubmitChapter && plugin) {
-        fetchChapterByPath(parseChapterPath);
-      }
-
+    if (!shouldAutoSubmitChapter) {
       clearParseChapterPath();
+      return;
     }
+
+    // A navigation can happen before the plugin is restored; keep the request
+    // pending instead of consuming it, so it runs once the plugin is available.
+    if (!plugin) return;
+
+    fetchChapterByPath(parseChapterPath);
+    clearParseChapterPath();
   }, [
+    parseChapterNonce,
     parseChapterPath,
     shouldAutoSubmitChapter,
     plugin,

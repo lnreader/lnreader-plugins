@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   BookOpen,
   ChevronLeft,
@@ -33,6 +33,7 @@ const ParseNovelSection = React.memo(function ParseNovelSection({
 }: ParseNovelSectionProps) {
   const plugin = useAppStore(state => state.plugin);
   const parseNovelPath = useAppStore(state => state.parseNovelPath);
+  const parseNovelNonce = useAppStore(state => state.parseNovelNonce);
   const shouldAutoSubmitNovel = useAppStore(
     state => state.shouldAutoSubmitNovel,
   );
@@ -46,7 +47,6 @@ const ParseNovelSection = React.memo(function ParseNovelSection({
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [fetchError, setFetchError] = useState('');
-  const lastProcessedPath = useRef<string>();
   const [prevPluginId, setPrevPluginId] = useState<string | undefined>();
 
   if (plugin?.id !== prevPluginId) {
@@ -130,19 +130,28 @@ const ParseNovelSection = React.memo(function ParseNovelSection({
   };
 
   useEffect(() => {
-    if (parseNovelPath === lastProcessedPath.current) return;
-    lastProcessedPath.current = parseNovelPath;
+    if (!parseNovelPath) return;
 
-    if (parseNovelPath) {
-      setNovelPath(parseNovelPath);
+    setNovelPath(parseNovelPath);
 
-      if (shouldAutoSubmitNovel && plugin) {
-        fetchNovelByPath(parseNovelPath);
-      }
-
+    if (!shouldAutoSubmitNovel) {
       clearParseNovelPath();
+      return;
     }
-  }, [parseNovelPath, shouldAutoSubmitNovel, plugin, clearParseNovelPath]);
+
+    // A navigation can happen before the plugin is restored; keep the request
+    // pending instead of consuming it, so it runs once the plugin is available.
+    if (!plugin) return;
+
+    fetchNovelByPath(parseNovelPath);
+    clearParseNovelPath();
+  }, [
+    parseNovelNonce,
+    parseNovelPath,
+    shouldAutoSubmitNovel,
+    plugin,
+    clearParseNovelPath,
+  ]);
 
   const formatDate = (dateString?: string | null) => {
     if (!dateString) return 'N/A';
