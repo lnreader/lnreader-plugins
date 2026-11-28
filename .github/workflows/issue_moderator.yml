@@ -22,13 +22,37 @@ jobs:
       actions: write
     steps:
       - name: Checkout Repository
-        if: github.event_name == 'issues' && github.event.action == 'opened' && !github.event.issue.pull_request
+        if: >-
+          ${{
+            github.event_name == 'issues' &&
+            !github.event.issue.pull_request &&
+            (
+              github.event.action == 'opened' ||
+              (
+                github.event.action == 'edited' &&
+                github.event.issue.state == 'open' &&
+                contains(github.event.issue.labels.*.name, 'bug')
+              )
+            )
+          }}
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
       - name: Setup Node.js
-        if: github.event_name == 'issues' && github.event.action == 'opened' && !github.event.issue.pull_request
+        if: >-
+          ${{
+            github.event_name == 'issues' &&
+            !github.event.issue.pull_request &&
+            (
+              github.event.action == 'opened' ||
+              (
+                github.event.action == 'edited' &&
+                github.event.issue.state == 'open' &&
+                contains(github.event.issue.labels.*.name, 'bug')
+              )
+            )
+          }}
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: '24'
@@ -77,6 +101,77 @@ jobs:
             ["plugin request", "domain changed", "severity: domain changed"]
 
           existing-check-enabled: false
+
+      - name: Check Reported Plugin Website
+        id: check-bug-site
+        if: >-
+          ${{
+            github.event_name == 'issues' &&
+            !github.event.issue.pull_request &&
+            github.event.issue.state == 'open' &&
+            (github.event.action == 'opened' || github.event.action == 'edited') &&
+            contains(github.event.issue.labels.*.name, 'bug') &&
+            steps.validate-template.outputs.closed != 'true'
+          }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          PREVIOUS_ISSUE_BODY_JSON: ${{ toJSON(github.event.changes.body.from) }}
+          EVENT_ACTION: ${{ github.event.action }}
+          ISSUE_LABELS: ${{ toJSON(github.event.issue.labels.*.name) }}
+          ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
+          ISSUE_AUTHOR_ASSOCIATION: ${{ github.event.issue.author_association }}
+          ISSUE_AUTHOR_TYPE: ${{ github.event.issue.user.type }}
+          ISSUE_STATE: ${{ github.event.issue.state }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/$REPOSITORY/issues/$ISSUE_NUMBER" > "$RUNNER_TEMP/pre-check-issue.json"
+          if [ "$(jq -r '.state' "$RUNNER_TEMP/pre-check-issue.json")" != "open" ]; then
+            echo "Issue #$ISSUE_NUMBER is no longer open; skipping website check." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          CHROME_VERSION=$(curl --silent --max-time 5 'https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Windows&num=1' | jq -r '.[0].version // empty' || true)
+          CHROME_VERSION="${CHROME_VERSION:-126.0.6478.36}"
+          export USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/$CHROME_VERSION Safari/537.36"
+
+          node .github/scripts/check-bug-report-site.cjs > "$RUNNER_TEMP/bug-site-check.json"
+          MODE=$(jq -r '.mode' "$RUNNER_TEMP/bug-site-check.json")
+          TARGETS=$(jq -r '.targets | join(", ")' "$RUNNER_TEMP/bug-site-check.json")
+          REACHABLE=$(jq -r '.reachable' "$RUNNER_TEMP/bug-site-check.json")
+          SHOULD_CLOSE=$(jq -r '.shouldClose' "$RUNNER_TEMP/bug-site-check.json")
+          SKIPPED=$(jq -r '.skipped // ""' "$RUNNER_TEMP/bug-site-check.json")
+
+          {
+            echo "## Plugin Website Reachability Check"
+            echo "- Mode: \`$MODE\`"
+            echo "- Targets: \`$TARGETS\`"
+            echo "- Reachable: \`$REACHABLE\`"
+            if [ -n "$SKIPPED" ]; then
+              echo "- Auto-close skipped: \`$SKIPPED\`"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$SHOULD_CLOSE" = "true" ]; then
+            gh api "repos/$REPOSITORY/issues/$ISSUE_NUMBER" > "$RUNNER_TEMP/current-issue.json"
+            node .github/scripts/check-bug-report-site.cjs --confirm-close "$RUNNER_TEMP/bug-site-check.json" "$RUNNER_TEMP/current-issue.json" > "$RUNNER_TEMP/bug-close-decision.json"
+            if [ "$(jq -r '.shouldClose' "$RUNNER_TEMP/bug-close-decision.json")" = "true" ]; then
+              jq -n '{labels: ["invalid"]}' \
+                | gh api --method POST "repos/$REPOSITORY/issues/$ISSUE_NUMBER/labels" --input - >/dev/null
+              jq '{body: .comment}' "$RUNNER_TEMP/bug-close-decision.json" \
+                | gh api --method POST "repos/$REPOSITORY/issues/$ISSUE_NUMBER/comments" --input - >/dev/null
+              gh api --method PATCH "repos/$REPOSITORY/issues/$ISSUE_NUMBER" \
+                -f state=closed \
+                -f state_reason=not_planned >/dev/null
+              echo "- Action: Added \`invalid\` label and closed issue as \`not_planned\`." >> "$GITHUB_STEP_SUMMARY"
+            else
+              CONFIRM_SKIPPED=$(jq -r '.skipped // "unknown"' "$RUNNER_TEMP/bug-close-decision.json")
+              echo "- Action: Skipped closing after live issue recheck (\`$CONFIRM_SKIPPED\`)." >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
 
       - name: Update moderated issue index
         if: ${{ always() && !cancelled() && !github.event.issue.pull_request }}
