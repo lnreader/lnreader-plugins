@@ -15,59 +15,115 @@ jobs:
     name: Auto Label Theme
     if: >-
       ${{
+        github.event.issue.state == 'open' &&
         contains(github.event.issue.labels.*.name, 'plugin request') &&
         (github.event.action != 'labeled' || github.event.label.name == 'plugin request')
       }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
+      contents: read
       issues: write
     env:
       REPO: ${{ github.repository }}
       ISSUE_NUMBER: ${{ github.event.issue.number }}
     steps:
-      - name: Get Plugin Website URL
+      - name: Checkout Repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '24'
+
+      - name: Extract Website URL
         id: get_url
         env:
           ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
-          URL=$(printf '%s\n' "$ISSUE_BODY" | tr -d '\r' | awk '/### Website URL/ {f=1; next} f && /^### / {exit} f && NF {print; exit}' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-          if [ "$URL" = "_No response_" ]; then
-            URL=""
-          fi
-          echo "URL=$URL" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          node .github/scripts/check-plugin-request-site.cjs --extract-url > "$RUNNER_TEMP/url.json"
+          URL=$(jq -r '.url' "$RUNNER_TEMP/url.json")
+          BASE_URL=$(jq -r '.baseUrl' "$RUNNER_TEMP/url.json")
+          {
+            echo "URL<<EOF_URL"
+            printf '%s\n' "$URL"
+            echo "EOF_URL"
+            echo "BASE_URL=$BASE_URL"
+          } >> "$GITHUB_OUTPUT"
           echo "Using URL: \`$URL\`" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Get Base URL
-        id: get_base_url
-        env:
-          URL: ${{ steps.get_url.outputs.URL }}
-        run: |
-          BASE_URL=$(printf '%s' "$URL" | sed -E 's#^[Hh][Tt][Tt][Pp][Ss]?://##; s#[/?#].*$##')
-          if [[ ! "$BASE_URL" =~ ^[A-Za-z0-9.-]+\.([A-Za-z]{2,}|xn--[A-Za-z0-9-]{2,})(:[0-9]+)?$ ]]; then
-            BASE_URL=""
-          else
-            HOST_ONLY=$(printf '%s' "${BASE_URL%%:*}" | tr '[:upper:]' '[:lower:]')
-            if [[ "$HOST_ONLY" == "localhost" || "$HOST_ONLY" == *.localhost || "$HOST_ONLY" == *.local || "$HOST_ONLY" == *.internal || "$HOST_ONLY" == *.home.arpa || "$HOST_ONLY" == *.lan || "$HOST_ONLY" == *.localdomain ]]; then
-              BASE_URL=""
-            fi
-          fi
-          echo "BASE_URL=$BASE_URL" >> "$GITHUB_OUTPUT"
           echo "Using Base URL: \`$BASE_URL\`" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Get User Agent
         id: get_user_agent
-        if: steps.get_base_url.outputs.BASE_URL != ''
+        if: steps.get_url.outputs.BASE_URL != ''
         run: |
           CHROME_VERSION=$(curl --silent --max-time 10 'https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Windows&num=1' | jq -r '.[0].version // empty' || true)
           CHROME_VERSION="${CHROME_VERSION:-126.0.6478.36}"
           echo "USER_AGENT=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/$CHROME_VERSION Safari/537.36" >> "$GITHUB_OUTPUT"
 
+      - name: Check Website Reachability
+        id: check_site
+        if: always() && !cancelled() && steps.get_url.outputs.BASE_URL != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          PREVIOUS_ISSUE_BODY_JSON: ${{ toJSON(github.event.changes.body.from) }}
+          EVENT_ACTION: ${{ github.event.action }}
+          ISSUE_LABELS: ${{ toJSON(github.event.issue.labels.*.name) }}
+          ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
+          ISSUE_AUTHOR_ASSOCIATION: ${{ github.event.issue.author_association }}
+          ISSUE_AUTHOR_TYPE: ${{ github.event.issue.user.type }}
+          ISSUE_STATE: ${{ github.event.issue.state }}
+          USER_AGENT: ${{ steps.get_user_agent.outputs.USER_AGENT }}
+        run: |
+          set -euo pipefail
+          node .github/scripts/check-plugin-request-site.cjs > "$RUNNER_TEMP/site-check.json"
+          REACHABLE=$(jq -r '.reachable' "$RUNNER_TEMP/site-check.json")
+          STATUS=$(jq -r '.reachability.status // "unknown"' "$RUNNER_TEMP/site-check.json")
+          SHOULD_CLOSE=$(jq -r '.shouldClose' "$RUNNER_TEMP/site-check.json")
+          SKIPPED=$(jq -r '.skipped // ""' "$RUNNER_TEMP/site-check.json")
+          FAILURE_REASON=$(jq -r '.reachability.failureReason // ""' "$RUNNER_TEMP/site-check.json")
+
+          echo "## Website Reachability Check" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Status: \`$STATUS\` (reachable: \`$REACHABLE\`)" >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$FAILURE_REASON" ]; then
+            echo "- Reason: $FAILURE_REASON" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -n "$SKIPPED" ]; then
+            echo "- Auto-close skipped: \`$SKIPPED\`" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          if [ "$SHOULD_CLOSE" = "true" ]; then
+            gh api "repos/$REPO/issues/$ISSUE_NUMBER" > "$RUNNER_TEMP/current-issue.json"
+            node .github/scripts/check-plugin-request-site.cjs --confirm-close "$RUNNER_TEMP/site-check.json" "$RUNNER_TEMP/current-issue.json" > "$RUNNER_TEMP/close-decision.json"
+            if [ "$(jq -r '.shouldClose' "$RUNNER_TEMP/close-decision.json")" = "true" ]; then
+              jq -n '{labels: ["invalid"]}' \
+                | gh api --method POST "repos/$REPO/issues/$ISSUE_NUMBER/labels" --input - >/dev/null
+              jq '{body: .comment}' "$RUNNER_TEMP/close-decision.json" \
+                | gh api --method POST "repos/$REPO/issues/$ISSUE_NUMBER/comments" --input - >/dev/null
+              gh api --method PATCH "repos/$REPO/issues/$ISSUE_NUMBER" \
+                -f state=closed \
+                -f state_reason=not_planned >/dev/null
+              echo "- Action: Added \`invalid\` label and closed issue as \`not_planned\`." >> "$GITHUB_STEP_SUMMARY"
+            else
+              CONFIRM_SKIPPED=$(jq -r '.skipped // "unknown"' "$RUNNER_TEMP/close-decision.json")
+              echo "- Action: Skipped closing after live issue recheck (\`$CONFIRM_SKIPPED\`)." >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+
+          {
+            echo "reachable=$REACHABLE"
+            echo "status=$STATUS"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Detect Website Theme
         id: detect_theme
-        if: always() && !cancelled() && steps.get_base_url.outputs.BASE_URL != ''
+        if: steps.get_url.outputs.BASE_URL != '' && steps.check_site.outputs.reachable == 'true'
         env:
-          BASE_URL: ${{ steps.get_base_url.outputs.BASE_URL }}
+          BASE_URL: ${{ steps.get_url.outputs.BASE_URL }}
           USER_AGENT: ${{ steps.get_user_agent.outputs.USER_AGENT }}
         run: |
           is_private_ip() {
@@ -144,7 +200,7 @@ jobs:
 
       - name: Add Theme Label To Issue
         id: add_theme_label
-        if: always() && !cancelled() && steps.get_base_url.outputs.BASE_URL != ''
+        if: steps.get_url.outputs.BASE_URL != '' && steps.check_site.outputs.reachable == 'true' && steps.detect_theme.outcome == 'success'
         env:
           MATCH_COUNT: ${{ steps.detect_theme.outputs.match_count }}
           THEME_LABEL: ${{ steps.detect_theme.outputs.theme_label }}
