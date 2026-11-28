@@ -1,7 +1,25 @@
 import { CheerioAPI, load as parseHTML } from 'cheerio';
 import { fetchApi } from '@libs/fetch';
 import { Plugin } from '@/types/plugin';
-import { Filters, FilterTypes } from '@libs/filterInputs';
+import { FilterOption, Filters, FilterTypes } from '@libs/filterInputs';
+
+const tagAutocompletePaths: Record<string, string> = {
+  fandoms: 'fandom',
+  characters: 'character',
+  relationships: 'relationship',
+  additionalTags: 'freeform',
+};
+
+function setTagNames(
+  params: URLSearchParams,
+  parameter: string,
+  values: string[],
+) {
+  const tagNames = (values || []).map(value => value.trim()).filter(Boolean);
+  if (tagNames.length > 0) {
+    params.set(`work_search[${parameter}]`, tagNames.join(','));
+  }
+}
 
 function checkResponse(res: Response, body: string, context: string) {
   if (!res.ok) {
@@ -24,7 +42,7 @@ function checkResponse(res: Response, body: string, context: string) {
 class ArchiveOfOurOwn implements Plugin.PluginBase {
   id = 'archiveofourown';
   name = 'Archive Of Our Own';
-  version = '1.0.6';
+  version = '1.1.0';
   icon = 'src/en/ao3/icon.png';
   site = 'https://archiveofourown.org/';
 
@@ -93,6 +111,10 @@ class ArchiveOfOurOwn implements Plugin.PluginBase {
         params.append('work_search[archive_warning_ids][]', warning);
       });
     }
+    setTagNames(params, 'fandom_names', filters.fandoms.value);
+    setTagNames(params, 'character_names', filters.characters.value);
+    setTagNames(params, 'relationship_names', filters.relationships.value);
+    setTagNames(params, 'freeform_names', filters.additionalTags.value);
     if (filters.singlechap.value) {
       params.set('work_search[single_chapter]', '1');
     }
@@ -285,6 +307,53 @@ class ArchiveOfOurOwn implements Plugin.PluginBase {
     const loadedCheerio = parseHTML(body);
     return this.parseNovels(loadedCheerio);
   }
+
+  async getFilterSuggestions(
+    filterKey: string,
+    query: string,
+  ): Promise<FilterOption[]> {
+    const path = tagAutocompletePaths[filterKey];
+    const term = query.trim();
+    if (!path || !term) {
+      return [];
+    }
+
+    const params = new URLSearchParams({ term });
+    const url = `${this.site}autocomplete/${path}?${params.toString()}`;
+    const res = await fetchApi(url, {
+      headers: { Cookie: 'view_adult=true' },
+    });
+    const body = await res.text();
+    checkResponse(res, body, 'fetch filter suggestions');
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(body);
+    } catch {
+      throw new Error('Failed to parse AO3 filter suggestions');
+    }
+
+    if (
+      !Array.isArray(parsed) ||
+      !parsed.every(
+        suggestion =>
+          suggestion !== null &&
+          typeof suggestion === 'object' &&
+          !Array.isArray(suggestion),
+      )
+    ) {
+      throw new Error('Unexpected AO3 filter suggestions response');
+    }
+
+    return parsed
+      .map(
+        (suggestion: { id?: string; name?: string }) =>
+          suggestion.name || suggestion.id,
+      )
+      .filter((name): name is string => Boolean(name))
+      .map(name => ({ label: name, value: name }));
+  }
+
   filters = {
     sort: {
       value: 'hits',
@@ -514,6 +583,30 @@ class ArchiveOfOurOwn implements Plugin.PluginBase {
         { label: 'Underage', value: '20' },
       ],
       type: FilterTypes.CheckboxGroup,
+    },
+    fandoms: {
+      value: [],
+      label: 'Fandoms',
+      type: FilterTypes.MultiText,
+      autocomplete: true,
+    },
+    characters: {
+      value: [],
+      label: 'Characters',
+      type: FilterTypes.MultiText,
+      autocomplete: true,
+    },
+    relationships: {
+      value: [],
+      label: 'Relationships',
+      type: FilterTypes.MultiText,
+      autocomplete: true,
+    },
+    additionalTags: {
+      value: [],
+      label: 'Additional Tags',
+      type: FilterTypes.MultiText,
+      autocomplete: true,
     },
     singlechap: {
       value: false,
